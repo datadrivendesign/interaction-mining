@@ -1,0 +1,21 @@
+@font-face {
+  font-family: "Source Code Pro Var";
+  src: url("./SourceCodePro-VariableFont_wght.woff2")
+      format("woff2 supports variations"),
+    url("./SourceCodePro-VariableFont_wght.woff2")
+      format("woff2-variations");
+  font-weight: 200 300 400 500 600 700 800 900;
+  font-stretch: 50% 500%;
+}
+
+@font-face {
+    font-family: "Source Code Pro Var";
+    font-style: italic;
+    src: url("./SourceCodePro-Italic-VariableFont_wght.woff2")
+        format("woff2 supports variations"),
+      url("./SourceCodePro-Italic-VariableFont_wght.woff2")
+        format("woff2-variations");
+    font-weight: 200 300 400 500 600 700 800 900;
+    font-stretch: 50% 500%;
+  }
+  
