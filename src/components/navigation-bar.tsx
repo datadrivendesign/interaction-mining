@@ -5,7 +5,7 @@ export default function NavigationBar() {
   return (
     <>
       <nav className="sticky z-40 top-0 flex w-full justify-center bg-white">
-        <div className="flex basis-screen-2xl px-16 py-2 justify-between">
+        <div className="flex basis-screen-2xl px-8 md:px-16 py-4 justify-between">
           <div className="flex basis-1/2 h-full">
             <Link
               href={"/"}
@@ -23,7 +23,7 @@ export default function NavigationBar() {
             </Link>
             <Link href={"/download"}>
               <span className="inline-flex items-center text-sm text-black font-medium">
-                Try ODIM <ArrowUpRight size={20} className="ml-1 stroke-4" />
+                Try ODIM
               </span>
             </Link>
           </div>

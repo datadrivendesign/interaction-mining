@@ -1,3 +1,5 @@
+"use server";
+
 import { prisma } from "@/lib/prisma";
 import { Screen } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";

@@ -104,11 +104,11 @@ export default function Download() {
           </div>
           <aside className="sticky top-12 flex flex-col w-full max-w-xs">
             <Link
-              href="https://mobileodimbucket155740-dev.s3.us-east-2.amazonaws.com/apk/odim-1.0.apk"
+              href="https://mobileodimbucket155740-dev.s3.us-east-2.amazonaws.com/apk/odim-3.0.apk"
               className="px-3 py-2 bg-neutral-800 rounded-xl mb-2"
             >
               <span className="flex justify-between items-center text-base text-white font-medium">
-                Download Latest (v1.0)
+                Download Latest (v3.0)
                 <DownloadIcon size={20} className="ml-1 stroke-4" />
               </span>
             </Link>
