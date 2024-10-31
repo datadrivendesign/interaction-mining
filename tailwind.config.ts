@@ -38,7 +38,7 @@ const config: Config = {
           ...defaultTheme.fontFamily.sans,
         ],
         sans: ["var(--font-inter)", ...defaultTheme.fontFamily.sans],
-        mono: ["var(--font-source-code-pro)", ...defaultTheme.fontFamily.mono],
+        mono: ["var(--font-roboto-mono)", ...defaultTheme.fontFamily.mono],
       },
     },
   },

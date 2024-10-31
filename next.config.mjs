@@ -6,6 +6,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "play-lh.googleusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "*.amazonaws.com"
+      }
     ],
   },
 };

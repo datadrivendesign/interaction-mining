@@ -1,14 +1,14 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Source_Code_Pro } from "next/font/google";
+import { Roboto_Mono } from "next/font/google";
 import localFont from "next/font/local";
 
 import classNames from "classnames";
 import NavigationBar from "@/components/navigation-bar";
 
-const sourceCodePro = Source_Code_Pro({
+const robotoMono = Roboto_Mono({
   subsets: ["latin"],
-  variable: "--font-source-code-pro",
+  variable: "--font-roboto-mono",
 });
 
 const inter = localFont({
@@ -138,7 +138,7 @@ export default function RootLayout({
           mona.variable,
           inter.variable,
           interDisplay.variable,
-          sourceCodePro.variable,
+          robotoMono.variable,
           "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans text-black"
         )}
       >

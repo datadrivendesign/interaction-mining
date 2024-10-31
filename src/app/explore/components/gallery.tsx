@@ -71,7 +71,7 @@ export function GallerySearch() {
 
   return (
     <>
-      <span className="inline-flex items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75">
+      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75 ">
         <Search size={16} className="text-neutral-400 mr-2" />
         <input
           className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
@@ -88,12 +88,12 @@ export function GallerySearch() {
 export function Gallery({ children }: { children?: React.FC<any> }) {
   const { filteredData } = useContext(GalleryContext);
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 px-4 md:px-16 mb-16">
       {filteredData.map((app: any, index: number) => (
         <Link
           key={index}
           href={`/app/${app.id}`}
-          className="flex w-full p-2 lg:p-4"
+          className="flex w-full"
         >
           <Image
             src={app.icon}

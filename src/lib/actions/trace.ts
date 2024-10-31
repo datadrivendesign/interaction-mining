@@ -1,3 +1,5 @@
+"use server";
+
 import { prisma } from "@/lib/prisma";
 import { Trace } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
@@ -40,6 +42,7 @@ export async function getTrace(id: string) {
       },
       include: {
         app: true,
+        screens: true,
       },
     });
   } catch {
@@ -75,38 +78,35 @@ export async function getTraceByApp(id: string) {
   return trace;
 }
 
-// export async function updateTraceRelations() {
+export async function updateTrace(
+  id: string,
+  updates: Partial<{ name: string; description: string }>
+) {
 
-//   console.log("Updating trace relations...");
-//   // get all traces
-//   const traces = await prisma.trace.findMany({
-//     include: {
-//       app: true,
-//       screens: true,
-//     },
-//   });
+  // Validate the trace ID
+  if (!id || !isObjectIdOrHexString(id)) {
+    let e = new Error("Invalid trace ID.");
+    e.name = "TypeError";
+    throw e;
+  }
 
-//   console.log(`Found ${traces.length} traces`);
+  // Check if there are any updates to apply
+  if (!updates || Object.keys(updates).length === 0) {
+    let e = new Error("No updates provided.");
+    e.name = "ValidationError";
+    throw e;
+  }
 
-//   // for each trace, go thru the screens and update each screen to have a trace field containing the trace id
-//   for (const trace of traces) {
-//     console.log(`Updating trace ${trace.id}`);
-//     // progress in form [traces done/total]
-//     console.log(`[${traces.indexOf(trace) + 1}/${traces.length}]`);
+  try {
+    // Perform the update on the trace
+    const updatedTrace = await prisma.trace.update({
+      where: { id },
+      data: updates,
+    });
 
-//     for (const screen of trace.screensIds) {
-//       await prisma.screen.update({
-//         where: {
-//           id: screen,
-//         },
-//         data: {
-//           trace: {
-//             connect: {
-//               id: trace.id,
-//             },
-//           },
-//         },
-//       });
-//     }
-//   }
-// }
+    return updatedTrace;
+  } catch (error) {
+    console.error("Failed to update trace:", error);
+    throw new Error("An error occurred while updating the trace.");
+  }
+}
