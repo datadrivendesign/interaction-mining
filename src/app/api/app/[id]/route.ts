@@ -1,11 +1,12 @@
 import { getApp } from "@/lib/actions";
 import { NextRequest } from "next/server";
 
-export async function GET(request : NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_ : NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let app;
 
   try {
-    app = await getApp(params.id);
+    const { id } = await params;
+    app = await getApp(id);
   } catch (err: any) {
     return Response.json(
       // { message: "Failed to fetch app.", app: {} },

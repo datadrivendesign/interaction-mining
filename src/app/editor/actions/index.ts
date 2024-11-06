@@ -72,8 +72,6 @@ export async function deleteScreens(screens: Screen[]) {
     // Wait for all deletion requests to complete
     const responses = await Promise.all(deletionPromises);
 
-    console.log(responses)
-
     // Check if all requests were successful
     const failedDeletions = responses.filter((response) => !response.ok);
 

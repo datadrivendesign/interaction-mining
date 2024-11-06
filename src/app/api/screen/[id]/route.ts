@@ -2,13 +2,14 @@ import { getScreen } from "@/lib/actions/screen";
 import { NextRequest } from "next/server";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let screen;
 
   try {
-    screen = await getScreen(params.id);
+    const { id } = await params;
+    screen = await getScreen(id);
   } catch (err: any) {
     return Response.json(
       // { message: "Failed to fetch screen.", screen: {} },

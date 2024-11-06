@@ -2,25 +2,20 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { getApp, getTraceByApp } from "@/lib/actions";
-import { GalleryRoot, Gallery } from "./components/gallery";
+import { GalleryRoot } from "../components/gallery";
 
 export default async function AppPage({
   params,
-  searchParams: { trace: traceId },
 }: {
-  params: { id: string };
-  searchParams: { trace: string };
+  params: Promise<{ id: string }>;
 }) {
   let app;
   let traces;
 
   try {
-    app = await getApp(params.id);
-    traces = await getTraceByApp(params.id);
-
-    // if (traces.length > 0) {
-    //   redirect(`/app/${params.id}/${traces[0].id}`, RedirectType.push);
-    // }
+    const { id } = await params;
+    app = await getApp(id);
+    traces = await getTraceByApp(id);
 
     if (!app) {
       notFound();
@@ -46,7 +41,7 @@ export default async function AppPage({
             </h1>
           </div>
           <div className="w-full h-0.5 bg-neutral-100 rounded-full mb-0 md:mb-4" />
-          <Gallery traceId={traceId || ""} />
+          {/* <Gallery traceId="" /> */}
         </section>
       </main>
     </GalleryRoot>

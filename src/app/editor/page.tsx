@@ -14,10 +14,14 @@ import { useSearchParams } from "next/navigation";
 import classNames from "classnames";
 import { Pencil, Save, Trash2 } from "lucide-react";
 
-import { Screen, Trace } from "@prisma/client";
+import { Button } from "@/components/ui/button";
+
+import { Screen } from "@prisma/client";
+import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
 import { getTrace, updateTrace } from "@/lib/actions";
 import { deleteScreens, splitTrace } from "./actions";
 import { prettyTime } from "@/lib/utils/date";
+import EditorDialog, { EditorDialogButton } from "./component/editor-dialog";
 
 const EditorContext = createContext<{
   selected: Screen[];
@@ -101,20 +105,25 @@ export default function Page() {
         alert("An error occurred while saving the trace. Please try again.");
       }
     },
-    [traceData.id]
+    [traceData.id, fetchTrace]
   );
 
   useEffect(() => {
     if (traceId) {
       fetchTrace().then((res) => {
-        setTitleState({ ...titleState, value: res?.name || "" });
-        setDescriptionState({
-          ...descriptionState,
+        // setTitleState({ ...titleState, value: res?.name || "" });
+        setTitleState((value) => ({ ...value, value: res?.name || "" }));
+        // setDescriptionState({
+        //   ...descriptionState,
+        //   value: res?.description || "",
+        // });
+        setDescriptionState((value) => ({
+          ...value,
           value: res?.description || "",
-        });
+        }));
       });
     }
-  }, [traceId]);
+  }, [traceId, fetchTrace]);
 
   const handleSplit = useCallback(async () => {
     if (!selected.length) {
@@ -145,11 +154,24 @@ export default function Page() {
       console.error("Failed to split trace:", error);
       alert("An error occurred while splitting the trace. Please try again.");
     }
-  }, [traceData, traceId, selected]);
+  }, [traceData, traceId, selected, fetchTrace]);
 
-  // const handleDelete = useCallback(async () => {
-  //   if (!selected.length)
-  // })
+  const handleDelete = useCallback(async () => {
+    if (!selected.length) {
+      alert("No screens selected to delete.");
+      return;
+    }
+
+    try {
+      await deleteScreens(selected);
+      fetchTrace();
+      // Clear the selected screens after deletion
+      setSelected([]);
+    } catch (error) {
+      console.error("Failed to delete screens:", error);
+      alert("An error occurred while deleting the screens. Please try again.");
+    }
+  }, [selected, fetchTrace]);
 
   return (
     <>
@@ -168,7 +190,7 @@ export default function Page() {
                   {titleState.mode === "display" && (
                     <>
                       <h1 className="text-3xl font-bold tracking-tight">
-                        {traceData?.name || "Untitled Trace"}
+                        {traceData?.name}
                       </h1>
                       <button
                         onClick={() =>
@@ -185,7 +207,7 @@ export default function Page() {
                         <input
                           className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
                           placeholder="Trace title"
-                          value={titleState.value || "Untitled Trace"}
+                          value={titleState.value}
                           onChange={(e) =>
                             setTitleState({
                               ...titleState,
@@ -272,32 +294,42 @@ export default function Page() {
                 <section className="block w-full mb-4">
                   <div className="flex w-full justify-between mb-2">
                     <h2 className="text-xl text-black font-bold tracking-tight mb-2">
-                      Images
+                      Screens
                     </h2>
                     <div className="flex gap-2">
-                      <button
+                      <Button
+                        variant="secondary"
                         disabled={selected.length > 0 ? false : true}
-                        className={classNames(
-                          "inline-flex items-center gap-1 px-3 py-0 rounded-xl font-semibold tracking-tight leading-none transition-colors duration-100",
-                          selected.length === 0
-                            ? "text-neutral-500 bg-neutral-100 cursor-not-allowed"
-                            : "text-black bg-neutral-100"
-                        )}
                         onClick={handleSplit}
                       >
                         Split trace with selected...
-                      </button>
-                      <button
-                        disabled={selected.length > 0 ? false : true}
-                        className={classNames(
-                          "inline-flex items-center gap-1 px-3 py-0 rounded-xl  font-semibold tracking-tight leading-none transition-colors duration-100",
-                          selected.length === 0
-                            ? "text-white bg-red-400 cursor-not-allowed"
-                            : "text-white bg-red-500 "
-                        )}
+                      </Button>
+                      <EditorDialog
+                        title="Are you sure?"
+                        description="Do you really want to delete these screens? This cannot be undone."
+                        label={
+                          <Button
+                            variant="destructive"
+                            disabled={selected.length > 0 ? false : true}
+                          >
+                            Delete screens
+                          </Button>
+                        }
                       >
-                        Delete screens
-                      </button>
+                        <div className="flex justify-end w-full gap-2 pt-2">
+                          <EditorDialogButton>
+                            <Button variant="secondary">Cancel</Button>
+                          </EditorDialogButton>
+                          <EditorDialogButton>
+                            <Button
+                              variant="destructive"
+                              onClick={handleDelete}
+                            >
+                              Delete
+                            </Button>
+                          </EditorDialogButton>
+                        </div>
+                      </EditorDialog>
                     </div>
                   </div>
                   <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
@@ -324,12 +356,12 @@ export default function Page() {
 
 function ScreenItem({ screen }: { screen: Screen }) {
   const { selected, setSelected, fetchTrace } = useContext(EditorContext);
-  const [hierarchyData, setHierarchyData] = useState(null);
+  const [hierarchyData, setHierarchyData] = useState<any>(null);
 
   // Refs for the image and canvas elements
-  const imgContainerRef = useRef(null);
-  const canvasRef = useRef(null);
-  const imgRef = useRef(null);
+  const imgContainerRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
   // Check if the current screen is selected
   const isSelected = useCallback(() => {
@@ -347,6 +379,8 @@ function ScreenItem({ screen }: { screen: Screen }) {
 
   const handleDeleteOne = useCallback(async () => {
     deleteScreens([screen]);
+
+    // Fetch the latest trace data after
     fetchTrace();
   }, [fetchTrace, screen]);
 
@@ -422,7 +456,7 @@ function ScreenItem({ screen }: { screen: Screen }) {
     canvas.style.height = `${imgHeight}px`;
 
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx!.clearRect(0, 0, canvas.width, canvas.height);
 
     // Calculate scale factors
     const scaleX = imgWidth / rootWidth;
@@ -435,9 +469,9 @@ function ScreenItem({ screen }: { screen: Screen }) {
       const width = box.width * scaleX;
       const height = box.height * scaleY;
 
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, width, height);
+      ctx!.strokeStyle = "red";
+      ctx!.lineWidth = 1;
+      ctx!.strokeRect(x, y, width, height);
     });
   }, [boxes, rootBounds]);
 
@@ -485,19 +519,33 @@ function ScreenItem({ screen }: { screen: Screen }) {
             isSelected() ? "opacity-100" : "group-hover:opacity-100 opacity-0"
           )}
         >
-          <button className="flex size-7 justify-center items-center aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
+          <button className="flex size-8 justify-center items-center aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
             <input
               type="checkbox"
               checked={isSelected()}
               onChange={toggleSelected}
             />
           </button>
-          <button
-            className="flex justify-center items-center p-1 aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300"
-            onClick={handleDeleteOne}
+          <EditorDialog
+            title="Are you sure?"
+            description="Do you really want to delete this screen? This cannot be undone."
+            label={
+              <button className="flex justify-center items-center p-1.5 aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
+                <Trash2 className="size-5" />
+              </button>
+            }
           >
-            <Trash2 className="size-5" />
-          </button>
+            <div className="flex justify-end w-full gap-2 pt-2">
+              <EditorDialogButton>
+                <Button variant="secondary">Cancel</Button>
+              </EditorDialogButton>
+              <EditorDialogButton>
+                <Button variant="destructive" onClick={handleDeleteOne}>
+                  Delete
+                </Button>
+              </EditorDialogButton>
+            </div>
+          </EditorDialog>
         </div>
         {/* Image container */}
         <div ref={imgContainerRef} style={{ position: "relative" }}>
@@ -514,69 +562,10 @@ function ScreenItem({ screen }: { screen: Screen }) {
           <canvas
             ref={canvasRef}
             className="absolute z-0 left-0 top-0 pointer-events-none"
+            style={{ imageRendering: "crisp-edges" }}
           />
         </div>
       </figure>
     </>
   );
 }
-
-// function ScreenItem({ screen }: { screen: Screen }) {
-//   const { selected, setSelected, fetchTrace } = useContext(EditorContext);
-
-//   // Check if the current screen is selected
-//   const isSelected = useCallback(() => {
-//     return selected.some((s) => s.id === screen.id);
-//   }, [selected, screen.id]);
-
-//   // Toggle the selection state of the current screen
-//   const toggleSelected = () => {
-//     if (isSelected()) {
-//       // Remove the screen from the selected list
-//       setSelected(selected.filter((s) => s.id !== screen.id));
-//     } else {
-//       // Add the screen to the selected list
-//       setSelected([...selected, screen]);
-//     }
-//   };
-
-//   const handleDeleteOne = useCallback(async () => {
-//     deleteScreens([screen]);
-//     fetchTrace();
-//   }, [fetchTrace, screen]);
-
-//   return (
-//     <>
-//       <figure className="group relative flex flex-col shrink-0 w-64 border border-neutral-500/10 rounded-lg shadow-sm overflow-clip">
-//         <div
-//           className={classNames(
-//             "absolute top-2 left-2 flex gap-2 transition-opacity duration-100",
-//             isSelected() ? "opacity-100" : "group-hover:opacity-100 opacity-0"
-//           )}
-//         >
-//           <button className="flex size-7 justify-center items-center aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
-//             <input
-//               type="checkbox"
-//               checked={isSelected()}
-//               onChange={toggleSelected}
-//             />
-//           </button>
-//           <button
-//             className="flex justify-center items-center p-1 aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300"
-//             onClick={handleDeleteOne}
-//           >
-//             <Trash2 className="size-5" />
-//           </button>
-//         </div>
-//         <Image
-//           src={screen?.src}
-//           alt={`screen-${screen?.id}`}
-//           className="object-contain w-full h-auto"
-//           width={0}
-//           height={0}
-//           sizes="100vw"
-//         />
-//       </figure>
-//     </>
-//   );
-// }
