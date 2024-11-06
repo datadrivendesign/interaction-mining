@@ -1,14 +1,22 @@
 "use client";
 
-import { createContext, useState, useContext, useEffect } from "react";
+import {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useReducer,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
-import classNames from "classnames";
+import clsx from "clsx";
+import { motion } from "framer-motion";
 import { Download, Search } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
-import { Trace, Screen } from "@prisma/client";
-import { trace } from "console";
+import { Screen } from "@prisma/client";
+import { TraceWithAppsScreens as Trace } from "@/lib/actions";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -47,13 +55,13 @@ export function Gallery({ traceId }: { traceId: string }) {
   useEffect(() => {
     // if traceId is passed in, set current view to specified trace
     if (traceId) {
-      const trace = data.find((a) => (a.id === traceId));
+      const trace = data.find((a) => a.id === traceId);
 
       if (trace) {
-        setInspectData(trace)
+        setInspectData(trace);
       }
     }
-  }, [traceId])
+  }, [traceId, data, setInspectData]);
 
   return (
     <div className="flex grow w-full max-w-screen-2xl h-full place-self-center md:px-16 gap-2">
@@ -61,7 +69,7 @@ export function Gallery({ traceId }: { traceId: string }) {
         {data.map((data, index) => (
           <div
             key={index}
-            className={classNames(
+            className={clsx(
               "flex flex-col p-3 md:p-4 cursor-pointer",
               inspectData?.id === data?.id
                 ? "bg-neutral-100 rounded-xl"
@@ -101,8 +109,40 @@ export function Gallery({ traceId }: { traceId: string }) {
   );
 }
 
+function loadingReducer(state: any, action: any) {
+  if (action.type === "OVERRIDE") {
+    return { status: action.status, imagesLoading: action.imagesLoading };
+  }
+  if (action.type === "LOAD_IMAGE") {
+    if (state.imagesLoading === 1) {
+      return { status: "loaded", imagesLoading: 0 };
+    } else {
+      return { status: "loading", imagesLoading: state.imagesLoading - 1 };
+    }
+  }
+  return action;
+}
+
 export function InspectView({ data }: { data: Trace }) {
-  console.log(data);
+  const [loading, setLoading] = useReducer(loadingReducer, {
+    status: "loading",
+    imagesLoading: data.screens.length,
+  });
+
+  useEffect(() => {
+    setLoading({
+      type: "OVERRIDE",
+      status: "loading",
+      imagesLoading: data.screens.length,
+    });
+  }, [data]);
+
+  const handleImageLoad = useCallback(() => {
+    if (loading.status === "loading") {
+      setLoading({ type: "LOAD_IMAGE" });
+    }
+  }, [loading]);
+
   return (
     <div className="flex flex-col grow w-full h-full p-4 pr-0">
       <div className="flex justify-between">
@@ -112,7 +152,7 @@ export function InspectView({ data }: { data: Trace }) {
         <div className="flex gap-2">
           <Link
             className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
-            href={`/app/${data.appId}/editor?trace=${data.id}`}
+            href={`/editor?trace=${data.id}`}
             target="_blank"
           >
             Open in editor...
@@ -150,13 +190,25 @@ export function InspectView({ data }: { data: Trace }) {
                 key={index}
                 className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-sm overflow-clip"
               >
+                <motion.div
+                  animate={{ opacity: loading.status === "loading" ? 1 : 0 }}
+                  className="absolute z-10 flex w-full h-full"
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="w-full h-full bg-neutral-100 animate-pulse"></div>
+                </motion.div>
                 <Image
                   src={screen?.src}
                   alt={`screen-${screen?.id}`}
-                  className="object-contain w-full h-auto"
+                  className={clsx(
+                    loading.status === "loading" ? "invisible" : "visible",
+                    "relative z-0 object-contain w-full h-auto"
+                  )}
                   width={0}
                   height={0}
                   sizes="100vw"
+                  priority
+                  onLoad={handleImageLoad}
                 />
               </figure>
             ))}

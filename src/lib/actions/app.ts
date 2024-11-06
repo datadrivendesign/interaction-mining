@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { App } from "@prisma/client";
+import { App, Prisma } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 
 interface GetAppParams {
@@ -13,7 +13,7 @@ interface GetAppParams {
 }
 
 export async function getApps({
-  limit = 10,
+  limit,
   page = 1,
   query = "",
   order = "downloads",
@@ -22,7 +22,7 @@ export async function getApps({
   let app: App[] = [];
 
   try {
-    app = await prisma.app.findMany({
+    const options = {
       where: {
         name: {
           contains: query,
@@ -32,9 +32,19 @@ export async function getApps({
       orderBy: {
         [order]: sort,
       },
-      take: limit,
-      skip: (page - 1) * limit,
-    });
+    } as Prisma.AppFindManyArgs;
+
+    // if limit is not provided, return all apps
+    if (limit) {
+      options.take = limit;
+    }
+
+    // if page and limit are provided, calculate the offset
+    if (page && limit) {
+      options.skip = (page - 1) * limit;
+    }
+
+    app = await prisma.app.findMany(options);
   } catch {
     throw new Error("Failed to fetch apps.");
   }
@@ -55,7 +65,6 @@ export async function getApp(id: string): Promise<App | null> {
         id,
       },
     });
-
   } catch {
     throw new Error("Failed to fetch app.");
   }

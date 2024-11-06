@@ -142,7 +142,6 @@ export default function RootLayout({
           "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans text-black"
         )}
       >
-        <NavigationBar />
         {children}
       </body>
     </html>

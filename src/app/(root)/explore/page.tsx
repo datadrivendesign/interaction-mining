@@ -5,7 +5,7 @@ import {
   GalleryRoot,
   GallerySearch,
   Gallery,
-} from "@/app/explore/components/gallery";
+} from "@/app/(root)/explore/components/gallery";
 import { getApps } from "@/lib/actions";
 // import { prettyNumber } from "@/lib/utils/number";
 
@@ -18,7 +18,7 @@ import { getApps } from "@/lib/actions";
 
 export default async function Explore() {
   let apps: App[] = await getApps({
-    limit: 50,
+    // limit: 100,
   });
 
   return (
