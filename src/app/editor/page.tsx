@@ -15,13 +15,15 @@ import classNames from "classnames";
 import { Pencil, Save, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import EditorDialog, { EditorDialogButton } from "./component/editor-dialog";
+import ScreenEditor from "./component/screen-editor";
 
 import { Screen } from "@prisma/client";
 import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
 import { getTrace, updateTrace } from "@/lib/actions";
 import { deleteScreens, splitTrace } from "./actions";
 import { prettyTime } from "@/lib/utils/date";
-import EditorDialog, { EditorDialogButton } from "./component/editor-dialog";
+import { fetchImageAsBase64 } from "./util/image";
 
 const EditorContext = createContext<{
   selected: Screen[];
@@ -190,7 +192,7 @@ export default function Page() {
                   {titleState.mode === "display" && (
                     <>
                       <h1 className="text-3xl font-bold tracking-tight">
-                        {traceData?.name}
+                        {traceData?.name || "Untitled Trace"}
                       </h1>
                       <button
                         onClick={() =>
@@ -358,32 +360,6 @@ function ScreenItem({ screen }: { screen: Screen }) {
   const { selected, setSelected, fetchTrace } = useContext(EditorContext);
   const [hierarchyData, setHierarchyData] = useState<any>(null);
 
-  // Refs for the image and canvas elements
-  const imgContainerRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-
-  // Check if the current screen is selected
-  const isSelected = useCallback(() => {
-    return selected.some((s) => s.id === screen.id);
-  }, [selected, screen.id]);
-
-  // Toggle the selection state of the current screen
-  const toggleSelected = () => {
-    if (isSelected()) {
-      setSelected(selected.filter((s) => s.id !== screen.id));
-    } else {
-      setSelected([...selected, screen]);
-    }
-  };
-
-  const handleDeleteOne = useCallback(async () => {
-    deleteScreens([screen]);
-
-    // Fetch the latest trace data after
-    fetchTrace();
-  }, [fetchTrace, screen]);
-
   // Fetch the hierarchy data from screen.vh
   useEffect(() => {
     if (screen.vh) {
@@ -403,6 +379,127 @@ function ScreenItem({ screen }: { screen: Screen }) {
         });
     }
   }, [screen.vh]);
+
+  // Check if the current screen is selected
+  const isSelected = useCallback(() => {
+    return selected.some((s) => s.id === screen.id);
+  }, [selected, screen.id]);
+  // Toggle the selection state of the current screen
+  const toggleSelected = () => {
+    if (isSelected()) {
+      setSelected(selected.filter((s) => s.id !== screen.id));
+    } else {
+      setSelected([...selected, screen]);
+    }
+  };
+
+  const handleDeleteOne = useCallback(async () => {
+    deleteScreens([screen]);
+
+    // Fetch the latest trace data after
+    fetchTrace();
+  }, [fetchTrace, screen]);
+
+  return (
+    <>
+      <figure className="group relative flex flex-col shrink-0 w-64 border border-neutral-500/10 rounded-lg shadow-sm overflow-clip">
+        <div
+          className={classNames(
+            "absolute z-10 top-2 left-2 flex gap-2 transition-opacity duration-100",
+            isSelected() ? "opacity-100" : "group-hover:opacity-100 opacity-0"
+          )}
+        >
+          <button className="flex size-8 justify-center items-center aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
+            <input
+              type="checkbox"
+              checked={isSelected()}
+              onChange={toggleSelected}
+            />
+          </button>
+          <ScreenEditor
+            screen={screen}
+            data={hierarchyData}
+            fetchData={fetchTrace}
+          />
+          <EditorDialog
+            title="Are you sure?"
+            description="Do you really want to delete this screen? This cannot be undone."
+            label={
+              <button className="flex justify-center items-center p-1.5 aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
+                <Trash2 className="size-5" />
+              </button>
+            }
+          >
+            <div className="flex justify-end w-full gap-2 pt-2">
+              <EditorDialogButton>
+                <Button variant="secondary">Cancel</Button>
+              </EditorDialogButton>
+              <EditorDialogButton>
+                <Button variant="destructive" onClick={handleDeleteOne}>
+                  Delete
+                </Button>
+              </EditorDialogButton>
+            </div>
+          </EditorDialog>
+        </div>
+        <RenderedScreen
+          screen={screen}
+          hierarchyData={hierarchyData}
+        />
+      </figure>
+    </>
+  );
+}
+
+function BoundingBox({
+  x,
+  y,
+  width,
+  height,
+  id,
+  onClick,
+  onHover,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  id: string;
+  onClick: () => void;
+  onHover: () => void;
+}) {
+  const [redacted, setRedacted] = useState(false);
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={redacted ? "black" : "transparent"}
+      stroke="red"
+      strokeWidth="1"
+      onClick={()=> setRedacted(!redacted)}
+      onMouseOver={onHover}
+      style={{ pointerEvents: "auto" }}
+    />
+  );
+}
+
+// Main RenderedScreen component
+export function RenderedScreen({
+  screen,
+  hierarchyData,
+  showRedaction = false,
+}: {
+  screen: Screen;
+  hierarchyData?: any;
+  showRedaction?: boolean;
+}) {
+  const [image, setImage] = useState<string>("");
+  // Refs for the image and SVG elements
+  const imgContainerRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   // Extract bounding boxes from hierarchy data
   const { boxes, rootBounds } = useMemo(() => {
@@ -426,7 +523,13 @@ function ScreenItem({ screen }: { screen: Screen }) {
           rootBounds = { x, y, width, height };
         }
 
-        boxes.push({ x, y, width, height });
+        boxes.push({
+          x,
+          y,
+          width,
+          height,
+          id: node.id || Math.random().toString(),
+        });
       }
       if (node.children && node.children.length > 0) {
         node.children.forEach((child: any) => traverse(child));
@@ -436,136 +539,75 @@ function ScreenItem({ screen }: { screen: Screen }) {
     return { boxes, rootBounds };
   }, [hierarchyData]);
 
-  const drawBoundingBoxes = useCallback(() => {
-    const imgContainer = imgContainerRef.current;
-    const canvas = canvasRef.current;
-    const img = imgRef.current;
-
-    if (!imgContainer || !canvas || !img || boxes.length === 0 || !rootBounds)
-      return;
-
-    const imgWidth = img.clientWidth;
-    const imgHeight = img.clientHeight;
-    const rootWidth = rootBounds.width;
-    const rootHeight = rootBounds.height;
-
-    // Set canvas size to match image size
-    canvas.width = imgWidth;
-    canvas.height = imgHeight;
-    canvas.style.width = `${imgWidth}px`;
-    canvas.style.height = `${imgHeight}px`;
-
-    const ctx = canvas.getContext("2d");
-    ctx!.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Calculate scale factors
-    const scaleX = imgWidth / rootWidth;
-    const scaleY = imgHeight / rootHeight;
-
-    // Draw bounding boxes
-    boxes.forEach((box: any) => {
-      const x = (box.x - rootBounds.x) * scaleX;
-      const y = (box.y - rootBounds.y) * scaleY;
-      const width = box.width * scaleX;
-      const height = box.height * scaleY;
-
-      ctx!.strokeStyle = "red";
-      ctx!.lineWidth = 1;
-      ctx!.strokeRect(x, y, width, height);
-    });
-  }, [boxes, rootBounds]);
-
   useEffect(() => {
     const img = imgRef.current;
-    if (!img) return;
+    const svg = svgRef.current;
+    if (!img || !svg) return;
 
+    // // Convert image to blob URL from image URL
+    // fetchImageAsBase64(screen.src).then((data) => {
+    //   setImage(data);
+    // }).catch(console.error);
+
+    // Use ResizeObserver to synchronize SVG dimensions with image dimensions
     const resizeObserver = new ResizeObserver(() => {
-      drawBoundingBoxes();
+      svg.style.width = `${img.clientWidth}px`;
+      svg.style.height = `${img.clientHeight}px`;
     });
 
     resizeObserver.observe(img);
 
-    // Cleanup
+    // Cleanup observer
     return () => {
       resizeObserver.unobserve(img);
     };
-  }, [drawBoundingBoxes]);
+  }, []);
 
-  // Initial drawing when the image loads
-  useEffect(() => {
-    const img = imgRef.current;
-    if (!img) return;
-
-    if (img.complete) {
-      drawBoundingBoxes();
-    } else {
-      img.onload = () => {
-        drawBoundingBoxes();
-      };
-    }
-
-    // Cleanup
-    return () => {
-      if (img) img.onload = null;
-    };
-  }, [drawBoundingBoxes]);
+  if (!rootBounds) {
+    return null; // Render nothing if rootBounds is not available
+  }
 
   return (
     <>
-      <figure className="group relative flex flex-col shrink-0 w-64 border border-neutral-500/10 rounded-lg shadow-sm overflow-clip">
-        <div
-          className={classNames(
-            "absolute z-10 top-2 left-2 flex gap-2 transition-opacity duration-100",
-            isSelected() ? "opacity-100" : "group-hover:opacity-100 opacity-0"
-          )}
-        >
-          <button className="flex size-8 justify-center items-center aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
-            <input
-              type="checkbox"
-              checked={isSelected()}
-              onChange={toggleSelected}
-            />
-          </button>
-          <EditorDialog
-            title="Are you sure?"
-            description="Do you really want to delete this screen? This cannot be undone."
-            label={
-              <button className="flex justify-center items-center p-1.5 aspect-square text-red-500 bg-stone-50 hover:bg-stone-100 rounded-lg transition-colors duration-300">
-                <Trash2 className="size-5" />
-              </button>
-            }
+      {/* Image container */}
+      <div ref={imgContainerRef} style={{ position: "relative" }}>
+        <Image
+          ref={imgRef}
+          src={screen.src}
+          alt={`screen-${screen?.id}`}
+          className="object-cover w-full h-auto" // Ensures consistent scaling with SVG
+          width={0}
+          height={0}
+          sizes="100vw"
+        />
+        {/* SVG overlay for bounding boxes */}
+        {showRedaction && (
+          <svg
+            ref={svgRef}
+            viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
+            preserveAspectRatio="xMinYMin meet"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              pointerEvents: "none",
+            }}
           >
-            <div className="flex justify-end w-full gap-2 pt-2">
-              <EditorDialogButton>
-                <Button variant="secondary">Cancel</Button>
-              </EditorDialogButton>
-              <EditorDialogButton>
-                <Button variant="destructive" onClick={handleDeleteOne}>
-                  Delete
-                </Button>
-              </EditorDialogButton>
-            </div>
-          </EditorDialog>
-        </div>
-        {/* Image container */}
-        <div ref={imgContainerRef} style={{ position: "relative" }}>
-          <Image
-            ref={imgRef}
-            src={screen?.src}
-            alt={`screen-${screen?.id}`}
-            className="object-contain w-full h-auto"
-            width={0}
-            height={0}
-            sizes="100vw"
-          />
-          {/* Canvas overlay */}
-          <canvas
-            ref={canvasRef}
-            className="absolute z-0 left-0 top-0 pointer-events-none"
-            style={{ imageRendering: "crisp-edges" }}
-          />
-        </div>
-      </figure>
+            {boxes.map((box: any, index: number) => (
+              <BoundingBox
+                key={box.id + index}
+                x={box.x}
+                y={box.y}
+                width={box.width}
+                height={box.height}
+                id={box.id}
+                onClick={() => console.log(`Clicked box ${box.id}`)}
+                onHover={() => console.log(`Hovered over box ${box.id}`)}
+              />
+            ))}
+          </svg>
+        )}
+      </div>
     </>
   );
 }

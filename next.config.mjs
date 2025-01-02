@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
+import createMDX from '@next/mdx';
+
 const nextConfig = {
+  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   images: {
     remotePatterns: [
       {
@@ -9,9 +12,18 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "*.amazonaws.com"
+      },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com"
       }
     ],
   },
 };
 
-export default nextConfig;
+const withMDX = createMDX({
+  // Add markdown plugins here, as desired
+})
+
+// Merge MDX config with Next.js config
+export default withMDX(nextConfig);

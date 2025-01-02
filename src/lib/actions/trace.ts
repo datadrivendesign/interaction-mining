@@ -2,7 +2,6 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { Trace } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 
 export type TraceWithAppsScreens = Prisma.TraceGetPayload<{
