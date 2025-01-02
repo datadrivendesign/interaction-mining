@@ -79,7 +79,6 @@ export function GallerySearch() {
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
         />
-        <button></button>
       </span>
     </>
   );
