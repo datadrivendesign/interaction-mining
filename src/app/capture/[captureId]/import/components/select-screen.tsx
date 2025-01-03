@@ -4,14 +4,15 @@ import React, {
   useCallback,
   useContext,
   useState,
-  Children,
-  isValidElement,
-  cloneElement,
   useId,
 } from "react";
+import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
-import { DndContext, useDroppable, useDraggable } from '@dnd-kit/core';
+import { DndContext, useDroppable, useDraggable, DragStartEvent, DragMoveEvent, DragEndEvent } from '@dnd-kit/core';
 import clsx from "clsx";
+
+import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
+import { Screen } from "@prisma/client";
 
 const GalleryContext = createContext<{
   selection: {
@@ -33,11 +34,9 @@ const GalleryContext = createContext<{
 });
 
 export default function SelectScreen({
-  className,
-  children,
+  data
 }: {
-  className?: string;
-  children?: React.ReactNode | ((index: number) => React.ReactNode);
+  data: Trace;
 }) {
   const id = useId();
   const [isShift, setIsShift] = useState(false);
@@ -103,8 +102,8 @@ export default function SelectScreen({
     setSelection(newSelection);
   };
 
-  const handleDragStart = (event: any) => {
-    const index = event.active.data.current.index;
+  const handleDragStart = (event: DragStartEvent) => {
+    const index = event.active.data.current!.index;
     if (selection.root !== null && isShift) {
       handleShiftSelection(index);
     }
@@ -116,27 +115,27 @@ export default function SelectScreen({
     }
   }
 
-  const handleDragMove = (event: any) => {
+  const handleDragMove = (event: DragMoveEvent) => {
     const { over } = event;
 
     if (!over) {
       return;
     }
 
-    const index = over.data.current.index;
+    const index = over.data.current!.index;
     if (selection.root !== null) {
       handleRangeSelection(selection.root, index);
     }
   }
 
-  const handleDragEnd = (event: any) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { over } = event;
 
     if (!over) {
       return;
     }
 
-    const index = over.data.current.index;
+    const index = over.data.current!.index;
     if (selection.root !== null && over) {
       if (isShift) {
         handleShiftSelection(index);
@@ -146,22 +145,6 @@ export default function SelectScreen({
     }
   }
 
-  const indexedChildren =
-    typeof children === "function"
-      ? Array.from({ length: React.Children.count(children) }, (_, index) =>
-        children(index)
-      )
-      : Children.map(children, (child, index) => {
-        if (isValidElement(child)) {
-          return cloneElement(
-            child as React.ReactElement<{ index: number }>,
-            {
-              index,
-            }
-          );
-        }
-        return child; // Leave non-React elements untouched
-      });
 
   return (
     <>
@@ -180,8 +163,22 @@ export default function SelectScreen({
         >
           {/* @ts-ignore keyMap has some weird prop discrepancy */}
           <GlobalHotKeys keyMap={keymap} handlers={handlers}>
-            <ul className={clsx("grid grid-cols-3", className)}>
-              {indexedChildren}
+            <ul className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {data.screens?.map((screen: Screen, index: number) => (
+                <SelectScreenItem key={screen.id} index={index}>
+                  <div className="relative w-full h-full bg-neutral-900">
+                    <Image
+                      src={screen.src}
+                      alt="gallery"
+                      draggable={false}
+                      className="z-0 object-cover w-full h-auto"
+                      width={0}
+                      height={0}
+                      sizes="100vw"
+                    />
+                  </div>
+                </SelectScreenItem>
+              ))}
             </ul>
           </GlobalHotKeys>
         </GalleryContext.Provider>
@@ -232,7 +229,7 @@ export function SelectScreenItem({
         className={clsx(
           "relative w-full h-full rounded-lg overflow-clip transition-all duration-200 ease-in-out select-none",
           selection.root === index || selection.items.includes(index)
-            ? "outline outline-[3] outline-yellow-400 grayscale-0"
+            ? "outline-3 outline-yellow-400 grayscale-0"
             : "grayscale"
         )}
       >

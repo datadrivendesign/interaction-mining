@@ -139,7 +139,7 @@ export default function RootLayout({
           inter.variable,
           interDisplay.variable,
           robotoMono.variable,
-          "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans text-black"
+          "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans bg-white text-black dark:bg-black dark:text-white"
         )}
       >
         {children}

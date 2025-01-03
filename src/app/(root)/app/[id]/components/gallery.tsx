@@ -64,7 +64,7 @@ export function Gallery({ traceId }: { traceId: string }) {
   }, [traceId, data, setInspectData]);
 
   return (
-    <div className="flex grow w-full max-w-screen-2xl h-full place-self-center md:px-16 gap-2">
+    <div className="flex grow w-full max-w-(--breakpoint-2xl) h-full place-self-center md:px-16 gap-2">
       <aside className="flex flex-col grow shrink-0 basis-full md:basis-[320px] p-2 md:p-0">
         {data.map((data, index) => (
           <div
@@ -188,7 +188,7 @@ export function InspectView({ data }: { data: Trace }) {
             {data?.screens.map((screen: Screen, index: number) => (
               <figure
                 key={index}
-                className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-sm overflow-clip"
+                className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-xs overflow-clip"
               >
                 <motion.div
                   animate={{ opacity: loading.status === "loading" ? 1 : 0 }}

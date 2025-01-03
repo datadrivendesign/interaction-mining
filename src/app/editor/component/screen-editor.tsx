@@ -37,7 +37,7 @@ export default function ScreenEditor({
           </button>
         </Sheet.Trigger>
         <Sheet.Portal>
-          <Sheet.Overlay className="data-[state=open]:backdrop-blur" />
+          <Sheet.Overlay className="data-[state=open]:backdrop-blur-sm" />
           <Sheet.Content
             className={clsx(
               "fixed z-50 flex justify-center w-full max-w-screen h-full max-h-screen bg-background shadow-lg overflow-hidden transition ease-in-out",
@@ -45,7 +45,7 @@ export default function ScreenEditor({
             )}
           >
             {/* <Sheet.Title asChild>
-              <div className="sticky top-0 flex w-full max-w-screen-xl justify-between px-6 pt-6 pb-2 md:px-8 md:pt-8 md:pb-2 bg-white">
+              <div className="sticky top-0 flex w-full max-w-(--breakpoint-xl) justify-between px-6 pt-6 pb-2 md:px-8 md:pt-8 md:pb-2 bg-white">
                 <h1 className="text-2xl text-black font-extrabold tracking-tight">
                   Redact Screen
                 </h1>
@@ -55,7 +55,7 @@ export default function ScreenEditor({
 
             <aside className="sticky top-0 hidden md:flex grow-0 xl:grow shrink-0 basis-64 h-full justify-end items-start bg-neutral-100 dark:bg-neutral-900 overflow-y-auto">
               <div className="flex flex-col w-64 px-2 py-6 md:py-8 gap-4 justify-start items-start">
-                <Sheet.Close className="inline-flex justify-center items-center ml-2 aspect-square rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+                <Sheet.Close className="inline-flex justify-center items-center ml-2 aspect-square rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
                   <X className="size-4" />
                   <span className="sr-only">Close</span>
                 </Sheet.Close>
@@ -71,7 +71,7 @@ export default function ScreenEditor({
                       view === "keyword"
                         ? "bg-neutral-200 dark:bg-neutral-800"
                         : "bg-transparent"
-                    } hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg outline-none focus:outline-none`}
+                    } hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg outline-hidden focus:outline-hidden`}
                     onClick={() => setView("keyword")}
                   >
                     <span className="inline-flex items-center text-sm text-black dark:text-white">
@@ -84,7 +84,7 @@ export default function ScreenEditor({
                       view === "box"
                         ? "bg-neutral-200 dark:bg-neutral-800"
                         : "bg-transparent"
-                    } hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg outline-none focus:outline-none`}
+                    } hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg outline-hidden focus:outline-hidden`}
                     onClick={() => setView("box")}
                   >
                     <span className="inline-flex items-center text-sm text-black dark:text-white">
@@ -186,10 +186,10 @@ function KeywordRedactionView({
           Redact Metadata by Keyword
         </h2>
         <div className="flex justify-between">
-          <span className="inline-flex w-full max-w-xs items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75">
+          <span className="inline-flex w-full max-w-xs items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-focus:ring-2 has-focus:ring-blue-500 rounded-lg transition-all duration-75">
             <Search size={16} className="text-neutral-400 mr-2" />
             <input
-              className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
+              className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-hidden"
               placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
