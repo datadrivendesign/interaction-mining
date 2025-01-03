@@ -186,7 +186,7 @@ export default function Page() {
       >
         <main className="relative flex flex-col grow items-center justify-between">
           <section className="relative flex flex-col grow w-full">
-            <div className="flex w-full max-w-screen-2xl self-center items-center mb-4 px-4 md:px-16">
+            <div className="flex w-full max-w-(--breakpoint-2xl) self-center items-center mb-4 px-4 md:px-16">
               <div className="flex flex-col grow w-full h-full">
                 <span className="inline-flex items-center gap-2">
                   {titleState.mode === "display" && (
@@ -205,9 +205,9 @@ export default function Page() {
                   )}
                   {titleState.mode === "edit" && (
                     <>
-                      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75 ">
+                      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-focus:ring-2 has-focus:ring-blue-500 rounded-lg transition-all duration-75 ">
                         <input
-                          className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
+                          className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-hidden"
                           placeholder="Trace title"
                           value={titleState.value}
                           onChange={(e) =>
@@ -278,9 +278,9 @@ export default function Page() {
                     </p>
                   )}
                   {descriptionState.mode === "edit" && (
-                    <span className="inline-flex w-full items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75 ">
+                    <span className="inline-flex w-full items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-focus:ring-2 has-focus:ring-blue-500 rounded-lg transition-all duration-75 ">
                       <textarea
-                        className="w-full text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
+                        className="w-full text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-hidden"
                         placeholder="Trace description"
                         value={descriptionState.value || ""}
                         onChange={(e) =>
@@ -402,7 +402,7 @@ function ScreenItem({ screen }: { screen: Screen }) {
 
   return (
     <>
-      <figure className="group relative flex flex-col shrink-0 w-64 border border-neutral-500/10 rounded-lg shadow-sm overflow-clip">
+      <figure className="group relative flex flex-col shrink-0 w-64 border border-neutral-500/10 rounded-lg shadow-xs overflow-clip">
         <div
           className={classNames(
             "absolute z-10 top-2 left-2 flex gap-2 transition-opacity duration-100",

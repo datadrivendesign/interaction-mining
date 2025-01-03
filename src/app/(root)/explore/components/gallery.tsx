@@ -71,10 +71,10 @@ export function GallerySearch() {
 
   return (
     <>
-      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75 ">
+      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-focus:ring-2 has-focus:ring-blue-500 rounded-lg transition-all duration-75 ">
         <Search size={16} className="text-neutral-400 mr-2" />
         <input
-          className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
+          className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-hidden"
           placeholder="Search"
           value={search}
           onChange={(e) => handleSearch(e.target.value)}

@@ -5,7 +5,7 @@ export default function Download() {
   return (
     <>
       <main className="relative flex flex-col grow min-h-screen items-center justify-between">
-        <section className="relative flex w-full max-w-screen-xl p-16 gap-16">
+        <section className="relative flex w-full max-w-(--breakpoint-xl) p-16 gap-16">
           <div className="flex flex-col items-start w-full">
             <h1
               id="getting-started"

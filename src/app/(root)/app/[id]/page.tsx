@@ -31,7 +31,7 @@ export default async function AppPage({
     <GalleryRoot data={traces}>
       <main className="relative flex flex-col grow items-center justify-between">
         <section className="relative flex flex-col grow w-full">
-          <div className="flex w-full max-w-screen-2xl self-center items-center mb-4 px-4 md:px-16">
+          <div className="flex w-full max-w-(--breakpoint-2xl) self-center items-center mb-4 px-4 md:px-16">
             <Image
               src={app.icon}
               alt={`${app?.name} icon`}
