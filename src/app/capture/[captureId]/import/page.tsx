@@ -1,22 +1,21 @@
 "use client";
-import { useEffect, useReducer, useState } from "react";
-import Image from "next/image";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import { ChevronRight, Loader2 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import Sheet from "./components/sheet";
-
-import SelectScreenDoc from "./components/select-screen.mdx";
-import SelectScreen, { SelectScreenItem } from "./components/select-screen";
-import RepairScreen, { RepairScreenItem } from "./components/repair-screen";
-import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
-import RepairInteractionsDoc from "./components/repair-interactions.mdx";
+import { useMeasure } from "@uidotdev/usehooks";
 
 import { getTrace } from "@/lib/actions/trace";
 import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
-import { Screen } from "@prisma/client";
-import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+import Sheet from "./components/sheet";
+import SelectScreen from "./components/select-screen";
+import RepairScreen from "./components/repair-screen";
+import SelectScreenDoc from "./components/select-screen.mdx";
+import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
+import RepairInteractionsDoc from "./components/repair-interactions.mdx";
+
 
 const container = {
   enter: {
@@ -68,8 +67,7 @@ const traceSteps = [
   }
 ]
 
-
-function stepReducer(state: any, action: number) {
+const stepReducer = (state: any, action: number) => {
   if (action !== state.index) {
     return {
       index: action,
@@ -80,10 +78,10 @@ function stepReducer(state: any, action: number) {
   return state;
 }
 
-function loadingReducer(state: any, action: {
+const loadingReducer = (state: any, action: {
   type: "SET_LOADED" | "SET_MESSAGE";
   payload?: any;
-}) {
+}) => {
   if (action.type === "SET_LOADED" && action.payload) {
     return {
       ...state,
@@ -104,6 +102,8 @@ function loadingReducer(state: any, action: {
 export default function Page() {
   const params = useParams();
   const captureId = params.captureId as string;
+
+  const [navRef, { width, height }] = useMeasure();
 
   const [loading, setLoading] = useReducer(loadingReducer, {
     isLoaded: false,
@@ -126,7 +126,6 @@ export default function Page() {
       setStepState(stepState.index - 1);
     }
   }
-
   // >>> DUMMY DRIVER CODE
 
   async function getCaptureSession(captureId: string) {
@@ -141,7 +140,7 @@ export default function Page() {
   useEffect(() => {
     getCaptureSession(captureId).then((capture) => {
       if (capture) {
-        setCapture(capture);
+        setCapture(capture as Trace);
         setLoading({ type: "SET_LOADED", payload: true });
       }
     });
@@ -151,7 +150,7 @@ export default function Page() {
 
   return (
     <>
-      <main className="relative flex flex-col min-w-screen min-h-screen bg-white dark:bg-black">
+      <main className="relative flex flex-col min-w-screen min-h-screen bg-white dark:bg-black" style={{ "--nav-height": `${height}px` } as React.CSSProperties}>
         {
           loading.isLoaded ? (
             <>
@@ -161,7 +160,7 @@ export default function Page() {
                     {traceSteps[stepState.index].content}
                   </article>
                 </aside>
-                <div className="flex flex-col grow w-full p-8 justify-center items-center over">
+                <div className="flex flex-col grow w-full justify-center items-center">
                   {
                     stepState.index === 0 ? (
                       <SelectScreen data={capture} />
@@ -175,6 +174,7 @@ export default function Page() {
                 </div>
               </div>
               <nav
+                ref={navRef}
                 className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
               >
                 <div className="flex gap-2 items-center">
@@ -235,7 +235,7 @@ export default function Page() {
             </>
           ) : (
             <div className="flex flex-col grow justify-center items-center w-full h-full">
-              <Loader2 className="text-500 size-8 animate-spin" />
+              <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
               <h1 className="text-xl md:text-2xl font-bold tracking-tight">{loading.message}</h1>
             </div >
 
