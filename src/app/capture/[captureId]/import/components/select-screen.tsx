@@ -163,23 +163,25 @@ export default function SelectScreen({
         >
           {/* @ts-ignore keyMap has some weird prop discrepancy */}
           <GlobalHotKeys keyMap={keymap} handlers={handlers}>
-            <ul className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {data.screens?.map((screen: Screen, index: number) => (
-                <SelectScreenItem key={screen.id} index={index}>
-                  <div className="relative w-full h-full bg-neutral-900">
-                    <Image
-                      src={screen.src}
-                      alt="gallery"
-                      draggable={false}
-                      className="z-0 object-cover w-full h-auto"
-                      width={0}
-                      height={0}
-                      sizes="100vw"
-                    />
-                  </div>
-                </SelectScreenItem>
-              ))}
-            </ul>
+            <div className="w-full h-full p-8">
+              <ul className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {data.screens?.map((screen: Screen, index: number) => (
+                  <SelectScreenItem key={screen.id} index={index}>
+                    <div className="relative w-full h-full bg-neutral-900">
+                      <Image
+                        src={screen.src}
+                        alt="gallery"
+                        draggable={false}
+                        className="z-0 object-cover w-full h-auto"
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                      />
+                    </div>
+                  </SelectScreenItem>
+                ))}
+              </ul>
+            </div>
           </GlobalHotKeys>
         </GalleryContext.Provider>
       </DndContext >
