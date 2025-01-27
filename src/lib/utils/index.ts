@@ -1,4 +1,4 @@
-import * as cn from './cn';
+import { cn } from './cn';
 import * as date from './date';
 import * as number from './number';
 
