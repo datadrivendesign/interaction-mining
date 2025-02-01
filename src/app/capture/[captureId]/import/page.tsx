@@ -171,6 +171,11 @@ export default function Page() {
                       <RepairScreen data={capture} />
                     ) : null
                   }
+                   {
+                    stepState.index === 2 ? (
+                      <RepairScreen data={capture} />
+                    ) : null
+                  }
                 </div>
               </div>
               <nav

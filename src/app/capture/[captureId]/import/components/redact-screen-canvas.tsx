@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { Check, ChevronsUpDown, Circle, MousePointerClick } from "lucide-react";
+import { Check, ChevronsUpDown, Eraser, MousePointerClick, Pencil } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMouse } from "@uidotdev/usehooks";
 import { DndContext, useDraggable, useDroppable, DragMoveEvent, DragEndEvent } from "@dnd-kit/core";
@@ -27,12 +27,13 @@ import {
 import clsx from "clsx";
 
 
-export default function RepairScreenCanvas({ screen }: { screen: Screen }) {
+export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
   const [mouse, ref] = useMouse();
   const [tooltip, setTooltip] = useState<{ x: number | null; y: number | null }>({
     x: null,
     y: null
   });
+  const [mode, setMode] = useState<"pencil" | "eraser">("pencil");
 
   const [gestureMarker, setGestureMarker] = useState<{ x: number | null; y: number | null }>({
     x: null,
@@ -59,48 +60,63 @@ export default function RepairScreenCanvas({ screen }: { screen: Screen }) {
   return (
     <>
       <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
-        <div
-          className="relative w-auto h-full p-4"
-          style={{ "--marker-radius": "1rem" } as React.CSSProperties}
-        >
-          <DroppableArea>
-            <AnimatePresence>
-              {/* Only show floating tooltip when no marker is placed  */}
-              {
-                (tooltip!.x && tooltip!.y) &&
-                  (!gestureMarker.x && !gestureMarker.y) ? (
-                  <motion.div
-                    className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
-                    initial={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
-                    animate={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 1 }}
-                    exit={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
-                    transition={{ duration: 0.05 }}
-                  >
-                    <span className="text-xs font-medium">Add a gesture</span>
-                  </motion.div>
-                ) : null
-              }
-            </AnimatePresence>
-            {(gestureMarker.x !== null && gestureMarker.y !== null) ? (
-              <DraggableMarker
-                position={gestureMarker}
+        <div className="relative flex w-full h-full justify-center items-center">
+          {/* Toolbar */}
+          <aside className="absolute z-50 left-8 flex flex-col justify-center h-full">
+            <div className="flex flex-col p-4 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md">
+              <button>
+                <Pencil className="h-6 w-6" />
+              </button>
+              <button>
+                <Eraser className="h-6 w-6" />
+              </button>
+            </div>
+          </aside>
+          {/* Canvas */}
+          <div
+            className="relative w-auto h-full p-4"
+            style={{ "--marker-radius": "0.75rem" } as React.CSSProperties}
+          >
+
+            <DroppableArea>
+              <AnimatePresence>
+                {/* Only show floating tool */}
+                {
+                  (tooltip!.x && tooltip!.y) &&
+                    (!gestureMarker.x && !gestureMarker.y) ? (
+                    <motion.div
+                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                      initial={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
+                      animate={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 1 }}
+                      exit={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
+                      transition={{ duration: 0.05 }}
+                    >
+                      <span className="text-xs font-medium">Add a gesture</span>
+                    </motion.div>
+                  ) : null
+                }
+              </AnimatePresence>
+              {(gestureMarker.x !== null && gestureMarker.y !== null) ? (
+                <DraggableMarker
+                  position={gestureMarker}
+                />
+              ) : null}
+              <Image
+                ref={ref as React.MutableRefObject<HTMLImageElement | null>}
+                src={screen.src}
+                alt="gallery"
+                draggable={false}
+                className="w-fit h-full rounded-lg cursor-crosshair"
+                width={0}
+                height={0}
+                sizes="100vw"
+                onClick={handleImageClick}
+                onMouseMove={() => {
+                  setTooltip({ x: mouse.elementX, y: mouse.elementY });
+                }}
               />
-            ) : null}
-            <Image
-              ref={ref as React.MutableRefObject<HTMLImageElement | null>}
-              src={screen.src}
-              alt="gallery"
-              draggable={false}
-              className="w-fit h-full rounded-lg cursor-crosshair"
-              width={0}
-              height={0}
-              sizes="100vw"
-              onClick={handleImageClick}
-              onMouseMove={() => {
-                setTooltip({ x: mouse.elementX, y: mouse.elementY });
-              }}
-            />
-          </DroppableArea>
+            </DroppableArea>
+          </div>
         </div>
       </DndContext>
     </>
@@ -138,19 +154,18 @@ function DraggableMarker({
           transform: `translate3d(${transform?.x ?? 0}px, ${transform?.y ?? 0}px, 0)`,
         }}
         className={clsx(
-          "absolute z-50 flex justify-center items-center bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-colors duration-150 ease-in-out",
+          "absolute z-50 bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-opacity duration-150 ease-in-out",
           isDragging ? "cursor-grabbing" : "cursor-grab"
         )}
         {...listeners}
         {...attributes}
       >
-        <Circle className="size-4 text-yellow-800 hover:text-black" />
       </motion.div>
       <div
-        className="absolute z-50 ml-2"
+        className="absolute z-50 ml-4"
         style={{
-          left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
-          top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
+          left: `calc(${position.x ?? 0}px - var(--marker-radius))`,
+          top: `calc(${position.y ?? 0}px) - var(--marker-radius))`,
           transform: `translate3d(${transform?.x ?? 0}px, ${transform?.y ?? 0}px, 0)`,
         }}
       >
@@ -159,35 +174,26 @@ function DraggableMarker({
     </>
   );
 }
-
 const gestureOptions = [
   {
-    value: "Tap",
-    label: "Tap",
+    value: "Press",
+    label: "Press",
   },
   {
-    value: "Double tap",
-    label: "Double tap",
+    value: "Long press",
+    label: "Long press",
   },
   {
-    value: "Touch and hold",
-    label: "Touch and hold",
+    value: "Scroll",
+    label: "Scroll"
   },
   {
     value: "Swipe",
-    label: "Swipe"
+    label: "Swipe",
   },
   {
-    value: "Drag",
-    label: "Drag"
-  },
-  {
-    value: "Zoom",
-    label: "Zoom",
-  },
-  {
-    value: "Rotate",
-    label: "Rotate",
+    value: "Pinch",
+    label: "Pinch",
   }
 ]
 
@@ -199,7 +205,6 @@ function GestureSelection() {
     <Popover open={open} onOpenChange={setOpen} defaultOpen>
       <PopoverTrigger asChild>
         <Button
-          size="sm"
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -213,7 +218,7 @@ function GestureSelection() {
       </PopoverTrigger>
       <PopoverContent className="w-50 p-0">
         <Command>
-          <CommandInput placeholder="Search gestures..." />
+          <CommandInput placeholder="Search gesture..." />
           <CommandList>
             <CommandEmpty>No framework found.</CommandEmpty>
             <CommandGroup>

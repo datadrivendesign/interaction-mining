@@ -17,8 +17,9 @@ import {
 import { TraceWithAppsScreens as Trace } from "@/lib/actions";
 import { Screen } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import RedactScreenCanvas from "./redact-screen-canvas";
 
-export default function RepairScreen({
+export default function RedactScreen({
   data
 }: {
   data: Trace
@@ -40,7 +41,14 @@ export default function RepairScreen({
 
   return (
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
-      <ResizablePanelGroup direction="vertical">
+      <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
+          <Filmstrip
+            data={data}
+            handleFocusView={handleFocusView}
+          />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
         <ResizablePanel defaultSize={75}>
           {focusViewValue.current ? (
             <FocusView screen={focusViewValue.current} />
@@ -50,13 +58,6 @@ export default function RepairScreen({
             </div>
           )}
         </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
-          <Filmstrip
-            data={data}
-            handleFocusView={handleFocusView}
-          />
-        </ResizablePanel>
       </ResizablePanelGroup>
     </div>
   );
@@ -64,7 +65,7 @@ export default function RepairScreen({
 
 function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (index: number) => void }) {
   return (
-    <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+    <ul className="flex flex-col h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
       {data.screens?.map((screen, index) => (
         <FilmstripItem
           key={screen.id}
@@ -121,13 +122,14 @@ function FilmstripItem({
   );
 }
 
+
 function FocusView({ screen }: {
   screen: Screen;
 }) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
-        <RepairScreenCanvas screen={screen} />
+        <RedactScreenCanvas screen={screen} />
       </div>
     </>
   )
