@@ -42,7 +42,7 @@ export default function RedactScreen({
   return (
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
+        <ResizablePanel defaultSize={25} minSize={10} maxSize={75}>
           <Filmstrip
             data={data}
             handleFocusView={handleFocusView}
@@ -65,7 +65,7 @@ export default function RedactScreen({
 
 function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (index: number) => void }) {
   return (
-    <ul className="flex flex-col h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+    <ul className="grid grid-cols-3 h-full px-2 pt-2 pb-4 gap-2 overflow-y-auto">
       {data.screens?.map((screen, index) => (
         <FilmstripItem
           key={screen.id}
@@ -78,7 +78,7 @@ function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (i
             src={screen.src}
             alt="gallery"
             draggable={false}
-            className="h-full w-auto object-contain"
+            className="w-full h-auto object-contain"
             width={0}
             height={0}
             sizes="100vw"
@@ -103,17 +103,17 @@ function FilmstripItem({
   return (
     <>
       <li
-        className="cursor-pointer min-w-fit h-full"
+        className="cursor-pointer min-h-fit w-full"
         data-index={index}
         {...props}
       >
-        <div className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
+        <div className="relative min-h-fit w-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
           {(isBroken) && (
             <div className="absolute z-10 flex w-full h-full justify-center items-center rounded-sm ring-2 ring-inset ring-red-400">
               <CircleAlert className="size-6 text-red-400" />
             </div>
           )}
-          <div className={cn("relative min-w-fit h-full transition-all duration-200 ease-in-out select-none", isBroken ? "grayscale brightness-50" : "grayscale-0 brightness-100")}>
+          <div className={cn("relative min-h-fit w-full transition-all duration-200 ease-in-out select-none", isBroken ? "grayscale brightness-50" : "grayscale-0 brightness-100")}>
             {children}
           </div>
         </div>

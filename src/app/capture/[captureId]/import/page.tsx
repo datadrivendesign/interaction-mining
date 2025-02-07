@@ -15,6 +15,7 @@ import RepairScreen from "./components/repair-screen";
 import SelectScreenDoc from "./components/select-screen.mdx";
 import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
 import RepairInteractionsDoc from "./components/repair-interactions.mdx";
+import RedactScreen from "./components/redact-screen";
 
 
 const container = {
@@ -173,7 +174,7 @@ export default function Page() {
                   }
                    {
                     stepState.index === 2 ? (
-                      <RepairScreen data={capture} />
+                      <RedactScreen data={capture} />
                     ) : null
                   }
                 </div>
