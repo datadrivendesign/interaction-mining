@@ -12,14 +12,10 @@ import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 import SelectScreen from "./components/select-screen";
 import RepairScreen from "./components/repair-screen";
+import RedactScreen from "./components/redact-screen";
 import SelectScreenDoc from "./components/select-screen.mdx";
 import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
 import RepairInteractionsDoc from "./components/repair-interactions.mdx";
-<<<<<<< Updated upstream
-=======
-import RedactScreen from "./components/redact-screen";
->>>>>>> Stashed changes
-
 
 const container = {
   enter: {
@@ -36,7 +32,7 @@ const container = {
 const item = {
   enter: {
     opacity: 0,
-    filter: "blur-sm(10px)"
+    filter: "blur-sm(10px)",
   },
   show: {
     opacity: 1,
@@ -68,8 +64,8 @@ const traceSteps = [
     title: "Review",
     description: "Review the trace and finish the trace creation process.",
     content: <SelectScreenDoc />,
-  }
-]
+  },
+];
 
 const stepReducer = (state: any, action: number) => {
   if (action !== state.index) {
@@ -80,12 +76,15 @@ const stepReducer = (state: any, action: number) => {
   }
 
   return state;
-}
+};
 
-const loadingReducer = (state: any, action: {
-  type: "SET_LOADED" | "SET_MESSAGE";
-  payload?: any;
-}) => {
+const loadingReducer = (
+  state: any,
+  action: {
+    type: "SET_LOADED" | "SET_MESSAGE";
+    payload?: any;
+  }
+) => {
   if (action.type === "SET_LOADED" && action.payload) {
     return {
       ...state,
@@ -101,7 +100,7 @@ const loadingReducer = (state: any, action: {
   }
 
   return state;
-}
+};
 
 export default function Page() {
   const params = useParams();
@@ -123,13 +122,13 @@ export default function Page() {
     if (stepState.index < traceSteps.length - 1) {
       setStepState(stepState.index + 1);
     }
-  }
+  };
 
   const prevStep = () => {
     if (stepState.index > 0) {
       setStepState(stepState.index - 1);
     }
-  }
+  };
   // >>> DUMMY DRIVER CODE
 
   async function getCaptureSession(captureId: string) {
@@ -148,116 +147,109 @@ export default function Page() {
         setLoading({ type: "SET_LOADED", payload: true });
       }
     });
-<<<<<<< Updated upstream
   }, [captureId]);
-=======
-  }, []);
->>>>>>> Stashed changes
 
   // <<< DUMMY DRIVER CODE
 
   return (
     <>
-      <main className="relative flex flex-col min-w-screen min-h-screen bg-white dark:bg-black" style={{ "--nav-height": `${height}px` } as React.CSSProperties}>
-        {
-          loading.isLoaded ? (
-            <>
-              <div className="relative flex grow w-full gap-4">
-                <aside className="sticky top-0 left-0 hidden lg:flex flex-col shrink w-full h-full p-8 pr-0 max-w-xs">
-                  <article className="prose prose-neutral dark:prose-invert leading-snug">
-                    {traceSteps[stepState.index].content}
-                  </article>
-                </aside>
-                <div className="flex flex-col grow w-full justify-center items-center">
-                  {
-                    stepState.index === 0 ? (
-                      <SelectScreen data={capture} />
-                    ) : null
-                  }
-                  {
-                    stepState.index === 1 ? (
-                      <RepairScreen data={capture} />
-                    ) : null
-                  }
-<<<<<<< Updated upstream
-=======
-                   {
-                    stepState.index === 2 ? (
-                      <RedactScreen data={capture} />
-                    ) : null
-                  }
->>>>>>> Stashed changes
-                </div>
+      <main
+        className="relative flex flex-col min-w-screen min-h-screen bg-white dark:bg-black"
+        style={{ "--nav-height": `${height}px` } as React.CSSProperties}
+      >
+        {loading.isLoaded ? (
+          <>
+            <div className="relative flex grow w-full gap-4">
+              <aside className="sticky top-0 left-0 hidden lg:flex flex-col shrink w-full h-full p-8 pr-0 max-w-xs">
+                <article className="prose prose-neutral dark:prose-invert leading-snug">
+                  {traceSteps[stepState.index].content}
+                </article>
+              </aside>
+              <div className="flex flex-col grow w-full justify-center items-center">
+                {stepState.index === 0 ? <SelectScreen data={capture} /> : null}
+                {stepState.index === 1 ? <RepairScreen data={capture} /> : null}
+                {stepState.index === 2 ? <RedactScreen data={capture} /> : null}
               </div>
-              <nav
-                ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
-              >
-                <div className="flex gap-2 items-center">
-                  <h1
-                    className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50"
-                  >
-                    <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
-                      New Trace <ChevronRight className="size-6" />
-                    </span>
-                    <AnimatePresence mode="sync">
-                      <motion.div
+            </div>
+            <nav
+              ref={navRef}
+              className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
+            >
+              <div className="flex gap-2 items-center">
+                <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
+                  <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
+                    New Trace <ChevronRight className="size-6" />
+                  </span>
+                  <AnimatePresence mode="sync">
+                    <motion.div
+                      key={stepState.hash}
+                      variants={container}
+                      initial="enter"
+                      animate="show"
+                      exit="exit"
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 0.5,
+                      }}
+                    >
+                      <motion.span
                         key={stepState.hash}
-                        variants={container}
+                        className="inline-block text-neutral-950 dark:text-neutral-50"
+                        variants={item}
                         initial="enter"
                         animate="show"
                         exit="exit"
                         transition={{
                           type: "spring",
-                          stiffness: 500,
-                          damping: 30,
-                          mass: 0.5
+                          stiffness: 100,
+                          damping: 10,
+                          mass: 0.75,
                         }}
+                        layoutId="title"
+                        layoutRoot
                       >
-                        <motion.span
-                          key={stepState.hash}
-                          className="inline-block text-neutral-950 dark:text-neutral-50"
-                          variants={item}
-                          initial="enter"
-                          animate="show"
-                          exit="exit"
-                          transition={{
-                            type: "spring",
-                            stiffness: 100,
-                            damping: 10,
-                            mass: 0.75,
-                          }}
-                          layoutId="title"
-                          layoutRoot
-                        >
-                          {traceSteps[stepState.index].title}
-                        </motion.span>
-                      </motion.div>
-                    </AnimatePresence>
-                  </h1>
-                  <span className="block lg:hidden">
-                    <Sheet
-                      title={"Trace Creation Help"}
-                      description={traceSteps[stepState.index].description}
-                    >
-                      {traceSteps[stepState.index].content}
-                    </Sheet>
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={prevStep} disabled={stepState.index === 0}>Back</Button>
-                  <Button onClick={nextStep} disabled={stepState.index === (traceSteps.length - 1)}>Next</Button></div>
-              </nav>
-            </>
-          ) : (
-            <div className="flex flex-col grow justify-center items-center w-full h-full">
-              <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">{loading.message}</h1>
-            </div >
-
-          )
-        }
-      </main >
+                        {traceSteps[stepState.index].title}
+                      </motion.span>
+                    </motion.div>
+                  </AnimatePresence>
+                </h1>
+                <span className="block lg:hidden">
+                  <Sheet
+                    title={"Trace Creation Help"}
+                    description={traceSteps[stepState.index].description}
+                  >
+                    {traceSteps[stepState.index].content}
+                  </Sheet>
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={stepState.index === 0}
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={nextStep}
+                  disabled={stepState.index === traceSteps.length - 1}
+                >
+                  Next
+                </Button>
+              </div>
+            </nav>
+          </>
+        ) : (
+          <div className="flex flex-col grow justify-center items-center w-full h-full">
+            <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+              {loading.message}
+            </h1>
+          </div>
+        )}
+      </main>
     </>
   );
 }

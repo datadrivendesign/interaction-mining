@@ -2,10 +2,7 @@
 
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 import { cn } from "@/lib/utils"
 
 const Tabs = TabsPrimitive.Root
