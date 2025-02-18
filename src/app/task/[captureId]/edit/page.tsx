@@ -15,7 +15,10 @@ import RepairScreen from "./components/repair-screen";
 import SelectScreenDoc from "./components/select-screen.mdx";
 import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
 import RepairInteractionsDoc from "./components/repair-interactions.mdx";
+<<<<<<< Updated upstream
+=======
 import RedactScreen from "./components/redact-screen";
+>>>>>>> Stashed changes
 
 
 const container = {
@@ -145,7 +148,11 @@ export default function Page() {
         setLoading({ type: "SET_LOADED", payload: true });
       }
     });
+<<<<<<< Updated upstream
+  }, [captureId]);
+=======
   }, []);
+>>>>>>> Stashed changes
 
   // <<< DUMMY DRIVER CODE
 
@@ -172,11 +179,14 @@ export default function Page() {
                       <RepairScreen data={capture} />
                     ) : null
                   }
+<<<<<<< Updated upstream
+=======
                    {
                     stepState.index === 2 ? (
                       <RedactScreen data={capture} />
                     ) : null
                   }
+>>>>>>> Stashed changes
                 </div>
               </div>
               <nav
@@ -187,7 +197,7 @@ export default function Page() {
                   <h1
                     className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50"
                   >
-                    <span className="inline-flex items-center text-neutral-400 dark:text-neutral-500">
+                    <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
                       New Trace <ChevronRight className="size-6" />
                     </span>
                     <AnimatePresence mode="sync">

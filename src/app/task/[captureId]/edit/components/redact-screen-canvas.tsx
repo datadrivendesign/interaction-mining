@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Check, ChevronsUpDown, Eraser, MousePointerClick, Pencil } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { useMouse } from "@uidotdev/usehooks";
 import { DndContext, useDraggable, useDroppable, DragMoveEvent, DragEndEvent } from "@dnd-kit/core";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
