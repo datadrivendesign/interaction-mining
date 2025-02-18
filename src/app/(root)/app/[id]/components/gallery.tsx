@@ -11,7 +11,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import clsx from "clsx";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Download, Search } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
@@ -72,7 +72,7 @@ export function Gallery({ traceId }: { traceId: string }) {
             className={clsx(
               "flex flex-col p-3 md:p-4 cursor-pointer",
               inspectData?.id === data?.id
-                ? "bg-neutral-100 rounded-xl"
+                ? "bg-neutral-100 dark:bg-neutral-900 rounded-xl"
                 : "bg-transparent"
             )}
             onClick={() => setInspectData(data)}
@@ -86,7 +86,7 @@ export function Gallery({ traceId }: { traceId: string }) {
                   format: "LL/dd/yy",
                 })}
               </span>
-              <span className="text-sm md:text-base text-neutral-500 line-clamp-1">
+              <span className="text-sm md:text-base text-neutral-500 dark:text-neutral-400 line-clamp-1">
                 {data?.description}
               </span>
             </div>
@@ -98,8 +98,8 @@ export function Gallery({ traceId }: { traceId: string }) {
           <InspectView data={inspectData} />
         ) : (
           <div className="flex flex-col items-center justify-center w-full h-full">
-            <Search size={48} className="text-neutral-300 mb-2" />
-            <span className="text-lg font-semibold text-neutral-300 tracking-tight">
+            <Search size={48} className="text-neutral-500 dark:text-neutral-400 mb-2" />
+            <span className="text-lg font-semibold text-neutral-400 tracking-tight">
               Select a trace to inspect
             </span>
           </div>
