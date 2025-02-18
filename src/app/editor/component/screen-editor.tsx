@@ -278,11 +278,11 @@ function BoxRedactionView({
 }) {
   return (
     <>
-      <div className="sticky top-0 flex flex-col w-full md:max-w-[32rem] lg:max-w-[48rem] xl:max-w-[64rem] h-full max-h-screen px-6 pt-6 md:px-8 md:pt-8 pb-4 gap-2 bg-white">
-        <h2 className="text-2xl text-black font-extrabold tracking-tight">
+      <div className="sticky top-0 flex flex-col w-full md:max-w-[32rem] lg:max-w-[48rem] xl:max-w-[64rem] h-full max-h-screen px-6 pt-6 md:px-8 md:pt-8 pb-4 gap-2">
+        <h2 className="text-2xl font-extrabold tracking-tight">
           Redact by Bounding Box
         </h2>
-        <div className="flex flex-col w-64">
+        <div className="flex flex-col w-64 cursor-crosshair">
           <RenderedScreen screen={screen} hierarchyData={data} showRedaction />
         </div>
       </div>

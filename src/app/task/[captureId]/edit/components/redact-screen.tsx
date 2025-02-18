@@ -54,7 +54,7 @@ export default function RedactScreen({
             <FocusView screen={focusViewValue.current} />
           ) : (
             <div className="flex justify-center items-center w-full h-full">
-              <span className="text-3xl lg:text-4xl text-neutral-400 dark:text-neutral-500 font-semibold">Select a screen from the filmstrip.</span>
+              <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">Select a screen from the filmstrip.</span>
             </div>
           )}
         </ResizablePanel>
