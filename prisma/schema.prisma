@@ -98,3 +98,22 @@ model User{
   name        String?
   role        Role         @default(USER) 
 }
+
+model Task {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String   @map("app") @db.ObjectId
+  os      String
+  traces  String[] @db.ObjectId
+
+  @@map("tasks")
+}
+
+model Recording {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String   @map("app") @db.ObjectId
+  userId  String   @map("user") @db.ObjectId
+  otp     Int
+  src     String
+
+  @@map("recordings")
+}
