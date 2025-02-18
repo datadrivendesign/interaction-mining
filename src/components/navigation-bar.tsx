@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function NavigationBar() {
   return (
     <>
-      <nav className="sticky z-40 top-0 flex w-full justify-center bg-white">
+      <nav className="sticky z-40 top-0 flex w-full justify-center bg-white dark:bg-black">
         <div className="flex basis-screen-2xl px-8 md:px-16 py-4 justify-between">
           <div className="flex basis-1/2 h-full">
             <Link
@@ -17,12 +17,12 @@ export default function NavigationBar() {
           </div>
           <div className="flex basis-1/2 h-full gap-8 justify-end items-center">
             <Link href={"/explore"}>
-              <span className="inline-flex items-center text-sm text-black font-medium">
+              <span className="inline-flex items-center text-sm font-medium">
                 Explore
               </span>
             </Link>
             <Link href={"/download"}>
-              <span className="inline-flex items-center text-sm text-black font-medium">
+              <span className="inline-flex items-center text-sm font-medium">
                 Try ODIM
               </span>
             </Link>

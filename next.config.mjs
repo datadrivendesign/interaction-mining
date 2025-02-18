@@ -4,7 +4,8 @@ import createMDX from '@next/mdx';
 const nextConfig = {
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   webpack: (config) => {
-    config.externals = [...config.externals, { canvas: "canvas" }];  // required to make Konva & react-konva work
+    config.externals = [...config.externals, { canvas: "canvas" }]; 
+    config.resolve.fallback = { fs: false };
     return config;
   },
   images: {
@@ -20,6 +21,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "via.placeholder.com"
+      },
+      {
+        protocol: "https",
+        hostname: "*.mzstatic.com"
       }
     ],
   },
