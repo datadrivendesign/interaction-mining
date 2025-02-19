@@ -4,7 +4,7 @@ import createMDX from '@next/mdx';
 const nextConfig = {
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   webpack: (config) => {
-    config.externals = [...config.externals, { canvas: "canvas" }]; 
+    config.externals = [...config.externals, { canvas: "canvas" }];
     config.resolve.fallback = { fs: false };
     return config;
   },
@@ -27,6 +27,11 @@ const nextConfig = {
         hostname: "*.mzstatic.com"
       }
     ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
   },
 };
 
