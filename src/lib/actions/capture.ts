@@ -1,7 +1,6 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
-import { isObjectIdOrHexString } from "mongoose";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 import { prisma } from "@/lib/prisma";
@@ -18,28 +17,48 @@ export type CaptureWithTask = Prisma.CaptureGetPayload<{
   include: { task: true };
 }>;
 
-export async function getCapture(id: string): Promise<CaptureWithTask | null> {
-  let capture: CaptureWithTask | null = null;
+interface GetCaptureProps {
+  id?: string;
+  taskId?: string;
+  otp?: string;
+}
 
-  if (!id && !isObjectIdOrHexString(id)) {
-    return null;
+export async function getCapture({
+  id,
+  taskId,
+  otp,
+}: GetCaptureProps): Promise<CaptureWithTask> {
+  if (!id && !taskId && !otp) {
+    throw new Error("Either 'id', 'taskId', or 'otp' must be provided.");
   }
+
+  const query: Prisma.CaptureWhereInput = {
+    ...(id ? { id } : {}),
+    ...(taskId ? { taskId } : {}),
+    ...(otp ? { otp } : {}),
+  };
 
   try {
-    capture = (await prisma.capture.findUnique({
-      where: {
-        id,
-      },
+    let res = await prisma.capture.findFirst({
+      where: query,
       include: {
-        task: true,
+        task: {
+          include: {
+            traces: true,
+          },
+        },
       },
-    })) as CaptureWithTask;
-  } catch (err: any) {
-    console.error(err);
+    });
+
+    if (!res) {
+      return {} as CaptureWithTask;
+    }
+
+    return res;
+  } catch (err) {
+    console.error("Error fetching capture:", err);
     throw new Error("Failed to fetch capture.");
   }
-
-  return capture;
 }
 
 export async function uploadCaptureToS3(captureId: string, formData: FormData) {

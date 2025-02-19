@@ -7,7 +7,7 @@ export async function generateMetadata({
   params: Promise<{ captureId: string }>;
 }): Promise<Metadata> {
   const { captureId } = await params;
-  let capture = await getCapture(captureId);
+  let capture = await getCapture({ id: captureId });
 
   if (!capture) {
     throw new Error("Capture not found.");
