@@ -95,15 +95,15 @@ export function Gallery({ children }: { children?: React.FC<any> }) {
           className="flex w-full"
         >
           <Image
-            src={app.icon}
-            alt={`${app.name} icon`}
+            src={app.metadata.icon}
+            alt={`${app.metadata.name} icon`}
             width={48}
             height={48}
             className="rounded-xl mr-4 drop-shadow-md"
           />
           <div className="flex flex-col justify-center">
             <h2 className="text-base font-semibold line-clamp-1 leading-tight">
-              {app.name}
+              {app.metadata.name}
             </h2>
             <span className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-1 leading-tight">
               {app.company}

@@ -1,26 +1,23 @@
-import Image from "next/image";
 import { App } from "@prisma/client";
-
-import {
-  GalleryRoot,
-  GallerySearch,
-  Gallery,
-} from "@/app/(root)/explore/components/gallery";
+import { GalleryRoot, GallerySearch, Gallery } from "@/app/(root)/explore/components/gallery";
 import { getApps } from "@/lib/actions";
-// import { prettyNumber } from "@/lib/utils/number";
-
-// const prettyDownloadNumber = (downloads: string) => {
-//   // strip "+" from downloads
-//   downloads = downloads.replace("+", "");
-//   downloads = downloads.replace(/,/g, "");
-//   return `${prettyNumber(parseInt(downloads, 10))}`;
-// };
 
 export default async function Explore() {
-  let apps: App[] = await getApps({
-    limit: 100,
-    order: "rating",
-  });
+  let apps: App[] = [];
+
+  try {
+    apps = await getApps();
+  } catch (error) {
+    console.error("Failed to fetch apps:", error);
+  }
+
+  if (!apps || apps.length === 0) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <h1>No apps available</h1>
+      </div>
+    );
+  }
 
   return (
     <GalleryRoot data={apps}>
@@ -32,7 +29,7 @@ export default async function Explore() {
             </h1>
             <GallerySearch />
           </div>
-          <Gallery/>
+          <Gallery />
         </section>
       </main>
     </GalleryRoot>
