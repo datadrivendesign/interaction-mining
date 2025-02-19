@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Image from "next/image";
 import * as Sheet from "@radix-ui/react-dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { Search, Eraser, X, TextCursorInput, Grid2x2X } from "lucide-react";
@@ -11,7 +12,6 @@ import {
   redactByKeyword,
   redactByPath,
 } from "../util/view-hierarchy";
-import { RenderedScreen } from "../page";
 import { Button } from "@/components/ui/button";
 import { uploadViewHierarchy } from "@/lib/aws";
 
@@ -122,12 +122,6 @@ function KeywordRedactionView({
   fetchData: () => void;
 }) {
   const [sensitiveFields, setSensitiveFields] = useState<any>([]);
-  // const sensitiveFields = useMemo(() => {
-  //   if (data) {
-  //     return extractSensitiveFields(data);
-  //   }
-  //   return [];
-  // }, [data]);
   const [search, setSearch] = useState("");
   const [filteredFieldList, setFilteredFieldList] = useState(sensitiveFields);
 
@@ -176,7 +170,7 @@ function KeywordRedactionView({
         throw err;
       }
     },
-    [data]
+    [data, handleSave]
   );
 
   return (
@@ -195,7 +189,6 @@ function KeywordRedactionView({
               onChange={(e) => setSearch(e.target.value)}
             />
           </span>
-          {/* <Button onClick={handleSave}>Save</Button> */}
         </div>
       </div>
       <ul className="flex flex-col w-full md:max-w-[32rem] lg:max-w-[48rem] xl:max-w-[64rem] h-full px-2 pb-6 md:px-4 md:pb-8">
@@ -285,6 +278,168 @@ function BoxRedactionView({
         <div className="flex flex-col w-64 cursor-crosshair">
           <RenderedScreen screen={screen} hierarchyData={data} showRedaction />
         </div>
+      </div>
+    </>
+  );
+}
+
+
+function BoundingBox({
+  x,
+  y,
+  width,
+  height,
+  id,
+  onClick,
+  onHover,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  id: string;
+  onClick: () => void;
+  onHover: () => void;
+}) {
+  const [redacted, setRedacted] = useState(false);
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={redacted ? "black" : "transparent"}
+      stroke="red"
+      strokeWidth="1"
+      onClick={()=> setRedacted(!redacted)}
+      onMouseOver={onHover}
+      style={{ pointerEvents: "auto" }}
+    />
+  );
+}
+
+// Main RenderedScreen component
+export function RenderedScreen({
+  screen,
+  hierarchyData,
+  showRedaction = false,
+}: {
+  screen: Screen;
+  hierarchyData?: any;
+  showRedaction?: boolean;
+}) {
+  const [image, setImage] = useState<string>("");
+  // Refs for the image and SVG elements
+  const imgContainerRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // Extract bounding boxes from hierarchy data
+  const { boxes, rootBounds } = useMemo(() => {
+    if (!hierarchyData) return { boxes: [], rootBounds: null };
+
+    const boxes: any = [];
+    let rootBounds: any = null;
+
+    function traverse(node: any) {
+      if (node.bounds_in_screen) {
+        const [left, top, right, bottom] = node.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        const width = right - left;
+        const height = bottom - top;
+        const x = left;
+        const y = top;
+
+        // If rootBounds is not set, this is the root node
+        if (!rootBounds) {
+          rootBounds = { x, y, width, height };
+        }
+
+        boxes.push({
+          x,
+          y,
+          width,
+          height,
+          id: node.id || Math.random().toString(),
+        });
+      }
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => traverse(child));
+      }
+    }
+    traverse(hierarchyData);
+    return { boxes, rootBounds };
+  }, [hierarchyData]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    const svg = svgRef.current;
+    if (!img || !svg) return;
+
+    // // Convert image to blob URL from image URL
+    // fetchImageAsBase64(screen.src).then((data) => {
+    //   setImage(data);
+    // }).catch(console.error);
+
+    // Use ResizeObserver to synchronize SVG dimensions with image dimensions
+    const resizeObserver = new ResizeObserver(() => {
+      svg.style.width = `${img.clientWidth}px`;
+      svg.style.height = `${img.clientHeight}px`;
+    });
+
+    resizeObserver.observe(img);
+
+    // Cleanup observer
+    return () => {
+      resizeObserver.unobserve(img);
+    };
+  }, []);
+
+  if (!rootBounds) {
+    return null; // Render nothing if rootBounds is not available
+  }
+
+  return (
+    <>
+      {/* Image container */}
+      <div ref={imgContainerRef} style={{ position: "relative" }}>
+        <Image
+          ref={imgRef}
+          src={screen.src}
+          alt={`screen-${screen?.id}`}
+          className="object-cover w-full h-auto" // Ensures consistent scaling with SVG
+          width={0}
+          height={0}
+          sizes="100vw"
+        />
+        {/* SVG overlay for bounding boxes */}
+        {showRedaction && (
+          <svg
+            ref={svgRef}
+            viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
+            preserveAspectRatio="xMinYMin meet"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              pointerEvents: "none",
+            }}
+          >
+            {boxes.map((box: any, index: number) => (
+              <BoundingBox
+                key={box.id + index}
+                x={box.x}
+                y={box.y}
+                width={box.width}
+                height={box.height}
+                id={box.id}
+                onClick={() => console.log(`Clicked box ${box.id}`)}
+                onHover={() => console.log(`Hovered over box ${box.id}`)}
+              />
+            ))}
+          </svg>
+        )}
       </div>
     </>
   );
