@@ -100,10 +100,11 @@ model User{
 }
 
 model Task {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  appId   String   @map("app") @db.ObjectId
-  os      String
-  traces  String[] @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  appId       String   @map("app") @db.ObjectId
+  description String
+  os          String
+  traces      String[] @db.ObjectId
 
   @@map("tasks")
 }
