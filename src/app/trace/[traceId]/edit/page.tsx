@@ -104,7 +104,7 @@ const loadingReducer = (
 
 export default function Page() {
   const params = useParams();
-  const captureId = params.captureId as string;
+  const traceId = params.traceId as string;
 
   const [navRef, { width, height }] = useMeasure();
 
@@ -131,8 +131,8 @@ export default function Page() {
   };
   // >>> DUMMY DRIVER CODE
 
-  async function getCaptureSession(captureId: string) {
-    const trace = await getTrace(captureId);
+  async function getCaptureSession(traceId: string) {
+    const trace = await getTrace(traceId);
     if (trace) {
       console.log(trace);
       return trace;
@@ -141,13 +141,13 @@ export default function Page() {
 
   // Data fetching
   useEffect(() => {
-    getCaptureSession(captureId).then((capture) => {
+    getCaptureSession(traceId).then((capture) => {
       if (capture) {
         setCapture(capture as Trace);
         setLoading({ type: "SET_LOADED", payload: true });
       }
     });
-  }, [captureId]);
+  }, [traceId]);
 
   // <<< DUMMY DRIVER CODE
 
