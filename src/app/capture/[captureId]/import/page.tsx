@@ -145,7 +145,7 @@ export default function Page() {
         setLoading({ type: "SET_LOADED", payload: true });
       }
     });
-  }, []);
+  }, [captureId]);
 
   // <<< DUMMY DRIVER CODE
 
