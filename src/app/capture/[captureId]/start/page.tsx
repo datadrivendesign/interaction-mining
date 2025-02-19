@@ -82,8 +82,8 @@ export default function Page() {
                 </h2>
                 <p className="text-base text-neutral-500 dark:text-neutral-400 font-medium mb-4">
                   Go to{" "}
-                  <Link className="underline" href="/trace/new">
-                    odim.app/trace/new
+                  <Link className="underline" href="/capture/upload">
+                    odim.app/capture/upload
                   </Link>{" "}
                   and enter the following code:
                 </p>
