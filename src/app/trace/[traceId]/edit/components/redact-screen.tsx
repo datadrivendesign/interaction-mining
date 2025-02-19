@@ -37,7 +37,7 @@ export default function RedactScreen({
       current: data.screens[index],
       next: data.screens[index + 1] ?? null,
     });
-  }, []);
+  }, [data.screens]);
 
   return (
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
