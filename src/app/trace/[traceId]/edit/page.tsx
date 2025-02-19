@@ -154,7 +154,7 @@ export default function Page() {
   return (
     <>
       <main
-        className="relative flex flex-col min-w-screen min-h-screen bg-white dark:bg-black"
+        className="relative flex flex-col min-w-dvw min-h-dvh bg-white dark:bg-black"
         style={{ "--nav-height": `${height}px` } as React.CSSProperties}
       >
         {loading.isLoaded ? (

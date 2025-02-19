@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, Eye, EyeClosed, Hammer, Sparkles } from "luci
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between">
+    <main className="relative flex min-h-dvh flex-col items-center justify-between">
       <section
         id="hero"
         className="relative flex flex-col w-full max-w-(--breakpoint-2xl) h-[60dvh]"

@@ -4,7 +4,7 @@ import { ArrowUpRight, DownloadIcon } from "lucide-react";
 export default function Download() {
   return (
     <>
-      <main className="relative flex flex-col grow min-h-screen items-center justify-between">
+      <main className="relative flex flex-col grow min-h-dvh items-center justify-between">
         <section className="relative flex w-full max-w-(--breakpoint-xl) p-16 gap-16">
           <div className="flex flex-col items-start w-full">
             <h1
