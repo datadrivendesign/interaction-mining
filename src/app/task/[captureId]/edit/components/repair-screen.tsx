@@ -4,13 +4,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-<<<<<<< Updated upstream
-import { Check, ChevronsUpDown, CircleAlert, Film } from "lucide-react";
-=======
-import { CircleAlert } from "lucide-react";
-
-import RepairScreenCanvas from "./repair-screen-canvas";
->>>>>>> Stashed changes
+import { Check, ChevronsUpDown, CircleAlert } from "lucide-react";
 
 import {
   ResizableHandle,
@@ -22,7 +16,6 @@ import { TraceWithAppsScreens as Trace } from "@/lib/actions";
 import { Screen } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
-<<<<<<< Updated upstream
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -37,9 +30,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import RepairScreenCanvas from "./repair-screen-canvas";
 
-=======
->>>>>>> Stashed changes
 export default function RepairScreen({
   data
 }: {
@@ -58,25 +50,15 @@ export default function RepairScreen({
       current: data.screens[index],
       next: data.screens[index + 1] ?? null,
     });
-<<<<<<< Updated upstream
   }, [data.screens]);
-=======
-  }, []);
->>>>>>> Stashed changes
+
 
   return (
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
           {focusViewValue.current ? (
-<<<<<<< Updated upstream
-            <FocusView
-              screen={focusViewValue.current}
-              nextScreen={focusViewValue.next}
-            />
-=======
             <FocusView screen={focusViewValue.current} />
->>>>>>> Stashed changes
           ) : (
             <div className="flex justify-center items-center w-full h-full">
               <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">Select a screen from the filmstrip.</span>
@@ -154,25 +136,13 @@ function FilmstripItem({
   );
 }
 
-<<<<<<< Updated upstream
-function FocusView({ screen, nextScreen }: {
+function FocusView({ screen }: {
   screen: Screen;
-  nextScreen: Screen | null;
 }) {
   return (
     <>
-      <div className="flex justify-center w-full h-full p-8 overflow-hidden">
-        <div className="flex justify-center w-full h-full gap-8">
-          <Image
-            src={screen.src}
-            alt="gallery"
-            draggable={false}
-            className="w-auto h-full rounded-lg"
-            width={0}
-            height={0}
-            sizes="100vw"
-          />
-        </div>
+      <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+        <RepairScreenCanvas screen={screen} />
       </div>
     </>
   )
@@ -250,16 +220,4 @@ function GestureSelection() {
       </PopoverContent>
     </Popover>
   )
-=======
-function FocusView({ screen }: {
-  screen: Screen;
-}) {
-  return (
-    <>
-      <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
-        <RepairScreenCanvas screen={screen} />
-      </div>
-    </>
-  )
->>>>>>> Stashed changes
 }
