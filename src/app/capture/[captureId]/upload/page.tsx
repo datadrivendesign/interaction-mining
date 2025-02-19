@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink, File, Upload } from "lucide-react";
+import { ExternalLink, File, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -58,6 +58,9 @@ export default function Page() {
     if (!file) return;
 
     setUploading(true);
+
+    toast.info("Uploading file...");
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -126,9 +129,7 @@ export default function Page() {
               <div className="flex flex-col justify-between items-center sm:items-start">
                 <div className="flex flex-col items-center sm:items-start mb-4">
                   {app?.title ? (
-                    <h2 className="font-semibold leading-snug">
-                      {app?.title}
-                    </h2>
+                    <h2 className="font-semibold leading-snug">{app?.title}</h2>
                   ) : (
                     <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
                   )}
@@ -220,7 +221,11 @@ export default function Page() {
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button onClick={handleUpload} disabled={uploading}>
-            <Upload className="size-4" />
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Upload className="size-4" />
+            )}
             Upload
           </Button>
         </CardFooter>
