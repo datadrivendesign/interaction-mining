@@ -23,22 +23,35 @@ type ScreenGesture {
   y            Float
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+
+type AppMetadata {
+  company     String
+  packageName String
+  name        String
+  cover       String
+  description String
+  icon        String
+  rating      String
+  reviews     String?
+  genre       String[]
+} 
+
 model App {
   id          String       @id @default(auto()) @map("_id") @db.ObjectId
   v           Int?         @map("__v")
   category    AppsCategory
-  company     String
-  cover       String
-  description String
-  downloads   String
-  icon        String
-  name        String
-  packageName String       @unique(map: "packageName_1")
-  rating      String
-  reviews     String?
   traces      Trace[]
+  captured    DateTime     @db.Date
+  metadata    AppMetadata
+  downloads   String
 
-  @@fulltext([name])
+
+  @@fulltext([metadata.name])
   @@map("apps")
 }
 
@@ -77,4 +90,30 @@ model Trace {
   worker      String
 
   @@map("traces")
+}
+
+model User{
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  email       String       @unique
+  name        String?
+  role        Role         @default(USER) 
+}
+
+model Task {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String   @map("app") @db.ObjectId
+  os      String
+  traces  String[] @db.ObjectId
+
+  @@map("tasks")
+}
+
+model Recording {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String   @map("app") @db.ObjectId
+  userId  String   @map("user") @db.ObjectId
+  otp     Int
+  src     String
+
+  @@map("recordings")
 }
