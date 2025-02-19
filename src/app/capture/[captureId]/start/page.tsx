@@ -71,7 +71,7 @@ export default function Page() {
                 </p>
                 <QRCodeSVG
                   className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
-                  value={`https://fa5b-66-253-180-105.ngrok-free.app/capture/${captureId}/upload`}
+                  value={`${process.env.NEXT_PUBLIC_DEPLOYED_URL}/capture/${captureId}/upload`}
                 />
               </article>
             </div>
