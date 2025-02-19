@@ -6,8 +6,6 @@ import React, {
 import Image from "next/image";
 import { Check, ChevronsUpDown, CircleAlert } from "lucide-react";
 
-import RepairScreenCanvas from "./repair-screen-canvas";
-
 import {
   ResizableHandle,
   ResizablePanel,
@@ -32,6 +30,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+
+import RepairScreenCanvas from "./repair-screen-canvas";
 
 export default function RepairScreen({
   data
