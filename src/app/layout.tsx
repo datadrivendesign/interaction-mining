@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Roboto_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { Toaster } from "@/components/ui/sonner";
 
 import classNames from "classnames";
 import NavigationBar from "@/components/navigation-bar";
@@ -142,6 +143,7 @@ export default function RootLayout({
           "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans bg-white text-black dark:bg-black dark:text-white"
         )}
       >
+        <Toaster />
         {children}
       </body>
     </html>
