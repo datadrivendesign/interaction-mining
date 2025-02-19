@@ -377,11 +377,6 @@ export function RenderedScreen({
     const svg = svgRef.current;
     if (!img || !svg) return;
 
-    // // Convert image to blob URL from image URL
-    // fetchImageAsBase64(screen.src).then((data) => {
-    //   setImage(data);
-    // }).catch(console.error);
-
     // Use ResizeObserver to synchronize SVG dimensions with image dimensions
     const resizeObserver = new ResizeObserver(() => {
       svg.style.width = `${img.clientWidth}px`;
