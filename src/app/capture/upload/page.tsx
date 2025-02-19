@@ -92,7 +92,7 @@ export default function Page() {
             <form action={formAction}>
               <input type="hidden" name="otp" value={otp} />
               <Button type="submit" disabled={pending}>
-                {pending && <Loader2 className="size-6 animate-spin" />}
+                {pending && <Loader2 className="size-4 animate-spin" />}
                 Continue
               </Button>
             </form>
