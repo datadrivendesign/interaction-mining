@@ -45,7 +45,8 @@ export async function getApps({
     }
 
     app = await prisma.app.findMany(options);
-  } catch {
+  } catch (err: any) {
+    console.error(err);
     throw new Error("Failed to fetch apps.");
   }
 
