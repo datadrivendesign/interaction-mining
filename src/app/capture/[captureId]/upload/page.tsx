@@ -4,9 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink, Upload, UploadIcon } from "lucide-react";
-import { motion } from "motion/react";
-import { toast } from "sonner"
+import { ExternalLink, File, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Card,
@@ -24,6 +23,7 @@ import {
   uploadCaptureToS3,
 } from "@/lib/actions/capture";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Page() {
   const params = useParams();
@@ -56,12 +56,12 @@ export default function Page() {
   const handleUpload = async (_: React.MouseEvent<HTMLButtonElement>) => {
     const file = fileInputRef.current?.files?.[0]; // Correctly access the file input
     if (!file) return;
-  
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-  
+
       const url = await uploadCaptureToS3(captureId, formData);
       setUploadedUrl(url);
       toast.success("Upload successful");
@@ -74,7 +74,7 @@ export default function Page() {
   };
 
   useEffect(() => {
-    getCapture(captureId).then((capture) => {
+    getCapture({ id: captureId }).then((capture) => {
       if (!capture) {
         throw new Error("Capture not found.");
       }
@@ -93,10 +93,7 @@ export default function Page() {
   }, [captureId]);
 
   return (
-    <motion.div
-      className="flex flex-col w-full grow items-center p-8 md:p-16 gap-4 md:gap-6"
-      layoutRoot
-    >
+    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-8 md:p-16 gap-6">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>
@@ -111,7 +108,7 @@ export default function Page() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col">
-            <div className="flex w-full p-4 gap-4 bg-neutral-100 dark:bg-neutral-900 rounded-2xl">
+            <div className="flex flex-col sm:flex-row justify-center sm:justify-start items-center w-full p-4 md:p-6 gap-4 bg-neutral-100 dark:bg-neutral-900 rounded-2xl">
               <figure className="w-full max-w-24">
                 {app?.icon ? (
                   <Image
@@ -126,17 +123,17 @@ export default function Page() {
                   <div className="w-full rounded-3xl object-contain aspect-square bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
                 )}
               </figure>
-              <div className="flex flex-col justify-between items-start">
-                <div className="flex flex-col">
+              <div className="flex flex-col justify-between items-center sm:items-start">
+                <div className="flex flex-col items-center sm:items-start mb-4">
                   {app?.title ? (
-                    <h2 className="text-lg md:text-xl font-semibold">
+                    <h2 className="font-semibold leading-snug">
                       {app?.title}
                     </h2>
                   ) : (
                     <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
                   )}
                   {app?.developer ? (
-                    <p className="text-base font-medium text-neutral-500 dark:text-neutral-400">
+                    <p className="text-sm md:text-base font-medium text-neutral-500 dark:text-neutral-400">
                       {app?.developer}
                     </p>
                   ) : (
@@ -195,7 +192,10 @@ export default function Page() {
         </CardHeader>
         <CardContent>
           <div
-            className="flex flex-col justify-center items-center w-full p-4 md:p-6 border-2 border-dashed border-neutral-200 hover:border-neutral-500 dark:border-neutral-800 dark:hover:border-neutral-400 rounded-2xl text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:dark:text-neutral-200 transition-colors duration-150 ease-in-out cursor-pointer"
+            className={cn(
+              "flex flex-col justify-center items-center w-full p-4 md:p-6 border-2 border-dashed border-neutral-200 hover:border-neutral-500 dark:border-neutral-800 dark:hover:border-neutral-400 rounded-2xl text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:dark:text-neutral-200 transition-colors duration-150 ease-in-out cursor-pointer",
+              file ? "border-solid" : "border-dashed"
+            )}
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -207,11 +207,14 @@ export default function Page() {
               ref={fileInputRef}
               onChange={handleFileChange}
             />
-            <UploadIcon className="size-8 mb-2" />
-            <span>
-              {file
-                ? `Selected: ${file.name}`
-                : "Drag and drop your recording here"}
+
+            <span className="inline-flex flex-col items-center text-sm">
+              {file ? (
+                <File className="size-8 mb-2" />
+              ) : (
+                <Upload className="size-8 mb-2" />
+              )}
+              {file ? `${file.name}` : "Tap to select or drop your file here"}
             </span>
           </div>
         </CardContent>
@@ -222,6 +225,6 @@ export default function Page() {
           </Button>
         </CardFooter>
       </Card>
-    </motion.div>
+    </div>
   );
 }
