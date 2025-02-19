@@ -65,7 +65,7 @@ export default function RedactScreen({
 
 function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (index: number) => void }) {
   return (
-    <ul className="grid grid-cols-3 h-full px-2 pt-2 pb-4 gap-2 overflow-y-auto">
+    <ul className="grid grid-cols-[repeat(auto-fit,minmax(150px,2fr))] gap-4 max-h-[90vh] px-3 pt-4 pb-2 overflow-y-auto">
       {data.screens?.map((screen, index) => (
         <FilmstripItem
           key={screen.id}
@@ -78,7 +78,7 @@ function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (i
             src={screen.src}
             alt="gallery"
             draggable={false}
-            className="w-full h-auto object-contain"
+            className="w-full h-auto object-contain rounded-md"
             width={0}
             height={0}
             sizes="100vw"
