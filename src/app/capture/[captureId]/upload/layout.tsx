@@ -1,5 +1,6 @@
 import { getCapture, getIosAppById } from "@/lib/actions";
 import type { Metadata, ResolvingMetadata } from "next";
+import { notFound } from "next/navigation";
 
 export async function generateMetadata({
   params,
@@ -7,11 +8,16 @@ export async function generateMetadata({
   params: Promise<{ captureId: string }>;
 }): Promise<Metadata> {
   const { captureId } = await params;
-  let capture = await getCapture({ id: captureId });
 
-  if (!capture) {
-    throw new Error("Capture not found.");
-  }
+  const { data: capture } = await getCapture({ id: captureId }).then(
+    (capture) => {
+      if (!capture.ok) {
+        notFound();
+      } else {
+        return capture;
+      }
+    }
+  );
 
   let app = await getIosAppById({ appId: capture.appId });
 

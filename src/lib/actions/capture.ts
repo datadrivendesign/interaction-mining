@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 import { prisma } from "@/lib/prisma";
+import { isValidObjectId } from "mongoose";
+import { ActionPayload } from "./types";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -27,9 +29,17 @@ export async function getCapture({
   id,
   taskId,
   otp,
-}: GetCaptureProps): Promise<CaptureWithTask> {
+}: GetCaptureProps): Promise<ActionPayload<CaptureWithTask>> {
   if (!id && !taskId && !otp) {
-    throw new Error("Either 'id', 'taskId', or 'otp' must be provided.");
+    return { ok: false, message: "No search criteria provided.", data: null };
+  }
+
+  if (id && !isValidObjectId(id)) {
+    return { ok: false, message: "Invalid capture ID provided.", data: null };
+  }
+
+  if (taskId && !isValidObjectId(taskId)) {
+    return { ok: false, message: "Invalid task ID provided.", data: null };
   }
 
   const query: Prisma.CaptureWhereInput = {
@@ -39,7 +49,7 @@ export async function getCapture({
   };
 
   try {
-    let res = await prisma.capture.findFirst({
+    const capture = await prisma.capture.findFirst({
       where: query,
       include: {
         task: {
@@ -50,14 +60,14 @@ export async function getCapture({
       },
     });
 
-    if (!res) {
-      return {} as CaptureWithTask;
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
     }
 
-    return res;
+    return { ok: true, message: "Capture found.", data: capture };
   } catch (err) {
     console.error("Error fetching capture:", err);
-    throw new Error("Failed to fetch capture.");
+    return { ok: false, message: "Failed to fetch capture.", data: null };
   }
 }
 

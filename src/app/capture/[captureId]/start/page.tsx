@@ -1,7 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Minus } from "lucide-react";
 import { motion } from "motion/react";
@@ -16,38 +13,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { getCapture, getIosAppById } from "@/lib/actions";
-import { Capture } from "@prisma/client";
+import { getCapture, getIosAppById } from "@/lib/actions";;
 
-const DUMMY_INFO = {
-  app_id: "389801252",
-  platform: "ios",
-  recording_link: `https://31ab-130-126-255-101.ngrok-free.app/task/670db3f487478f2c8b7824c8/upload`,
-};
-
-export default function Page() {
-  const params = useParams();
+export default async function Page({ params }: { params: { captureId: string } }) {
   const captureId = params.captureId as string;
-  const [capture, setCapture] = useState<Capture>({} as Capture);
-  const [app, setApp] = useState<any>({});
 
-  useEffect(() => {
-    getCapture({ id: captureId }).then((capture) => {
-      if (!capture.id) {
-        throw new Error("Capture not found.");
-      }
-
-      setCapture(capture);
-
-      getIosAppById({ appId: capture.appId })
-        .then((app: any) => {
-          setApp(app);
-        })
-        .catch((error: any) => {
-          throw new Error(error);
-        });
-    });
-  }, [captureId]);
+  const { data: capture } = await getCapture({ id: captureId }).then((capture) => { 
+    if (!capture.ok) {
+      notFound();
+    } else {
+      return capture;
+    }
+  });
 
   return (
     <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">
