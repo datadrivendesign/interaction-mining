@@ -35,12 +35,12 @@ async function fetchCapture(prevState: any, formData: FormData) {
   try {
     const capture = await getCapture({ otp });
 
-    if (!capture.id) {
+    if (!capture.ok) {
       toast.error("Invalid capture session code.");
       return { error: "Invalid capture session code." };
     }
 
-    return { capture };
+    return { capture: capture.data };
   } catch (error) {
     toast.error("Failed to fetch capture. Please try again.");
     return { error: "Failed to fetch capture. Please try again." };
