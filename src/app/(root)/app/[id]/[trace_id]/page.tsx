@@ -40,7 +40,7 @@ export default async function AppPage({
               {app?.metadata.name}
             </h1>
           </div>
-          <div className="w-full h-0.5 bg-neutral-100 rounded-full mb-0 md:mb-4" />
+          <div className="w-full h-0.5 bg-neutral-100 dark:bg-neutral-900 rounded-full mb-0 md:mb-4" />
           {/* <Gallery traceId="" /> */}
         </section>
       </main>

@@ -4,9 +4,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { CircleAlert } from "lucide-react";
-
-import RepairScreenCanvas from "./repair-screen-canvas";
+import { Check, ChevronsUpDown, CircleAlert } from "lucide-react";
 
 import {
   ResizableHandle,
@@ -17,6 +15,23 @@ import {
 import { TraceWithAppsScreens as Trace } from "@/lib/actions";
 import { Screen } from "@prisma/client";
 import { cn } from "@/lib/utils";
+
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
+import RepairScreenCanvas from "./repair-screen-canvas";
 
 export default function RepairScreen({
   data
@@ -46,7 +61,7 @@ export default function RepairScreen({
             <FocusView screen={focusViewValue.current} />
           ) : (
             <div className="flex justify-center items-center w-full h-full">
-              <span className="text-3xl lg:text-4xl text-neutral-400 dark:text-neutral-500 font-semibold">Select a screen from the filmstrip.</span>
+              <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">Select a screen from the filmstrip.</span>
             </div>
           )}
         </ResizablePanel>
@@ -130,5 +145,79 @@ function FocusView({ screen }: {
         <RepairScreenCanvas screen={screen} />
       </div>
     </>
+  )
+}
+
+const gestureOptions = [
+  {
+    value: "Press",
+    label: "Press",
+  },
+  {
+    value: "Long press",
+    label: "Long press",
+  },
+  {
+    value: "Scroll",
+    label: "Scroll"
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+  },
+  {
+    value: "Pinch",
+    label: "Pinch",
+  }
+]
+
+function GestureSelection() {
+  const [open, setOpen] = React.useState(false)
+  const [value, setValue] = React.useState("")
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-50 justify-between"
+        >
+          {value
+            ? gestureOptions.find((gesture) => gesture.value === value)?.label
+            : "Select gesture..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-50 p-0">
+        <Command>
+          <CommandInput placeholder="Search gesture..." />
+          <CommandList>
+            <CommandEmpty>No framework found.</CommandEmpty>
+            <CommandGroup>
+              {gestureOptions.map((gesture) => (
+                <CommandItem
+                  key={gesture.value}
+                  value={gesture.value}
+                  onSelect={(currentValue) => {
+                    setValue(currentValue === value ? "" : currentValue)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "h-4 w-4",
+                      value === gesture.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {gesture.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }

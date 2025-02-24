@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isObjectIdOrHexString } from "mongoose";
 
 export type TraceWithAppsScreens = Prisma.TraceGetPayload<{
-  include: { app: true; screens: true };
+  include: { screens: true };
 }>;
 
 interface GetTraceParams {
@@ -21,7 +21,7 @@ export async function getTraces({ limit = 10, page = 1 }: GetTraceParams = {}) {
       take: limit,
       skip: (page - 1) * limit,
       include: {
-        app: true,
+        // app: true,
         screens: true,
       },
     })) as TraceWithAppsScreens[];
@@ -47,7 +47,7 @@ export async function getTrace(
         id,
       },
       include: {
-        app: true,
+        // app: true,
         screens: true,
       },
     })) as TraceWithAppsScreens;
@@ -72,7 +72,7 @@ export async function getTraceByApp(id: string) {
         appId: id,
       },
       include: {
-        app: true,
+        // app: true,
         screens: true,
       },
     });

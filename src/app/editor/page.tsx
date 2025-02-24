@@ -5,11 +5,8 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
-  useRef,
   useState,
 } from "react";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import classNames from "classnames";
 import { Pencil, Save, Trash2 } from "lucide-react";
@@ -23,7 +20,6 @@ import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
 import { getTrace, updateTrace } from "@/lib/actions";
 import { deleteScreens, splitTrace } from "./actions";
 import { prettyTime } from "@/lib/utils/date";
-import { fetchImageAsBase64 } from "./util/image";
 
 const EditorContext = createContext<{
   selected: Screen[];

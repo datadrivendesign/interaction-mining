@@ -8,13 +8,26 @@
   text-wrap: balance;
 }
 
+@theme {
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
 @layer base {
   :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 255, 255, 255;
-    --background-end-rgb: 255, 255, 255;
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --background: hsl(0 0% 100%);
+    --foreground: hsl(0 0% 3.9%);
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
@@ -43,8 +56,8 @@
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: 0 0% 3.9%;
-      --foreground: 0 0% 98%;
+      --background: hsl(0 0% 100%);
+      --foreground: hsl(0 0% 3.9%);
       --card: 0 0% 3.9%;
       --card-foreground: 0 0% 98%;
       --popover: 0 0% 3.9%;
@@ -79,7 +92,7 @@
     -moz-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
   }
-  
+
   * {
     @apply border-border;
   }
