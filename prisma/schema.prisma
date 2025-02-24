@@ -50,7 +50,6 @@ model App {
   metadata  AppMetadata
   downloads String
 
-  @@fulltext([metadata.name])
   @@map("apps")
 }
 

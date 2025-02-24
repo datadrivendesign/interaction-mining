@@ -1,4 +1,4 @@
-import { getCapture, getIosAppById } from "@/lib/actions";
+import { getCapture, getIosApp } from "@/lib/actions";
 import type { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -19,7 +19,7 @@ export async function generateMetadata({
     }
   );
 
-  let app = await getIosAppById({ appId: capture.appId });
+  let app = await getIosApp({ appId: capture.appId });
 
   const metadata: Metadata = {
     title: "Upload Capture",

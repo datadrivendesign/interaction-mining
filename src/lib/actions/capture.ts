@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
@@ -71,24 +72,109 @@ export async function getCapture({
   }
 }
 
-export async function uploadCaptureToS3(captureId: string, formData: FormData) {
-  const file = formData.get("file") as File;
+export async function updateCapture(
+  id: string,
+  data: Prisma.CaptureUpdateInput
+) {
+  try {
+    const capture = await prisma.capture.update({
+      where: { id },
+      data,
+    });
 
-  if (!file) {
-    throw new Error("No file provided");
+    return { ok: true, message: "Capture updated.", data: capture };
+  } catch (err) {
+    console.error("Error updating capture:", err);
+    return { ok: false, message: "Failed to update capture.", data: null };
+  }
+}
+
+/**
+ * Generates a pre-signed URL for direct S3 upload.
+ */
+export async function generatePresignedCaptureUpload(
+  captureId: string,
+  fileType: string
+): Promise<ActionPayload<{ uploadUrl: string; fileUrl: string }>> {
+  if (!(fileType === "video/mp4" || fileType === "video/quicktime")) {
+    return {
+      ok: false,
+      message: "Invalid file type. Please upload an MP4 or MOV file.",
+      data: null,
+    };
   }
 
-  const buffer = await file.arrayBuffer();
-  const fileKey = `uploads/${captureId}`;
+  try {
+    const fileKey = `uploads/${captureId}/${Date.now()}`;
 
-  const command = new PutObjectCommand({
-    Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
-    Key: fileKey,
-    Body: Buffer.from(buffer),
-    ContentType: file.type,
-  });
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Key: fileKey,
+      ContentType: fileType,
+    });
 
-  await s3.send(command);
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
 
-  return `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+    return {
+      ok: true,
+      message: "Pre-signed upload URL generated.",
+      data: {
+        uploadUrl,
+        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+      },
+    };
+  } catch (err) {
+    console.error("Error generating pre-signed URL:", err);
+    return { ok: false, message: "Failed to generate upload URL.", data: null };
+  }
 }
+
+// export async function uploadCaptureToS3(
+//   captureId: string,
+//   formData: FormData
+// ): Promise<ActionPayload<string>> {
+//   const file = formData.get("file") as File;
+
+//   if (!file) {
+//     return {
+//       ok: false,
+//       message: "No file provided.",
+//       data: null,
+//     };
+//   }
+
+//   if (!(file.type === "video/mp4" || file.type === "video/quicktime")) {
+//     return {
+//       ok: false,
+//       message: "Invalid file type. Please upload an MP4 or MOV file.",
+//       data: null,
+//     };
+//   }
+
+//   try {
+//     const buffer = await file.arrayBuffer();
+//     const fileKey = `uploads/${captureId}`;
+
+//     const command = new PutObjectCommand({
+//       Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+//       Key: fileKey,
+//       Body: Buffer.from(buffer),
+//       ContentType: file.type,
+//     });
+
+//     await s3.send(command);
+
+//     return {
+//       ok: true,
+//       message: "File uploaded successfully.",
+//       data: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+//     };
+//   } catch (err) {
+//     console.error("Error uploading file to S3:", err);
+//     return {
+//       ok: false,
+//       message: "Failed to upload file to S3.",
+//       data: null,
+//     };
+//   }
+// }
