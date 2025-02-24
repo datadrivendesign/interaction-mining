@@ -122,12 +122,6 @@ function KeywordRedactionView({
   fetchData: () => void;
 }) {
   const [sensitiveFields, setSensitiveFields] = useState<any>([]);
-  // const sensitiveFields = useMemo(() => {
-  //   if (data) {
-  //     return extractSensitiveFields(data);
-  //   }
-  //   return [];
-  // }, [data]);
   const [search, setSearch] = useState("");
   const [filteredFieldList, setFilteredFieldList] = useState(sensitiveFields);
 
@@ -195,7 +189,6 @@ function KeywordRedactionView({
               onChange={(e) => setSearch(e.target.value)}
             />
           </span>
-          {/* <Button onClick={handleSave}>Save</Button> */}
         </div>
       </div>
       <ul className="flex flex-col w-full md:max-w-[32rem] lg:max-w-[48rem] xl:max-w-[64rem] h-full px-2 pb-6 md:px-4 md:pb-8">
@@ -278,15 +271,50 @@ function BoxRedactionView({
 }) {
   return (
     <>
-      <div className="sticky top-0 flex flex-col w-full md:max-w-[32rem] lg:max-w-[48rem] xl:max-w-[64rem] h-full max-h-screen px-6 pt-6 md:px-8 md:pt-8 pb-4 gap-2 bg-white">
-        <h2 className="text-2xl text-black font-extrabold tracking-tight">
+      <div className="sticky top-0 flex flex-col w-full md:max-w-[32rem] lg:max-w-[48rem] xl:max-w-[64rem] h-full max-h-screen px-6 pt-6 md:px-8 md:pt-8 pb-4 gap-2">
+        <h2 className="text-2xl font-extrabold tracking-tight">
           Redact by Bounding Box
         </h2>
-        <div className="flex flex-col w-64">
+        <div className="flex flex-col w-64 cursor-crosshair">
           <RenderedScreen screen={screen} hierarchyData={data} showRedaction />
         </div>
       </div>
     </>
+  );
+}
+
+
+function BoundingBox({
+  x,
+  y,
+  width,
+  height,
+  id,
+  onClick,
+  onHover,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  id: string;
+  onClick: () => void;
+  onHover: () => void;
+}) {
+  const [redacted, setRedacted] = useState(false);
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={redacted ? "black" : "transparent"}
+      stroke="red"
+      strokeWidth="1"
+      onClick={()=> setRedacted(!redacted)}
+      onMouseOver={onHover}
+      style={{ pointerEvents: "auto" }}
+    />
   );
 }
 
@@ -411,38 +439,3 @@ export function RenderedScreen({
     </>
   );
 }
-
-function BoundingBox({
-  x,
-  y,
-  width,
-  height,
-  id,
-  onClick,
-  onHover,
-}: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  id: string;
-  onClick: () => void;
-  onHover: () => void;
-}) {
-  const [redacted, setRedacted] = useState(false);
-  return (
-    <rect
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      fill={redacted ? "black" : "transparent"}
-      stroke="red"
-      strokeWidth="1"
-      onClick={()=> setRedacted(!redacted)}
-      onMouseOver={onHover}
-      style={{ pointerEvents: "auto" }}
-    />
-  );
-}
-

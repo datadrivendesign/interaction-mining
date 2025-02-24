@@ -1,6 +1,6 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextIndex"] 
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
@@ -29,7 +29,6 @@ enum Role {
   ADMIN
 }
 
-
 type AppMetadata {
   company     String
   packageName String
@@ -40,19 +39,17 @@ type AppMetadata {
   rating      String
   reviews     String?
   genre       String[]
-} 
+}
 
 model App {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int?         @map("__v")
-  category    AppsCategory
-  traces      Trace[]
-  captured    DateTime     @db.Date
-  metadata    AppMetadata
-  downloads   String
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  v         Int?         @map("__v")
+  category  AppsCategory
+  traces    Trace[]
+  captured  DateTime     @db.Date
+  metadata  AppMetadata
+  downloads String
 
-
-  @@fulltext([metadata.name])
   @@map("apps")
 }
 
@@ -66,14 +63,14 @@ model Redaction {
 }
 
 model Screen {
-  id      String         @id @default(auto()) @map("_id") @db.ObjectId
-  v       Int            @map("__v")
-  created DateTime       @db.Date
+  id      String        @id @default(auto()) @map("_id") @db.ObjectId
+  v       Int           @map("__v")
+  created DateTime      @db.Date
   gesture ScreenGesture
   src     String
   vh      String
-  traceId String         @map("trace") @db.ObjectId
-  trace   Trace          @relation(fields: [traceId], references: [id])
+  traceId String        @map("trace") @db.ObjectId
+  trace   Trace         @relation(fields: [traceId], references: [id])
 
   @@map("screens")
 }
@@ -86,35 +83,49 @@ model Trace {
   created     DateTime @db.Date
   name        String?
   description String
-  screensIds  String[] @map("screens") @db.ObjectId
+  screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
+  taskId      String   @map("task") @db.ObjectId
+  task        Task     @relation(fields: [taskId], references: [id])
   worker      String
 
   @@map("traces")
 }
 
-model User{
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  email       String       @unique
-  name        String?
-  role        Role         @default(USER) 
+model User {
+  id    String  @id @default(auto()) @map("_id") @db.ObjectId
+  email String  @unique
+  name  String?
+  role  Role    @default(USER)
+
+  @@map("users")
 }
 
 model Task {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  appId   String   @map("app") @db.ObjectId
-  os      String
-  traces  String[] @db.ObjectId
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  // appId    String   @map("app") @db.ObjectId
+  // app      App      @relation(fields: [appId], references: [id])
+  appId       String
+  os          String
+  traceIds    String[]  @map("traces") @db.ObjectId
+  traces      Trace[]
+  description String
+  Capture     Capture[]
 
   @@map("tasks")
 }
 
-model Recording {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  appId   String   @map("app") @db.ObjectId
-  userId  String   @map("user") @db.ObjectId
-  otp     Int
-  src     String
+model Capture {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  // appId  String @map("app") @db.ObjectId
+  appId  String
+  // userId String @map("user") @db.ObjectId
+  // traceId String @map("trace") @db.ObjectId
+  // trace   Trace  @relation(fields: [traceId], references: [id])
+  taskId String @map("task") @db.ObjectId
+  task   Task   @relation(fields: [taskId], references: [id])
+  otp    String
+  src    String
 
-  @@map("recordings")
+  @@map("captures")
 }

@@ -1,3 +1,4 @@
+import { keyframes } from "motion/react";
 import type { Config } from "tailwindcss";
 import defaultTheme from "tailwindcss/defaultTheme";
 

@@ -30,6 +30,7 @@ export async function splitTrace(
         format: "hh:mm a",
       })}`,
       description: "This trace was created by splitting existing screens.",
+      taskId: "", // Assuming the task ID is the same for all screens
       worker: worker, // Assuming the worker is the same for all screens
     },
   });
@@ -49,7 +50,7 @@ export async function splitTrace(
   await prisma.trace.update({
     where: { id: newTrace.id },
     data: {
-      screensIds: screenIds,
+      screenIds: screenIds,
     },
   });
 
