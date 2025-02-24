@@ -1,30 +1,34 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Minus } from "lucide-react";
-import { motion } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
 
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 
-import { getCapture, getIosAppById } from "@/lib/actions";;
+import { getCapture } from "@/lib/actions";
 
-export default async function Page({ params }: { params: { captureId: string } }) {
-  const captureId = params.captureId as string;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ captureId: string }>;
+}) {
+  const { captureId } = await params;
 
-  const { data: capture } = await getCapture({ id: captureId }).then((capture) => { 
-    if (!capture.ok) {
-      notFound();
-    } else {
-      return capture;
+  const { data: capture } = await getCapture({ id: captureId }).then(
+    (capture) => {
+      if (!capture.ok) {
+        notFound();
+      } else {
+        return capture;
+      }
     }
-  });
+  );
 
   return (
     <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">

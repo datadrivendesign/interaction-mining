@@ -21,7 +21,7 @@ export default function NavigationBar() {
                 Explore
               </span>
             </Link>
-            <Link href={"/download"}>
+            <Link href={"/contribute"}>
               <span className="inline-flex items-center text-sm font-medium">
                 Try ODIM
               </span>

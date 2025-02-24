@@ -22,17 +22,21 @@ export async function getApps({
   let app: App[] = [];
 
   try {
-    const options = {
+    const options: Prisma.AppFindManyArgs = {
       where: {
-        name: {
-          contains: query,
-          mode: "insensitive",
-        },
+        // metadata: {
+        //   name: {
+        //     string_contains: query,
+        //   },
+        // },
       },
-      orderBy: {
+    };
+
+    if (order && sort) {
+      options.orderBy = {
         [order]: sort,
-      },
-    } as Prisma.AppFindManyArgs;
+      };
+    }
 
     // if limit is not provided, return all apps
     if (limit) {
