@@ -68,7 +68,8 @@ export default async function Page({
                 <p className="text-neutral-500 dark:text-neutral-400 font-medium mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
-                    odim.app/capture/upload
+                    {/* odim.app/capture/upload */}
+                    {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
                   </Link>{" "}
                   and enter the following capture session code:
                 </p>
