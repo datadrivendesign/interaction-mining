@@ -31,7 +31,6 @@ enum Role {
 
 type AppMetadata {
   company     String
-  packageName String
   name        String
   cover       String
   description String
@@ -39,17 +38,16 @@ type AppMetadata {
   rating      String
   reviews     String?
   genre       String[]
+  downloads   String
 }
 
 model App {
-  id        String       @id @default(auto()) @map("_id") @db.ObjectId
-  v         Int?         @map("__v")
-  category  AppsCategory
-  traces    Trace[]
-  captured  DateTime     @db.Date
-  metadata  AppMetadata
-  downloads String
-
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int?         @map("__v")
+  category    AppsCategory
+  captured    DateTime     @db.Date
+  packageName String       @unique
+  metadata    AppMetadata
   @@fulltext([metadata.name])
   @@map("apps")
 }
@@ -80,7 +78,6 @@ model Trace {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   v           Int      @map("__v")
   appId       String   @map("app") @db.ObjectId
-  app         App      @relation(fields: [appId], references: [id])
   created     DateTime @db.Date
   name        String?
   description String
