@@ -11,7 +11,7 @@ import { GlobalHotKeys } from "react-hotkeys";
 import { DndContext, useDroppable, useDraggable, DragStartEvent, DragMoveEvent, DragEndEvent } from '@dnd-kit/core';
 import clsx from "clsx";
 
-import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
+import { TraceWithScreens as Trace } from "@/lib/actions/trace";
 import { Screen } from "@prisma/client";
 
 const GalleryContext = createContext<{

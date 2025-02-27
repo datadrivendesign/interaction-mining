@@ -6,7 +6,7 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import { useMeasure } from "@uidotdev/usehooks";
 
 import { getTrace } from "@/lib/actions/trace";
-import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
+import { TraceWithScreens as Trace } from "@/lib/actions/trace";
 import { Button } from "@/components/ui/button";
 
 import Sheet from "./components/sheet";
