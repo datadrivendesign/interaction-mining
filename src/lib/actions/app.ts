@@ -24,13 +24,19 @@ export async function getApps({
   try {
     const options = {
       where: {
-        name: {
-          contains: query,
-          mode: "insensitive",
+        metadata: {
+          is: {
+            name: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
         },
       },
       orderBy: {
-        [order]: sort,
+        metadata: {
+          [order]: sort,
+        },
       },
     } as Prisma.AppFindManyArgs;
 

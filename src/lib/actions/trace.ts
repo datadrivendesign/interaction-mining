@@ -4,8 +4,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isObjectIdOrHexString } from "mongoose";
 
-export type TraceWithAppsScreens = Prisma.TraceGetPayload<{
-  include: { app: true; screens: true };
+export type TraceWithScreens = Prisma.TraceGetPayload<{
+  include: { screens: true };
 }>;
 
 interface GetTraceParams {
@@ -14,17 +14,16 @@ interface GetTraceParams {
 }
 
 export async function getTraces({ limit = 10, page = 1 }: GetTraceParams = {}) {
-  let traces: TraceWithAppsScreens[] = [];
+  let traces: TraceWithScreens[] = [];
 
   try {
     traces = (await prisma.trace.findMany({
       take: limit,
       skip: (page - 1) * limit,
       include: {
-        app: true,
         screens: true,
       },
-    })) as TraceWithAppsScreens[];
+    })) as TraceWithScreens[];
   } catch (err: any) {
     console.error(err);
     throw new Error("Failed to fetch traces.");
@@ -35,8 +34,8 @@ export async function getTraces({ limit = 10, page = 1 }: GetTraceParams = {}) {
 
 export async function getTrace(
   id: string
-): Promise<TraceWithAppsScreens | null> {
-  let trace: TraceWithAppsScreens | null = null;
+): Promise<TraceWithScreens | null> {
+  let trace: TraceWithScreens | null = null;
 
   if (!id || !isObjectIdOrHexString(id)) {
     return null;
@@ -47,10 +46,9 @@ export async function getTrace(
         id,
       },
       include: {
-        app: true,
         screens: true,
       },
-    })) as TraceWithAppsScreens;
+    })) as TraceWithScreens;
   } catch {
     throw new Error("Failed to fetch trace.");
   }
@@ -59,7 +57,7 @@ export async function getTrace(
 }
 
 export async function getTraceByApp(id: string) {
-  let trace: TraceWithAppsScreens[] = [] as TraceWithAppsScreens[];
+  let trace: TraceWithScreens[] = [] as TraceWithScreens[];
 
   if (!id || !isObjectIdOrHexString(id)) {
     let e = new Error("Invalid app id.");
@@ -72,7 +70,6 @@ export async function getTraceByApp(id: string) {
         appId: id,
       },
       include: {
-        app: true,
         screens: true,
       },
     });

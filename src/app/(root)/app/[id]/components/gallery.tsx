@@ -16,7 +16,7 @@ import { Download, Search } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
 import { Screen } from "@prisma/client";
-import { TraceWithAppsScreens as Trace } from "@/lib/actions";
+import { TraceWithScreens as Trace } from "@/lib/actions";
 
 const GalleryContext = createContext({
   data: [] as any[],
