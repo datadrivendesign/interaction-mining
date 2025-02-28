@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-import { getApp, getTraceByApp } from "@/lib/actions";
+import { getApp, getTraces } from "@/lib/actions";
 import { GalleryRoot } from "../components/gallery";
 
 export default async function AppPage({
@@ -15,7 +15,8 @@ export default async function AppPage({
   try {
     const { id } = await params;
     app = await getApp(id);
-    traces = await getTraceByApp(id);
+    // traces = await getTraceByApp(id);
+    traces = await getTraces({ appId: id });
 
     if (!app) {
       notFound();

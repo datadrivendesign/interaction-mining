@@ -24,11 +24,7 @@ export async function getApps({
   try {
     const options: Prisma.AppFindManyArgs = {
       where: {
-        // metadata: {
-        //   name: {
-        //     string_contains: query,
-        //   },
-        // },
+        name: query
       },
     };
 

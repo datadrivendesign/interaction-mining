@@ -16,7 +16,6 @@ import { Download, Search } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
 import { Screen } from "@prisma/client";
-import { TraceWithAppsScreens as Trace } from "@/lib/actions";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -29,7 +28,7 @@ export function GalleryRoot({
   data,
   children,
 }: {
-  data: Trace[];
+  data: any;
   children: React.ReactNode;
 }) {
   const [_data, setData] = useState<any[]>(data);
@@ -123,7 +122,7 @@ function loadingReducer(state: any, action: any) {
   return action;
 }
 
-export function InspectView({ data }: { data: Trace }) {
+export function InspectView({ data }: { data: any }) {
   const [loading, setLoading] = useReducer(loadingReducer, {
     status: "loading",
     imagesLoading: data.screens.length,
