@@ -1,87 +1,135 @@
 "use server";
 import { Prisma } from "@prisma/client";
-
 import { prisma } from "@/lib/prisma";
-import { isObjectIdOrHexString } from "mongoose";
-
-export type TraceWithAppsScreens = Prisma.TraceGetPayload<{
-  include: { screens: true };
-}>;
-
-interface GetTraceParams {
+import { isValidObjectId } from "mongoose";
+interface GetTracesParams {
+  id?: string;
+  appId?: string;
+  taskId?: string;
   limit?: number;
   page?: number;
+  includes?: {
+    app?: boolean;
+    screens?: boolean;
+  };
 }
 
-export async function getTraces({ limit = 10, page = 1 }: GetTraceParams = {}) {
-  let traces: TraceWithAppsScreens[] = [];
+export async function getTraces({
+  id,
+  appId,
+  taskId,
+  limit = 10,
+  page = 1,
+  includes = {
+    app: true,
+    screens: true,
+  },
+}: GetTracesParams) {
+  let traces = [];
+
+  if (id && !isValidObjectId(id)) {
+    return { ok: false, message: "Invalid traceId provided.", data: null };
+  }
+
+  if (appId && !isValidObjectId(appId)) {
+    return { ok: false, message: "Invalid appId provided.", data: null };
+  }
+
+  if (taskId && !isValidObjectId(taskId)) {
+    return { ok: false, message: "Invalid taskId provided.", data: null };
+  }
+
+  const query: Prisma.TraceWhereInput = {
+    ...(id ? { id } : {}),
+    ...(appId ? { appId } : {}),
+    ...(taskId ? { taskId } : {}),
+  };
 
   try {
-    traces = (await prisma.trace.findMany({
+    traces = await prisma.trace.findMany({
+      where: query,
       take: limit,
       skip: (page - 1) * limit,
       include: {
-        // app: true,
-        screens: true,
+        app: includes.app,
+        screens: includes.screens,
       },
-    })) as TraceWithAppsScreens[];
+    });
+
+    if (!traces) {
+      return {
+        ok: false,
+        message: "No traces found.",
+        data: null,
+      };
+    }
+
+    return {
+      ok: true,
+      message: "Traces found.",
+      data: traces,
+    };
   } catch (err: any) {
     console.error(err);
-    throw new Error("Failed to fetch traces.");
+    return {
+      ok: false,
+      message: "Failed to fetch traces.",
+      data: null,
+    };
   }
-
-  return traces;
 }
 
-export async function getTrace(
-  id: string
-): Promise<TraceWithAppsScreens | null> {
-  let trace: TraceWithAppsScreens | null = null;
+interface GetTraceParams {
+  includes?: {
+    app?: boolean;
+    screens?: boolean;
+  };
+}
 
-  if (!id || !isObjectIdOrHexString(id)) {
-    return null;
+export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
+  const { app = true, screens = true } = includes || {};
+  let trace = null;
+
+  if (!id || !isValidObjectId(id)) {
+    return {
+      ok: false,
+      message: "Invalid trace ID.",
+      data: null,
+    };
   }
+
   try {
-    trace = (await prisma.trace.findUnique({
+    trace = await prisma.trace.findUnique({
       where: {
         id,
       },
       include: {
-        // app: true,
-        screens: true,
-      },
-    })) as TraceWithAppsScreens;
-  } catch {
-    throw new Error("Failed to fetch trace.");
-  }
-
-  return trace;
-}
-
-export async function getTraceByApp(id: string) {
-  let trace: TraceWithAppsScreens[] = [] as TraceWithAppsScreens[];
-
-  if (!id || !isObjectIdOrHexString(id)) {
-    let e = new Error("Invalid app id.");
-    e.name = "TypeError";
-    throw e;
-  }
-  try {
-    trace = await prisma.trace.findMany({
-      where: {
-        appId: id,
-      },
-      include: {
-        // app: true,
-        screens: true,
+        app,
+        screens,
       },
     });
-  } catch (err) {
-    console.error(err);
-    throw new Error("Failed to fetch trace.");
-  }
 
-  return trace;
+    if (!trace) {
+      return {
+        ok: false,
+        message: "Trace not found.",
+        data: null,
+      };
+    }
+
+    return {
+      ok: true,
+      message: "Trace found.",
+      data: trace,
+    };
+  } catch (err: any) {
+    console.error(err);
+    return {
+      ok: false,
+      message: "Failed to fetch trace.",
+      data: null,
+    };
+  }
 }
 
 export async function updateTrace(
@@ -89,7 +137,7 @@ export async function updateTrace(
   updates: Partial<{ name: string; description: string }>
 ) {
   // Validate the trace ID
-  if (!id || !isObjectIdOrHexString(id)) {
+  if (!id || !isValidObjectId(id)) {
     let e = new Error("Invalid trace ID.");
     e.name = "TypeError";
     throw e;
