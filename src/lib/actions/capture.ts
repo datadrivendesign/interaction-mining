@@ -36,11 +36,11 @@ export async function getCapture({
   }
 
   if (id && !isValidObjectId(id)) {
-    return { ok: false, message: "Invalid capture ID provided.", data: null };
+    return { ok: false, message: "Invalid captureId provided.", data: null };
   }
 
   if (taskId && !isValidObjectId(taskId)) {
-    return { ok: false, message: "Invalid task ID provided.", data: null };
+    return { ok: false, message: "Invalid taskId provided.", data: null };
   }
 
   const query: Prisma.CaptureWhereInput = {
