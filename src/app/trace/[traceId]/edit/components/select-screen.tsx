@@ -8,10 +8,16 @@ import React, {
 } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
-import { DndContext, useDroppable, useDraggable, DragStartEvent, DragMoveEvent, DragEndEvent } from '@dnd-kit/core';
+import {
+  DndContext,
+  useDroppable,
+  useDraggable,
+  DragStartEvent,
+  DragMoveEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
 import clsx from "clsx";
 
-import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
 import { Screen } from "@prisma/client";
 
 const GalleryContext = createContext<{
@@ -30,14 +36,10 @@ const GalleryContext = createContext<{
     root: null,
     items: [],
   },
-  setSelection: () => { },
+  setSelection: () => {},
 });
 
-export default function SelectScreen({
-  data
-}: {
-  data: Trace;
-}) {
+export default function SelectScreen({ data }: { data: any }) {
   const id = useId();
   const [isShift, setIsShift] = useState(false);
   const [selection, setSelection] = useState<{
@@ -96,7 +98,10 @@ export default function SelectScreen({
 
     const newSelection = {
       root: start,
-      items: Array.from({ length: trueEnd - trueStart + 1 }, (_, i) => trueStart + i),
+      items: Array.from(
+        { length: trueEnd - trueStart + 1 },
+        (_, i) => trueStart + i
+      ),
     };
 
     setSelection(newSelection);
@@ -106,14 +111,13 @@ export default function SelectScreen({
     const index = event.active.data.current!.index;
     if (selection.root !== null && isShift) {
       handleShiftSelection(index);
-    }
-    else {
+    } else {
       setSelection({
         root: index,
         items: [index],
       });
     }
-  }
+  };
 
   const handleDragMove = (event: DragMoveEvent) => {
     const { over } = event;
@@ -126,7 +130,7 @@ export default function SelectScreen({
     if (selection.root !== null) {
       handleRangeSelection(selection.root, index);
     }
-  }
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { over } = event;
@@ -143,8 +147,7 @@ export default function SelectScreen({
         handleRangeSelection(selection.root, index);
       }
     }
-  }
-
+  };
 
   return (
     <>
@@ -184,11 +187,10 @@ export default function SelectScreen({
             </div>
           </GlobalHotKeys>
         </GalleryContext.Provider>
-      </DndContext >
+      </DndContext>
     </>
   );
 }
-
 
 export function SelectScreenItem({
   index = 0,
@@ -205,7 +207,11 @@ export function SelectScreenItem({
   });
 
   // Initialize `useDraggable`
-  const { attributes, listeners, setNodeRef: setDraggableRef } = useDraggable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDraggableRef,
+  } = useDraggable({
     id: `dnd-${index}`,
     data: { index },
   });
