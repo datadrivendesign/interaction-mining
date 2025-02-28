@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
 }
 
@@ -83,8 +83,8 @@ model Trace {
   description String
   screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
-  taskId      String   @map("task") @db.ObjectId
-  task        Task     @relation(fields: [taskId], references: [id])
+  taskId      String?  @map("task") @db.ObjectId
+  task        Task?    @relation(fields: [taskId], references: [id])
   worker      String
 
   @@map("traces")
