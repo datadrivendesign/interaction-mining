@@ -22,7 +22,7 @@ export async function getApps({
   let app: App[] = [];
 
   try {
-    const options = {
+    const options: Prisma.AppFindManyArgs = {
       where: {
         metadata: {
           is: {
@@ -39,6 +39,7 @@ export async function getApps({
         },
       },
     } as Prisma.AppFindManyArgs;
+
 
     // if limit is not provided, return all apps
     if (limit) {

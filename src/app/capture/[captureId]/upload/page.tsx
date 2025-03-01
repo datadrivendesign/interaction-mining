@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink, Upload, UploadIcon } from "lucide-react";
-import { motion } from "motion/react";
-import { toast } from "sonner"
+import { ExternalLink, File, Loader2, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Card,
@@ -16,14 +15,66 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { getCapture, getIosAppById } from "@/lib/actions";
+import { getCapture, getIosApp } from "@/lib/actions";
 import {
   CaptureWithTask as Capture,
-  uploadCaptureToS3,
+  generatePresignedCaptureUpload,
+  updateCapture,
 } from "@/lib/actions/capture";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+async function handleUpload(prevState: any, formData: FormData) {
+  const captureId = formData.get("captureId") as string;
+  const file = formData.get("file") as File;
+
+  if (!captureId) {
+    toast.error("Unexpected error. Please try again.");
+    return { error: "Unexpected error. Please try again." };
+  }
+
+  if (!file) return;
+
+  try {
+    const res = await generatePresignedCaptureUpload(captureId, file.type);
+
+    if (!res.ok) {
+      toast.error(`Upload failed: ${res.message}`);
+      return {
+        error: `Upload failed: ${res.message}`,
+      };
+    }
+
+    const { uploadUrl, fileUrl } = res.data;
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": file.type },
+    });
+
+    if (!uploadRes.ok) {
+      toast.error("Upload failed: Failed to upload file");
+      return {
+        error: "Upload failed: Failed to upload file. Please try again.",
+      };
+    }
+
+    const updateRes = await updateCapture(captureId, { src: fileUrl });
+    if (!updateRes.ok) {
+      toast.error("Upload failed: Failed to update capture");
+      return {
+        error: "Upload failed: Failed to update capture. Please try again.",
+      };
+    }
+
+    toast.success("Upload successful");
+  } catch (error: any) {
+    console.error("Upload failed", error);
+    toast.error(`Upload failed: ${error.message}`);
+  }
+}
 
 export default function Page() {
   const params = useParams();
@@ -31,10 +82,10 @@ export default function Page() {
 
   const [capture, setCapture] = useState<Capture>({} as Capture);
   const [app, setApp] = useState<any>({});
-  const [uploading, setUploading] = useState(false);
-  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+
+  const [state, formAction, pending] = useActionState(handleUpload, null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -53,50 +104,32 @@ export default function Page() {
     event.preventDefault();
   };
 
-  const handleUpload = async (_: React.MouseEvent<HTMLButtonElement>) => {
-    const file = fileInputRef.current?.files?.[0]; // Correctly access the file input
-    if (!file) return;
-  
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-  
-      const url = await uploadCaptureToS3(captureId, formData);
-      setUploadedUrl(url);
-      toast.success("Upload successful");
-    } catch (error) {
-      console.error("Upload failed", error);
-      toast.error("Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   useEffect(() => {
-    getCapture(captureId).then((capture) => {
-      if (!capture) {
-        throw new Error("Capture not found.");
-      }
+    getCapture({ id: captureId })
+      .then((capture) => {
+        if (!capture.ok) {
+          notFound();
+        } else {
+          const { data } = capture;
+          setCapture(data);
 
-      console.log("Capture", capture);
-      setCapture(capture);
-
-      getIosAppById({ appId: capture.appId })
-        .then((app: any) => {
-          setApp(app);
-        })
-        .catch((error: any) => {
-          throw new Error(error);
-        });
-    });
+          getIosApp({ appId: data.appId })
+            .then((app: any) => {
+              setApp(app);
+            })
+            .catch((error: any) => {
+              throw new Error(error);
+            });
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch capture", error);
+        notFound();
+      });
   }, [captureId]);
 
   return (
-    <motion.div
-      className="flex flex-col w-full grow items-center p-8 md:p-16 gap-4 md:gap-6"
-      layoutRoot
-    >
+    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-8 md:p-16 gap-6">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>
@@ -111,7 +144,7 @@ export default function Page() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col">
-            <div className="flex w-full p-4 gap-4 bg-neutral-100 dark:bg-neutral-900 rounded-2xl">
+            <div className="flex flex-col sm:flex-row justify-center sm:justify-start items-center w-full p-4 md:p-6 gap-4 bg-neutral-100 dark:bg-neutral-900 rounded-2xl">
               <figure className="w-full max-w-24">
                 {app?.icon ? (
                   <Image
@@ -126,24 +159,22 @@ export default function Page() {
                   <div className="w-full rounded-3xl object-contain aspect-square bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
                 )}
               </figure>
-              <div className="flex flex-col justify-between items-start">
-                <div className="flex flex-col">
+              <div className="flex flex-col justify-between items-center sm:items-start">
+                <div className="flex flex-col items-center sm:items-start mb-4">
                   {app?.title ? (
-                    <h2 className="text-lg md:text-xl font-semibold">
-                      {app?.title}
-                    </h2>
+                    <h2 className="font-semibold leading-snug">{app?.title}</h2>
                   ) : (
                     <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
                   )}
                   {app?.developer ? (
-                    <p className="text-base font-medium text-neutral-500 dark:text-neutral-400">
+                    <p className="text-sm md:text-base font-medium text-neutral-500 dark:text-neutral-400">
                       {app?.developer}
                     </p>
                   ) : (
                     <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></span>
                   )}
                 </div>
-                <Link href={app?.url ?? "/"}>
+                <Link href={app?.url ?? "/"} target="_blank">
                   <button
                     disabled={!app?.url}
                     className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-500 disabled:bg-neutral-500 text-white text-sm md:text-base font-medium"
@@ -191,37 +222,60 @@ export default function Page() {
             </span>{" "}
             Upload your task recording
           </CardTitle>
-          <CardDescription hidden>Upload your task recording</CardDescription>
+          <CardDescription>Upload the screen recording.</CardDescription>
         </CardHeader>
         <CardContent>
+          {state?.error && (
+            <div className="border-2 border-red-500 bg-red-500/10 rounded-2xl px-4 py-2 mb-4">
+              <span className="text-red-500 dark:text-red-400 text-sm">
+                {state.error}
+              </span>
+            </div>
+          )}
           <div
-            className="flex flex-col justify-center items-center w-full p-4 md:p-6 border-2 border-dashed border-neutral-200 hover:border-neutral-500 dark:border-neutral-800 dark:hover:border-neutral-400 rounded-2xl text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:dark:text-neutral-200 transition-colors duration-150 ease-in-out cursor-pointer"
+            className={cn(
+              "flex flex-col justify-center items-center w-full p-4 md:p-6 border-2 border-dashed border-neutral-200 hover:border-neutral-500 dark:border-neutral-800 dark:hover:border-neutral-400 rounded-2xl text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:dark:text-neutral-200 transition-colors duration-150 ease-in-out cursor-pointer",
+              file ? "border-solid" : "border-dashed"
+            )}
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
-            <input
-              hidden
-              className="hidden"
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-            />
-            <UploadIcon className="size-8 mb-2" />
-            <span>
-              {file
-                ? `Selected: ${file.name}`
-                : "Drag and drop your recording here"}
+            <span className="inline-flex flex-col items-center text-center text-sm">
+              {file ? (
+                <File className="size-8 mb-2" />
+              ) : (
+                <Upload className="size-8 mb-2" />
+              )}
+              {file ? (
+                `${file.name}`
+              ) : (
+                <>
+                  <p>Tap to select or drop your file here</p>
+                  <p>MP4 or MOV</p>
+                </>
+              )}
             </span>
           </div>
         </CardContent>
         <CardFooter className="flex justify-end">
-          <Button onClick={handleUpload} disabled={uploading}>
-            <Upload className="size-4" />
-            Upload
-          </Button>
+          <form action={formAction}>
+            <input type="hidden" name="captureId" value={captureId} />
+            <input
+              hidden
+              className="hidden"
+              name="file"
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
+            <Button type="submit" disabled={pending}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              Upload
+            </Button>
+          </form>
         </CardFooter>
       </Card>
-    </motion.div>
+    </div>
   );
 }
