@@ -6,7 +6,6 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import { useMeasure } from "@uidotdev/usehooks";
 
 import { getTrace } from "@/lib/actions/trace";
-import { TraceWithScreens as Trace } from "@/lib/actions/trace";
 import { Button } from "@/components/ui/button";
 
 import Sheet from "./components/sheet";
@@ -106,13 +105,13 @@ export default function Page() {
   const params = useParams();
   const traceId = params.traceId as string;
 
-  const [navRef, { width, height }] = useMeasure();
+  const [navRef, { height }] = useMeasure();
 
   const [loading, setLoading] = useReducer(loadingReducer, {
     isLoaded: false,
     message: "Getting your capture session...",
   });
-  const [capture, setCapture] = useState<Trace>({} as Trace);
+  const [capture, setCapture] = useState({});
   const [stepState, setStepState] = useReducer(stepReducer, {
     index: 0,
     hash: Date.now() + Math.random(),
@@ -129,13 +128,14 @@ export default function Page() {
       setStepState(stepState.index - 1);
     }
   };
+
   // >>> DUMMY DRIVER CODE
 
   async function getCaptureSession(traceId: string) {
-    const trace = await getTrace(traceId);
-    if (trace) {
-      console.log(trace);
-      return trace;
+    const trace = await getTrace(traceId, { includes: { app: false } });
+
+    if (trace.ok) {
+      return trace.data
     }
   }
 
@@ -143,7 +143,7 @@ export default function Page() {
   useEffect(() => {
     getCaptureSession(traceId).then((capture) => {
       if (capture) {
-        setCapture(capture as Trace);
+        setCapture(capture);
         setLoading({ type: "SET_LOADED", payload: true });
       }
     });
@@ -154,7 +154,7 @@ export default function Page() {
   return (
     <>
       <main
-        className="relative flex flex-col min-w-screen min-h-screen bg-white dark:bg-black"
+        className="relative flex flex-col min-w-dvw min-h-dvh bg-white dark:bg-black"
         style={{ "--nav-height": `${height}px` } as React.CSSProperties}
       >
         {loading.isLoaded ? (

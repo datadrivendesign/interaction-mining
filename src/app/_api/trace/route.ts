@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Trace } from "@prisma/client";
 import { NextRequest } from "next/server";
 
-import { getTraces, getTraceByApp } from "@/lib/actions/trace";
+import { getTraces } from "@/lib/actions";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     : 1;
   const app = searchParams.get("app") ? searchParams.get("app")! : "";
 
-  let traces: Trace[] = []; 
+  let traces = []; 
 
   try {
     if (app === "") {
@@ -23,7 +23,11 @@ export async function GET(request: NextRequest) {
         page,
       });
     } else {
-      traces = await getTraceByApp(app);
+      traces = await getTraces({
+        appId: app,
+        limit,
+        page,
+      });
     }
   } catch (err: any) {
     console.error(err);
