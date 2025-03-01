@@ -16,7 +16,7 @@ import EditorDialog, { EditorDialogButton } from "./component/editor-dialog";
 import ScreenEditor, { RenderedScreen } from "./component/screen-editor";
 
 import { Screen } from "@prisma/client";
-import { TraceWithAppsScreens as Trace } from "@/lib/actions/trace";
+import { TraceWithScreens as Trace } from "@/lib/actions/trace";
 import { getTrace, updateTrace } from "@/lib/actions";
 import { deleteScreens, splitTrace } from "./actions";
 import { prettyTime } from "@/lib/utils/date";

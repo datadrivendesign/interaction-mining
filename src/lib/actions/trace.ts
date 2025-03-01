@@ -89,7 +89,6 @@ interface GetTraceParams {
 export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
   const { app = true, screens = true } = includes || {};
   let trace = null;
-
   if (!id || !isValidObjectId(id)) {
     return {
       ok: false,
