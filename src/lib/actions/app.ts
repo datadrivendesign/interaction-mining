@@ -33,13 +33,13 @@ export async function getApps({
           },
         },
       },
-    };
+      orderBy: {
+        metadata: {
+          [order]: sort,
+        },
+      },
+    } as Prisma.AppFindManyArgs;
 
-    if (order && sort) {
-      options.orderBy = {
-        [order]: sort,
-      };
-    }
 
     // if limit is not provided, return all apps
     if (limit) {

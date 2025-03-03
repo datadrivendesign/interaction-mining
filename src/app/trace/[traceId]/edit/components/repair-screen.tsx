@@ -12,7 +12,6 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
 
-import { TraceWithAppsScreens as Trace } from "@/lib/actions";
 import { Screen } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +31,8 @@ import {
 } from "@/components/ui/popover"
 
 import RepairScreenCanvas from "./repair-screen-canvas";
+
+type Trace = any;
 
 export default function RepairScreen({
   data
@@ -80,7 +81,7 @@ export default function RepairScreen({
 function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (index: number) => void }) {
   return (
     <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
-      {data.screens?.map((screen, index) => (
+      {data.screens?.map((screen: Screen, index: number) => (
         <FilmstripItem
           key={screen.id}
           index={index}
