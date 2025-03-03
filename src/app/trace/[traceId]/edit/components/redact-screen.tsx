@@ -14,7 +14,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
 
-import { TraceWithAppsScreens as Trace } from "@/lib/actions";
+import { TraceWithScreens as Trace } from "@/lib/actions";
 import { Screen } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import RedactScreenCanvas from "./redact-screen-canvas";
