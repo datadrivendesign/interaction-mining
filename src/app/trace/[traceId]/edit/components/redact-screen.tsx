@@ -14,10 +14,11 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
 
-import { TraceWithScreens as Trace } from "@/lib/actions";
 import { Screen } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import RedactScreenCanvas from "./redact-screen-canvas";
+
+type Trace = any;
 
 export default function RedactScreen({
   data
@@ -66,7 +67,7 @@ export default function RedactScreen({
 function Filmstrip({ data, handleFocusView }: { data: Trace, handleFocusView: (index: number) => void }) {
   return (
     <ul className="grid grid-cols-[repeat(auto-fit,minmax(150px,2fr))] gap-4 max-h-[90vh] px-3 pt-4 pb-2 overflow-y-auto">
-      {data.screens?.map((screen, index) => (
+      {data.screens?.map((screen: Screen, index: number) => (
         <FilmstripItem
           key={screen.id}
           index={index}
