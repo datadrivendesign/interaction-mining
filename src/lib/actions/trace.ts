@@ -21,8 +21,8 @@ export async function getTraces({
   limit = 10,
   page = 1,
   includes = {
-    app: true,
-    screens: true,
+    app: false,
+    screens: false,
   },
 }: GetTracesParams) {
   let traces = [];
@@ -51,7 +51,7 @@ export async function getTraces({
       take: limit,
       skip: (page - 1) * limit,
       include: {
-        app: includes.app,
+        // app: includes.app,
         screens: includes.screens,
       },
     });
@@ -87,7 +87,11 @@ interface GetTraceParams {
 }
 
 export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
-  const { app = true, screens = true } = includes || {};
+  const {
+    // app = false,
+    screens = false,
+  } = includes || {};
+  
   let trace = null;
   if (!id || !isValidObjectId(id)) {
     return {
@@ -103,7 +107,7 @@ export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
         id,
       },
       include: {
-        app,
+        // app,
         screens,
       },
     });
