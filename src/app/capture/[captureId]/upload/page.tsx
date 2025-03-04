@@ -8,6 +8,13 @@ import { ExternalLink, File, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
+import {
   Card,
   CardContent,
   CardDescription,
@@ -129,11 +136,12 @@ export default function Page() {
   }, [captureId]);
 
   return (
-    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-8 md:p-16 gap-6">
+    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-4 md:p-16 gap-4">
+      {/* <h1 className="text-4xl font-bold my-4">Record Capture</h1> */}
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>
-            <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white text-sm">
+            <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white text-sm tabular-nums">
               1
             </span>{" "}
             Install the target app
@@ -144,7 +152,7 @@ export default function Page() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col">
-            <div className="flex flex-col sm:flex-row justify-center sm:justify-start items-center w-full p-4 md:p-6 gap-4 bg-neutral-100 dark:bg-neutral-900 rounded-2xl">
+            <div className="flex flex-col sm:flex-row justify-center sm:justify-start items-center w-full gap-4">
               <figure className="w-full max-w-24">
                 {app?.icon ? (
                   <Image
@@ -194,24 +202,61 @@ export default function Page() {
             <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white text-sm">
               2
             </span>{" "}
-            Complete the assigned task
+            Record the following task
           </CardTitle>
-          <CardDescription hidden>Complete the task</CardDescription>
+          <CardDescription hidden>Record the following task</CardDescription>
         </CardHeader>
         <CardContent>
-          <article className="prose prose-neutral dark:prose-invert leading-snug">
+          <div className="mb-4">
             {capture?.task ? (
-              <p>
-                {capture?.task?.description
-                  ? capture?.task?.description
-                  : "No description provided."}
-              </p>
+              <>
+                <article className="prose prose-neutral dark:prose-invert leading-snug">
+                  <p>
+                    {capture?.task?.description
+                      ? capture?.task?.description
+                      : "No description provided."}
+                  </p>
+                </article>
+              </>
             ) : (
               <>
                 <div className="w-full h-4 bg-neutral-500 dark:bg-neutral-400 animate-pulse rounded"></div>
               </>
             )}
-          </article>
+          </div>
+
+          <Accordion type="single" collapsible className="px-4 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+            <AccordionItem value="item-1">
+              <AccordionTrigger>How do I record my screen?</AccordionTrigger>
+              <AccordionContent>
+                <article className="prose prose-neutral dark:prose-invert leading-snug mb-4">
+                  <p>
+                    Consult your phone or tablet&rsquo;s documentation to learn how to
+                    record your screen.
+                  </p>
+                </article>
+                <Link
+                  href="https://support.apple.com/en-us/102653"
+                  target="_blank"
+                  className="no-underline"
+                >
+                  <div className="flex flex-col justify-start items-start p-4 md:p-6 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
+                    <span className="text-sm text-neutral-500 dark:text-neutral-400 mb-1 overflow-hidden line-clamp-1">
+                      Apple Support
+                    </span>
+                    <span className="text-base text-blue-500 underline font-medium mb-1 overflow-hidden line-clamp-1">
+                      Record the screen on your iPhone, iPad, or iPod touch -
+                      Apple Support
+                    </span>
+                    <p className="text-sm overflow-hidden line-clamp-1">
+                      In iOS 11 or later, you can create a screen recording and
+                      capture sound.
+                    </p>
+                  </div>
+                </Link>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
       <Card className="w-full max-w-screen-sm">
@@ -222,9 +267,11 @@ export default function Page() {
             </span>{" "}
             Upload your task recording
           </CardTitle>
-          <CardDescription>Upload the screen recording.</CardDescription>
         </CardHeader>
         <CardContent>
+          <p className="text-neutral-500 dark:text-neutral-400 mb-4">
+            Upload the screen recording.
+          </p>
           {state?.error && (
             <div className="border-2 border-red-500 bg-red-500/10 rounded-2xl px-4 py-2 mb-4">
               <span className="text-red-500 dark:text-red-400 text-sm">
