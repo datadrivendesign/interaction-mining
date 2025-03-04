@@ -38,7 +38,7 @@ export default async function Page({
   );
 
   return (
-    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-8 md:p-16">
+    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-4 md:p-16">
       <h1 className="text-4xl font-bold mb-8">Let&rsquo;s get started!</h1>
       <Card className="w-full max-w-screen-md">
         <CardHeader>
@@ -48,7 +48,7 @@ export default async function Page({
             your study.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 pt-0 pb-0">
+        <CardContent className="p-6 pt-0 pb-0 md:pb-6">
           <div className="hidden md:flex flex-col md:flex-row w-full gap-x-6">
             <div className="flex flex-col md:w-1/2">
               <article className="flex flex-col">
