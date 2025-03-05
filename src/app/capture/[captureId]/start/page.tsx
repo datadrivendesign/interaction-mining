@@ -11,6 +11,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 import { getCapture } from "@/lib/actions";
 
 export default async function Page({
@@ -31,22 +38,24 @@ export default async function Page({
   );
 
   return (
-    <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">
+    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start md:justify-center p-4 md:p-16">
+      <h1 className="text-4xl font-bold mb-8">Let&rsquo;s get started!</h1>
       <Card className="w-full max-w-screen-md">
         <CardHeader>
-          <CardTitle>Launch ODIM</CardTitle>
+          <CardTitle>Launch session</CardTitle>
           <CardDescription>
-            Choose the method that works best for you to launch ODIM.
+            Choose the method that works best for you to launch ODIM to start
+            your study.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row w-full gap-6">
+        <CardContent className="p-6 pt-0 pb-0 md:pb-6">
+          <div className="hidden md:flex flex-col md:flex-row w-full gap-x-6">
             <div className="flex flex-col md:w-1/2">
               <article className="flex flex-col">
                 <h2 className="text-lg font-semibold mb-2">
-                  Scanning a QR code
+                  Using the QR code
                 </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 font-medium mb-4">
+                <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                   Point the camera on your phone or tablet at this QR code to
                   launch ODIM.
                 </p>
@@ -63,12 +72,11 @@ export default async function Page({
             <div className="flex flex-col md:w-1/2">
               <article className="flex flex-col">
                 <h2 className="text-lg font-semibold mb-2">
-                  Using a capture session code
+                  Using the capture session code
                 </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 font-medium mb-4">
+                <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
-                    {/* odim.app/capture/upload */}
                     {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
                   </Link>{" "}
                   and enter the following capture session code:
@@ -111,6 +119,35 @@ export default async function Page({
               </article>
             </div>
           </div>
+          <Accordion type="single" collapsible className="inherit md:hidden">
+            <AccordionItem value="item-1">
+              <AccordionTrigger>
+                <h2 className="text-lg font-semibold">Using the QR code</h2>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-neutral-500 dark:text-neutral-400">
+                  Point the camera on your phone or tablet at this QR code to
+                  launch ODIM.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-2">
+              <AccordionTrigger>
+                <h2 className="text-lg font-semibold">
+                  Using the capture session code
+                </h2>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-neutral-500 dark:text-neutral-400">
+                  Go to{" "}
+                  <Link className="underline" href="/capture/upload">
+                    {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
+                  </Link>{" "}
+                  and enter the following capture session code:
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Eye, EyeClosed, Hammer, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Eye,
+  EyeClosed,
+  Hammer,
+  Sparkles,
+} from "lucide-react";
 
 export default function Home() {
   return (
@@ -22,12 +29,12 @@ export default function Home() {
               className="px-4 py-2 bg-neutral-100 rounded-xl"
             >
               <span className="inline-flex items-center text-xl text-black font-medium">
-                Explore data <ArrowRight size={24} className="ml-1" />
+                Explore dataset <ArrowRight size={24} className="ml-1" />
               </span>
             </Link>
             <Link href="/contribute" className="px-4 py-2 bg-black rounded-xl">
               <span className="inline-flex items-center text-xl text-white font-medium">
-                Try ODIM <ArrowUpRight size={24} className="ml-1" />
+                Contribute to ODIM <ArrowUpRight size={24} className="ml-1" />
               </span>
             </Link>
           </div>
@@ -37,32 +44,37 @@ export default function Home() {
         id="about-the-project"
         className="grid grid-cols-3 w-full px-8 gap-8 justify-center items-start"
       >
-        <div className="flex col-span-1 w-full p-12 bg-neutral-50 dark:bg-neutral-950 rounded-6xl aspect-1/1">
-          <p className="text-3xl lg:text-4xl font-display font-normal tracking-tight text-neutral-500 dark:text-neutral-400">
-            ODIM is a privacy-first framework for collecting authentic
-            in-the-wild user interaction data.
-          </p>
-        </div>
+        <div className="flex col-span-1 w-full p-12 bg-neutral-50 dark:bg-neutral-950 rounded-6xl aspect-1/1"></div>
         <div className="flex col-span-2 w-full h-full p-12 bg-neutral-50 dark:bg-neutral-950 rounded-6xl">
           <p className="text-3xl lg:text-4xl font-display font-normal tracking-tight text-neutral-500 dark:text-neutral-400">
-            ODIM is a privacy-first framework for collecting authentic
-            in-the-wild user interaction data.
+            ODIM is an interaction mining architecture designed to
+            capture in-the-wild user interaction data—prioritizing
+            individual privacy while preserving authentic behavioral insights.
           </p>
         </div>
         <div className="flex flex-col col-span-1 w-full p-12 bg-green-200 dark:bg-green-800  rounded-6xl aspect-1/1">
-          <Hammer size={64} className="text-green-400 dark:text-green-300 mb-8" />
+          <Hammer
+            size={64}
+            className="text-green-400 dark:text-green-300 mb-8"
+          />
           <p className="text-3xl lg:text-4xl font-display font-semibold tracking-tight text-green-400 dark:text-green-300">
             Repair
           </p>
         </div>
         <div className="flex flex-col col-span-1 w-full p-12 bg-purple-200 dark:bg-purple-800 rounded-6xl aspect-1/1">
-          <Eye size={64} className="text-purple-400 dark:text-purple-300 mb-8" />
+          <Eye
+            size={64}
+            className="text-purple-400 dark:text-purple-300 mb-8"
+          />
           <p className="text-3xl lg:text-4xl font-display font-semibold tracking-tight text-purple-400 dark:text-purple-300">
             Redact
           </p>
         </div>
         <div className="flex flex-col col-span-1 w-full p-12 bg-blue-200 dark:bg-blue-800 rounded-6xl aspect-1/1">
-          <Sparkles size={64} className="text-blue-400 dark:text-blue-300 mb-8" />
+          <Sparkles
+            size={64}
+            className="text-blue-400 dark:text-blue-300 mb-8"
+          />
           <p className="text-3xl lg:text-4xl font-display font-semibold tracking-tight text-blue-400 dark:text-blue-300">
             Enrich
           </p>
