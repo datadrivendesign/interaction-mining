@@ -9,8 +9,28 @@
 }
 
 @theme {
-  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
-  
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-caret-blink: caret-blink 0.2s ease-out infinite;
+
+  @keyframes accordion-down {
+    0% {
+      height: 0;
+    }
+    100% {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    0% {
+      height: var(--radix-accordion-content-height);
+    }
+    100% {
+      height: 0;
+    }
+  }
+
   @keyframes caret-blink {
     0%,
     70%,
