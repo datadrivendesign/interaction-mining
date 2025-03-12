@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useRouter, redirect, RedirectType } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -48,7 +48,6 @@ async function fetchCapture(prevState: any, formData: FormData) {
 }
 
 export default function Page() {
-  const router = useRouter();
   const [otp, setOtp] = useState("");
   const [state, formAction, pending] = useActionState(fetchCapture, null);
 
@@ -60,7 +59,7 @@ export default function Page() {
 
   return (
     <>
-      <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">
+      <div className="flex w-dvw min-h-dvh justify-center items-start p-8 md:p-16">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>Let&rsquo;s find your capture session</CardTitle>
