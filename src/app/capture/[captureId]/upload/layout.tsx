@@ -24,7 +24,7 @@ export async function generateMetadata({
   const metadata: Metadata = {
     title: "Upload Capture",
     other: {
-      "apple-itunes-app": `app-id=${app.id}`,
+      "apple-itunes-app": `app-id=${app.data.id}`,
     },
   };
 
