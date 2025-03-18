@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
 import {
@@ -87,6 +87,10 @@ export default function Page({}: {}) {
       setCaptureState(CaptureState.PROCESSED);
     }, 5000);
   };
+
+  const redirectToFrameExtract = () => {
+    capture?.id ? redirect(`/extract?captureId=${capture.id}`) : null
+  }
 
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
@@ -364,6 +368,7 @@ export default function Page({}: {}) {
         <Button
           className="gap-1"
           disabled={captureState < CaptureState.PROCESSED}
+          onClick={redirectToFrameExtract}
         >
           Next step <ArrowRight />
         </Button>
