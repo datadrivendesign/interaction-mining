@@ -132,7 +132,7 @@ export default function Page() {
   // >>> DUMMY DRIVER CODE
 
   async function getCaptureSession(traceId: string) {
-    const trace = await getTrace(traceId, { includes: { app: false } });
+    const trace = await getTrace(traceId, { includes: { screens: true, app: false } });
 
     if (trace.ok) {
       return trace.data
