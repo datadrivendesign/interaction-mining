@@ -19,6 +19,7 @@ import {
 import clsx from "clsx";
 
 import { Screen } from "@prisma/client";
+import { FrameData } from "./extract-frames";
 
 const GalleryContext = createContext<{
   selection: {
@@ -39,7 +40,7 @@ const GalleryContext = createContext<{
   setSelection: () => {},
 });
 
-export default function SelectScreen({ screens }: { screens: Screen[] }) {
+export default function SelectScreen({ data }: { data: FrameData[] }) {
   const id = useId();
   const [isShift, setIsShift] = useState(false);
   const [selection, setSelection] = useState<{
@@ -168,11 +169,11 @@ export default function SelectScreen({ screens }: { screens: Screen[] }) {
           <GlobalHotKeys keyMap={keymap} handlers={handlers}>
             <div className="w-full h-full p-8">
               <ul className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {screens?.map((screen: Screen, index: number) => (
-                  <SelectScreenItem key={screen.id} index={index}>
+                {data.map((screen: FrameData, index: number) => (
+                  <SelectScreenItem key={screen.timestamp} index={index}>
                     <div className="relative w-full h-full bg-neutral-900">
                       <Image
-                        src={screen.src}
+                        src={screen.url}
                         alt="gallery"
                         draggable={false}
                         className="z-0 object-cover w-full h-auto"

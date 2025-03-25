@@ -1,26 +1,11 @@
 import { createContext } from "react";
 
-import { Redaction, Screen, ScreenGesture } from "@prisma/client";
+import { Screen } from "@prisma/client";
 
-export const FormContext = createContext<{
-  screens: Screen[];
-  edits: {
-    gestures: { [key: string]: ScreenGesture };
-    redactions: { [key: string]: Redaction[] };
-  };
-  setScreens: React.Dispatch<React.SetStateAction<Screen[]>>;
-  setEdits: React.Dispatch<
-    React.SetStateAction<{
-      gestures: { [key: string]: ScreenGesture };
-      redactions: { [key: string]: Redaction[] };
-    }>
-  >;
+const FormContext = createContext<{
+    screens: Screen[];
+    setScreens: React.Dispatch<React.SetStateAction<Screen[]>>;
 }>({
-  screens: [],
-  edits: {
-    gestures: {},
-    redactions: {},
-  },
-  setScreens: () => {},
-  setEdits: () => {},
+    screens: [],
+    setScreens: () => { },
 });

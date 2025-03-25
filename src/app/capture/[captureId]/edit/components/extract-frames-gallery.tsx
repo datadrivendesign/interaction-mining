@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import React from 'react'
-import { FrameData } from '../page'
+import { FrameData } from './extract-frames'
 import { X } from 'lucide-react'
 import { prettyNumber } from '@/lib/utils/number'
 
@@ -11,7 +11,7 @@ export const FrameGallery = ({
 }: {
   frameData: FrameData[], 
   setFrameData: React.Dispatch<React.SetStateAction<FrameData[]>>
-  video: HTMLVideoElement
+  video: HTMLVideoElement | null
 }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -27,7 +27,7 @@ export const FrameGallery = ({
             className="inline-flex self-end items-center cursor-pointer"
           >
             <X 
-              color='white'
+              color='red'
               className="size-4 text-neutral-500 hover:opacity-75" 
             />
           </button>
@@ -40,7 +40,11 @@ export const FrameGallery = ({
           </Image>
           <a
             className='cursor-pointer text-blue-300'
-            onClick={() => video.currentTime = frame.timestamp}
+            onClick={() => {
+              if (video) {
+                video.currentTime = frame.timestamp
+              }
+            }}
           >
             {`Timestamp: ${prettyNumber(frame.timestamp)}s`}
           </a>

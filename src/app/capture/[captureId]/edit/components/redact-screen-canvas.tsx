@@ -1,12 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { Check, ChevronsUpDown, Eraser, MousePointerClick, Pencil } from "lucide-react";
+import { Check, ChevronsUpDown, Eraser, Pencil } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMouse } from "@uidotdev/usehooks";
-import { DndContext, useDraggable, useDroppable, DragMoveEvent, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
-import { Screen } from "@prisma/client";
 
 import { cn } from "@/lib/utils";
 
@@ -25,9 +24,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import clsx from "clsx";
+import { FrameData } from "./extract-frames";
 
 
-export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
+export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
   const [mouse, ref] = useMouse();
   const [tooltip, setTooltip] = useState<{ x: number | null; y: number | null }>({
     x: null,
@@ -103,10 +103,10 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
               ) : null}
               <Image
                 ref={ref as React.MutableRefObject<HTMLImageElement | null>}
-                src={screen.src}
+                src={screen.url}
                 alt="gallery"
                 draggable={false}
-                className="w-fit h-full rounded-lg cursor-crosshair"
+                className="w-auto h-full rounded-lg cursor-crosshair"
                 width={0}
                 height={0}
                 sizes="100vw"
