@@ -13,6 +13,7 @@ import SelectScreenDoc from "./components/select-screen.mdx";
 import RepairInteractionsDoc from "./components/repair-interactions.mdx";
 import ExtractFrames, { FrameData } from "./components/extract-frames";
 import { getCapture } from "@/lib/actions";
+import SaveTrace from "./components/save-trace";
 
 const container = {
   enter: {
@@ -171,7 +172,7 @@ export default function Page() {
                       setFrames={setFrames} /> 
                   : null}
                 {stepState.index === 1 ? <RepairScreen data={frames} /> : null}
-                {/* {stepState.index === 2 ? <RedactScreen data={frames} /> : null} */}
+                {stepState.index === 2 ? <SaveTrace data={frames} /> : null}
               </div>
             </div>
             <nav
