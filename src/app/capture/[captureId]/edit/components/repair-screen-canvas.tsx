@@ -94,6 +94,18 @@ export default function RepairScreenCanvas({
       }));
     }
   };
+  // const handleImageClick = () => {
+  //   setGesture((prev) => {
+  //     if (prev.x === null && prev.y === null) {
+  //       return {
+  //         ...prev,
+  //         x: mouse.elementX,
+  //         y: mouse.elementY,
+  //       };
+  //     }
+  //     return prev;
+  //   });
+  // };
 
   // Update marker position on drag
   const handleDragEnd = useCallback(
@@ -114,6 +126,14 @@ export default function RepairScreenCanvas({
     },
     [width, height]
   );
+  // const handleDragEnd = (event: DragEndEvent) => {
+  //   const { delta } = event;
+  //   setGesture((prev) => ({
+  //     ...prev,
+  //     x: prev.x! + delta.x,
+  //     y: prev.y! + delta.y,
+  //   }));
+  // };
 
   useEffect(() => {
     if (
@@ -289,14 +309,8 @@ function GestureSelection() {
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
 
-  // Update gesture type when value changes
   useEffect(() => {
-    if (value !== "") {
-      setGesture((prev) => ({ ...prev, type: value }));
-    } else {
-      // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
-      setGesture((prev) => ({ ...prev, type: null }));
-    }
+    setGesture((prev) => ({ ...prev, type: value }));
   }, [value]);
 
   return (

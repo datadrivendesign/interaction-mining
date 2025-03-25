@@ -5,7 +5,6 @@ import React, {
   useContext,
   useState,
   useId,
-  useEffect,
 } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
@@ -19,9 +18,7 @@ import {
 } from "@dnd-kit/core";
 import clsx from "clsx";
 
-import { Screen, Trace } from "@prisma/client";
-import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../page";
+import { Screen } from "@prisma/client";
 
 const GalleryContext = createContext<{
   selection: {
@@ -42,16 +39,7 @@ const GalleryContext = createContext<{
   setSelection: () => {},
 });
 
-export default function SelectScreen({
-  trace,
-}: {
-  trace: Trace & { screens: Screen[] };
-}) {
-  const { setValue, watch } = useFormContext<TraceFormData>();
-
-  const selectedScreens = watch("screens");
-  const screens = trace.screens;
-
+export default function SelectScreen({ screens }: { screens: Screen[] }) {
   const id = useId();
   const [isShift, setIsShift] = useState(false);
   const [selection, setSelection] = useState<{
@@ -61,21 +49,6 @@ export default function SelectScreen({
     root: null,
     items: [],
   });
-  
-  useEffect(() => {
-    // Only update if no selection has been made yet
-    if (selection.items.length === 0 && selectedScreens && selectedScreens.length > 0) {
-      const defaultIndices = selectedScreens
-        .map((screen: any) => screens.findIndex((s: any) => s.id === screen.id))
-        .filter((index: number) => index !== -1);
-      if (defaultIndices.length > 0) {
-        setSelection({
-          root: defaultIndices[0],
-          items: defaultIndices,
-        });
-      }
-    }
-  }, [selectedScreens, screens, selection.items.length]);
 
   const keymap = {
     SHIFT_DOWN: {
@@ -175,16 +148,6 @@ export default function SelectScreen({
       }
     }
   };
-
-  // Update form value when selection changes
-  useEffect(() => {
-    if (selection.items.length > 0) {
-      setValue(
-        "screens",
-        selection.items.map((index) => screens[index])
-      );
-    }
-  }, [selection.items]);
 
   return (
     <>
