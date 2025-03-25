@@ -1,87 +1,74 @@
 "use client";
 import React, {
-  use,
   useCallback,
-  useContext,
-  useEffect,
-  useMemo,
   useState,
 } from "react";
 import Image from "next/image";
-import { CircleAlert } from "lucide-react";
-
-import { GlobalHotKeys, HotKeys } from "react-hotkeys";
+import { Check, ChevronsUpDown, CircleAlert } from "lucide-react";
 
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable";
+} from "@/components/ui/resizable"
 
-import { Screen, ScreenGesture } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
 import RepairScreenCanvas from "./repair-screen-canvas";
-import { FormContext } from "./controller";
+import { FrameData } from "./extract-frames";
 
-type Trace = any;
+export default function RepairScreen({
+  data
+}: {
+  data: FrameData[]
+}) {
+  const [focusViewValue, setFocusViewValue] = useState<{
+    current: FrameData | null;
+    next: FrameData | null;
+  }>({
+    current: null,
+    next: null,
+  });
 
-export default function RepairScreen({ screens }: { screens: Screen[] }) {
-  const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
-
-  const keymap = {
-    LEFT: "left",
-    RIGHT: "right",
-  };
-
-  const handlePrevious = useCallback(() => {
-    if (focusViewIndex > 0) {
-      console.log("going previous", focusViewIndex - 1);
-      setFocusViewIndex(focusViewIndex - 1);
-    }
-  }, [focusViewIndex]);
-
-  const handleNext = useCallback(() => {
-    if (focusViewIndex < screens.length - 1) {
-      console.log("going next", focusViewIndex + 1);
-      setFocusViewIndex(focusViewIndex + 1);
-    }
-  }, [focusViewIndex, screens]);
-
-  const handlers = {
-    LEFT: handlePrevious,
-    RIGHT: handleNext,
-  };
-
-  useEffect(() => {
-    console.log("focusViewIndex", focusViewIndex);
-  }, [focusViewIndex]);
+  const handleFocusView = useCallback((index: number) => {
+    setFocusViewValue({
+      current: data[index],
+      next: data[index + 1] ?? null,
+    });
+  }, [data]);
 
   return (
-    // @ts-ignore - GlobalHotKeys is not typed
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
-          <GlobalHotKeys keyMap={keymap} handlers={handlers} allowChanges>
-            {focusViewIndex > -1 ? (
-              <FocusView
-                key={focusViewIndex}
-                screen={screens[focusViewIndex]}
-              />
-            ) : (
-              <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">
-                  Select a screen from the filmstrip.
-                </span>
-              </div>
-            )}
-          </GlobalHotKeys>
+          {focusViewValue.current ? (
+            <FocusView screen={focusViewValue.current} />
+          ) : (
+            <div className="flex justify-center items-center w-full h-full">
+              <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">Select a screen from the filmstrip.</span>
+            </div>
+          )}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
           <Filmstrip
-            screens={screens}
-            handleFocusView={(index) => setFocusViewIndex(index)}
+            data={data}
+            handleFocusView={handleFocusView}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -89,25 +76,25 @@ export default function RepairScreen({ screens }: { screens: Screen[] }) {
   );
 }
 
-function Filmstrip({
-  screens,
-  handleFocusView,
-}: {
-  screens: Screen[];
-  handleFocusView: (index: number) => void;
+function Filmstrip({ 
+  data, 
+  handleFocusView 
+}: { 
+  data: FrameData[], 
+  handleFocusView: (index: number) => void 
 }) {
   return (
     <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
-      {screens?.map((screen: Screen, index: number) => (
+      {data.map((screen: FrameData, index: number) => (
         <FilmstripItem
-          key={screen.id}
+          key={screen.timestamp}
           index={index}
-          isBroken={screen.gesture.type === null}
+          isBroken={true}//screen.gesture === null}
           onClick={() => handleFocusView(index)}
         >
           <Image
-            key={screen.id}
-            src={screen.src}
+            key={screen.timestamp}
+            src={screen.url}
             alt="gallery"
             draggable={false}
             className="h-full w-auto object-contain"
@@ -119,7 +106,7 @@ function Filmstrip({
         </FilmstripItem>
       ))}
     </ul>
-  );
+  )
 }
 
 function FilmstripItem({
@@ -140,19 +127,12 @@ function FilmstripItem({
         {...props}
       >
         <div className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
-          {isBroken && (
-            <div className="absolute z-10 flex w-full h-full justify-center items-center rounded-sm ring-2 ring-inset ring-red-500 dark:ring-red-400">
-              <CircleAlert className="size-6 text-red-500 dark:text-red-400" />
+          {(isBroken) && (
+            <div className="absolute z-10 flex w-full h-full justify-center items-center rounded-sm ring-2 ring-inset ring-red-400">
+              <CircleAlert className="size-6 text-red-400" />
             </div>
           )}
-          <div
-            className={cn(
-              "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
-              isBroken
-                ? "grayscale brightness-50"
-                : "grayscale-0 brightness-100"
-            )}
-          >
+          <div className={cn("relative min-w-fit h-full transition-all duration-200 ease-in-out select-none", isBroken ? "grayscale brightness-50" : "grayscale-0 brightness-100")}>
             {children}
           </div>
         </div>
@@ -161,39 +141,88 @@ function FilmstripItem({
   );
 }
 
-function FocusView({ screen }: { screen: Screen }) {
-  const { screens, setEdits } = useContext(FormContext);
-  // find applicable gesture for screen or set to default template
-  const [gesture, setGesture] = useState<ScreenGesture>(
-    screens.find((s) => s.id === screen.id)?.gesture ?? {
-      type: null,
-      x: null,
-      y: null,
-      scrollDeltaX: null,
-      scrollDeltaY: null,
-    }
-  );
-
-  useEffect(() => {
-    setEdits((prev) => ({
-      ...prev,
-      gestures: {
-        ...prev.gestures,
-        [screen.id]: gesture,
-      },
-    }));
-  }, [gesture]);
-
+function FocusView({ screen }: {
+  screen: FrameData;
+}) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
-        <RepairScreenCanvas
-          key={screen.id}
-          screen={screen}
-          gesture={gesture}
-          setGesture={setGesture}
-        />
+        <RepairScreenCanvas screen={screen} />
       </div>
     </>
-  );
+  )
+}
+
+const gestureOptions = [
+  {
+    value: "Press",
+    label: "Press",
+  },
+  {
+    value: "Long press",
+    label: "Long press",
+  },
+  {
+    value: "Scroll",
+    label: "Scroll"
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+  },
+  {
+    value: "Pinch",
+    label: "Pinch",
+  }
+]
+
+function GestureSelection() {
+  const [open, setOpen] = React.useState(false)
+  const [value, setValue] = React.useState("")
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-50 justify-between"
+        >
+          {value
+            ? gestureOptions.find((gesture) => gesture.value === value)?.label
+            : "Select gesture..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-50 p-0">
+        <Command>
+          <CommandInput placeholder="Search gesture..." />
+          <CommandList>
+            <CommandEmpty>No framework found.</CommandEmpty>
+            <CommandGroup>
+              {gestureOptions.map((gesture) => (
+                <CommandItem
+                  key={gesture.value}
+                  value={gesture.value}
+                  onSelect={(currentValue) => {
+                    setValue(currentValue === value ? "" : currentValue)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "h-4 w-4",
+                      value === gesture.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {gesture.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }

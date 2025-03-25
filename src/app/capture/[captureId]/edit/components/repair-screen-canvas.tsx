@@ -1,27 +1,15 @@
 "use client";
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { Check, ChevronsUpDown, Circle, MousePointerClick } from "lucide-react";
+import { Check, ChevronsUpDown, Circle } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMeasure, useMouse } from "@uidotdev/usehooks";
-import {
-  DndContext,
-  useDraggable,
-  useDroppable,
-  DragEndEvent,
-} from "@dnd-kit/core";
+import { useMouse } from "@uidotdev/usehooks";
+import { DndContext, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
-import { Screen, ScreenGesture } from "@prisma/client";
 
 import { cn } from "@/lib/utils";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -29,194 +17,94 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/components/ui/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"
 import clsx from "clsx";
-import mergeRefs from "@/lib/utils/merge-refs";
+import { FrameData } from "./extract-frames";
 
-export const GestureContext = createContext<{
-  gesture: ScreenGesture;
-  setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
-}>({
-  gesture: {
-    type: null,
-    x: null,
-    y: null,
-    scrollDeltaX: null,
-    scrollDeltaY: null,
-  },
-  setGesture: () => {},
-});
 
-export default function RepairScreenCanvas({
-  screen,
-  gesture,
-  setGesture,
-}: {
-  screen: Screen;
-  gesture: ScreenGesture;
-  setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
-}) {
-  const [imageRef, { width, height }] = useMeasure();
+export default function RepairScreenCanvas({ screen }: { screen: FrameData }) {
   const [mouse, ref] = useMouse();
-  const [tooltip, setTooltip] = useState<{
-    x: number | null;
-    y: number | null;
-  }>({
+  const [tooltip, setTooltip] = useState<{ x: number | null; y: number | null }>({
+    x: null,
+    y: null
+  });
+
+  const [gestureMarker, setGestureMarker] = useState<{ x: number | null; y: number | null }>({
     x: null,
     y: null,
   });
 
-  const [markerPixelPosition, setMarkerPixelPosition] = useState<{
-    x: number | null;
-    y: number | null;
-  }>({
-    x: null,
-    y: null,
-  });
-
-  // Set initial marker position on image
   const handleImageClick = () => {
-    const imageElement = ref.current;
-    if (imageElement) {
-      const { width, height } = imageElement.getBoundingClientRect();
-      const relativeX = mouse.elementX / width;
-      const relativeY = mouse.elementY / height;
-
-      setGesture((prev) => ({
-        ...prev,
-        x: relativeX,
-        y: relativeY,
-      }));
-    }
+    // Set the marker position
+    setGestureMarker({ x: mouse.elementX, y: mouse.elementY });
   };
-  // const handleImageClick = () => {
-  //   setGesture((prev) => {
-  //     if (prev.x === null && prev.y === null) {
-  //       return {
-  //         ...prev,
-  //         x: mouse.elementX,
-  //         y: mouse.elementY,
-  //       };
-  //     }
-  //     return prev;
-  //   });
-  // };
 
-  // Update marker position on drag
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const imageElement = ref.current;
-      if (imageElement && width && height) {
-        const { delta } = event;
-        // Calculate proportional delta
-        const deltaX = delta.x / width;
-        const deltaY = delta.y / height;
-
-        setGesture((prev) => ({
-          ...prev,
-          x: prev.x! + deltaX,
-          y: prev.y! + deltaY,
-        }));
-      }
-    },
-    [width, height]
-  );
-  // const handleDragEnd = (event: DragEndEvent) => {
-  //   const { delta } = event;
-  //   setGesture((prev) => ({
-  //     ...prev,
-  //     x: prev.x! + delta.x,
-  //     y: prev.y! + delta.y,
-  //   }));
-  // };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { delta } = event;
+    setGestureMarker((prev) => ({
+      x: (prev?.x ?? 0) + delta.x,
+      y: (prev?.y ?? 0) + delta.y,
+    }));
+  };
 
   useEffect(() => {
-    if (
-      (markerPixelPosition.x !== gesture.x ||
-        markerPixelPosition.y !== gesture.y) &&
-      width &&
-      height
-    ) {
-      setMarkerPixelPosition({
-        x: gesture.x ? gesture.x * width : null,
-        y: gesture.y ? gesture.y * height : null,
-      });
-    }
-  }, [gesture, width, height]);
+    console.log(gestureMarker)
+  }, [gestureMarker])
 
   return (
     <>
-      <GestureContext.Provider
-        value={{
-          gesture: gesture,
-          setGesture: setGesture,
-        }}
-      >
-        <DndContext
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToParentElement]}
+      <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
+        <div
+          className="relative w-auto h-full p-4"
+          style={{ "--marker-radius": "1rem" } as React.CSSProperties}
         >
-          <div
-            className="relative w-auto h-full p-4"
-            style={{ "--marker-radius": "1rem" } as React.CSSProperties}
-          >
-            <DroppableArea>
-              <AnimatePresence>
-                {/* Only show floating tooltip when no marker is placed  */}
-                {tooltip!.x && tooltip!.y && !gesture.x && !gesture.y ? (
+          <DroppableArea>
+            <AnimatePresence>
+              {/* Only show floating tooltip when no marker is placed  */}
+              {
+                (tooltip!.x && tooltip!.y) &&
+                  (!gestureMarker.x && !gestureMarker.y) ? (
                   <motion.div
                     className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
-                    initial={{
-                      x: 8 + tooltip!.x,
-                      y: 8 + tooltip!.y,
-                      opacity: 0,
-                    }}
-                    animate={{
-                      x: 8 + tooltip!.x,
-                      y: 8 + tooltip!.y,
-                      opacity: 1,
-                    }}
+                    initial={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
+                    animate={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 1 }}
                     exit={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
                     transition={{ duration: 0.05 }}
                   >
                     <span className="text-xs font-medium">Add a gesture</span>
                   </motion.div>
-                ) : null}
-              </AnimatePresence>
-              {markerPixelPosition.x !== null &&
-              markerPixelPosition.y !== null ? (
-                <DraggableMarker position={markerPixelPosition} />
-              ) : null}
-              <Image
-                ref={
-                  mergeRefs(
-                    ref,
-                    imageRef
-                  ) as React.MutableRefObject<HTMLImageElement | null>
-                }
-                src={screen.src}
-                alt="gallery"
-                draggable={false}
-                className="w-fit h-full rounded-lg cursor-crosshair"
-                width={0}
-                height={0}
-                sizes="100vw"
-                onClick={handleImageClick}
-                onMouseMove={() => {
-                  setTooltip({ x: mouse.elementX, y: mouse.elementY });
-                }}
+                ) : null
+              }
+            </AnimatePresence>
+            {(gestureMarker.x !== null && gestureMarker.y !== null) ? (
+              <DraggableMarker
+                position={gestureMarker}
               />
-            </DroppableArea>
-          </div>
-        </DndContext>
-      </GestureContext.Provider>
+            ) : null}
+            <Image
+              ref={ref as React.MutableRefObject<HTMLImageElement | null>}
+              src={screen.url}
+              alt="gallery"
+              draggable={false}
+              className="w-auto h-full rounded-lg cursor-crosshair"
+              width={0}
+              height={0}
+              sizes="100vw"
+              onClick={handleImageClick}
+              onMouseMove={() => {
+                setTooltip({ x: mouse.elementX, y: mouse.elementY });
+              }}
+            />
+          </DroppableArea>
+        </div>
+      </DndContext>
     </>
-  );
+  )
 }
 
 function DroppableArea({ children }: { children: React.ReactNode }) {
@@ -234,10 +122,9 @@ function DraggableMarker({
   position: { x: number | null; y: number | null };
   props?: React.HTMLAttributes<HTMLDivElement>;
 }) {
-  const { attributes, isDragging, listeners, setNodeRef, transform } =
-    useDraggable({
-      id: "gestureMarker",
-    });
+  const { attributes, isDragging, listeners, setNodeRef, transform } = useDraggable({
+    id: "gestureMarker",
+  });
 
   return (
     <>
@@ -288,11 +175,11 @@ const gestureOptions = [
   },
   {
     value: "Swipe",
-    label: "Swipe",
+    label: "Swipe"
   },
   {
     value: "Drag",
-    label: "Drag",
+    label: "Drag"
   },
   {
     value: "Zoom",
@@ -301,20 +188,15 @@ const gestureOptions = [
   {
     value: "Rotate",
     label: "Rotate",
-  },
-];
+  }
+]
 
 function GestureSelection() {
-  const { gesture, setGesture } = useContext(GestureContext);
-  const [open, setOpen] = useState(gesture.type === null);
-  const [value, setValue] = useState(gesture.type);
-
-  useEffect(() => {
-    setGesture((prev) => ({ ...prev, type: value }));
-  }, [value]);
+  const [open, setOpen] = useState(true)
+  const [value, setValue] = useState("")
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} defaultOpen>
       <PopoverTrigger asChild>
         <Button
           size="sm"
@@ -340,8 +222,8 @@ function GestureSelection() {
                   key={gesture.value}
                   value={gesture.value}
                   onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue);
-                    setOpen(false);
+                    setValue(currentValue === value ? "" : currentValue)
+                    setOpen(false)
                   }}
                 >
                   <Check
@@ -358,5 +240,6 @@ function GestureSelection() {
         </Command>
       </PopoverContent>
     </Popover>
-  );
+  )
 }
+
