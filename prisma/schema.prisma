@@ -14,14 +14,11 @@ type AppsCategory {
 }
 
 type ScreenGesture {
-  // Multiple data types found: Float: 11.4%, Int: 88.6% out of 1000 sampled entries
-  scrollDeltaX Float
-  // Multiple Float types found: Float: 37.9%, Int: 62.1% out of 1000 sampled entries
-  scrollDeltaY Float
-  // Multiple data types found: Float: 99.8%, Int: 0.2% out of 1000 sampled entries
-  x            Float
-  // Multiple data types found: Float: 99.9%, Int: 0.1% out of 1000 sampled entries
-  y            Float
+  type String?
+  scrollDeltaX Float?
+  scrollDeltaY Float?
+  x            Float?
+  y            Float?
 }
 
 enum Role {

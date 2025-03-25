@@ -1,64 +1,33 @@
-import { Variants } from "motion/react";
+import { getTrace } from "@/lib/actions";
 
-export const stepReducer = (state: any, action: number) => {
-  if (action !== state.index) {
-    return {
-      index: action,
-      hash: Date.now() + Math.random(),
-    };
+import useSWR from "swr";
+import { toast } from "sonner";
+
+export enum TraceSWRKeys {
+  TRACE = "trace",
+}
+
+export async function traceFetcher([_, traceId]: [string, string]) {
+  let res = await getTrace(traceId, { includes: { screens: true } });
+
+  if (res.ok) {
+    return { trace: res.data };
+  } else {
+    console.error("Failed to fetch capture session:", res.message);
+    toast.error("Failed to fetch capture session.");
+    return null;
   }
+}
 
-  return state;
-};
+export function useTrace(traceId: string) {
+  const { data, error, isLoading } = useSWR(
+    [TraceSWRKeys.TRACE, traceId],
+    traceFetcher
+  );
 
-export const loadingReducer = (
-  state: any,
-  action: {
-    type: "SET_LOADED" | "SET_MESSAGE";
-    payload?: any;
-  }
-) => {
-  if (action.type === "SET_LOADED" && action.payload) {
-    return {
-      ...state,
-      isLoaded: action.payload,
-    };
-  }
-
-  if (action.type === "SET_MESSAGE" && action.payload) {
-    return {
-      ...state,
-      message: action.payload,
-    };
-  }
-
-  return state;
-};
-
-// motion variants
-export const container = {
-  enter: {
-    width: "0",
-  },
-  show: {
-    width: "auto",
-  },
-  exit: {
-    width: "0",
-  },
-} as Variants;
-
-export const item = {
-  enter: {
-    opacity: 0,
-    filter: "blur(10px)",
-  },
-  show: {
-    opacity: 1,
-    filter: "blur(0px)",
-  },
-  exit: {
-    opacity: 0,
-    filter: "blur(10px)",
-  },
-} as Variants;
+  return {
+    trace: data?.trace,
+    error,
+    isLoading,
+  };
+}
