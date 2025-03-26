@@ -89,7 +89,7 @@ export default function Page({}: {}) {
   };
 
   const redirectToFrameExtract = () => {
-    capture?.id ? redirect(`/extract?captureId=${capture.id}`) : null
+    capture?.id ? redirect(`/capture/${capture.id}/edit`) : null
   }
 
   return (
