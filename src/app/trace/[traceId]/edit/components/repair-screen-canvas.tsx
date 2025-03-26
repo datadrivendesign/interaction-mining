@@ -142,7 +142,7 @@ export default function RepairScreenCanvas({
           modifiers={[restrictToParentElement]}
         >
           <div
-            className="relative w-auto h-full p-4"
+            className="relative w-full h-full p-4 bg-neutral-50 dark:bg-neutral-950"
             style={{ "--marker-radius": "1rem" } as React.CSSProperties}
           >
             <DroppableArea>
@@ -172,25 +172,28 @@ export default function RepairScreenCanvas({
               markerPixelPosition.y !== null ? (
                 <DraggableMarker position={markerPixelPosition} />
               ) : null}
-              <Image
-                ref={
-                  mergeRefs(
-                    ref,
-                    imageRef
-                  ) as React.MutableRefObject<HTMLImageElement | null>
-                }
-                src={screen.src}
-                alt="gallery"
-                draggable={false}
-                className="w-fit h-full rounded-lg cursor-crosshair"
-                width={0}
-                height={0}
-                sizes="100vw"
-                onClick={handleImageClick}
-                onMouseMove={() => {
-                  setTooltip({ x: mouse.elementX, y: mouse.elementY });
-                }}
-              />
+              <figure className="relative w-full h-full">
+                <Image
+                  ref={
+                    mergeRefs(
+                      ref,
+                      imageRef
+                    ) as React.MutableRefObject<HTMLImageElement | null>
+                  }
+                  src={screen.src}
+                  alt="gallery"
+                  draggable={false}
+                  className="w-auto h-full rounded-lg cursor-crosshair"
+                  fill
+                  // width={0}
+                  // height={0}
+                  // sizes="100vw"
+                  onClick={handleImageClick}
+                  onMouseMove={() => {
+                    setTooltip({ x: mouse.elementX, y: mouse.elementY });
+                  }}
+                />
+              </figure>
             </DroppableArea>
           </div>
         </DndContext>

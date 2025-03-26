@@ -142,57 +142,63 @@ export default function RepairScreenCanvas({
           onDragEnd={handleDragEnd}
           modifiers={[restrictToParentElement]}
         >
-          <div
-            className="relative w-auto h-full p-4"
-            style={{ "--marker-radius": "1rem" } as React.CSSProperties}
-          >
-            <DroppableArea>
-              <AnimatePresence>
-                {/* Only show floating tooltip when no marker is placed  */}
-                {tooltip!.x && tooltip!.y && !gesture.x && !gesture.y ? (
-                  <motion.div
-                    className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
-                    initial={{
-                      x: 8 + tooltip!.x,
-                      y: 8 + tooltip!.y,
-                      opacity: 0,
-                    }}
-                    animate={{
-                      x: 8 + tooltip!.x,
-                      y: 8 + tooltip!.y,
-                      opacity: 1,
-                    }}
-                    exit={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
-                    transition={{ duration: 0.05 }}
-                  >
-                    <span className="text-xs font-medium">Add a gesture</span>
-                  </motion.div>
+          <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
+            <div
+              className="relative w-auto h-full"
+              style={{ "--marker-radius": "1rem" } as React.CSSProperties}
+            >
+              <DroppableArea>
+                <AnimatePresence>
+                  {/* Only show floating tooltip when no marker is placed  */}
+                  {tooltip!.x && tooltip!.y && !gesture.x && !gesture.y ? (
+                    <motion.div
+                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                      initial={{
+                        x: 8 + tooltip!.x,
+                        y: 8 + tooltip!.y,
+                        opacity: 0,
+                      }}
+                      animate={{
+                        x: 8 + tooltip!.x,
+                        y: 8 + tooltip!.y,
+                        opacity: 1,
+                      }}
+                      exit={{
+                        x: 8 + tooltip!.x,
+                        y: 8 + tooltip!.y,
+                        opacity: 0,
+                      }}
+                      transition={{ duration: 0.05 }}
+                    >
+                      <span className="text-xs font-medium">Add a gesture</span>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+                {markerPixelPosition.x !== null &&
+                markerPixelPosition.y !== null ? (
+                  <DraggableMarker position={markerPixelPosition} />
                 ) : null}
-              </AnimatePresence>
-              {markerPixelPosition.x !== null &&
-              markerPixelPosition.y !== null ? (
-                <DraggableMarker position={markerPixelPosition} />
-              ) : null}
-              <Image
-                ref={
-                  mergeRefs(
-                    ref,
-                    imageRef
-                  ) as React.MutableRefObject<HTMLImageElement | null>
-                }
-                src={screen.url}
-                alt="gallery"
-                draggable={false}
-                className="w-fit h-full rounded-lg cursor-crosshair"
-                width={0}
-                height={0}
-                sizes="100vw"
-                onClick={handleImageClick}
-                onMouseMove={() => {
-                  setTooltip({ x: mouse.elementX, y: mouse.elementY });
-                }}
-              />
-            </DroppableArea>
+                <Image
+                  ref={
+                    mergeRefs(
+                      ref,
+                      imageRef
+                    ) as React.MutableRefObject<HTMLImageElement | null>
+                  }
+                  src={screen.url}
+                  alt="gallery"
+                  draggable={false}
+                  className="w-auto h-full rounded-lg cursor-crosshair"
+                  width={0}
+                  height={0}
+                  sizes="100vw"
+                  onClick={handleImageClick}
+                  onMouseMove={() => {
+                    setTooltip({ x: mouse.elementX, y: mouse.elementY });
+                  }}
+                />
+              </DroppableArea>
+            </div>
           </div>
         </DndContext>
       </GestureContext.Provider>

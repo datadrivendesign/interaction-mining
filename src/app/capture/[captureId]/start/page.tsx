@@ -6,10 +6,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import {
   ArrowRight,
-  CheckCircle2,
-  Ellipsis,
   FileVideo,
-  Loader2,
   Minus,
   X,
 } from "lucide-react";
@@ -32,7 +29,6 @@ import {
 
 import {
   CaptureSWROperations,
-  captureFetcher,
   fileFetcher,
   handleDeleteFile,
 } from "./util";
@@ -327,42 +323,12 @@ export default function Page({}: {}) {
               </div>
             )}
           </div>
-          <div className="flex w-full justify-end">
-            <Button
-              disabled={uploadList ? uploadList.length < 1 : false}
-              onClick={handleProcess}
-            >
-              Continue
-            </Button>
-          </div>
         </CardContent>
-      </Card>
-      <Card className="w-full max-w-screen-sm">
-        <CardHeader>
-          <div className="flex w-full justify-between items-center">
-            <CardTitle className="text-sm">
-              {captureState < CaptureState.PROCESSING ? (
-                <>Session recording processing</>
-              ) : captureState === CaptureState.PROCESSING ? (
-                <>Processing recordings...</>
-              ) : (
-                <>Recordings processed</>
-              )}
-            </CardTitle>
-            {captureState < CaptureState.PROCESSING ? (
-              <Ellipsis className="size-5 text-neutral-500" />
-            ) : captureState === CaptureState.PROCESSING ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="size-5" />
-            )}
-          </div>
-        </CardHeader>
       </Card>
       <div className="flex justify-end w-full max-w-screen-sm">
         <Button
           className="gap-1"
-          disabled={captureState < CaptureState.PROCESSED}
+          disabled={uploadList.length === 0}
           onClick={redirectToFrameExtract}
         >
           Next step <ArrowRight />
