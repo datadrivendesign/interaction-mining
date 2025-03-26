@@ -1,4 +1,4 @@
-import { getCapture, getTrace } from "@/lib/actions";
+import { getCapture } from "@/lib/actions";
 
 import useSWR from "swr";
 import { toast } from "sonner";
@@ -7,11 +7,13 @@ export enum CaptureSWRKeys {
   CAPTURE = "capture",
 }
 
+
+// TODO: the two captureFetchers returning different data is tripping up caches
 export async function captureFetcher([_, captureId]: [string, string]) {
   let res = await getCapture({ id: captureId, includes: { app: true } });
 
   if (res.ok) {
-    return { capture: res.data };
+    return res.data; //{ capture: res.data };
   } else {
     console.error("Failed to fetch capture session:", res.message);
     toast.error("Failed to fetch capture session.");
@@ -26,7 +28,7 @@ export function useCapture(captureId: string) {
   );
 
   return {
-    capture: data?.capture,
+    capture: data,//?.capture,
     error,
     isLoading,
   };
