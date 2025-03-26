@@ -10,13 +10,20 @@ import Sheet from "./components/sheet";
 
 import ExtractFrames, { FrameData } from "./components/extract-frames";
 import RepairScreen from "./components/repair-screen/index";
+import Review from "./components/review/review";
 
 import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairInteractionsDoc from "./components/repair-screen/doc.mdx";
 import ReviewDoc from "./components/review/doc.mdx";
 
 import { useCapture } from "./util";
-import { ScreenGesture } from "@prisma/client";
+import { Screen, ScreenGesture, Trace } from "@prisma/client";
+import { toast } from "sonner";
+import {
+  createScreen,
+  createTrace,
+  generatePresignedScreenUpload,
+} from "@/lib/actions";
 
 const traceSteps = [
   {
@@ -40,6 +47,7 @@ export type CaptureFormData = {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [key: string]: string };
+  description: string;
 };
 
 export default function Page() {
@@ -54,40 +62,58 @@ export default function Page() {
       screens: [],
       gestures: {},
       redactions: {},
+      description: "",
     },
   });
 
-  // // Function to perform step-level validation
-  // const validateStep = async (): Promise<boolean> => {
-  //   const data = methods.getValues();
-  //   // Example validation: Ensure at least one screen exists and, for Step 2, each screen has a gesture
-  //   if (stepIndex === 0) {
-  //     if (!data.screens || data.screens.length === 0) {
-  //       alert("No screens were generated.");
-  //       return false;
-  //     }
-  //   }
-  //   if (stepIndex === 1) {
-  //     const missingGesture = data.screens.some((screen) => !screen.gesture);
-  //     if (missingGesture) {
-  //       alert("Please add a gesture to all screens.");
-  //       return false;
-  //     }
-  //   }
-  //   return true;
-  // };
-
-  const onSubmit = (data: FormData) => {
-    // Here you can assemble and transform the data as needed before sending it to your backend.
-    console.log("Final backend-ready data:", data);
-  };
-
   const [stepIndex, setStepIndex] = useState(0);
-  const [frames, setFrames] = useState<FrameData[]>([]);
 
-  const handleNext = () => {
-    if (stepIndex < traceSteps.length - 1) {
+  const handleNext = async () => {
+    let isValid = false;
+
+    if (stepIndex === 0) {
+      // Validate "screens" field
+      isValid = await methods.trigger("screens");
+      const screens = methods.getValues("screens");
+      if (!screens || screens.length === 0) {
+        methods.setError("screens", { message: "No screens were selected." });
+        toast.error("No screens were selected.");
+        isValid = false;
+      }
+    } else if (stepIndex === 1) {
+      // Custom validation for gestures
+      const screens = methods.getValues("screens");
+      const gestures = methods.getValues("gestures");
+      const missingGesture = screens.some(
+        (screen) => !gestures[screen.id] || gestures[screen.id].type === null
+      );
+      if (missingGesture) {
+        methods.setError("gestures", {
+          message: "Please add a gesture to all screens.",
+        });
+        toast.error("Please add a gesture to all screens.");
+        isValid = false;
+      } else {
+        isValid = true;
+      }
+    } else if (stepIndex === 2) {
+      // Validate "description" field
+      isValid = await methods.trigger("description");
+      const description = methods.getValues("description");
+      if (!description) {
+        methods.setError("description", {
+          message: "Please add a description to your trace.",
+        });
+        toast.error("Please add a description to your trace.");
+        isValid = false;
+      }
+    }
+
+    if (isValid && stepIndex < traceSteps.length - 1) {
       setStepIndex(stepIndex + 1);
+    } else if (isValid && stepIndex === traceSteps.length - 1) {
+      const data = methods.getValues();
+      await onSubmit(data);
     }
   };
 
@@ -97,6 +123,96 @@ export default function Page() {
     }
   };
 
+  const onSubmit = async (data: CaptureFormData) => {
+    console.log("Serializing and submitting...", data);
+
+    // Transpose gestures on to screens
+    let screens = data.screens.map((screen) => {
+      return {
+        created: new Date(),
+        gesture: data.gestures[screen.id],
+        src: "",
+        vh: "",
+      };
+    }) as Screen[];
+
+    // Upload B64 images to S3 using presigned uploads
+    const generateScreenUploadRes = await Promise.all(
+      screens.map((_) => {
+        return generatePresignedScreenUpload(captureId, "image/png");
+      })
+    );
+
+    if (
+      !generateScreenUploadRes ||
+      generateScreenUploadRes.some((res) => !res.ok)
+    ) {
+      toast.error(
+        "Failed to upload screen images: Failed to generate presigned URLs."
+      );
+      return;
+    }
+
+    const screenUploadRes = await Promise.all(
+      data.screens.map(async (screen, index) => {
+        var res;
+
+        if (generateScreenUploadRes[index].ok) {
+          console.log(screen.url.split("data:image/png;base64,")[1]);
+          res = await fetch(generateScreenUploadRes[index].data.uploadUrl, {
+            method: "PUT",
+            body: Buffer.from(
+              screen.url.split("data:image/png;base64,")[1],
+              "base64"
+            ),
+            headers: { "Content-Type": "image/png" },
+          });
+
+          if (!res.ok) {
+            toast.error("Failed to upload screen images.");
+            return { ok: false, message: "Failed to upload screen images." };
+          }
+
+          // Set screen src to S3 URL
+          screens[index].src = generateScreenUploadRes[index].data.fileUrl;
+
+          return generateScreenUploadRes[index];
+        }
+      })
+    );
+
+    if (!screenUploadRes || screenUploadRes.some((res) => !res!.ok)) {
+      toast.error("Failed to upload screen images.");
+      return;
+    }
+
+    console.log(screens);
+
+    // Create trace AND screen records
+    const trace = await createTrace(
+      {
+        name: "New Trace",
+        description: data.description,
+        created: new Date(),
+        appId: capture!.appId_!,
+        screens: {
+          create: [...screens],
+        },
+        worker: "web",
+      },
+      {
+        includes: { screens: true },
+      }
+    );
+
+    if (!trace.ok) {
+      toast.error("Failed to create trace.");
+      return;
+    }
+
+    toast.success("Trace created successfully.");
+  };
+
   const renderStep = () => {
     switch (stepIndex) {
       case 0:
@@ -104,7 +220,7 @@ export default function Page() {
       case 1:
         return <RepairScreen />;
       case 2:
-        return <></>;
+        return <Review />;
       default:
         return null;
     }
@@ -162,7 +278,7 @@ export default function Page() {
                   {stepIndex < traceSteps.length - 1 ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
-                    <Button>Finish</Button>
+                    <Button onClick={handleNext}>Finish</Button>
                   )}
                 </div>
               </nav>

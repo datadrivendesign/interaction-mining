@@ -8,7 +8,7 @@ export enum CaptureSWRKeys {
 }
 
 export async function captureFetcher([_, captureId]: [string, string]) {
-  let res = await getCapture({ id: captureId });
+  let res = await getCapture({ id: captureId, includes: { app: true } });
 
   if (res.ok) {
     return { capture: res.data };

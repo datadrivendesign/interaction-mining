@@ -95,8 +95,8 @@ function FocusView({ screen }: { screen: FrameData }) {
       type: null,
       x: null,
       y: null,
-      scrollDeltaX: null,
-      scrollDeltaY: null,
+      scrollDeltaX: 0,
+      scrollDeltaY: 0,
     }
   );
 

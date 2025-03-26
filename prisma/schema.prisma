@@ -9,12 +9,12 @@ datasource db {
 }
 
 type AppsCategory {
-  id   String
+  id   Int
   name String
 }
 
 type ScreenGesture {
-  type String?
+  type         String?
   scrollDeltaX Float?
   scrollDeltaY Float?
   x            Float?
@@ -32,26 +32,27 @@ type AppMetadata {
   cover       String
   description String
   icon        String
-  rating      String
-  reviews     String?
+  rating      Float
+  reviews     Float
   genre       String[]
   downloads   String
 }
 
 model App {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int?         @map("__v")
-  category    AppsCategory
-  captured    DateTime     @db.Date
-  packageName String       @unique
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int?          @default(0) @map("__v")
+  category    AppsCategory?
+  packageName String        @unique
   metadata    AppMetadata
+  Capture     Capture[]
+
   @@fulltext([metadata.name])
   @@map("apps")
 }
 
 model Redaction {
   id     String @id @default(auto()) @map("_id") @db.ObjectId
-  v      Int    @map("__v")
+  v      Int    @default(0) @map("__v")
   label  String
   screen String @db.ObjectId
 
@@ -60,8 +61,8 @@ model Redaction {
 
 model Screen {
   id      String        @id @default(auto()) @map("_id") @db.ObjectId
-  v       Int           @map("__v")
-  created DateTime      @db.Date
+  v       Int           @default(0) @map("__v")
+  created DateTime      @default(now()) @db.Date
   gesture ScreenGesture
   src     String
   vh      String
@@ -73,14 +74,14 @@ model Screen {
 
 model Trace {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int      @map("__v")
+  v           Int      @default(0) @map("__v")
   appId       String   @map("app") @db.ObjectId
-  created     DateTime @db.Date
+  created     DateTime @default(now()) @db.Date
   name        String?
   description String
   screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
-  taskId      String?  @map("task") @db.ObjectId @default("")
+  taskId      String?  @default("") @map("task") @db.ObjectId
   task        Task?    @relation(fields: [taskId], references: [id])
   worker      String
 
@@ -111,14 +112,15 @@ model Task {
 }
 
 model Capture {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  // appId  String @map("app") @db.ObjectId
-  appId  String
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  appId_ String? @map("app") @db.ObjectId
+  app    App?    @relation(fields: [appId_], references: [id])
+  appId  String // stupid frickin packageName
   // userId String @map("user") @db.ObjectId
   // traceId String @map("trace") @db.ObjectId
   // trace   Trace  @relation(fields: [traceId], references: [id])
-  taskId String @map("task") @db.ObjectId
-  task   Task   @relation(fields: [taskId], references: [id])
+  taskId String  @map("task") @db.ObjectId
+  task   Task    @relation(fields: [taskId], references: [id])
   otp    String
   src    String
 
