@@ -4,7 +4,7 @@ import React, { Dispatch, SetStateAction, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import FrameGallery from "./extract-frames-gallery";
 import useSWR from "swr";
-import { getUploadedFiles } from "@/lib/actions";
+import { getUploadedCaptureFiles } from "@/lib/actions";
 import { toast } from "sonner";
 
 export type FrameData = {
@@ -13,7 +13,7 @@ export type FrameData = {
 };
 
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getUploadedFiles(captureId);
+  let res = await getUploadedCaptureFiles(captureId);
 
   if (res.ok) {
     return res.data;
