@@ -1,262 +1,182 @@
 "use client";
-import { useEffect, useReducer, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { AnimatePresence, motion, Variants } from "framer-motion";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
+import { ChevronRight, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
 import Sheet from "./components/sheet";
-import RepairScreen from "./components/repair-screen";
-import SelectScreenDoc from "./components/select-screen.mdx";
-import RepairInteractionsDoc from "./components/repair-interactions.mdx";
+
 import ExtractFrames, { FrameData } from "./components/extract-frames";
-import { getCapture } from "@/lib/actions";
-import SaveTrace from "./components/save-trace";
+import RepairScreen from "./components/repair-screen/index";
 
-const container = {
-  enter: {
-    width: "0",
-  },
-  show: {
-    width: "auto",
-  },
-  exit: {
-    width: "0",
-  },
-} as Variants;
+import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
+import RepairInteractionsDoc from "./components/repair-screen/doc.mdx";
+import ReviewDoc from "./components/review/doc.mdx";
 
-const item = {
-  enter: {
-    opacity: 0,
-    filter: "blur-sm(10px)",
-  },
-  show: {
-    opacity: 1,
-    filter: "blur-sm(0px)",
-  },
-  exit: {
-    opacity: 0,
-    filter: "blur-sm(10px)",
-  },
-} as Variants;
+import { useCapture } from "./util";
+import { ScreenGesture } from "@prisma/client";
 
 const traceSteps = [
   {
-    title: "Extraction",
-    description: "Extract the frames that will constitute of the new trace.",
-    content: <SelectScreenDoc />,
+    title: "Selection",
+    description: "Select the screens you want to use to create a new trace.",
+    content: <ExtractFrameDoc />,
   },
   {
     title: "Repair",
     description: "Repair interactions that are broken or missing.",
     content: <RepairInteractionsDoc />,
   },
-  // {
-  //   title: "Redaction",
-  //   description: "Redact personal data from the trace.",
-  //   content: <RedactPersonalDataDoc />,
-  // },
   {
     title: "Review",
     description: "Review the trace and finish the trace creation process.",
-    content: <SelectScreenDoc />,
+    content: <ReviewDoc />,
   },
 ];
 
-const stepReducer = (state: any, action: number) => {
-  if (action !== state.index) {
-    return {
-      index: action,
-      hash: Date.now() + Math.random(),
-    };
-  }
-
-  return state;
-};
-
-const loadingReducer = (
-  state: any,
-  action: {
-    type: "SET_LOADED" | "SET_MESSAGE";
-    payload?: any;
-  }
-) => {
-  if (action.type === "SET_LOADED" && action.payload) {
-    return {
-      ...state,
-      isLoaded: action.payload,
-    };
-  }
-
-  if (action.type === "SET_MESSAGE" && action.payload) {
-    return {
-      ...state,
-      message: action.payload,
-    };
-  }
-
-  return state;
+export type CaptureFormData = {
+  screens: FrameData[];
+  gestures: { [key: string]: ScreenGesture };
+  redactions: { [key: string]: string };
 };
 
 export default function Page() {
   const params = useParams();
   const captureId = params.captureId as string;
-
   const [navRef, { height }] = useMeasure();
 
-  const [loading, setLoading] = useReducer(loadingReducer, {
-    isLoaded: false,
-    message: "Getting your capture session...",
-  });
-  const [capture, setCapture] = useState({});
-  const [frames, setFrames] = useState<FrameData[]>([])
-  const [stepState, setStepState] = useReducer(stepReducer, {
-    index: 0,
-    hash: Date.now() + Math.random(),
+  const { capture, isLoading: isTraceLoading } = useCapture(captureId);
+
+  const methods = useForm<CaptureFormData>({
+    defaultValues: {
+      screens: [],
+      gestures: {},
+      redactions: {},
+    },
   });
 
-  const nextStep = () => {
-    if (stepState.index < traceSteps.length - 1) {
-      setStepState(stepState.index + 1);
+  // // Function to perform step-level validation
+  // const validateStep = async (): Promise<boolean> => {
+  //   const data = methods.getValues();
+  //   // Example validation: Ensure at least one screen exists and, for Step 2, each screen has a gesture
+  //   if (stepIndex === 0) {
+  //     if (!data.screens || data.screens.length === 0) {
+  //       alert("No screens were generated.");
+  //       return false;
+  //     }
+  //   }
+  //   if (stepIndex === 1) {
+  //     const missingGesture = data.screens.some((screen) => !screen.gesture);
+  //     if (missingGesture) {
+  //       alert("Please add a gesture to all screens.");
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // };
+
+  const onSubmit = (data: FormData) => {
+    // Here you can assemble and transform the data as needed before sending it to your backend.
+    console.log("Final backend-ready data:", data);
+  };
+
+  const [stepIndex, setStepIndex] = useState(0);
+  const [frames, setFrames] = useState<FrameData[]>([]);
+
+  const handleNext = () => {
+    if (stepIndex < traceSteps.length - 1) {
+      setStepIndex(stepIndex + 1);
     }
   };
 
-  const prevStep = () => {
-    if (stepState.index > 0) {
-      setStepState(stepState.index - 1);
+  const handlePrevious = () => {
+    if (stepIndex > 0) {
+      setStepIndex(stepIndex - 1);
     }
   };
 
-  // >>> DUMMY DRIVER CODE
-  // TODO: get the capture urls of uploaded and extracted frames
-  async function getCaptureSession(captureId: string) {
-    const capture = await getCapture({id: captureId})
-    if (capture.ok) {
-      return capture.data
+  const renderStep = () => {
+    switch (stepIndex) {
+      case 0:
+        return <ExtractFrames capture={capture} />;
+      case 1:
+        return <RepairScreen />;
+      case 2:
+        return <></>;
+      default:
+        return null;
     }
-  }
-
-  // Data fetching
-  useEffect(() => {
-    getCaptureSession(captureId).then((capture) => {
-      if (capture) {
-        setCapture(capture);
-        setLoading({ type: "SET_LOADED", payload: true });
-      }
-    });
-  }, [captureId]);
-
-  // <<< DUMMY DRIVER CODE
+  };
 
   return (
     <>
-      <main
-        className="relative flex flex-col min-w-dvw min-h-dvh bg-white dark:bg-black"
-        style={{ "--nav-height": `${height}px` } as React.CSSProperties}
-      >
-        {loading.isLoaded ? (
-          <>
-            <div className="relative flex grow w-full gap-4">
-              <aside className="sticky top-0 left-0 hidden lg:flex flex-col shrink w-full h-full p-8 pr-0 max-w-xs">
-                <article className="prose prose-neutral dark:prose-invert leading-snug">
-                  {traceSteps[stepState.index].content}
-                </article>
-              </aside>
-              <div className="flex flex-col grow w-full justify-center items-center">
-                {stepState.index === 0 
-                  ? <ExtractFrames 
-                      capture={capture} 
-                      frames={frames}
-                      setFrames={setFrames} /> 
-                  : null}
-                {stepState.index === 1 ? <RepairScreen data={frames} /> : null}
-                {stepState.index === 2 ? <SaveTrace data={frames} /> : null}
+      <FormProvider {...methods}>
+        <main
+          className="relative flex flex-col min-w-dvw min-h-dvh bg-white dark:bg-black"
+          style={{ "--nav-height": `${height}px` } as React.CSSProperties}
+        >
+          {!isTraceLoading ? (
+            <>
+              <div className="relative flex grow w-full gap-4">
+                <aside className="sticky top-0 left-0 hidden lg:flex flex-col shrink w-full h-full p-8 pr-0 max-w-xs">
+                  <article className="prose prose-neutral dark:prose-invert leading-snug">
+                    {traceSteps[stepIndex].content}
+                  </article>
+                </aside>
+                <div className="flex flex-col grow w-full justify-center items-center">
+                  {renderStep()}
+                </div>
               </div>
-            </div>
-            <nav
-              ref={navRef}
-              className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
-            >
-              <div className="flex gap-2 items-center">
-                <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
-                  <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
-                    New Trace <ChevronRight className="size-6" />
-                  </span>
-                  <AnimatePresence mode="sync">
-                    <motion.div
-                      key={stepState.hash}
-                      variants={container}
-                      initial="enter"
-                      animate="show"
-                      exit="exit"
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 30,
-                        mass: 0.5,
-                      }}
+              <nav
+                ref={navRef}
+                className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
+              >
+                <div className="flex gap-2 items-center">
+                  <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
+                    <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
+                      New Trace <ChevronRight className="size-6" />{" "}
+                    </span>
+                    <span className="inline-flex items-center text-black dark:text-white">
+                      {traceSteps[stepIndex].title}
+                    </span>
+                  </h1>
+                  <span className="block lg:hidden">
+                    <Sheet
+                      title={"Trace Creation Help"}
+                      description={traceSteps[stepIndex].description}
                     >
-                      <motion.span
-                        key={stepState.hash}
-                        className="inline-block text-neutral-950 dark:text-neutral-50"
-                        variants={item}
-                        initial="enter"
-                        animate="show"
-                        exit="exit"
-                        transition={{
-                          type: "spring",
-                          stiffness: 100,
-                          damping: 10,
-                          mass: 0.75,
-                        }}
-                        layoutId="title"
-                        layoutRoot
-                      >
-                        {traceSteps[stepState.index].title}
-                      </motion.span>
-                    </motion.div>
-                  </AnimatePresence>
-                </h1>
-                <span className="block lg:hidden">
-                  <Sheet
-                    title={"Trace Creation Help"}
-                    description={traceSteps[stepState.index].description}
+                      {traceSteps[stepIndex].content}
+                    </Sheet>
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={stepIndex === 0}
                   >
-                    {traceSteps[stepState.index].content}
-                  </Sheet>
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={stepState.index === 0}
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  disabled={
-                    stepState.index === traceSteps.length - 1 
-                      || frames.length === 0
-                  }
-                >
-                  Next
-                </Button>
-              </div>
-            </nav>
-          </>
-        ) : (
-          <div className="flex flex-col grow justify-center items-center w-full h-full">
-            <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-              {loading.message}
-            </h1>
-          </div>
-        )}
-      </main>
+                    Back
+                  </Button>
+                  {stepIndex < traceSteps.length - 1 ? (
+                    <Button onClick={handleNext}>Next</Button>
+                  ) : (
+                    <Button>Finish</Button>
+                  )}
+                </div>
+              </nav>
+            </>
+          ) : (
+            <div className="flex flex-col grow justify-center items-center w-full h-full">
+              <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+                Loading trace...
+              </h1>
+            </div>
+          )}
+        </main>
+      </FormProvider>
     </>
   );
 }

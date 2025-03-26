@@ -1,53 +1,33 @@
-import { Variants } from "motion/react"
+import { getCapture, getTrace } from "@/lib/actions";
 
-export const loadingReducer = (
-  state: any,
-  action: {
-    type: "SET_LOADED" | "SET_MESSAGE";
-    payload?: any;
+import useSWR from "swr";
+import { toast } from "sonner";
+
+export enum CaptureSWRKeys {
+  CAPTURE = "capture",
+}
+
+export async function captureFetcher([_, captureId]: [string, string]) {
+  let res = await getCapture({ id: captureId });
+
+  if (res.ok) {
+    return { capture: res.data };
+  } else {
+    console.error("Failed to fetch capture session:", res.message);
+    toast.error("Failed to fetch capture session.");
+    return null;
   }
-) => {
-  if (action.type === "SET_LOADED" && action.payload) {
-    return {
-      ...state,
-      isLoaded: action.payload,
-    };
-  }
+}
 
-  if (action.type === "SET_MESSAGE" && action.payload) {
-    return {
-      ...state,
-      message: action.payload,
-    };
-  }
+export function useCapture(captureId: string) {
+  const { data, error, isLoading } = useSWR(
+    [CaptureSWRKeys.CAPTURE, captureId],
+    captureFetcher
+  );
 
-  return state;
-};
-
-// motion variants
-export const container = {
-  enter: {
-    width: "0",
-  },
-  show: {
-    width: "auto",
-  },
-  exit: {
-    width: "0",
-  },
-} as Variants;
-
-export const item = {
-  enter: {
-    opacity: 0,
-    filter: "blur(10px)",
-  },
-  show: {
-    opacity: 1,
-    filter: "blur(0px)",
-  },
-  exit: {
-    opacity: 0,
-    filter: "blur(10px)",
-  },
-} as Variants;
+  return {
+    capture: data?.capture,
+    error,
+    isLoading,
+  };
+}
