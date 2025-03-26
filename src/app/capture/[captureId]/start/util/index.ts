@@ -1,6 +1,6 @@
 import {
   getCapture,
-  getUploadedFiles,
+  getUploadedCaptureFiles,
   deleteUploadedFile,
 } from "@/lib/actions";
 
@@ -46,7 +46,7 @@ export async function captureFetcher([_, captureId]: [string, string]) {
 }
 
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getUploadedFiles(captureId);
+  let res = await getUploadedCaptureFiles(captureId);
 
   if (res.ok) {
     return res.data;

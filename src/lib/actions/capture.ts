@@ -30,7 +30,12 @@ interface GetCaptureProps {
   id?: string;
   taskId?: string;
   otp?: string;
+  includes?: {
+    app?: boolean;
+    task?: boolean;
+  };
 }
+
 
 /**
  * Fetches a capture from the database.
@@ -40,11 +45,11 @@ interface GetCaptureProps {
  * @returns ActionPayload
  */
 export const getCapture = unstable_cache(
-  async ({
-    id,
-    taskId,
-    otp,
-  }: GetCaptureProps): Promise<ActionPayload<CaptureWithTask>> => {
+  async (
+    { id, taskId, otp, includes }: GetCaptureProps,
+  ): Promise<ActionPayload<CaptureWithTask>> => {
+    const { task = false, app = false } = includes || {};
+
     if (!id && !taskId && !otp) {
       return { ok: false, message: "No search criteria provided.", data: null };
     }
@@ -67,11 +72,8 @@ export const getCapture = unstable_cache(
       const capture = await prisma.capture.findFirst({
         where: query,
         include: {
-          task: {
-            include: {
-              traces: true,
-            },
-          },
+          app,
+          task,
         },
       });
 
@@ -207,7 +209,7 @@ export async function deleteUploadedFile(fileKey: string) {
  * @param captureId The ID of the capture to fetch uploaded files for.
  * @returns ActionPayload
  */
-export async function getUploadedFiles(captureId: string) {
+export async function getUploadedCaptureFiles(captureId: string) {
   try {
     const command = new ListObjectsV2Command({
       Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
@@ -219,6 +221,9 @@ export async function getUploadedFiles(captureId: string) {
     if (!response.Contents || response.Contents.length === 0) {
       return { ok: true, message: "No uploaded files found.", data: [] };
     }
+
+    // filter to only show shallow keys
+    response.Contents = response.Contents.filter((file) => file.Key!.split("/").length === 3);
 
     // Map the file URLs from S3 object keys
     const fileUrls = response.Contents.map((file) => ({

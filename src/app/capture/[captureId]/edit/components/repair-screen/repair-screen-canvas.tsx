@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/popover";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
+import { FrameData } from "../extract-frames";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -57,7 +58,7 @@ export default function RepairScreenCanvas({
   gesture,
   setGesture,
 }: {
-  screen: Screen;
+  screen: FrameData;
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
 }) {
@@ -179,7 +180,7 @@ export default function RepairScreenCanvas({
                     imageRef
                   ) as React.MutableRefObject<HTMLImageElement | null>
                 }
-                src={screen.src}
+                src={screen.url}
                 alt="gallery"
                 draggable={false}
                 className="w-fit h-full rounded-lg cursor-crosshair"

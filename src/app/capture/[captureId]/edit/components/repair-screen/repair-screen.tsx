@@ -1,5 +1,5 @@
 "use client";
-import React, { use, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
 import { CircleAlert } from "lucide-react";
@@ -10,16 +10,17 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import { Screen, ScreenGesture } from "@prisma/client";
+import {  ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../page";
+import { CaptureFormData } from "../../page";
+import { FrameData } from "../extract-frames";
 
 export default function RepairScreen() {
-  const { getValues } = useFormContext<TraceFormData>();
-  const screens = getValues("screens") as Screen[];
-  const gestures = getValues("gestures") as { [key: string]: ScreenGesture };
+  const { watch } = useFormContext<CaptureFormData>();
+  const screens = watch("screens") as FrameData[];
+  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
@@ -83,8 +84,8 @@ export default function RepairScreen() {
   );
 }
 
-function FocusView({ screen }: { screen: Screen }) {
-  const { watch, setValue } = useFormContext<TraceFormData>();
+function FocusView({ screen }: { screen: FrameData }) {
+  const { watch, setValue } = useFormContext<CaptureFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
@@ -94,8 +95,8 @@ function FocusView({ screen }: { screen: Screen }) {
       type: null,
       x: null,
       y: null,
-      scrollDeltaX: null,
-      scrollDeltaY: null,
+      scrollDeltaX: 0,
+      scrollDeltaY: 0,
     }
   );
 
@@ -127,24 +128,25 @@ function Filmstrip({
   focusViewIndex,
   setFocusViewIndex,
 }: {
-  screens: Screen[];
+  screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
 }) {
+  
   return (
     <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
-      {screens?.map((screen: Screen, index: number) => (
+      {screens?.map((screen: FrameData, index: number) => (
         <FilmstripItem
           key={screen.id}
           index={index}
           isSelected={focusViewIndex === index}
-          hasError={gestures[screen.id].type === null}
+          hasError={!gestures[screen.id] || gestures[screen.id].type === null}
           onClick={() => setFocusViewIndex(index)}
         >
           <Image
             key={screen.id}
-            src={screen.src}
+            src={screen.url}
             alt="gallery"
             draggable={false}
             className="h-full w-auto object-contain"
