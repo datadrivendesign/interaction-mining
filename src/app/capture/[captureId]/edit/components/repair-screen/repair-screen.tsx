@@ -63,7 +63,7 @@ export default function RepairScreen() {
               />
             ) : (
               <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">
+                <span className="text-3xl lg:text-4xl text-neutral-400 dark:text-neutral-500 font-semibold">
                   Select a screen from the filmstrip.
                 </span>
               </div>
@@ -110,7 +110,7 @@ function FocusView({ screen }: { screen: FrameData }) {
 
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+      <div className="flex justify-center w-full h-full overflow-hidden">
         <RepairScreenCanvas
           key={screen.id}
           screen={screen}

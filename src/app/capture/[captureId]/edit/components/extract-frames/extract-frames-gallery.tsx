@@ -24,7 +24,7 @@ export default function FrameGallery({
   };
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-4 overflow-auto">
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-4 p-8 overflow-auto">
       {frames.map((frame, index) => (
         <div
           className="flex flex-col p-2 bg-neutral-100 dark:bg-neutral-900 rounded-xl"

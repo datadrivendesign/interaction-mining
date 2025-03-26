@@ -109,7 +109,7 @@ function FocusView({ screen }: { screen: Screen }) {
 
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+      <div className="flex justify-center w-full h-full overflow-hidden">
         <RepairScreenCanvas
           key={screen.id}
           screen={screen}

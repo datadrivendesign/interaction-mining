@@ -124,8 +124,6 @@ export default function Page() {
   };
 
   const onSubmit = async (data: CaptureFormData) => {
-    console.log("Serializing and submitting...", data);
-
     // Transpose gestures on to screens
     let screens = data.screens.map((screen) => {
       return {
@@ -158,7 +156,6 @@ export default function Page() {
         var res;
 
         if (generateScreenUploadRes[index].ok) {
-          console.log(screen.url.split("data:image/png;base64,")[1]);
           res = await fetch(generateScreenUploadRes[index].data.uploadUrl, {
             method: "PUT",
             body: Buffer.from(
@@ -185,8 +182,6 @@ export default function Page() {
       toast.error("Failed to upload screen images.");
       return;
     }
-
-    console.log(screens);
 
     // Create trace AND screen records
     const trace = await createTrace(
@@ -235,8 +230,8 @@ export default function Page() {
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex grow w-full gap-4">
-                <aside className="sticky top-0 left-0 hidden lg:flex flex-col shrink w-full h-full p-8 pr-0 max-w-xs">
+              <div className="relative flex w-full h-full">
+                <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-8 max-w-xs border-r border-neutral-200 dark:border-neutral-800">
                   <article className="prose prose-neutral dark:prose-invert leading-snug">
                     {traceSteps[stepIndex].content}
                   </article>
@@ -247,7 +242,7 @@ export default function Page() {
               </div>
               <nav
                 ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
+                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-8 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
               >
                 <div className="flex gap-2 items-center">
                   <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
