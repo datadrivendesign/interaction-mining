@@ -39,6 +39,7 @@ import {
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCapture } from "@/lib/hooks";
 
 enum CaptureState {
   IDLE = 0,
@@ -55,13 +56,7 @@ export default function Page({}: {}) {
     CaptureState.IDLE
   );
 
-  const { data: capture, isLoading: isCaptureLoading } = useSWR(
-    [CaptureSWROperations.CAPTURE, captureId],
-    captureFetcher,
-    {
-      refreshInterval: 10,
-    }
-  );
+  const { capture, isLoading: isCaptureLoading } = useCapture(captureId);
 
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     capture?.src ? [CaptureSWROperations.UPLOAD_LIST, captureId] : null,
@@ -89,8 +84,8 @@ export default function Page({}: {}) {
   };
 
   const redirectToFrameExtract = () => {
-    capture?.id ? redirect(`/capture/${capture.id}/edit`) : null
-  }
+    capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
+  };
 
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">

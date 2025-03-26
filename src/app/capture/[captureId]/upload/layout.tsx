@@ -21,6 +21,8 @@ export async function generateMetadata({
 
   let app = await getIosApp({ appId: capture.appId });
 
+  console.log(app);
+
   const metadata: Metadata = {
     title: "Upload Capture",
     other: {
