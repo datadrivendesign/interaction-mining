@@ -36,6 +36,7 @@ type AppMetadata {
   reviews     Float
   genre       String[]
   downloads   String
+  url         String
 }
 
 model App {

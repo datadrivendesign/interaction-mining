@@ -16,8 +16,8 @@ import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairInteractionsDoc from "./components/repair-screen/doc.mdx";
 import ReviewDoc from "./components/review/doc.mdx";
 
-import { useCapture } from "./util";
-import { Screen, ScreenGesture, Trace } from "@prisma/client";
+import { useCapture } from "@/lib/hooks";
+import { Screen, ScreenGesture } from "@prisma/client";
 import { toast } from "sonner";
 import {
   createScreen,
