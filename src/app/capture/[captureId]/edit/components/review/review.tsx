@@ -4,10 +4,10 @@ import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
-import { CaptureFormData } from "../../page";
+import { TraceFormData } from "../../page";
 
 export default function Review() {
-  const { register } = useFormContext<CaptureFormData>();
+  const { register } = useFormContext<TraceFormData>();
 
   return (
     <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))]">
@@ -31,7 +31,7 @@ export default function Review() {
 }
 
 function SaveTraceGallery() {
-  const { watch } = useFormContext<CaptureFormData>();
+  const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens");
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">

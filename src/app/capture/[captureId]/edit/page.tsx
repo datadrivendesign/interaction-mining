@@ -4,26 +4,27 @@ import { useParams } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ChevronRight, Loader2 } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { useCapture } from "@/lib/hooks";
+import { ScreenGesture } from "@prisma/client";
+import {
+  ScreenGestureSchema,
+  ScreenSchema,
+  TraceFormSchema,
+} from "./components/types";
 
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
-import ExtractFrames, { FrameData } from "./components/extract-frames";
-import RepairScreen from "./components/repair-screen/index";
-import Review from "./components/review/review";
-
+import ExtractFrames, { type FrameData } from "./components/extract-frames";
 import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
+import RepairScreen from "./components/repair-screen/index";
 import RepairInteractionsDoc from "./components/repair-screen/doc.mdx";
+import Review from "./components/review/review";
 import ReviewDoc from "./components/review/doc.mdx";
-
-import { useCapture } from "@/lib/hooks";
-import { Screen, ScreenGesture } from "@prisma/client";
 import { toast } from "sonner";
-import {
-  createScreen,
-  createTrace,
-  generatePresignedScreenUpload,
-} from "@/lib/actions";
+import { handleSave } from "./util";
 
 const traceSteps = [
   {
@@ -43,172 +44,92 @@ const traceSteps = [
   },
 ];
 
-export type CaptureFormData = {
+export type TraceFormData = {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
-  redactions: { [key: string]: string };
   description: string;
 };
 
 export default function Page() {
   const params = useParams();
   const captureId = params.captureId as string;
-  const [navRef, { height }] = useMeasure();
-
   const { capture, isLoading: isTraceLoading } = useCapture(captureId);
 
-  const methods = useForm<CaptureFormData>({
+  const [navRef, { height }] = useMeasure();
+
+  const methods = useForm<TraceFormData>({
     defaultValues: {
       screens: [],
       gestures: {},
-      redactions: {},
       description: "",
     },
+    resolver: zodResolver(TraceFormSchema),
   });
 
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    let isValid = false;
-
     if (stepIndex === 0) {
-      // Validate "screens" field
-      isValid = await methods.trigger("screens");
-      const screens = methods.getValues("screens");
-      if (!screens || screens.length === 0) {
-        methods.setError("screens", { message: "No screens were selected." });
-        toast.error("No screens were selected.");
-        isValid = false;
+      // Validate the "screens")
+      const validation = ScreenSchema.safeParse(methods.getValues().screens);
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        return;
       }
     } else if (stepIndex === 1) {
-      // Custom validation for gestures
-      const screens = methods.getValues("screens");
-      const gestures = methods.getValues("gestures");
-      const missingGesture = screens.some(
-        (screen) => !gestures[screen.id] || gestures[screen.id].type === null
-      );
-      if (missingGesture) {
-        methods.setError("gestures", {
-          message: "Please add a gesture to all screens.",
+      // Validate the "gestures"
+      const validation = ScreenGestureSchema.safeParse(methods.getValues());
+      if (!validation.success) {
+        console.log(validation.error.issues);
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
         });
-        toast.error("Please add a gesture to all screens.");
-        isValid = false;
-      } else {
-        isValid = true;
+        return;
       }
     } else if (stepIndex === 2) {
-      // Validate "description" field
-      isValid = await methods.trigger("description");
-      const description = methods.getValues("description");
-      if (!description) {
-        methods.setError("description", {
-          message: "Please add a description to your trace.",
+      // Validate the "description" field
+      const validation = TraceFormSchema.safeParse(methods.getValues());
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
         });
-        toast.error("Please add a description to your trace.");
-        isValid = false;
+        return;
       }
     }
 
-    if (isValid && stepIndex < traceSteps.length - 1) {
+    if (stepIndex < traceSteps.length - 1) {
       setStepIndex(stepIndex + 1);
-    } else if (isValid && stepIndex === traceSteps.length - 1) {
+    } else {
+      // Submit the form
       const data = methods.getValues();
-      await onSubmit(data);
+      handleSave(data, capture!);
     }
   };
-
   const handlePrevious = () => {
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
     }
   };
 
-  const onSubmit = async (data: CaptureFormData) => {
-    // Transpose gestures on to screens
-    let screens = data.screens.map((screen) => {
-      return {
-        created: new Date(),
-        gesture: data.gestures[screen.id],
-        src: "",
-        vh: "",
-      };
-    }) as Screen[];
-
-    // Upload B64 images to S3 using presigned uploads
-    const generateScreenUploadRes = await Promise.all(
-      screens.map((_) => {
-        return generatePresignedScreenUpload(captureId, "image/png");
-      })
-    );
-
-    if (
-      !generateScreenUploadRes ||
-      generateScreenUploadRes.some((res) => !res.ok)
-    ) {
-      toast.error(
-        "Failed to upload screen images: Failed to generate presigned URLs."
-      );
-      return;
+  const docRender = () => {
+    switch (stepIndex) {
+      case 0:
+        return <ExtractFrameDoc />;
+      case 1:
+        return <RepairInteractionsDoc />;
+      case 2:
+        return <ReviewDoc />;
+      default:
+        return null;
     }
-
-    const screenUploadRes = await Promise.all(
-      data.screens.map(async (screen, index) => {
-        var res;
-
-        if (generateScreenUploadRes[index].ok) {
-          res = await fetch(generateScreenUploadRes[index].data.uploadUrl, {
-            method: "PUT",
-            body: Buffer.from(
-              screen.url.split("data:image/png;base64,")[1],
-              "base64"
-            ),
-            headers: { "Content-Type": "image/png" },
-          });
-
-          if (!res.ok) {
-            toast.error("Failed to upload screen images.");
-            return { ok: false, message: "Failed to upload screen images." };
-          }
-
-          // Set screen src to S3 URL
-          screens[index].src = generateScreenUploadRes[index].data.fileUrl;
-
-          return generateScreenUploadRes[index];
-        }
-      })
-    );
-
-    if (!screenUploadRes || screenUploadRes.some((res) => !res!.ok)) {
-      toast.error("Failed to upload screen images.");
-      return;
-    }
-
-    // Create trace AND screen records
-    const trace = await createTrace(
-      {
-        name: "New Trace",
-        description: data.description,
-        created: new Date(),
-        appId: capture!.appId_!,
-        screens: {
-          create: [...screens],
-        },
-        worker: "web",
-      },
-      {
-        includes: { screens: true },
-      }
-    );
-
-    if (!trace.ok) {
-      toast.error("Failed to create trace.");
-      return;
-    }
-
-    toast.success("Trace created successfully.");
   };
 
-  const renderStep = () => {
+  const editorRender = () => {
     switch (stepIndex) {
       case 0:
         return <ExtractFrames capture={capture} />;
@@ -233,11 +154,11 @@ export default function Page() {
               <div className="relative flex w-full h-full">
                 <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-8 max-w-xs border-r border-neutral-200 dark:border-neutral-800">
                   <article className="prose prose-neutral dark:prose-invert leading-snug">
-                    {traceSteps[stepIndex].content}
+                    {docRender()}
                   </article>
                 </aside>
                 <div className="flex flex-col grow w-full justify-center items-center">
-                  {renderStep()}
+                  {editorRender()}
                 </div>
               </div>
               <nav

@@ -82,9 +82,7 @@ export default function RepairScreenCanvas({
 
   // Set initial marker position on image
   const handleImageClick = () => {
-    const imageElement = ref.current;
-    if (imageElement) {
-      const { width, height } = imageElement.getBoundingClientRect();
+    if (width && height) {
       const relativeX = mouse.elementX / width;
       const relativeY = mouse.elementY / height;
 
