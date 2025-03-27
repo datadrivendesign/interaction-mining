@@ -6,7 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
 import FrameGallery from "./extract-frames-gallery";
-import { CaptureFormData } from "../../page";
+import { TraceFormData } from "../../page";
 
 import { getUploadedCaptureFiles } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export async function fileFetcher([_, captureId]: [string, string]) {
 }
 
 export default function ExtractFrames({ capture }: { capture: any }) {
-  const { setValue, watch } = useFormContext<CaptureFormData>();
+  const { setValue, watch } = useFormContext<TraceFormData>();
   const frames = watch("screens") as FrameData[];
 
   const videoRef = useRef<HTMLVideoElement | null>(null);

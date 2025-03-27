@@ -4,7 +4,7 @@ import { FrameData } from "./extract-frames";
 import { prettyNumber } from "@/lib/utils/number";
 import { X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
-import { CaptureFormData } from "../../page";
+import { TraceFormData } from "../../page";
 
 export default function FrameGallery({
   frames,
@@ -13,7 +13,7 @@ export default function FrameGallery({
   frames: FrameData[];
   setTime: (_: number) => void;
 }) {
-  const { watch, setValue } = useFormContext<CaptureFormData>();
+  const { watch, setValue } = useFormContext<TraceFormData>();
 
   const setFrameData = (value: FrameData[]) => setValue("screens", value);
 

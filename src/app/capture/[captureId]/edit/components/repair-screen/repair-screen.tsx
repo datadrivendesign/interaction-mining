@@ -14,11 +14,11 @@ import {  ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
 import { useFormContext } from "react-hook-form";
-import { CaptureFormData } from "../../page";
+import { TraceFormData } from "../../page";
 import { FrameData } from "../extract-frames";
 
 export default function RepairScreen() {
-  const { watch } = useFormContext<CaptureFormData>();
+  const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens") as FrameData[];
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
@@ -85,7 +85,7 @@ export default function RepairScreen() {
 }
 
 function FocusView({ screen }: { screen: FrameData }) {
-  const { watch, setValue } = useFormContext<CaptureFormData>();
+  const { watch, setValue } = useFormContext<TraceFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 

@@ -22,7 +22,7 @@ export async function captureFetcher([_, captureId, options]: [
   } else {
     console.error("Failed to fetch capture session:", res.message);
     toast.error("Failed to fetch capture session.");
-    return null;
+    throw new Error("Failed to fetch capture session.");
   }
 }
 
