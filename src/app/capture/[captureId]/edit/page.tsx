@@ -146,13 +146,16 @@ export default function Page() {
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col min-w-dvw min-h-dvh bg-white dark:bg-black"
+          className="relative flex flex-col w-dvw h-dvh bg-white dark:bg-black"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex w-full h-full">
-                <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-8 max-w-xs border-r border-neutral-200 dark:border-neutral-800">
+              <div className="relative flex w-full h-full overflow-hidden">
+                <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-6 max-w-sm border-r border-neutral-200 dark:border-neutral-800 overflow-auto">
+                  <h1 className="text-lg font-semibold text-neutral-950 dark:text-neutral-50 mb-4">
+                    Instructions
+                  </h1>
                   <article className="prose prose-neutral dark:prose-invert leading-snug">
                     {docRender()}
                   </article>
@@ -163,7 +166,7 @@ export default function Page() {
               </div>
               <nav
                 ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-8 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
+                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
               >
                 <div className="flex gap-2 items-center">
                   <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
@@ -176,7 +179,7 @@ export default function Page() {
                   </h1>
                   <span className="block lg:hidden">
                     <Sheet
-                      title={"Trace Creation Help"}
+                      title={"Instructions"}
                       description={traceSteps[stepIndex].description}
                     >
                       {traceSteps[stepIndex].content}
