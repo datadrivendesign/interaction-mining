@@ -4,7 +4,7 @@ import { FrameData } from "./extract-frames";
 import { prettyNumber } from "@/lib/utils/number";
 import { X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
-import { CaptureFormData } from "../../page";
+import { TraceFormData } from "../../page";
 
 export default function FrameGallery({
   frames,
@@ -13,7 +13,7 @@ export default function FrameGallery({
   frames: FrameData[];
   setTime: (_: number) => void;
 }) {
-  const { watch, setValue } = useFormContext<CaptureFormData>();
+  const { watch, setValue } = useFormContext<TraceFormData>();
 
   const setFrameData = (value: FrameData[]) => setValue("screens", value);
 
@@ -24,7 +24,7 @@ export default function FrameGallery({
   };
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-4 overflow-auto">
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6 overflow-auto">
       {frames.map((frame, index) => (
         <div
           className="flex flex-col p-2 bg-neutral-100 dark:bg-neutral-900 rounded-xl"
@@ -46,6 +46,7 @@ export default function FrameGallery({
             <button
               onClick={() => handleDeleteFrame(index)}
               className="inline-flex self-end items-center cursor-pointer"
+              title="Delete snapshot"
             >
               <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
             </button>
