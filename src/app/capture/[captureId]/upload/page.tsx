@@ -41,16 +41,19 @@ import {
   CaptureSWROperations,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
+import { useCapture } from "@/lib/hooks";
 
 export default function Page() {
   const params = useParams();
   const captureId = params.captureId as string;
 
-  const { data, isLoading: isDataLoading } = useSWR(
-    [CaptureSWROperations.CAPTURE, captureId],
-    captureFetcher
-  );
-  const { capture, app } = data || {};
+  const { capture, isLoading: isDataLoading } = useCapture(captureId, {
+    includes: { app: true, task: true },
+  });
+
+  // @ts-ignore app is in there it just doesn't know it :)
+  const app = capture?.app;
+
   const { data: uploadList, isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
@@ -106,8 +109,8 @@ export default function Page() {
                 {!isDataLoading && app ? (
                   <Image
                     className="w-full rounded-3xl object-contain aspect-square"
-                    src={app.icon}
-                    alt={`${app.title} icon`}
+                    src={app.metadata.icon}
+                    alt={`${app.metadata.name} icon`}
                     width={0}
                     height={0}
                     sizes={"100vw"}
@@ -119,23 +122,25 @@ export default function Page() {
               <div className="flex flex-col justify-between items-center sm:items-start">
                 <div className="flex flex-col items-center sm:items-start mb-4">
                   {!isDataLoading && app ? (
-                    <h2 className="font-semibold leading-snug">{app.title}</h2>
+                    <h2 className="font-semibold leading-snug">
+                      {app.metadata.name}
+                    </h2>
                   ) : (
                     <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
                   )}
                   {!isDataLoading && app ? (
                     <p className="text-sm md:text-base font-medium text-neutral-500 dark:text-neutral-400">
-                      {app.developer}
+                      {app.metadata.developer}
                     </p>
                   ) : (
                     <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
                   )}
                 </div>
                 {!isDataLoading && app ? (
-                  app.url ? (
-                    <Link href={app.url} target="_blank">
+                  app.metadata.url ? (
+                    <Link href={app.metadata.url} target="_blank">
                       <button
-                        disabled={!app.url}
+                        disabled={!app.metadata.url}
                         className="inline-flex items-center px-3 py-0.5 rounded-full bg-blue-500 hover:bg-blue-600 disabled:bg-neutral-500 text-white text-sm md:text-base font-medium cursor-pointer transition-colors duration-150 ease-in-out"
                       >
                         <ExternalLink className="size-3.5 md:size-4 mr-1" />{" "}
@@ -144,7 +149,7 @@ export default function Page() {
                     </Link>
                   ) : (
                     <button
-                      disabled={!app.url}
+                      disabled={!app.metadata.url}
                       className="inline-flex items-center px-3 py-0.5 rounded-full bg-blue-500 disabled:bg-neutral-500 text-white text-sm md:text-base font-medium"
                     >
                       Not available

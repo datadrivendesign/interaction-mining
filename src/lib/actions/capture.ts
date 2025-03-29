@@ -48,7 +48,7 @@ export const getCapture = unstable_cache(
   async (
     { id, taskId, otp, includes }: GetCaptureProps,
   ): Promise<ActionPayload<CaptureWithTask>> => {
-    const { task = true, app = false } = includes || {};
+    const { task = false, app = false } = includes || {};
 
     if (!id && !taskId && !otp) {
       return { ok: false, message: "No search criteria provided.", data: null };
