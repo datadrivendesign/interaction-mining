@@ -6,10 +6,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import {
   ArrowRight,
-  CheckCircle2,
-  Ellipsis,
   FileVideo,
-  Loader2,
   Minus,
   X,
 } from "lucide-react";
@@ -32,13 +29,13 @@ import {
 
 import {
   CaptureSWROperations,
-  captureFetcher,
   fileFetcher,
   handleDeleteFile,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCapture } from "@/lib/hooks";
 
 enum CaptureState {
   IDLE = 0,
@@ -55,13 +52,7 @@ export default function Page({}: {}) {
     CaptureState.IDLE
   );
 
-  const { data: capture, isLoading: isCaptureLoading } = useSWR(
-    [CaptureSWROperations.CAPTURE, captureId],
-    captureFetcher,
-    {
-      refreshInterval: 10,
-    }
-  );
+  const { capture, isLoading: isCaptureLoading } = useCapture(captureId);
 
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     capture?.src ? [CaptureSWROperations.UPLOAD_LIST, captureId] : null,
@@ -89,8 +80,8 @@ export default function Page({}: {}) {
   };
 
   const redirectToFrameExtract = () => {
-    capture?.id ? redirect(`/extract?captureId=${capture.id}`) : null
-  }
+    capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
+  };
 
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
@@ -332,42 +323,12 @@ export default function Page({}: {}) {
               </div>
             )}
           </div>
-          <div className="flex w-full justify-end">
-            <Button
-              disabled={uploadList ? uploadList.length < 1 : false}
-              onClick={handleProcess}
-            >
-              Continue
-            </Button>
-          </div>
         </CardContent>
-      </Card>
-      <Card className="w-full max-w-screen-sm">
-        <CardHeader>
-          <div className="flex w-full justify-between items-center">
-            <CardTitle className="text-sm">
-              {captureState < CaptureState.PROCESSING ? (
-                <>Session recording processing</>
-              ) : captureState === CaptureState.PROCESSING ? (
-                <>Processing recordings...</>
-              ) : (
-                <>Recordings processed</>
-              )}
-            </CardTitle>
-            {captureState < CaptureState.PROCESSING ? (
-              <Ellipsis className="size-5 text-neutral-500" />
-            ) : captureState === CaptureState.PROCESSING ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="size-5" />
-            )}
-          </div>
-        </CardHeader>
       </Card>
       <div className="flex justify-end w-full max-w-screen-sm">
         <Button
           className="gap-1"
-          disabled={captureState < CaptureState.PROCESSED}
+          disabled={uploadList.length === 0}
           onClick={redirectToFrameExtract}
         >
           Next step <ArrowRight />

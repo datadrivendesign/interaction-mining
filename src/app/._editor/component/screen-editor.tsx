@@ -157,7 +157,6 @@ function KeywordRedactionView({
         // const result = redactByKeyword(data, poth);
 
         // Update the data with the redacted fields
-        console.log(result);
         const newSensitiveFields = extractSensitiveFields(result);
         setSensitiveFields(newSensitiveFields);
 
@@ -429,8 +428,6 @@ export function RenderedScreen({
                 width={box.width}
                 height={box.height}
                 id={box.id}
-                onClick={() => console.log(`Clicked box ${box.id}`)}
-                onHover={() => console.log(`Hovered over box ${box.id}`)}
               />
             ))}
           </svg>
