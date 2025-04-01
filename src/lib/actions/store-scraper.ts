@@ -2,7 +2,6 @@
 
 // @ts-ignore
 import appStore from "app-store-scraper";
-import { ok } from "assert";
 import gplay from "google-play-scraper";
 
 export async function getIosApp({ appId }: { appId: string }) {

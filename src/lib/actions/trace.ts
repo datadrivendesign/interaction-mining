@@ -1,7 +1,8 @@
 "use server";
-import { Prisma } from "@prisma/client";
+import { Prisma, Screen, Trace } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
+import { ActionPayload } from "./types";
 interface GetTracesParams {
   id?: string;
   appId?: string;
@@ -91,7 +92,7 @@ export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
     // app = false,
     screens = false,
   } = includes || {};
-  
+
   let trace = null;
   if (!id || !isValidObjectId(id)) {
     return {
@@ -130,6 +131,37 @@ export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
     return {
       ok: false,
       message: "Failed to fetch trace.",
+      data: null,
+    };
+  }
+}
+
+interface CreateTraceIncludesParams {
+  includes?: {
+    screens?: boolean;
+    task?: boolean;
+  };
+}
+
+export async function createTrace(
+  data: Prisma.TraceCreateInput,
+  { includes }: CreateTraceIncludesParams = {}
+): Promise<ActionPayload<Trace>> {
+  const { screens = false, task = false } = includes || {};
+  let trace: Trace | null = {} as Trace;
+  try {
+    trace = await prisma.trace.create({ data, include: { screens, task } });
+
+    return {
+      ok: true,
+      message: "Trace created.",
+      data: trace,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      message: "Failed to create trace.",
       data: null,
     };
   }
