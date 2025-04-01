@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { Check, ChevronsUpDown, Circle, MousePointerClick } from "lucide-react";
+import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, Check, ChevronRight, ChevronsUpDown, Circle, CircleDashed, CircleDot, CircleStop, Expand, Grab, IterationCcw, IterationCw, Shrink } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
 import {
@@ -17,7 +17,7 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { restrictToParentElement } from "@dnd-kit/modifiers";
-import { Screen, ScreenGesture } from "@prisma/client";
+import { ScreenGesture } from "@prisma/client";
 
 import { cn } from "@/lib/utils";
 
@@ -90,6 +90,8 @@ export default function RepairScreenCanvas({
         ...prev,
         x: relativeX,
         y: relativeY,
+        scrollDeltaX: prev.type === "Swipe left" ? -0.02 : (prev.type === "Swipe right" ? 0.02 : 0),
+        scrollDeltaY: prev.type === "Swipe down" ? -0.02 : (prev.type === "Swipe up" ? 0.02 : 0)
       }));
     }
   };
@@ -108,6 +110,8 @@ export default function RepairScreenCanvas({
           ...prev,
           x: prev.x! + deltaX,
           y: prev.y! + deltaY,
+          scrollDeltaX: prev.type === "Swipe left" ? -0.02 : (prev.type === "Swipe right" ? 0.02 : 0),
+          scrollDeltaY: prev.type === "Swipe down" ? -0.02 : (prev.type === "Swipe up" ? 0.02 : 0)
         }));
       }
     },
@@ -213,6 +217,83 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
   );
 }
 
+type GestureOption = {
+  value: string;
+  label: string;
+  icon?: React.JSX.Element;
+  subGestures?: GestureOption[];
+}
+
+const gestureOptions: GestureOption[] = [
+  {
+    value: "Tap",
+    label: "Tap",
+    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Double tap",
+    label: "Double tap",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+    subGestures: [{
+      value: "Swipe up",
+      label: "Swipe up",
+      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe down",
+      label: "Swipe down",
+      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe left",
+      label: "Swipe left",
+      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe right",
+      label: "Swipe right",
+      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Zoom",
+    label: "Zoom",
+    subGestures: [{
+      value: "Zoom in",
+      label: "Zoom in",
+      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Zoom out",
+      label: "Zoom out",
+      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Rotate",
+    label: "Rotate",
+    subGestures: [{
+      value: "Rotate cw",
+      label: "Rotate cw",
+      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Rotate ccw",
+      label: "Rotate ccw",
+      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  }
+];
+
 function DraggableMarker({
   position,
 }: {
@@ -223,6 +304,8 @@ function DraggableMarker({
     useDraggable({
       id: "gestureMarker",
     });
+  const { gesture, setGesture } = useContext(GestureContext);
+  
 
   return (
     <>
@@ -242,7 +325,11 @@ function DraggableMarker({
         {...listeners}
         {...attributes}
       >
-        <Circle className="size-4 text-yellow-800 hover:text-black" />
+        {gesture.type
+            ? gestureOptions
+              .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
+              .find((option) => option.value === gesture.type )?.icon
+            :  <CircleDashed className="size-4 text-yellow-800 hover:text-black" />}
       </motion.div>
       <div
         className="absolute z-50 ml-2"
@@ -257,37 +344,6 @@ function DraggableMarker({
     </>
   );
 }
-
-const gestureOptions = [
-  {
-    value: "Tap",
-    label: "Tap",
-  },
-  {
-    value: "Double tap",
-    label: "Double tap",
-  },
-  {
-    value: "Touch and hold",
-    label: "Touch and hold",
-  },
-  {
-    value: "Swipe",
-    label: "Swipe",
-  },
-  {
-    value: "Drag",
-    label: "Drag",
-  },
-  {
-    value: "Zoom",
-    label: "Zoom",
-  },
-  {
-    value: "Rotate",
-    label: "Rotate",
-  },
-];
 
 function GestureSelection() {
   const { gesture, setGesture } = useContext(GestureContext);
@@ -315,7 +371,10 @@ function GestureSelection() {
           className="w-50 justify-between"
         >
           {value
-            ? gestureOptions.find((gesture) => gesture.value === value)?.label
+            ? gestureOptions
+            .flat()
+            .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
+            .find((gesture) => gesture.value === value)?.label
             : "Select gesture..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -331,8 +390,10 @@ function GestureSelection() {
                   key={gesture.value}
                   value={gesture.value}
                   onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue);
-                    setOpen(false);
+                    if (gesture.subGestures === undefined) {
+                      setValue(currentValue === value ? "" : currentValue);
+                      setOpen(false);
+                    }
                   }}
                 >
                   <Check
@@ -342,6 +403,43 @@ function GestureSelection() {
                     )}
                   />
                   {gesture.label}
+
+                  {gesture.subGestures && 
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={null}
+                          className="relative w-full h-full right-2 top-1/2 -translate-y-1/2"
+                        >
+                          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-50 p-0" align="start" side="right">
+                        <Command>
+                          <CommandList>
+                            {gesture.subGestures.map((subGesture) => (
+                              <CommandItem
+                                key={subGesture.value}
+                                value={subGesture.value}
+                                onSelect={(currentValue) => {
+                                  setValue(currentValue === value ? "" : currentValue);
+                                  setOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "h-4 w-4",
+                                    subGesture.value === value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {subGesture.label}
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>  
+                    </Popover>
+                  }
                 </CommandItem>
               ))}
             </CommandGroup>
