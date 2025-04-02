@@ -4,7 +4,8 @@ import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../../page";
+import { gestureOptions, TraceFormData } from "../../page";
+import { ScreenGesture } from "@prisma/client";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
@@ -33,11 +34,12 @@ export default function Review() {
 function SaveTraceGallery() {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens");
+  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
       {screens.map((screen) => (
         <div
-          className="flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
+          className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
           key={`${screen.id}`}
         >
           <Image
@@ -47,8 +49,29 @@ function SaveTraceGallery() {
             draggable={false}
             width={0}
             height={0}
-            sizes="100vw"
-          />
+            sizes="100vw" >
+          </Image>
+
+          <div
+            style={{
+              left: `${(gestures[screen.id].x ?? 0) * 100}%`,
+              top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
+              width: "10%",
+              aspectRatio: 1,
+              position: 'absolute',
+              borderRadius: '50%',
+              opacity: '0.5',
+              backgroundColor: '#ff9100',
+              transform: 'translate(-50%, -50%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {gestureOptions
+              .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
+              .find((option) => option.value === gestures[screen.id].type)?.icon}
+          </div>
         </div>
       ))}
     </div>
