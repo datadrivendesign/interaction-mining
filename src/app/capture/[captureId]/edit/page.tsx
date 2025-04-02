@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, ChevronRight, Circle, CircleDot, CircleStop, Expand, Grab, IterationCcw, IterationCw, Loader2, Shrink } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useCapture } from "@/lib/hooks";
@@ -42,6 +42,83 @@ const traceSteps = [
     description: "Review the trace and finish the trace creation process.",
     content: <ReviewDoc />,
   },
+];
+
+export type GestureOption = {
+  value: string;
+  label: string;
+  icon?: React.JSX.Element;
+  subGestures?: GestureOption[];
+}
+
+export const gestureOptions: GestureOption[] = [
+  {
+    value: "Tap",
+    label: "Tap",
+    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Double tap",
+    label: "Double tap",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+    subGestures: [{
+      value: "Swipe up",
+      label: "Swipe up",
+      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe down",
+      label: "Swipe down",
+      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe left",
+      label: "Swipe left",
+      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe right",
+      label: "Swipe right",
+      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Zoom",
+    label: "Zoom",
+    subGestures: [{
+      value: "Zoom in",
+      label: "Zoom in",
+      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Zoom out",
+      label: "Zoom out",
+      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Rotate",
+    label: "Rotate",
+    subGestures: [{
+      value: "Rotate cw",
+      label: "Rotate cw",
+      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Rotate ccw",
+      label: "Rotate ccw",
+      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  }
 ];
 
 export type TraceFormData = {
