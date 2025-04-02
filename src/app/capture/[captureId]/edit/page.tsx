@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCapture } from "@/lib/hooks";
 import { ScreenGesture } from "@prisma/client";
 import {
+  GestureOption,
   ScreenGestureSchema,
   ScreenSchema,
   TraceFormSchema,
@@ -43,13 +44,6 @@ const traceSteps = [
     content: <ReviewDoc />,
   },
 ];
-
-export type GestureOption = {
-  value: string;
-  label: string;
-  icon?: React.JSX.Element;
-  subGestures?: GestureOption[];
-}
 
 export const gestureOptions: GestureOption[] = [
   {
