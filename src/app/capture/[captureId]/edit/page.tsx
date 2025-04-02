@@ -8,6 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useCapture } from "@/lib/hooks";
 import { ScreenGesture } from "@prisma/client";
+import { toast } from "sonner";
+
 import {
   ScreenGestureSchema,
   ScreenSchema,
@@ -20,11 +22,14 @@ import Sheet from "./components/sheet";
 import ExtractFrames, { type FrameData } from "./components/extract-frames";
 import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairScreen from "./components/repair-screen/index";
-import RepairInteractionsDoc from "./components/repair-screen/doc.mdx";
+import RepairDoc from "./components/repair-screen/doc.mdx";
+import RedactDoc from "./components/redact-screen/doc.mdx";
 import Review from "./components/review/review";
 import ReviewDoc from "./components/review/doc.mdx";
-import { toast } from "sonner";
+
 import { handleSave } from "./util";
+import RedactScreen from "./components/redact-screen/redact-screen";
+import type { Redaction } from "./components/redact-screen/redact-screen-canvas";
 
 const traceSteps = [
   {
@@ -35,7 +40,12 @@ const traceSteps = [
   {
     title: "Repair",
     description: "Repair interactions that are broken or missing.",
-    content: <RepairInteractionsDoc />,
+    content: <RepairDoc />,
+  },
+  {
+    title: "Redact",
+    description: "Redact sensitive information from the screens.",
+    content: <RedactDoc />,
   },
   {
     title: "Review",
@@ -47,6 +57,7 @@ const traceSteps = [
 export type TraceFormData = {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
+  redactions: { [key: string]: Redaction[] };
   description: string;
 };
 
@@ -61,6 +72,7 @@ export default function Page() {
     defaultValues: {
       screens: [],
       gestures: {},
+      redactions: {},
       description: "",
     },
     resolver: zodResolver(TraceFormSchema),
@@ -121,8 +133,10 @@ export default function Page() {
       case 0:
         return <ExtractFrameDoc />;
       case 1:
-        return <RepairInteractionsDoc />;
+        return <RepairDoc />;
       case 2:
+        return <RedactDoc />;
+      case 3:
         return <ReviewDoc />;
       default:
         return null;
@@ -136,6 +150,8 @@ export default function Page() {
       case 1:
         return <RepairScreen />;
       case 2:
+        return <RedactScreen data={capture} />;
+      case 3:
         return <Review />;
       default:
         return null;
