@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ error: result.message }, { status: 404 });
     }
 
-    const taskId = result.data.task?.id;
+    const taskId = result.data.taskId;  
     let taskDetails = null;
 
     if (taskId) {
@@ -24,11 +24,15 @@ export async function GET(
       }
     }
 
+    console.log('Capture:', result.data);
+    console.log('Task:', taskDetails);
+
     return NextResponse.json({
       capture: {
         id: result.data.id,
         appId: result.data.appId,
         otp: result.data.otp,
+        src: result.data.src,
       },
       task: taskDetails ? {
         id: taskDetails.id,
