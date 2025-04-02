@@ -1,250 +1,200 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import { Check, ChevronsUpDown, Eraser, MousePointerClick, Pencil } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useMouse } from "@uidotdev/usehooks";
-import { DndContext, useDraggable, useDroppable, DragMoveEvent, DragEndEvent } from "@dnd-kit/core";
-import { restrictToParentElement } from "@dnd-kit/modifiers";
-import { Screen } from "@prisma/client";
 
-import { cn } from "@/lib/utils";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Pencil, Eraser } from "lucide-react";
+import { useFormContext } from "react-hook-form";
+import { TraceFormData } from "../../page";
+import { FrameData } from "../extract-frames";
+import { HotKeys } from "react-hotkeys";
 
-import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import clsx from "clsx";
-
-
-export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
-  const [mouse, ref] = useMouse();
-  const [tooltip, setTooltip] = useState<{ x: number | null; y: number | null }>({
-    x: null,
-    y: null
-  });
-  const [mode, setMode] = useState<"pencil" | "eraser">("pencil");
-
-  const [gestureMarker, setGestureMarker] = useState<{ x: number | null; y: number | null }>({
-    x: null,
-    y: null,
-  });
-
-  const handleImageClick = () => {
-    // Set the marker position
-    setGestureMarker({ x: mouse.elementX, y: mouse.elementY });
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { delta } = event;
-    setGestureMarker((prev) => ({
-      x: (prev?.x ?? 0) + delta.x,
-      y: (prev?.y ?? 0) + delta.y,
-    }));
-  };
-
-  useEffect(() => {
-    console.log(gestureMarker)
-  }, [gestureMarker])
-
-  return (
-    <>
-      <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
-        <div className="relative flex w-full h-full justify-center items-center">
-          {/* Toolbar */}
-          <aside className="absolute z-50 left-8 flex flex-col justify-center h-full">
-            <div className="flex flex-col p-4 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md">
-              <button>
-                <Pencil className="h-6 w-6" />
-              </button>
-              <button>
-                <Eraser className="h-6 w-6" />
-              </button>
-            </div>
-          </aside>
-          {/* Canvas */}
-          <div
-            className="relative w-auto h-full p-4"
-            style={{ "--marker-radius": "0.75rem" } as React.CSSProperties}
-          >
-
-            <DroppableArea>
-              <AnimatePresence>
-                {/* Only show floating tool */}
-                {
-                  (tooltip!.x && tooltip!.y) &&
-                    (!gestureMarker.x && !gestureMarker.y) ? (
-                    <motion.div
-                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
-                      initial={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
-                      animate={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 1 }}
-                      exit={{ x: 8 + tooltip!.x, y: 8 + tooltip!.y, opacity: 0 }}
-                      transition={{ duration: 0.05 }}
-                    >
-                      <span className="text-xs font-medium">Add a gesture</span>
-                    </motion.div>
-                  ) : null
-                }
-              </AnimatePresence>
-              {(gestureMarker.x !== null && gestureMarker.y !== null) ? (
-                <DraggableMarker
-                  position={gestureMarker}
-                />
-              ) : null}
-              <Image
-                ref={ref as React.MutableRefObject<HTMLImageElement | null>}
-                src={screen.src}
-                alt="gallery"
-                draggable={false}
-                className="w-fit h-full rounded-lg cursor-crosshair"
-                width={0}
-                height={0}
-                sizes="100vw"
-                onClick={handleImageClick}
-                onMouseMove={() => {
-                  setTooltip({ x: mouse.elementX, y: mouse.elementY });
-                }}
-              />
-            </DroppableArea>
-          </div>
-        </div>
-      </DndContext>
-    </>
-  )
+export interface Redaction {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
-function DroppableArea({ children }: { children: React.ReactNode }) {
-  const { setNodeRef } = useDroppable({ id: "screenshot" });
-  return (
-    <div ref={setNodeRef} className="relative w-full h-full">
-      {children}
-    </div>
-  );
-}
-
-function DraggableMarker({
-  position,
+export default function RedactScreenCanvas({
+  screen,
+  // redactions,
+  // onRedactionsChange,
 }: {
-  position: { x: number | null; y: number | null };
-  props?: React.HTMLAttributes<HTMLDivElement>;
+  screen: FrameData;
+  // redactions: Redaction[];
+  // onRedactionsChange: (screenId: string, newRedactions: Redaction[]) => void;
 }) {
-  const { attributes, isDragging, listeners, setNodeRef, transform } = useDraggable({
-    id: "gestureMarker",
+  const { watch, setValue } = useFormContext<TraceFormData>();
+
+  const redactions = watch("redactions") as { [screenId: string]: Redaction[] };
+
+  const onRedactionsChange = (screenId: string, newRedactions: Redaction[]) => {
+    setValue("redactions", {
+      ...redactions,
+      [screenId]: newRedactions,
+    });
+  };
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(new Image());
+
+  const [mode, setMode] = useState<"pencil" | "eraser">("pencil");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [startPos, setStartPos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
   });
+  const [currentRect, setCurrentRect] = useState<Redaction | null>(null);
+
+  // Load base image once
+  useEffect(() => {
+    const img = imgRef.current;
+    img.src = screen.url;
+    img.onload = redrawCanvas;
+  }, [screen.url]);
+
+  // Re‑draw whenever redactions or transient rect changes
+  useEffect(() => {
+    redrawCanvas();
+  }, [redactions, currentRect]);
+
+  const redrawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img.complete) return;
+
+    const ctx = canvas.getContext("2d")!;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    // Draw original
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    // Draw saved redactions
+    ctx.fillStyle = "black";
+
+    // Check if redactions exist for the current screen,
+    if (redactions[screen.id]) {
+      redactions[screen.id].forEach((r) => {
+        ctx.fillRect(
+          r.x * canvas.width,
+          r.y * canvas.height,
+          r.width * canvas.width,
+          r.height * canvas.height
+        );
+      });
+    } else {
+      onRedactionsChange(screen.id, []);
+    }
+
+    // Draw in‑progress rectangle
+    if (currentRect) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(
+        currentRect.x * canvas.width,
+        currentRect.y * canvas.height,
+        currentRect.width * canvas.width,
+        currentRect.height * canvas.height
+      );
+      ctx.globalAlpha = 1;
+    }
+  }, [redactions, currentRect, screen.id]);
+
+  const toNormalized = (evt: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return {
+      x: (evt.clientX - rect.left) / rect.width,
+      y: (evt.clientY - rect.top) / rect.height,
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (mode === "pencil") {
+      const { x, y } = toNormalized(e);
+      setStartPos({ x, y });
+      setCurrentRect({ x, y, width: 0, height: 0 });
+      setIsDrawing(true);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDrawing && currentRect) {
+      const { x, y } = toNormalized(e);
+      setCurrentRect({
+        x: Math.min(startPos.x, x),
+        y: Math.min(startPos.y, y),
+        width: Math.abs(x - startPos.x),
+        height: Math.abs(y - startPos.y),
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isDrawing && currentRect) {
+      onRedactionsChange(screen.id, [...redactions[screen.id], currentRect]);
+      setCurrentRect(null);
+      setIsDrawing(false);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (mode === "eraser") {
+      const { x, y } = toNormalized(e);
+      const idx = redactions[screen.id].findIndex(
+        (r) => x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height
+      );
+      if (idx >= 0)
+        onRedactionsChange(
+          screen.id,
+          redactions[screen.id].filter((_, i) => i !== idx)
+        );
+    }
+  };
+
+  const keymap = {
+    PENCIL: "p",
+    ERASER: "e",
+    CANCEL: "esc",
+  };
+  const handlers = {
+    PENCIL: () => setMode("pencil"),
+    ERASER: () => setMode("eraser"),
+    CANCEL: () => {
+      setIsDrawing(false);
+      setCurrentRect(null);
+    },
+  };
 
   return (
-    <>
-      <motion.div
-        ref={setNodeRef}
-        style={{
-          left: `calc(${position.x ?? 0}px - var(--marker-radius))`,
-          top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
-          width: "calc(var(--marker-radius) * 2)",
-          height: "calc(var(--marker-radius) * 2)",
-          transform: `translate3d(${transform?.x ?? 0}px, ${transform?.y ?? 0}px, 0)`,
-        }}
-        className={clsx(
-          "absolute z-50 bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-opacity duration-150 ease-in-out",
-          isDragging ? "cursor-grabbing" : "cursor-grab"
-        )}
-        {...listeners}
-        {...attributes}
-      >
-      </motion.div>
-      <div
-        className="absolute z-50 ml-4"
-        style={{
-          left: `calc(${position.x ?? 0}px - var(--marker-radius))`,
-          top: `calc(${position.y ?? 0}px) - var(--marker-radius))`,
-          transform: `translate3d(${transform?.x ?? 0}px, ${transform?.y ?? 0}px, 0)`,
-        }}
-      >
-        <GestureSelection />
+    <HotKeys keyMap={keymap} handlers={handlers} className="w-full h-full" tabIndex={0}>
+      <div className="flex items-center h-full w-full p-4">
+        <aside className="flex flex-col justify-center items-center bg-neutral-100 dark:bg-neutral-900 p-1 rounded-lg shadow-lg">
+          <button
+            onClick={() => setMode("pencil")}
+            className={`p-2 rounded ${mode === "pencil" ? "bg-blue-500 text-white" : ""}`}
+          >
+            <Pencil className="size-5" />
+          </button>
+          <button
+            onClick={() => setMode("eraser")}
+            className={`p-2 rounded ${mode === "eraser" ? "bg-blue-500 text-white" : ""}`}
+          >
+            <Eraser className="size-5" />
+          </button>
+        </aside>
+
+        <div className="relative flex justify-center items-center w-full h-full">
+          <canvas
+            ref={canvasRef}
+            className="w-fit h-full cursor-crosshair rounded-lg"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onClick={handleClick}
+            style={{ cursor: mode === "eraser" ? "pointer" : "crosshair" }}
+          />
+        </div>
       </div>
-    </>
+    </HotKeys>
   );
 }
-const gestureOptions = [
-  {
-    value: "Press",
-    label: "Press",
-  },
-  {
-    value: "Long press",
-    label: "Long press",
-  },
-  {
-    value: "Scroll",
-    label: "Scroll"
-  },
-  {
-    value: "Swipe",
-    label: "Swipe",
-  },
-  {
-    value: "Pinch",
-    label: "Pinch",
-  }
-]
-
-function GestureSelection() {
-  const [open, setOpen] = useState(true)
-  const [value, setValue] = useState("")
-
-  return (
-    <Popover open={open} onOpenChange={setOpen} defaultOpen>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-50 justify-between"
-        >
-          {value
-            ? gestureOptions.find((gesture) => gesture.value === value)?.label
-            : "Select gesture..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-50 p-0">
-        <Command>
-          <CommandInput placeholder="Search gesture..." />
-          <CommandList>
-            <CommandEmpty>No framework found.</CommandEmpty>
-            <CommandGroup>
-              {gestureOptions.map((gesture) => (
-                <CommandItem
-                  key={gesture.value}
-                  value={gesture.value}
-                  onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      value === gesture.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {gesture.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
