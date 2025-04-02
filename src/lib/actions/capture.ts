@@ -167,6 +167,58 @@ export async function generatePresignedCaptureUpload(
 }
 
 /**
+ * Generates a pre-signed URL for direct S3 upload.
+ * @param captureId The ID of the capture to upload the file to.
+ * @param fileType The MIME type of the file to upload.
+ * @returns ActionPayload
+ */
+export async function generatePresignedCaptureUploadImg(
+  captureId: string,
+  fileType: string
+): Promise<
+  ActionPayload<{
+    uploadUrl: string;
+    fileKey: string;
+    filePrefix: string;
+    fileUrl: string;
+  }>
+> {
+  if (!(fileType === "image/png")) {
+    return {
+      ok: false,
+      message: "Invalid file type. Please upload an PNG",
+      data: null,
+    };
+  }
+
+  try {
+    const fileKey = `uploads/${captureId}/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Key: fileKey,
+      ContentType: fileType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+
+    return {
+      ok: true,
+      message: "Pre-signed upload URL generated.",
+      data: {
+        uploadUrl,
+        filePrefix: `uploads/${captureId}/`,
+        fileKey,
+        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+      },
+    };
+  } catch (err) {
+    console.error("Error generating pre-signed URL:", err);
+    return { ok: false, message: "Failed to generate upload URL.", data: null };
+  }
+}
+
+/**
  * Deletes an uploaded file from S3.
  * @param fileKey The S3 object key of the file to delete.
  * @returns ActionPayload
