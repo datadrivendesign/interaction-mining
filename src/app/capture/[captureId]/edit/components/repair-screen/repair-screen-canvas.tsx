@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { Check, ChevronRight, ChevronsUpDown, CircleDashed } from "lucide-react";
+import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, Check, ChevronRight, ChevronsUpDown, Circle, CircleDashed, CircleDot, CircleStop, Expand, Grab, IterationCcw, IterationCw, Shrink } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
 import {
@@ -38,7 +38,7 @@ import {
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { FrameData } from "../extract-frames";
-import { gestureOptions } from "../../page";
+import { GestureOption } from "../types";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -218,6 +218,76 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
   );
 }
 
+const gestureOptions: GestureOption[] = [
+  {
+    value: "Tap",
+    label: "Tap",
+    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Double tap",
+    label: "Double tap",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+    subGestures: [{
+      value: "Swipe up",
+      label: "Swipe up",
+      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe down",
+      label: "Swipe down",
+      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe left",
+      label: "Swipe left",
+      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe right",
+      label: "Swipe right",
+      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Zoom",
+    label: "Zoom",
+    subGestures: [{
+      value: "Zoom in",
+      label: "Zoom in",
+      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Zoom out",
+      label: "Zoom out",
+      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Rotate",
+    label: "Rotate",
+    subGestures: [{
+      value: "Rotate cw",
+      label: "Rotate cw",
+      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Rotate ccw",
+      label: "Rotate ccw",
+      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  }
+];
+
 function DraggableMarker({
   position,
 }: {
@@ -229,7 +299,6 @@ function DraggableMarker({
       id: "gestureMarker",
     });
   const { gesture, setGesture } = useContext(GestureContext);
-  
 
   return (
     <>
