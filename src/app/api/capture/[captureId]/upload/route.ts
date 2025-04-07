@@ -4,7 +4,7 @@ import { handleAndroidScreenUpload } from '@/lib/actions';
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { captureId: string } }
+    { params }: { params: Promise<{ captureId: string }> }
 ) {
     try {
         const { captureId } = await params;
