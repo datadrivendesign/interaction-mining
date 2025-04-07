@@ -127,3 +127,116 @@ export async function generatePresignedScreenUpload(
     return { ok: false, message: "Failed to upload image.", data: null };
   }
 }
+
+/**
+ * Handles the upload of an Android screen and its view hierarchy.
+ * @param data The data containing screen information.
+ * @returns ActionPayload with the screen ID or error message.
+ */
+
+export async function handleAndroidScreenUpload(
+  data: {
+    vh: string;
+    img: string;
+    created: string;
+    gesture: {
+      type?: string;
+      scrollDeltaX?: number;
+      scrollDeltaY?: number;
+      x?: number;
+      y?: number;
+    };
+    captureId: string;
+  }
+): Promise<ActionPayload<{ url: string }>> {
+  try {
+    // // Validate Base64 image
+    // if (!/^data:image\/png;base64,/.test(data.img)) {
+    //   return { 
+    //     ok: false, 
+    //     message: "Invalid image format. Expected PNG Base64", 
+    //     data: null 
+    //   };
+    // }
+
+    // // Use transaction to ensure data consistency
+    // const result = await prisma.$transaction(async (tx) => {
+    //   // Create initial screen record
+    //   const newScreen = await tx.screen.create({
+    //     data: {
+    //       created: new Date(data.created),
+    //       gesture: data.gesture,
+    //       src: "",
+    //       vh: "",
+    //       traceId: ""
+    //     }
+    //   });
+
+    
+
+
+
+      // Upload files to S3
+      const [res] = await Promise.all([
+        // uploadToS3({
+        //   content: data.img.replace(/^data:image\/png;base64,/, ''),
+        //   fileName: `${data.captureId}/${data.created}/screen.png`,
+        //   contentType: 'image/png'
+        // }),
+        uploadToS3({
+          content: JSON.stringify(data),
+          fileName: `uploads/${data.captureId}/${data.created}.json`,
+          contentType: 'application/json'
+        })
+      ]);
+
+      // Update screen with S3 URLs
+    //   return tx.screen.update({
+    //     where: { id: newScreen.id },
+    //     data: { src, vh }
+    //   });
+    // });
+
+    return { 
+      ok: true, 
+      message: "Screen uploaded successfully", 
+      data: { url: res} 
+    };
+
+  } catch (error) {
+    console.error("Android screen upload error:", error);
+    return { 
+      ok: false, 
+      message: "Failed to process screen upload", 
+      data: null 
+    };
+  }
+}
+
+/**
+ * Uploads content to S3 and returns the public URL.
+ * @param content The content to upload (string or Buffer).
+ * @param fileName The name of the file to save in S3.
+ * @param contentType The MIME type of the content.
+ * @returns The public URL of the uploaded file.
+ */
+
+async function uploadToS3({ content, fileName, contentType }: {
+  content: string;
+  fileName: string;
+  contentType: string;
+}): Promise<string> {
+  // const buffer = typeof content === 'string' 
+  //   ? Buffer.from(content, 'base64')
+  //   : content;
+
+  const command = new PutObjectCommand({
+    Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+    Key: fileName,
+    Body: content,
+    ContentType: contentType,
+  });
+
+  await s3.send(command);
+  return `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+}
