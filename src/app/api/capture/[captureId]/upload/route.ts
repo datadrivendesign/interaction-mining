@@ -28,7 +28,12 @@ export async function POST(
                 );
             }
 
-            return NextResponse.json(result.data);
+            console.log('Upload successful:', result.data);
+
+            return NextResponse.json(
+                { message: 'Upload successful'},
+                { status: 200 }
+            );
         }
     } catch (error) {
         console.error('Upload error:', error);
