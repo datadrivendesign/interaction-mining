@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import Image from "next/image";
@@ -63,8 +64,17 @@ export default function RepairScreenCanvas({
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
 }) {
+  // memoize gesture and setGesture to avoid unnecessary re-renders
+  const memoizedGestureState = useMemo(() => {
+    console.log("memoize")
+    return { gesture, setGesture}
+  }, [gesture, setGesture]);
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
+  const mergedRef = useMemo(
+    () => { console.log("mergeRef"); return mergeRefs(ref, imageRef)},
+    [ref, imageRef]
+  );
   const [tooltip, setTooltip] = useState<{
     x: number | null;
     y: number | null;
@@ -80,6 +90,7 @@ export default function RepairScreenCanvas({
     x: null,
     y: null,
   });
+  console.log("RepairScreenCanvas");
 
   // Set initial marker position on image
   const handleImageClick = () => {
@@ -119,7 +130,7 @@ export default function RepairScreenCanvas({
     [width, height]
   );
 
-  useEffect(() => {
+  useEffect(() => { 
     if (
       (markerPixelPosition.x !== gesture.x ||
         markerPixelPosition.y !== gesture.y) &&
@@ -137,8 +148,8 @@ export default function RepairScreenCanvas({
     <>
       <GestureContext.Provider
         value={{
-          gesture: gesture,
-          setGesture: setGesture,
+          gesture: memoizedGestureState["gesture"],
+          setGesture: memoizedGestureState["setGesture"],
         }}
       >
         <DndContext
@@ -183,10 +194,7 @@ export default function RepairScreenCanvas({
                 ) : null}
                 <Image
                   ref={
-                    mergeRefs(
-                      ref,
-                      imageRef
-                    ) as React.MutableRefObject<HTMLImageElement | null>
+                    mergedRef as React.MutableRefObject<HTMLImageElement | null>
                   }
                   src={screen.url}
                   alt="gallery"
@@ -299,6 +307,7 @@ function DraggableMarker({
       id: "gestureMarker",
     });
   const { gesture, setGesture } = useContext(GestureContext);
+  console.log("setGesture")
 
   return (
     <>
@@ -340,6 +349,7 @@ function DraggableMarker({
 
 function GestureSelection() {
   const { gesture, setGesture } = useContext(GestureContext);
+  console.log("setGesture")
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
 
@@ -353,6 +363,7 @@ function GestureSelection() {
     }
   }, [value]);
 
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -363,12 +374,12 @@ function GestureSelection() {
           aria-expanded={open}
           className="w-50 justify-between"
         >
-          {value
-            ? gestureOptions
-            .flat()
-            .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
-            .find((gesture) => gesture.value === value)?.label
-            : "Select gesture..."}
+          {value ? 
+            gestureOptions
+              .flat()
+              .flatMap((option) => [option, ...(option.subGestures ?? [])])
+              .find((option) => option.value === value)?.label : 
+            "Select gesture..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -378,12 +389,12 @@ function GestureSelection() {
           <CommandList>
             <CommandEmpty>No framework found.</CommandEmpty>
             <CommandGroup>
-              {gestureOptions.map((gesture) => (
+              {gestureOptions.map((option) => (
                 <CommandItem
-                  key={gesture.value}
-                  value={gesture.value}
+                  key={option.value}
+                  value={option.value}
                   onSelect={(currentValue) => {
-                    if (gesture.subGestures === undefined) {
+                    if (option.subGestures === undefined) {
                       setValue(currentValue === value ? "" : currentValue);
                       setOpen(false);
                     }
@@ -392,12 +403,12 @@ function GestureSelection() {
                   <Check
                     className={cn(
                       "h-4 w-4",
-                      value === gesture.value ? "opacity-100" : "opacity-0"
+                      value === option.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {gesture.label}
+                  {option.label}
 
-                  {gesture.subGestures && 
+                  {option.subGestures && 
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -410,12 +421,14 @@ function GestureSelection() {
                       <PopoverContent className="w-50 p-0" align="start" side="right">
                         <Command>
                           <CommandList>
-                            {gesture.subGestures.map((subGesture) => (
+                            {option.subGestures.map((subGesture) => (
                               <CommandItem
                                 key={subGesture.value}
                                 value={subGesture.value}
                                 onSelect={(currentValue) => {
-                                  setValue(currentValue === value ? "" : currentValue);
+                                  setValue(
+                                    currentValue === value ? "" : currentValue
+                                  );
                                   setOpen(false);
                                 }}
                               >
