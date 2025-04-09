@@ -36,6 +36,25 @@ interface GetCaptureProps {
   };
 }
 
+export type CaptureListedFile = {
+  fileKey: string;
+  fileName: string;
+  fileUrl: string;
+}
+
+export type CaptureScreenFile = {
+  vh: string,
+  img: string,
+  created: string,
+  gesture: {
+    type?: string,
+    x: number,
+    y: number,
+    scrollDeltaX: number,
+    scrollDeltaY: number,
+    description?: string,
+  }
+}
 
 /**
  * Fetches a capture from the database.

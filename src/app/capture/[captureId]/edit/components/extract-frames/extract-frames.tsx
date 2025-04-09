@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import useSWR from "swr";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
-import { Camera } from "lucide-react";
-import FrameGallery from "./extract-frames-gallery";
+import { Camera, ListRestart } from "lucide-react";
+import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
 import { TraceFormData } from "../../page";
 
-import { getUploadedCaptureFiles } from "@/lib/actions";
+import { CaptureListedFile, CaptureScreenFile, getUploadedCaptureFiles } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -16,6 +16,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { FrameData } from "../types";
+import { ScreenGesture } from "@prisma/client";
 
 export async function fileFetcher([_, captureId]: [string, string]) {
   let res = await getUploadedCaptureFiles(captureId);
@@ -29,7 +30,105 @@ export async function fileFetcher([_, captureId]: [string, string]) {
   }
 }
 
-export default function ExtractFrames({ capture }: { capture: any }) {
+export default function ExportFrames({ capture }: { capture: any }) {
+  return (
+    <>    
+      {(capture.task.os as string).toLowerCase() === "android" ? 
+        (<ExtractFramesAndroid capture={capture} />) : 
+        (<ExtractFramesIOS capture={capture} />)}
+    </>
+  )
+}
+
+const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
+  const { setValue, watch } = useFormContext<TraceFormData>();
+  const originalFrames = useRef<FrameData[]>([]);
+  const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
+  const frames = watch("screens") as FrameData[];
+  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
+
+  // Fetch file data
+  const { data: captures = [], isLoading: isCapturesLoading } = useSWR(
+    capture.id ? ["", capture.id] : null,
+    fileFetcher
+  );
+
+  async function populateFrameData(
+    captures: CaptureListedFile[]
+  ): Promise<{frames: FrameData[], gestures: { [key: string]: ScreenGesture }}> {
+    const frameData: FrameData[] = [];
+    const frameGestures: { [key: string]: ScreenGesture } = {};
+    for (const c of captures) {
+      try {
+        const frameResponse = await fetch(c.fileUrl);
+        const frameJson: CaptureScreenFile = await frameResponse.json();
+        const b64img = `data:image/png;base64,${frameJson.img}`.trim();
+        const frame: FrameData = { 
+          id: frameJson.created + Math.random().toString(),
+          url: b64img,
+          timestamp: Date.parse(frameJson.created),
+        };
+        frameData.push(frame);
+        if (frameJson.gesture) {
+          frameGestures[frame.id] = {
+            type: null,
+            x: frameJson.gesture.x,
+            y: frameJson.gesture.y,
+            scrollDeltaX: frameJson.gesture.scrollDeltaX,
+            scrollDeltaY: frameJson.gesture.scrollDeltaY,
+            description: ""
+          };
+        }
+      } catch(e) {
+        console.error("Error fetching frame data:", e);
+        toast.error("Error fetching frame data");
+      }
+    }
+    return {
+      frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
+      gestures: frameGestures,
+    }
+  }
+
+  useEffect(() => {
+    populateFrameData(captures).then(({ frames, gestures }) => {
+      originalFrames.current = [...frames];
+      originalGestures.current = {...gestures};
+      setValue("screens", frames)
+      setValue("gestures", gestures)
+    });
+  }, [captures])
+
+  return (
+  <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
+    <ResizablePanelGroup direction="horizontal">
+      <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
+        <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
+          {isCapturesLoading ?? (
+            <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
+          )}
+          <Button onClick={() => {
+            if (originalFrames.current.length !== frames.length) {
+              setValue("screens", originalFrames.current)
+              setValue("gestures", originalGestures.current)
+            }
+          }}>
+            <ListRestart /> Reset Frames
+          </Button>
+        </div>
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={67}>
+        <div className="flex w-full h-full overflow-auto">
+        <FrameGalleryAndroid frames={frames} gestures={gestures} />
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  </div>
+);
+}
+
+const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   const { setValue, watch } = useFormContext<TraceFormData>();
   const frames = watch("screens") as FrameData[];
 
@@ -129,7 +228,7 @@ export default function ExtractFrames({ capture }: { capture: any }) {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={67}>
           <div className="flex w-full h-full overflow-auto">
-            <FrameGallery frames={frames} setTime={handleSetTime} />
+            <FrameGalleryIOS frames={frames} setTime={handleSetTime} />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

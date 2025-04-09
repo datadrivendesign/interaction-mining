@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
-import ExtractFrames from "./components/extract-frames";
+import ExtractFrames from "./components/extract-frames/extract-frames";
 import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairScreen from "./components/repair-screen/index";
 import RepairInteractionsDoc from "./components/repair-screen/doc.mdx";
@@ -55,7 +55,9 @@ export type TraceFormData = {
 export default function Page() {
   const params = useParams();
   const captureId = params.captureId as string;
-  const { capture, isLoading: isTraceLoading } = useCapture(captureId);
+  const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
+    includes: { app: true, task: true },
+  });
 
   const [navRef, { height }] = useMeasure();
 
