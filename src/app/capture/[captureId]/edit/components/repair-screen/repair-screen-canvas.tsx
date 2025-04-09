@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, Check, ChevronRight, ChevronsUpDown, Circle, CircleDashed, CircleDot, CircleStop, Expand, Grab, IterationCcw, IterationCw, Shrink } from "lucide-react";
+import { Check, ChevronRight, ChevronsUpDown, CircleDashed } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
 import {
@@ -38,12 +38,13 @@ import {
 } from "@/components/ui/popover";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
-import { FrameData } from "../extract-frames";
-import { GestureOption } from "../types";
+import { Textarea } from "@/components/ui/textarea";
+import { FrameData, GestureOption } from "../types";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
+  gestureOptions: GestureOption[];
 }>({
   gesture: {
     type: null,
@@ -51,28 +52,31 @@ export const GestureContext = createContext<{
     y: null,
     scrollDeltaX: null,
     scrollDeltaY: null,
+    description: ""
   },
   setGesture: () => {},
+  gestureOptions: [],
 });
 
 export default function RepairScreenCanvas({
   screen,
   gesture,
   setGesture,
+  gestureOptions,
 }: {
   screen: FrameData;
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
+  gestureOptions: GestureOption[];
 }) {
   // memoize gesture and setGesture to avoid unnecessary re-renders
   const memoizedGestureState = useMemo(() => {
-    console.log("memoize")
-    return { gesture, setGesture}
+    return { gesture, setGesture }
   }, [gesture, setGesture]);
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
   const mergedRef = useMemo(
-    () => { console.log("mergeRef"); return mergeRefs(ref, imageRef)},
+    () => { return mergeRefs(ref, imageRef)},
     [ref, imageRef]
   );
   const [tooltip, setTooltip] = useState<{
@@ -90,7 +94,6 @@ export default function RepairScreenCanvas({
     x: null,
     y: null,
   });
-  console.log("RepairScreenCanvas");
 
   // Set initial marker position on image
   const handleImageClick = () => {
@@ -150,6 +153,7 @@ export default function RepairScreenCanvas({
         value={{
           gesture: memoizedGestureState["gesture"],
           setGesture: memoizedGestureState["setGesture"],
+          gestureOptions: gestureOptions,
         }}
       >
         <DndContext
@@ -226,76 +230,6 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
   );
 }
 
-const gestureOptions: GestureOption[] = [
-  {
-    value: "Tap",
-    label: "Tap",
-    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Double tap",
-    label: "Double tap",
-    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Touch and hold",
-    label: "Touch and hold",
-    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Swipe",
-    label: "Swipe",
-    subGestures: [{
-      value: "Swipe up",
-      label: "Swipe up",
-      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe down",
-      label: "Swipe down",
-      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe left",
-      label: "Swipe left",
-      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe right",
-      label: "Swipe right",
-      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  },
-  {
-    value: "Drag",
-    label: "Drag",
-    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Zoom",
-    label: "Zoom",
-    subGestures: [{
-      value: "Zoom in",
-      label: "Zoom in",
-      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Zoom out",
-      label: "Zoom out",
-      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  },
-  {
-    value: "Rotate",
-    label: "Rotate",
-    subGestures: [{
-      value: "Rotate cw",
-      label: "Rotate cw",
-      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Rotate ccw",
-      label: "Rotate ccw",
-      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  }
-];
-
 function DraggableMarker({
   position,
 }: {
@@ -306,8 +240,8 @@ function DraggableMarker({
     useDraggable({
       id: "gestureMarker",
     });
-  const { gesture, setGesture } = useContext(GestureContext);
-  console.log("setGesture")
+  
+  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
 
   return (
     <>
@@ -342,14 +276,23 @@ function DraggableMarker({
         }}
       >
         <GestureSelection />
+        {gesture.type !== null ?        
+          <Textarea 
+            className="mt-2 border-black text-black placeholder-gray-500 text-sm"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)' }}
+            placeholder="Specify gesture, why gesture, and interacted element."
+            value={gesture.description ? gesture.description : ""}
+            onChange={(e) => setGesture((prev) => ({ ...prev, description: e.target.value }))}
+          /> : 
+          <></>
+        }
       </div>
     </>
   );
 }
 
 function GestureSelection() {
-  const { gesture, setGesture } = useContext(GestureContext);
-  console.log("setGesture")
+  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
 
@@ -421,10 +364,10 @@ function GestureSelection() {
                       <PopoverContent className="w-50 p-0" align="start" side="right">
                         <Command>
                           <CommandList>
-                            {option.subGestures.map((subGesture) => (
+                            {option.subGestures.map((gesture: GestureOption) => (
                               <CommandItem
-                                key={subGesture.value}
-                                value={subGesture.value}
+                                key={gesture.value}
+                                value={gesture.value}
                                 onSelect={(currentValue) => {
                                   setValue(
                                     currentValue === value ? "" : currentValue
@@ -435,10 +378,10 @@ function GestureSelection() {
                                 <Check
                                   className={cn(
                                     "h-4 w-4",
-                                    subGesture.value === value ? "opacity-100" : "opacity-0"
+                                    gesture.value === value ? "opacity-100" : "opacity-0"
                                   )}
                                 />
-                                {subGesture.label}
+                                {gesture.label}
                               </CommandItem>
                             ))}
                           </CommandList>

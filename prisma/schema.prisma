@@ -19,6 +19,7 @@ type ScreenGesture {
   scrollDeltaY Float?
   x            Float?
   y            Float?
+  description String?
 }
 
 enum Role {

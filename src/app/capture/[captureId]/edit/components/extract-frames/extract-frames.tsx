@@ -15,12 +15,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-
-export type FrameData = {
-  id: string;
-  url: string;
-  timestamp: number;
-};
+import { FrameData } from "../types";
 
 export async function fileFetcher([_, captureId]: [string, string]) {
   let res = await getUploadedCaptureFiles(captureId);

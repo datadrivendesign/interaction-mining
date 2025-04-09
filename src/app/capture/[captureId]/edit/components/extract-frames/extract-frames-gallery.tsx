@@ -1,10 +1,10 @@
 import Image from "next/image";
 import React, { useEffect } from "react";
-import { FrameData } from "./extract-frames";
 import { prettyNumber } from "@/lib/utils/number";
 import { X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../../page";
+import { FrameData } from "../types";
 
 export default function FrameGallery({
   frames,
