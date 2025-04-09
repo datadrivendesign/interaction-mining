@@ -49,6 +49,7 @@ export const GestureContext = createContext<{
     y: null,
     scrollDeltaX: null,
     scrollDeltaY: null,
+    description: ""
   },
   setGesture: () => {},
 });

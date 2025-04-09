@@ -2,6 +2,14 @@ import { Capture, Screen } from "@prisma/client";
 import { TraceFormData } from "../page";
 import { createTrace, generatePresignedScreenUpload } from "@/lib/actions";
 import { toast } from "sonner";
+import { GestureOption } from "../components/types";
+import { createContext } from "react";
+
+export const GestureOptionsContext = createContext<{
+  gestureOptions: GestureOption[];
+}>({
+  gestureOptions: [],
+});
 
 export async function handleSave(data: TraceFormData, capture: Capture) {
   // Transpose gestures on to screens
