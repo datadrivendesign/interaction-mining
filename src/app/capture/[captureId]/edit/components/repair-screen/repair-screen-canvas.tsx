@@ -1,10 +1,12 @@
 "use client";
 import React, {
   createContext,
+  MutableRefObject,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Image from "next/image";
@@ -36,10 +38,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
 import { FrameData, GestureOption } from "../types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -58,27 +64,41 @@ export const GestureContext = createContext<{
   gestureOptions: [],
 });
 
+type FocusedBox = {
+  id?: string, 
+  class?: string, 
+  x?: number, 
+  y?: number, 
+  width?: number, 
+  height?: number
+}
+
 export default function RepairScreenCanvas({
   screen,
+  vh,
   gesture,
   setGesture,
   gestureOptions,
 }: {
   screen: FrameData;
+  vh: any;
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
 }) {
-  // memoize gesture and setGesture to avoid unnecessary re-renders
-  const memoizedGestureState = useMemo(() => {
-    return { gesture, setGesture }
-  }, [gesture, setGesture]);
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
   const mergedRef = useMemo(
     () => { return mergeRefs(ref, imageRef)},
     [ref, imageRef]
   );
+
+  const [showRedaction, setShowRedaction] = useState<boolean>(false)
+  const [focusedBox, setFocusedBox] = useState<FocusedBox>({})
+  // memoize gesture and setGesture to avoid unnecessary re-renders
+  const memoizedGestureState = useMemo(() => {
+    return { gesture, setGesture }
+  }, [gesture, setGesture]);  
   const [tooltip, setTooltip] = useState<{
     x: number | null;
     y: number | null;
@@ -86,7 +106,6 @@ export default function RepairScreenCanvas({
     x: null,
     y: null,
   });
-
   const [markerPixelPosition, setMarkerPixelPosition] = useState<{
     x: number | null;
     y: number | null;
@@ -120,7 +139,6 @@ export default function RepairScreenCanvas({
         // Calculate proportional delta
         const deltaX = delta.x / width;
         const deltaY = delta.y / height;
-
         setGesture((prev) => ({
           ...prev,
           x: prev.x! + deltaX,
@@ -146,6 +164,64 @@ export default function RepairScreenCanvas({
       });
     }
   }, [gesture, width, height]);
+
+  useEffect(() => {
+    // find new box at gesture position
+    if (showRedaction && gesture.x !== null && gesture.y !== null) {
+      const gestureX = gesture.x
+      const gestureY = gesture.y
+      console.log(gestureX, gestureY)
+      const foundBox = boxes.findLast(box => (
+        gestureX >= box.x / rootBounds.width && 
+        gestureX <= (box.x + box.width) / rootBounds.width &&
+        gestureY >= box.y / rootBounds.height && 
+        gestureY <= (box.y + box.height) / rootBounds.height
+      )) ?? {}
+      console.log(foundBox)
+      setFocusedBox(foundBox)
+    }
+  }, [gesture.x, gesture.y, showRedaction])
+
+  // Extract bounding boxes from hierarchy data
+  const { boxes, rootBounds } = useMemo(() => {
+    if (!vh) return { boxes: [], rootBounds: null };
+
+    const boxes: any[] = [];
+    let rootBounds: any = null;
+
+    function traverse(node: any) {
+      if (node.bounds_in_screen) {
+        const [left, top, right, bottom] = node.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        const width = right - left;
+        const height = bottom - top;
+        const x = left;
+        const y = top;
+        // If rootBounds is not set, this is the root node
+        if (!rootBounds) {
+          rootBounds = { x, y, width, height };
+        }
+        // do not collect boxes with no width or height
+        if (width <= 0 || height <= 0) {
+          return
+        }
+        boxes.push({
+          x,
+          y,
+          width,
+          height,
+          class: node.class_name,
+          id: node.id || `null_id_${Math.random().toString()}`,
+        });
+      }
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => traverse(child));
+      }
+    }
+    traverse(vh);
+    return { boxes, rootBounds };
+  }, [vh]);
 
   return (
     <>
@@ -198,7 +274,7 @@ export default function RepairScreenCanvas({
                 ) : null}
                 <Image
                   ref={
-                    mergedRef as React.MutableRefObject<HTMLImageElement | null>
+                    mergedRef as MutableRefObject<HTMLImageElement | null>
                   }
                   src={screen.url}
                   alt="gallery"
@@ -212,8 +288,23 @@ export default function RepairScreenCanvas({
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
                 />
+                <BoundingBoxOverlay 
+                  showRedaction={showRedaction}
+                  mergedRef={
+                    mergedRef as MutableRefObject<HTMLImageElement | null>
+                  }
+                  height={height}
+                  width={width}
+                  boxes={boxes} 
+                  rootBounds={rootBounds}
+                />
               </DroppableArea>
             </div>
+            <FocusedElementTab 
+              showRedaction={showRedaction}
+              setShowRedaction={setShowRedaction}
+              focusedBox={focusedBox} 
+            />
           </div>
         </DndContext>
       </GestureContext.Provider>
@@ -278,7 +369,7 @@ function DraggableMarker({
         <GestureSelection />
         {gesture.type !== null ?        
           <Textarea 
-            className="mt-2 border-black text-black placeholder-gray-500 text-sm"
+            className="ml-1 border-black text-black placeholder-gray-500 text-sm w-full h-full"
             style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)' }}
             placeholder="Specify gesture, why gesture, and interacted element."
             value={gesture.description ? gesture.description : ""}
@@ -289,6 +380,126 @@ function DraggableMarker({
       </div>
     </>
   );
+}
+
+function FocusedElementTab({
+  showRedaction,
+  setShowRedaction,
+  focusedBox
+}: {
+  showRedaction: boolean,
+  setShowRedaction: React.Dispatch<React.SetStateAction<boolean>>,
+  focusedBox: FocusedBox
+}) {
+  return(
+    <Card className="absolute right-0 top-0 mr-5 mt-5 w-auto h-auto">
+      <CardHeader>
+        <CardTitle>Gesture Interaction Element</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-1 mb-5">
+          <Switch 
+            checked={showRedaction}
+            onCheckedChange={(checked) => {setShowRedaction(checked)}}
+          />
+          <span className="pl-3">Show Bounding Boxes</span>
+        </div>
+        {showRedaction ? (
+          <>
+            <div className="space-y-1 flex flex-row mb-5">
+              <div 
+                className="w-15 flex flex-col justify-center items-center"
+              >
+                <Label 
+                  htmlFor="x0"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  x0
+                </Label>
+                <Input
+                  id="x0"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={focusedBox.x ?? -1} />
+              </div>
+              <div 
+                className="w-15 flex flex-col justify-center items-center mr-3"
+              >
+                <Label 
+                  htmlFor="y0"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  y0
+                </Label>
+                <Input
+                  id="y0"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={focusedBox.y ?? -1} />
+              </div>
+              <div 
+                className="w-15 flex flex-col justify-center items-center"
+              >
+                <Label 
+                  htmlFor="x1"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  x1
+                </Label>
+                <Input
+                  id="x1"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)} />
+              </div>
+              <div 
+                className="w-15 flex flex-col justify-center items-center"
+              >
+                <Label 
+                  htmlFor="y1"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  y1
+                </Label>
+                <Input
+                  id="y1"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={(focusedBox.y ?? -1) + (focusedBox.height ?? -1)} />
+              </div>
+            </div>
+            <div className="space-y-1 mb-5">
+              <Label 
+                htmlFor="elemId"
+                className="text-base font-bold leading-none"
+              >
+                Element Id
+              </Label>
+              <Input
+                id="elemId"
+                className="text-sm font-normal text-muted-foreground"
+                readOnly={true}
+                value={focusedBox.id ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <Label 
+                className="text-base font-bold leading-none"
+                htmlFor="elemClass"
+              >
+                Element Class
+              </Label>
+              <Input
+                id="elemClass"
+                className="text-sm font-normal text-muted-foreground"
+                readOnly={true}
+                value={focusedBox.class ?? ""} />
+            </div>
+          </>
+        ) :
+        <></>}
+      </CardContent>
+    </Card>
+  )
 }
 
 function GestureSelection() {
@@ -396,5 +607,91 @@ function GestureSelection() {
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function BoundingBoxOverlay({
+  showRedaction,
+  mergedRef,
+  height,
+  width,
+  boxes,
+  rootBounds
+}: {
+  showRedaction: boolean,
+  mergedRef: MutableRefObject<HTMLImageElement | null>,
+  height: number | null,
+  width: number | null,
+  boxes: any[],
+  rootBounds: any
+}) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    const img = (mergedRef as MutableRefObject<HTMLImageElement | null>).current
+    if (!height || !width || !img || !svg) return;
+    // Use ResizeObserver to synchronize SVG dimensions with image dimensions
+    const resizeObserver = new ResizeObserver(() => {
+      svg.style.width = `${width}px`;
+      svg.style.height = `${height}px`;
+    });
+    resizeObserver.observe(img);
+    // Cleanup observer
+    return () => {
+      resizeObserver.unobserve(img);
+    };
+  }, [height, width, mergedRef, svgRef]);
+
+  if (!rootBounds) {
+    return null; // Render nothing if rootBounds is not available
+  }
+
+  return (
+    <div>
+      {showRedaction && (
+        <svg
+          ref={svgRef}
+          viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
+          preserveAspectRatio="xMinYMin meet"
+          className="pointer-events-none top-0 left-0 absolute cursor-crosshair"
+        >
+          {boxes.map((box: any, index: number) => (
+            <BoundingBox
+              key={box.id + index}
+              x={box.x}
+              y={box.y}
+              width={box.width}
+              height={box.height}
+            />
+          ))}
+        </svg>
+      )}
+    </div>
+  );
+}
+
+function BoundingBox({
+  x,
+  y,
+  width,
+  height,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}) {
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={"transparent"}
+      stroke="red"
+      strokeWidth="1"
+      className="pointer-events-none"
+    />
   );
 }

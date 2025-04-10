@@ -9,12 +9,14 @@ import { ScreenGesture } from "@prisma/client";
 
 export function FrameGalleryAndroid({
   frames,
+  vhs,
   gestures,
 }: {
   frames: FrameData[];
+  vhs: { [key: string]: any };
   gestures: { [key: string]: ScreenGesture };
 }) {
-  const { watch, setValue } = useFormContext<TraceFormData>();
+  const { setValue } = useFormContext<TraceFormData>();
 
   const setFrameData = (value: FrameData[]) => setValue("screens", value);
 
@@ -23,6 +25,11 @@ export function FrameGalleryAndroid({
     const newFrameData = [...frames];
     newFrameData.splice(index, 1);
     setFrameData(newFrameData);
+    // remove frame from vhs
+    const updatedVHs = Object.fromEntries(
+      Object.entries(vhs).filter(([key]) => key !== frames[index].id)
+    );
+    setValue("vhs", updatedVHs);
     // remove frame from gestures
     const updatedGestures = Object.fromEntries(
       Object.entries(gestures).filter(([key]) => key !== frames[index].id)

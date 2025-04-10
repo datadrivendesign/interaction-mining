@@ -48,6 +48,7 @@ const traceSteps = [
 
 export type TraceFormData = {
   screens: FrameData[];
+  vhs?: { [key: string]: any };
   gestures: { [key: string]: ScreenGesture };
   description: string;
 };
@@ -64,6 +65,7 @@ export default function Page() {
   const methods = useForm<TraceFormData>({
     defaultValues: {
       screens: [],
+      vhs: {},
       gestures: {},
       description: "",
     },

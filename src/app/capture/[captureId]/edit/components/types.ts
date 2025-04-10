@@ -70,6 +70,7 @@ export const ScreenGestureSchema = z
 export const TraceFormSchema: ZodType<TraceFormData> = z
   .object({
     screens: ScreenSchema,
+    vhs: z.record(z.any()).optional(),
     gestures: GestureSchema,
     description: z.string().nonempty({
       message: "A description is required",
