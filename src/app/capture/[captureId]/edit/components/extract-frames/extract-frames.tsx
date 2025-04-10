@@ -43,8 +43,10 @@ export default function ExportFrames({ capture }: { capture: any }) {
 const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const { setValue, watch } = useFormContext<TraceFormData>();
   const originalFrames = useRef<FrameData[]>([]);
+  const originalVHs = useRef<{[key: string]: any}>({});
   const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
   const frames = watch("screens") as FrameData[];
+  const vhs = watch("vhs") as { [key: string]: any };
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
   // Fetch file data
@@ -55,12 +57,19 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
 
   async function populateFrameData(
     captures: CaptureListedFile[]
-  ): Promise<{frames: FrameData[], gestures: { [key: string]: ScreenGesture }}> {
+  ): Promise<{
+    frames: FrameData[], 
+    vhs: { [key: string]: any }, 
+    gestures: { [key: string]: ScreenGesture }
+  }> {
+    console.log("Capture: ", capture);
     const frameData: FrameData[] = [];
+    const frameVHs: { [key: string]: any } = {};
     const frameGestures: { [key: string]: ScreenGesture } = {};
     for (const c of captures) {
       try {
         const frameResponse = await fetch(c.fileUrl);
+        console.log(c)
         const frameJson: CaptureScreenFile = await frameResponse.json();
         const b64img = `data:image/png;base64,${frameJson.img}`.trim();
         const frame: FrameData = { 
@@ -69,6 +78,9 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           timestamp: Date.parse(frameJson.created),
         };
         frameData.push(frame);
+        if (frameJson.vh) {
+          frameVHs[frame.id] = JSON.parse(frameJson.vh);
+        }
         if (frameJson.gesture) {
           frameGestures[frame.id] = {
             type: null,
@@ -86,15 +98,18 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
     }
     return {
       frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
+      vhs: frameVHs,
       gestures: frameGestures,
     }
   }
 
   useEffect(() => {
-    populateFrameData(captures).then(({ frames, gestures }) => {
+    populateFrameData(captures).then(({ frames, vhs, gestures }) => {
       originalFrames.current = [...frames];
+      originalVHs.current = {...vhs};
       originalGestures.current = {...gestures};
       setValue("screens", frames)
+      setValue("vhs", vhs)
       setValue("gestures", gestures)
     });
   }, [captures])
@@ -110,6 +125,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           <Button onClick={() => {
             if (originalFrames.current.length !== frames.length) {
               setValue("screens", originalFrames.current)
+              setValue("vhs", originalVHs.current)
               setValue("gestures", originalGestures.current)
             }
           }}>
@@ -120,7 +136,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={67}>
         <div className="flex w-full h-full overflow-auto">
-        <FrameGalleryAndroid frames={frames} gestures={gestures} />
+        <FrameGalleryAndroid frames={frames} vhs={vhs} gestures={gestures} />
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

@@ -21,6 +21,7 @@ import { GestureOptionsContext } from "../../util";
 export default function RepairScreen() {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens") as FrameData[];
+  const vhs = watch("vhs") as { [key: string]: any };
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
@@ -60,6 +61,7 @@ export default function RepairScreen() {
             {focusViewIndex > -1 ? (
               <FocusView
                 key={focusViewIndex}
+                vh = {vhs[screens[focusViewIndex].id]}
                 screen={screens[focusViewIndex]}
               />
             ) : (
@@ -85,7 +87,7 @@ export default function RepairScreen() {
   );
 }
 
-function FocusView({ screen }: { screen: FrameData }) {
+function FocusView({ screen , vh }: { screen: FrameData, vh: any }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
@@ -117,6 +119,7 @@ function FocusView({ screen }: { screen: FrameData }) {
         <RepairScreenCanvas
           key={screen.id}
           screen={screen}
+          vh={vh}
           gesture={gesture}
           setGesture={setGesture}
           gestureOptions={gestureOptions}
