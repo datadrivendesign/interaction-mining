@@ -36,6 +36,8 @@ import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCapture } from "@/lib/hooks";
+import { getTask } from '@/lib/actions';
+
 
 enum CaptureState {
   IDLE = 0,
@@ -52,7 +54,9 @@ export default function Page({}: {}) {
     CaptureState.IDLE
   );
 
-  const { capture, isLoading: isCaptureLoading } = useCapture(captureId);
+  const { capture, isLoading: isCaptureLoading } = useCapture(captureId,{
+    includes: { app: true, task: true },
+  });
 
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     capture?.src ? [CaptureSWROperations.UPLOAD_LIST, captureId] : null,
@@ -61,14 +65,22 @@ export default function Page({}: {}) {
       refreshInterval: 10,
     }
   );
-
+   
+  let os = capture?.task?.os;
   useEffect(() => {
     if (capture && captureState <= CaptureState.CONNECTED) {
       if (capture.src && uploadList.length > 0) {
         setCaptureState(CaptureState.UPLOADED);
+        
       }
+      os = capture?.task?.os;
+      console.log("OS", os);
+      console.log("Capture", capture);
     }
   }, [capture]);
+
+  
+
 
   // Dummy functions
   const handleProcess = () => {
@@ -108,7 +120,11 @@ export default function Page({}: {}) {
                 {!isCaptureLoading && capture ? (
                   <QRCodeSVG
                     className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
-                    value={`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`}
+                    value={
+                      os === "android"
+                        ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
+                        : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
+                    }
                   />
                 ) : (
                   <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
@@ -192,9 +208,13 @@ export default function Page({}: {}) {
                   </p>
                   {!isCaptureLoading && capture ? (
                     <QRCodeSVG
-                      className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
-                      value={`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`}
-                    />
+                    className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
+                    value={
+                      os === "android"
+                        ? `https:///api/capture/${captureId}`
+                        : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
+                    }
+                  />
                   ) : (
                     <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
                   )}
