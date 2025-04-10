@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";

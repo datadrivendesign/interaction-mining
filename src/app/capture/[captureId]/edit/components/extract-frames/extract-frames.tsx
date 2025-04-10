@@ -8,7 +8,7 @@ import { Camera, ListRestart } from "lucide-react";
 import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
 import { TraceFormData } from "../../page";
 
-import { CaptureListedFile, CaptureScreenFile, getUploadedCaptureFiles } from "@/lib/actions";
+import { CaptureListedFile, CaptureScreenFile, CaptureScreenGesture, getUploadedCaptureFiles } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -62,6 +62,43 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
     vhs: { [key: string]: any }, 
     gestures: { [key: string]: ScreenGesture }
   }> {
+
+    function createScreenGesture(gesture: CaptureScreenGesture): ScreenGesture {
+      const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture
+      console.log(gesture)
+      const screenGesture: ScreenGesture = {
+        type: null,
+        x,
+        y,
+        scrollDeltaX,
+        scrollDeltaY,
+        description: ""
+      }
+      if (!type) {
+        screenGesture.type = null
+      } else if (type === "TYPE_VIEW_CLICKED") {
+        screenGesture.type = "Tap"
+      } else if (type === "TYPE_VIEW_LONG_CLICKED") {
+        screenGesture.type = "Touch and hold"
+      } else if (type === "TYPE_VIEW_SCROLLED") {
+        // get directionality of scroll/swipe,choose dominant delta direction
+        if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+          screenGesture.type = "Swipe right"
+        } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+          screenGesture.type = "Swipe left"
+        } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+          screenGesture.type = "Swipe up"
+        } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+          screenGesture.type = "Swipe down"
+        } else { // fall through case, don't know what will reach
+          screenGesture.type = "Swipe"
+        }
+      } else {
+        screenGesture.type = null
+      }      
+      return screenGesture
+    }
+
     console.log("Capture: ", capture);
     const frameData: FrameData[] = [];
     const frameVHs: { [key: string]: any } = {};
@@ -82,14 +119,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           frameVHs[frame.id] = JSON.parse(frameJson.vh);
         }
         if (frameJson.gesture) {
-          frameGestures[frame.id] = {
-            type: null,
-            x: frameJson.gesture.x,
-            y: frameJson.gesture.y,
-            scrollDeltaX: frameJson.gesture.scrollDeltaX,
-            scrollDeltaY: frameJson.gesture.scrollDeltaY,
-            description: ""
-          };
+          frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
         }
       } catch(e) {
         console.error("Error fetching frame data:", e);
