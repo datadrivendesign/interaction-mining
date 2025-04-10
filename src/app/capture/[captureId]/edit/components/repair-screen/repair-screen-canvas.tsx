@@ -93,7 +93,7 @@ export default function RepairScreenCanvas({
     [ref, imageRef]
   );
 
-  const [showRedaction, setShowRedaction] = useState<boolean>(false)
+  const [showBoxes, setShowBoxes] = useState<boolean>(false)
   const [focusedBox, setFocusedBox] = useState<FocusedBox>({})
   // memoize gesture and setGesture to avoid unnecessary re-renders
   const memoizedGestureState = useMemo(() => {
@@ -167,7 +167,7 @@ export default function RepairScreenCanvas({
 
   useEffect(() => {
     // find new box at gesture position
-    if (showRedaction && gesture.x !== null && gesture.y !== null) {
+    if (showBoxes && gesture.x !== null && gesture.y !== null) {
       const gestureX = gesture.x
       const gestureY = gesture.y
       console.log(gestureX, gestureY)
@@ -180,7 +180,7 @@ export default function RepairScreenCanvas({
       console.log(foundBox)
       setFocusedBox(foundBox)
     }
-  }, [gesture.x, gesture.y, showRedaction])
+  }, [gesture.x, gesture.y, showBoxes])
 
   // Extract bounding boxes from hierarchy data
   const { boxes, rootBounds } = useMemo(() => {
@@ -289,7 +289,7 @@ export default function RepairScreenCanvas({
                   }}
                 />
                 <BoundingBoxOverlay 
-                  showRedaction={showRedaction}
+                  showRedaction={showBoxes}
                   mergedRef={
                     mergedRef as MutableRefObject<HTMLImageElement | null>
                   }
@@ -301,8 +301,8 @@ export default function RepairScreenCanvas({
               </DroppableArea>
             </div>
             <FocusedElementTab 
-              showRedaction={showRedaction}
-              setShowRedaction={setShowRedaction}
+              showRedaction={showBoxes}
+              setShowRedaction={setShowBoxes}
               focusedBox={focusedBox} 
             />
           </div>
