@@ -1,6 +1,6 @@
 import { Capture, Screen } from "@prisma/client";
 import { TraceFormData } from "../page";
-import { createTrace, generatePresignedScreenUpload } from "@/lib/actions";
+import { createTrace, generatePresignedScreenUpload, generatePresignedVHUpload } from "@/lib/actions";
 import { toast } from "sonner";
 import { GestureOption } from "../components/types";
 import { createContext } from "react";
@@ -71,7 +71,60 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     return;
   }
 
+  // check if there are view hierarchies, if so then upload them
+  const vhs = data.vhs
+  if (vhs && Object.keys(vhs).length > 0) {
+    const generateVHUploadRes = await Promise.all(
+      screens.map((_) => {
+        return generatePresignedVHUpload(capture.id, "application/json")
+      })
+    )
+
+    if (
+      !generateVHUploadRes ||
+      generateVHUploadRes.some((res) => !res.ok)
+    ) {
+      toast.error(
+        "Failed to upload screen images: Failed to generate presigned URLs."
+      );
+      return;
+    }
+
+    const vhUploadRes = await Promise.all(
+      data.screens.map(async (screen, index) => {
+        var res;
+        const vh = vhs[screen.id];
+        if (!vh) {
+          return { ok: false, message: "Failed to find view hierarchies." };
+        }
+        if (generateVHUploadRes[index].ok) {
+          res = await fetch(generateVHUploadRes[index].data.uploadUrl, {
+            method: "PUT",
+            body: JSON.stringify(vh),
+            headers: { "Content-Type": "application/json" },
+          });
+  
+          if (!res.ok) {
+            toast.error("Failed to upload view hierarchies.");
+            return { ok: false, message: "Failed to upload view hierarchies." };
+          }
+  
+          // Set screen src to S3 URL
+          screens[index].vh = generateVHUploadRes[index].data.fileUrl;
+  
+          return generateVHUploadRes[index];
+        }
+      })
+    );
+
+    if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
+      toast.error("Failed to upload screen view hierarchies.");
+      return;
+    }
+  }
+
   // Create trace AND screen records
+  console.log(capture)
   const trace = await createTrace(
     {
       name: "New Trace",

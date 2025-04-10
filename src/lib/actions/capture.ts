@@ -42,18 +42,20 @@ export type CaptureListedFile = {
   fileUrl: string;
 }
 
+export type CaptureScreenGesture = {
+  type?: string,
+  x: number,
+  y: number,
+  scrollDeltaX: number,
+  scrollDeltaY: number,
+  description?: string,
+}
+
 export type CaptureScreenFile = {
   vh: string,
   img: string,
   created: string,
-  gesture: {
-    type?: string,
-    x: number,
-    y: number,
-    scrollDeltaX: number,
-    scrollDeltaY: number,
-    description?: string,
-  }
+  gesture: CaptureScreenGesture
 }
 
 /**
