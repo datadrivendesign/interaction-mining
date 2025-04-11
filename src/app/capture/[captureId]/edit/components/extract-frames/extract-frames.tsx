@@ -6,6 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
 import FrameGallery from "./extract-frames-gallery";
+import FrameTimeline from "./extract-frames-timeline";
 import { TraceFormData } from "../../page";
 
 import { getUploadedCaptureFiles } from "@/lib/actions";
@@ -110,34 +111,43 @@ export default function ExtractFrames({ capture }: { capture: any }) {
   };
 
   return (
-    <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
-      <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
-          <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
-            {isCapturesLoading ? (
-              <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
-            ) : (
-              <video
-                crossOrigin="anonymous"
-                className="z-0 max-w-full max-h-[calc(100%-4rem)] mb-4 rounded-lg"
-                controls
-                ref={videoRef}
-              >
-                <source src={captures[0].fileUrl} type="video/mp4" />
-              </video>
-            )}
-            <Button onClick={handleCaptureFrame}>
-              <Camera /> Snapshot
-            </Button>
-          </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={67}>
-          <div className="flex w-full h-full overflow-auto">
-            <FrameGallery frames={frames} setTime={handleSetTime} />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+    <div className="flex flex-col w-full h-[calc(100dvh-var(--nav-height))]">
+      {/* Video + Gallery */}
+      <div className="flex-1 w-full h-0 min-h-0 overflow-hidden">
+        <ResizablePanelGroup direction="horizontal">
+          <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
+            <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
+              {isCapturesLoading ? (
+                <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]" />
+              ) : (
+                <video
+                  crossOrigin="anonymous"
+                  className="z-0 max-w-full max-h-[calc(100%-4rem)] mb-4 rounded-lg"
+                  controls
+                  ref={videoRef}
+                >
+                  <source src={captures[0].fileUrl} type="video/mp4" />
+                </video>
+              )}
+              <Button onClick={handleCaptureFrame}>
+                <Camera className="mr-2" />
+                Snapshot
+              </Button>
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={67}>
+            <div className="flex w-full h-full overflow-auto">
+              <FrameGallery frames={frames} setTime={handleSetTime} />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+
+      {/* Timeline */}
+      <div className="w-full h-20 p-4 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
+        <FrameTimeline frames={frames} setTime={handleSetTime} />
+      </div>
     </div>
   );
 }
