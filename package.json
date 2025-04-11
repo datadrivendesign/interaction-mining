@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"NODE_OPTIONS='--inspect' next dev --turbopack\" \"prisma generate --watch\"",
+    "dev": "concurrently \"next dev --turbopack\" \"prisma generate --watch\"",
     "build": "npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint"
@@ -38,7 +38,7 @@
     "@types/luxon": "^3.4.2",
     "@types/mdx": "^2.0.13",
     "@uidotdev/usehooks": "^2.4.1",
-    "app-store-scraper": "^0.18.0",
+    "app-store-scraper": "^0.4.0",
     "aws4": "^1.12.0",
     "caniuse-lite": "^1.0.30001677",
     "class-variance-authority": "^0.7.0",
