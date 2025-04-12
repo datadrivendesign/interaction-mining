@@ -15,9 +15,10 @@ export default function FrameGallery({
 }) {
   const { setValue } = useFormContext<TraceFormData>();
 
+  // Create a ref for the scrollable container.
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when new frames are added
+  // Auto-scroll to the bottom whenever frames change.
   useEffect(() => {
     requestAnimationFrame(() => {
       if (containerRef.current) {
@@ -35,19 +36,17 @@ export default function FrameGallery({
   };
 
   return (
-    // Outer scrollable container to fit video panel height
+    // Outer container: ensure its height is tied to the video area and enable scrolling.
     <div
       ref={containerRef}
       className="h-full max-h-[calc(100%-4rem)] overflow-auto flex flex-col"
     >
-      {/* Grid layout inside scrollable container */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6">
         {frames.map((frame, index) => (
           <div
             className="flex flex-col p-2 bg-neutral-100 dark:bg-neutral-900 rounded-xl"
             key={`${frame.timestamp}-${index}`}
           >
-            {/* Header: timestamp + delete button */}
             <div className="flex flex-row w-full items-center justify-between mb-2">
               <div
                 className="group flex p-1 justify-center items-center bg-neutral-800 rounded-lg"
@@ -68,9 +67,10 @@ export default function FrameGallery({
                 <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
               </button>
             </div>
-            {/* Frame image */}
+            {/* Make the image clickable to jump to the corresponding video time */}
             <Image
-              className="z-0 object-cover w-full h-auto rounded-lg"
+              onClick={() => setTime(frame.timestamp)}
+              className="z-0 object-cover w-full h-auto rounded-lg cursor-pointer"
               src={frame.url}
               alt={`Extracted frame at ${frame.timestamp}`}
               draggable={false}
