@@ -1,7 +1,8 @@
 "use client";
 import React from "react";
-import { SkipBack, Play, Pause, SkipForward } from "lucide-react";
+import { SkipBack, Play, Pause, SkipForward, Camera} from "lucide-react";
 import { FrameData } from "./extract-frames";
+import { Button } from "@/components/ui/button";
 
 export type FrameTimelineProps = {
   frames: FrameData[]; // optional—if needed for extra purposes
@@ -12,6 +13,7 @@ export type FrameTimelineProps = {
   onPlayPause: () => void;
   onBackward: () => void;
   onForward: () => void;
+  onCapture: () => void;
 };
 
 export default function FrameTimeline({
@@ -23,6 +25,7 @@ export default function FrameTimeline({
   onPlayPause,
   onBackward,
   onForward,
+  onCapture,
 }: FrameTimelineProps) {
   // Handler for when the scrubber (range input) is used.
   const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,32 +37,41 @@ export default function FrameTimeline({
     <div className="relative w-full h-20 p-4 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
       {/* Playback Controls (placed at the top-left) */}
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 p-2 rounded-md bg-white dark:bg-neutral-900 ">
           <button
             onClick={onBackward}
             title="Back 2 seconds"
-            className="text-gray-600 hover:text-gray-800"
+            className="text-white hover:text-gray-500"
           >
             <SkipBack size={20} />
           </button>
           <button
             onClick={onPlayPause}
             title={isPlaying ? "Pause" : "Play"}
-            className="text-gray-600 hover:text-gray-800"
+            className="text-white hover:text-gray-500"
           >
             {isPlaying ? <Pause size={20} /> : <Play size={20} />}
           </button>
           <button
             onClick={onForward}
             title="Forward 2 seconds"
-            className="text-gray-600 hover:text-gray-800"
+            className="text-white hover:text-gray-500"
           >
             <SkipForward size={20} />
           </button>
         </div>
         {/* Display current time and total duration */}
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-white">
           {currentTime.toFixed(2)} / {videoDuration.toFixed(2)}
+        </div>
+        <div>
+          <button
+            onClick={onCapture}
+            title="Capture frame"
+            className="p-2 rounded-full bg-white dark:bg-neutral-900 shadow hover:bg-gray-500 dark:hover:bg-neutral-800 text-white hover:text-gray-800 transition"
+          >
+            <Camera className="mr-1" size={20} />
+          </button>
         </div>
       </div>
 
