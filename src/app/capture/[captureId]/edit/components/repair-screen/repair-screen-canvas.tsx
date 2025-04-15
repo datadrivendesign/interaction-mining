@@ -1,13 +1,17 @@
 "use client";
+
 import React, {
   createContext,
+  MutableRefObject,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 import Image from "next/image";
-import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, Check, ChevronRight, ChevronsUpDown, Circle, CircleDashed, CircleDot, CircleStop, Expand, Grab, IterationCcw, IterationCw, Shrink } from "lucide-react";
+import { Check, ChevronRight, ChevronsUpDown, CircleDashed } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
 import {
@@ -35,14 +39,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
-import { FrameData } from "../extract-frames";
-import { GestureOption } from "../types";
+import { Textarea } from "@/components/ui/textarea";
+import { FrameData, GestureOption } from "../types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
+  gestureOptions: GestureOption[];
 }>({
   gesture: {
     type: null,
@@ -50,21 +59,47 @@ export const GestureContext = createContext<{
     y: null,
     scrollDeltaX: null,
     scrollDeltaY: null,
+    description: ""
   },
   setGesture: () => {},
+  gestureOptions: [],
 });
+
+type FocusedBox = {
+  id?: string, 
+  class?: string, 
+  x?: number, 
+  y?: number, 
+  width?: number, 
+  height?: number
+}
 
 export default function RepairScreenCanvas({
   screen,
+  vh,
   gesture,
   setGesture,
+  gestureOptions,
 }: {
   screen: FrameData;
+  vh: any;
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
+  gestureOptions: GestureOption[];
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
+  const mergedRef = useMemo(
+    () => { return mergeRefs(ref, imageRef)},
+    [ref, imageRef]
+  );
+
+  const [showBoxes, setShowBoxes] = useState<boolean>(false)
+  const [focusedBox, setFocusedBox] = useState<FocusedBox>({})
+  // memoize gesture and setGesture to avoid unnecessary re-renders
+  const memoizedGestureState = useMemo(() => {
+    return { gesture, setGesture }
+  }, [gesture, setGesture]);  
   const [tooltip, setTooltip] = useState<{
     x: number | null;
     y: number | null;
@@ -72,7 +107,6 @@ export default function RepairScreenCanvas({
     x: null,
     y: null,
   });
-
   const [markerPixelPosition, setMarkerPixelPosition] = useState<{
     x: number | null;
     y: number | null;
@@ -106,7 +140,6 @@ export default function RepairScreenCanvas({
         // Calculate proportional delta
         const deltaX = delta.x / width;
         const deltaY = delta.y / height;
-
         setGesture((prev) => ({
           ...prev,
           x: prev.x! + deltaX,
@@ -119,7 +152,7 @@ export default function RepairScreenCanvas({
     [width, height]
   );
 
-  useEffect(() => {
+  useEffect(() => { 
     if (
       (markerPixelPosition.x !== gesture.x ||
         markerPixelPosition.y !== gesture.y) &&
@@ -133,12 +166,71 @@ export default function RepairScreenCanvas({
     }
   }, [gesture, width, height]);
 
+  useEffect(() => {
+    // find new box at gesture position
+    if (showBoxes && gesture.x !== null && gesture.y !== null) {
+      const gestureX = gesture.x
+      const gestureY = gesture.y
+      console.log(gestureX, gestureY)
+      const foundBox = boxes.findLast(box => (
+        gestureX >= box.x / rootBounds.width && 
+        gestureX <= (box.x + box.width) / rootBounds.width &&
+        gestureY >= box.y / rootBounds.height && 
+        gestureY <= (box.y + box.height) / rootBounds.height
+      )) ?? {}
+      console.log(foundBox)
+      setFocusedBox(foundBox)
+    }
+  }, [gesture.x, gesture.y, showBoxes])
+
+  // Extract bounding boxes from hierarchy data
+  const { boxes, rootBounds } = useMemo(() => {
+    if (!vh) return { boxes: [], rootBounds: null };
+
+    const boxes: any[] = [];
+    let rootBounds: any = null;
+
+    function traverse(node: any) {
+      if (node.bounds_in_screen) {
+        const [left, top, right, bottom] = node.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        const width = right - left;
+        const height = bottom - top;
+        const x = left;
+        const y = top;
+        // If rootBounds is not set, this is the root node
+        if (!rootBounds) {
+          rootBounds = { x, y, width, height };
+        }
+        // do not collect boxes with no width or height
+        if (width <= 0 || height <= 0) {
+          return
+        }
+        boxes.push({
+          x,
+          y,
+          width,
+          height,
+          class: node.class_name,
+          id: node.id || `null_id_${Math.random().toString()}`,
+        });
+      }
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => traverse(child));
+      }
+    }
+    traverse(vh);
+    return { boxes, rootBounds };
+  }, [vh]);
+
   return (
     <>
       <GestureContext.Provider
         value={{
-          gesture: gesture,
-          setGesture: setGesture,
+          gesture: memoizedGestureState["gesture"],
+          setGesture: memoizedGestureState["setGesture"],
+          gestureOptions: gestureOptions,
         }}
       >
         <DndContext
@@ -183,10 +275,7 @@ export default function RepairScreenCanvas({
                 ) : null}
                 <Image
                   ref={
-                    mergeRefs(
-                      ref,
-                      imageRef
-                    ) as React.MutableRefObject<HTMLImageElement | null>
+                    mergedRef as MutableRefObject<HTMLImageElement | null>
                   }
                   src={screen.url}
                   alt="gallery"
@@ -200,8 +289,23 @@ export default function RepairScreenCanvas({
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
                 />
+                <BoundingBoxOverlay 
+                  showRedaction={showBoxes}
+                  mergedRef={
+                    mergedRef as MutableRefObject<HTMLImageElement | null>
+                  }
+                  height={height}
+                  width={width}
+                  boxes={boxes} 
+                  rootBounds={rootBounds}
+                />
               </DroppableArea>
             </div>
+            <FocusedElementTab 
+              showRedaction={showBoxes}
+              setShowRedaction={setShowBoxes}
+              focusedBox={focusedBox} 
+            />
           </div>
         </DndContext>
       </GestureContext.Provider>
@@ -218,76 +322,6 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
   );
 }
 
-const gestureOptions: GestureOption[] = [
-  {
-    value: "Tap",
-    label: "Tap",
-    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Double tap",
-    label: "Double tap",
-    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Touch and hold",
-    label: "Touch and hold",
-    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Swipe",
-    label: "Swipe",
-    subGestures: [{
-      value: "Swipe up",
-      label: "Swipe up",
-      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe down",
-      label: "Swipe down",
-      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe left",
-      label: "Swipe left",
-      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe right",
-      label: "Swipe right",
-      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  },
-  {
-    value: "Drag",
-    label: "Drag",
-    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Zoom",
-    label: "Zoom",
-    subGestures: [{
-      value: "Zoom in",
-      label: "Zoom in",
-      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Zoom out",
-      label: "Zoom out",
-      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  },
-  {
-    value: "Rotate",
-    label: "Rotate",
-    subGestures: [{
-      value: "Rotate cw",
-      label: "Rotate cw",
-      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Rotate ccw",
-      label: "Rotate ccw",
-      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  }
-];
-
 function DraggableMarker({
   position,
 }: {
@@ -298,7 +332,8 @@ function DraggableMarker({
     useDraggable({
       id: "gestureMarker",
     });
-  const { gesture, setGesture } = useContext(GestureContext);
+  
+  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
 
   return (
     <>
@@ -333,13 +368,143 @@ function DraggableMarker({
         }}
       >
         <GestureSelection />
+        {gesture.type !== null ?        
+          <Textarea 
+            className="ml-1 border-black text-black placeholder-gray-500 text-sm w-full h-full"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)' }}
+            placeholder="Specify gesture, why gesture, and interacted element."
+            value={gesture.description ? gesture.description : ""}
+            onChange={(e) => setGesture((prev) => ({ ...prev, description: e.target.value }))}
+          /> : 
+          <></>
+        }
       </div>
     </>
   );
 }
 
+function FocusedElementTab({
+  showRedaction,
+  setShowRedaction,
+  focusedBox
+}: {
+  showRedaction: boolean,
+  setShowRedaction: React.Dispatch<React.SetStateAction<boolean>>,
+  focusedBox: FocusedBox
+}) {
+  return(
+    <Card className="absolute right-0 top-0 mr-5 mt-5 w-auto h-auto">
+      <CardHeader>
+        <CardTitle>Gesture Interaction Element</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-1 mb-5">
+          <Switch 
+            checked={showRedaction}
+            onCheckedChange={(checked) => {setShowRedaction(checked)}}
+          />
+          <span className="pl-3">Show Bounding Boxes</span>
+        </div>
+        {showRedaction ? (
+          <>
+            <div className="space-y-1 flex flex-row mb-5">
+              <div 
+                className="w-15 flex flex-col justify-center items-center"
+              >
+                <Label 
+                  htmlFor="x0"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  x0
+                </Label>
+                <Input
+                  id="x0"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={focusedBox.x ?? -1} />
+              </div>
+              <div 
+                className="w-15 flex flex-col justify-center items-center mr-3"
+              >
+                <Label 
+                  htmlFor="y0"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  y0
+                </Label>
+                <Input
+                  id="y0"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={focusedBox.y ?? -1} />
+              </div>
+              <div 
+                className="w-15 flex flex-col justify-center items-center"
+              >
+                <Label 
+                  htmlFor="x1"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  x1
+                </Label>
+                <Input
+                  id="x1"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)} />
+              </div>
+              <div 
+                className="w-15 flex flex-col justify-center items-center"
+              >
+                <Label 
+                  htmlFor="y1"
+                  className="text-sm font-bold leading-none mb-1"
+                >
+                  y1
+                </Label>
+                <Input
+                  id="y1"
+                  className="text-sm font-normal text-muted-foreground"
+                  readOnly={true}
+                  value={(focusedBox.y ?? -1) + (focusedBox.height ?? -1)} />
+              </div>
+            </div>
+            <div className="space-y-1 mb-5">
+              <Label 
+                htmlFor="elemId"
+                className="text-base font-bold leading-none"
+              >
+                Element Id
+              </Label>
+              <Input
+                id="elemId"
+                className="text-sm font-normal text-muted-foreground"
+                readOnly={true}
+                value={focusedBox.id ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <Label 
+                className="text-base font-bold leading-none"
+                htmlFor="elemClass"
+              >
+                Element Class
+              </Label>
+              <Input
+                id="elemClass"
+                className="text-sm font-normal text-muted-foreground"
+                readOnly={true}
+                value={focusedBox.class ?? ""} />
+            </div>
+          </>
+        ) :
+        <></>}
+      </CardContent>
+    </Card>
+  )
+}
+
 function GestureSelection() {
-  const { gesture, setGesture } = useContext(GestureContext);
+  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
 
@@ -353,6 +518,7 @@ function GestureSelection() {
     }
   }, [value]);
 
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -363,12 +529,12 @@ function GestureSelection() {
           aria-expanded={open}
           className="w-50 justify-between"
         >
-          {value
-            ? gestureOptions
-            .flat()
-            .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
-            .find((gesture) => gesture.value === value)?.label
-            : "Select gesture..."}
+          {value ? 
+            gestureOptions
+              .flat()
+              .flatMap((option) => [option, ...(option.subGestures ?? [])])
+              .find((option) => option.value === value)?.label : 
+            "Select gesture..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -378,12 +544,12 @@ function GestureSelection() {
           <CommandList>
             <CommandEmpty>No framework found.</CommandEmpty>
             <CommandGroup>
-              {gestureOptions.map((gesture) => (
+              {gestureOptions.map((option) => (
                 <CommandItem
-                  key={gesture.value}
-                  value={gesture.value}
+                  key={option.value}
+                  value={option.value}
                   onSelect={(currentValue) => {
-                    if (gesture.subGestures === undefined) {
+                    if (option.subGestures === undefined) {
                       setValue(currentValue === value ? "" : currentValue);
                       setOpen(false);
                     }
@@ -392,12 +558,12 @@ function GestureSelection() {
                   <Check
                     className={cn(
                       "h-4 w-4",
-                      value === gesture.value ? "opacity-100" : "opacity-0"
+                      value === option.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {gesture.label}
+                  {option.label}
 
-                  {gesture.subGestures && 
+                  {option.subGestures && 
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -410,22 +576,24 @@ function GestureSelection() {
                       <PopoverContent className="w-50 p-0" align="start" side="right">
                         <Command>
                           <CommandList>
-                            {gesture.subGestures.map((subGesture) => (
+                            {option.subGestures.map((gesture: GestureOption) => (
                               <CommandItem
-                                key={subGesture.value}
-                                value={subGesture.value}
+                                key={gesture.value}
+                                value={gesture.value}
                                 onSelect={(currentValue) => {
-                                  setValue(currentValue === value ? "" : currentValue);
+                                  setValue(
+                                    currentValue === value ? "" : currentValue
+                                  );
                                   setOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "h-4 w-4",
-                                    subGesture.value === value ? "opacity-100" : "opacity-0"
+                                    gesture.value === value ? "opacity-100" : "opacity-0"
                                   )}
                                 />
-                                {subGesture.label}
+                                {gesture.label}
                               </CommandItem>
                             ))}
                           </CommandList>
@@ -440,5 +608,91 @@ function GestureSelection() {
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function BoundingBoxOverlay({
+  showRedaction,
+  mergedRef,
+  height,
+  width,
+  boxes,
+  rootBounds
+}: {
+  showRedaction: boolean,
+  mergedRef: MutableRefObject<HTMLImageElement | null>,
+  height: number | null,
+  width: number | null,
+  boxes: any[],
+  rootBounds: any
+}) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    const img = (mergedRef as MutableRefObject<HTMLImageElement | null>).current
+    if (!height || !width || !img || !svg) return;
+    // Use ResizeObserver to synchronize SVG dimensions with image dimensions
+    const resizeObserver = new ResizeObserver(() => {
+      svg.style.width = `${width}px`;
+      svg.style.height = `${height}px`;
+    });
+    resizeObserver.observe(img);
+    // Cleanup observer
+    return () => {
+      resizeObserver.unobserve(img);
+    };
+  }, [height, width, mergedRef, svgRef]);
+
+  if (!rootBounds) {
+    return null; // Render nothing if rootBounds is not available
+  }
+
+  return (
+    <div>
+      {showRedaction && (
+        <svg
+          ref={svgRef}
+          viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
+          preserveAspectRatio="xMinYMin meet"
+          className="pointer-events-none top-0 left-0 absolute cursor-crosshair"
+        >
+          {boxes.map((box: any, index: number) => (
+            <BoundingBox
+              key={box.id + index}
+              x={box.x}
+              y={box.y}
+              width={box.width}
+              height={box.height}
+            />
+          ))}
+        </svg>
+      )}
+    </div>
+  );
+}
+
+function BoundingBox({
+  x,
+  y,
+  width,
+  height,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}) {
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={"transparent"}
+      stroke="red"
+      strokeWidth="1"
+      className="pointer-events-none"
+    />
   );
 }
