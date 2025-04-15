@@ -15,10 +15,10 @@ export default function FrameGallery({
 }) {
   const { setValue } = useFormContext<TraceFormData>();
 
-  // Create a ref for the scrollable container.
+  // Ref for the scrollable container.
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to the bottom whenever frames change.
+  // Auto-scroll to the bottom when frames update.
   useEffect(() => {
     requestAnimationFrame(() => {
       if (containerRef.current) {
@@ -36,7 +36,7 @@ export default function FrameGallery({
   };
 
   return (
-    // Outer container: ensure its height is tied to the video area and enable scrolling.
+    // The outer container’s height is tied to the video area.
     <div
       ref={containerRef}
       className="h-full max-h-[calc(100%-4rem)] overflow-auto flex flex-col"
@@ -67,7 +67,7 @@ export default function FrameGallery({
                 <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
               </button>
             </div>
-            {/* Make the image clickable to jump to the corresponding video time */}
+            {/* Clickable image that jumps to the corresponding video time */}
             <Image
               onClick={() => setTime(frame.timestamp)}
               className="z-0 object-cover w-full h-auto rounded-lg cursor-pointer"
@@ -84,3 +84,4 @@ export default function FrameGallery({
     </div>
   );
 }
+
