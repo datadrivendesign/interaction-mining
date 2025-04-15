@@ -1,5 +1,6 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
 import { CircleAlert } from "lucide-react";
@@ -15,11 +16,13 @@ import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../../page";
-import { FrameData } from "../extract-frames";
+import { FrameData } from "../types";
+import { GestureOptionsContext } from "../../util";
 
 export default function RepairScreen() {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens") as FrameData[];
+  const vhs = watch("vhs") as { [key: string]: any };
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
@@ -59,6 +62,7 @@ export default function RepairScreen() {
             {focusViewIndex > -1 ? (
               <FocusView
                 key={focusViewIndex}
+                vh = {vhs[screens[focusViewIndex].id]}
                 screen={screens[focusViewIndex]}
               />
             ) : (
@@ -84,10 +88,12 @@ export default function RepairScreen() {
   );
 }
 
-function FocusView({ screen }: { screen: FrameData }) {
+function FocusView({ screen , vh }: { screen: FrameData, vh: any }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
+  const { gestureOptions } = useContext(GestureOptionsContext);
+
 
   // Find applicable gesture for screen or set to default template
   const [gesture, setGesture] = useState<ScreenGesture>(
@@ -114,8 +120,10 @@ function FocusView({ screen }: { screen: FrameData }) {
         <RepairScreenCanvas
           key={screen.id}
           screen={screen}
+          vh={vh}
           gesture={gesture}
           setGesture={setGesture}
+          gestureOptions={gestureOptions}
         />
       </div>
     </>
@@ -141,7 +149,10 @@ function Filmstrip({
           key={screen.id}
           index={index}
           isSelected={focusViewIndex === index}
-          hasError={!gestures[screen.id] || gestures[screen.id].type === null}
+          hasError={!gestures[screen.id] || 
+            gestures[screen.id].type === null || 
+            gestures[screen.id].description === undefined || 
+            gestures[screen.id].description === ""} 
           onClick={() => setFocusViewIndex(index)}
         >
           <Image

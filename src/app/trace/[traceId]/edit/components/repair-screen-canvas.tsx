@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import Image from "next/image";
@@ -48,6 +49,7 @@ export const GestureContext = createContext<{
     y: null,
     scrollDeltaX: null,
     scrollDeltaY: null,
+    description: ""
   },
   setGesture: () => {},
 });
@@ -63,6 +65,10 @@ export default function RepairScreenCanvas({
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
+  const mergedRef = useMemo(
+    () => mergeRefs(ref, imageRef),
+    [ref, imageRef]
+  );
   const [tooltip, setTooltip] = useState<{
     x: number | null;
     y: number | null;
@@ -175,10 +181,7 @@ export default function RepairScreenCanvas({
               <figure className="relative w-full h-full">
                 <Image
                   ref={
-                    mergeRefs(
-                      ref,
-                      imageRef
-                    ) as React.MutableRefObject<HTMLImageElement | null>
+                    mergedRef as React.MutableRefObject<HTMLImageElement | null>
                   }
                   src={screen.src}
                   alt="gallery"
