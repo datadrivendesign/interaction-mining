@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { CircleAlert } from "lucide-react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { cn } from "@/lib/utils";
 
 import {
@@ -10,13 +11,13 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import RedactScreenCanvas, { Redaction } from "./redact-screen-canvas";
+import RedactScreenCanvas from "./redact-screen-canvas";
+import { Redaction } from "./types";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../../page";
 import { FrameData } from "../extract-frames";
-import { GlobalHotKeys } from "react-hotkeys";
 
-export default function RedactScreen({ data }: { data: any }) {
+export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();
   const screens = getValues("screens") as FrameData[];
   const redactions = getValues("redactions") as {
@@ -24,11 +25,6 @@ export default function RedactScreen({ data }: { data: any }) {
   };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
-
-  const keymap = {
-    LEFT: "left",
-    RIGHT: "right",
-  };
 
   const handlePrevious = useCallback(() => {
     if (focusViewIndex > 0) {
@@ -42,20 +38,13 @@ export default function RedactScreen({ data }: { data: any }) {
     }
   }, [focusViewIndex, screens]);
 
-  const handlers = {
-    LEFT: handlePrevious,
-    RIGHT: handleNext,
-  };
+  useHotkeys("left", handlePrevious);
+  useHotkeys("right", handleNext);
 
   return (
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
-          <GlobalHotKeys
-            keyMap={keymap}
-            handlers={handlers}
-            allowChanges
-          >
             {focusViewIndex > -1 ? (
               <FocusView
                 key={focusViewIndex}
@@ -68,7 +57,6 @@ export default function RedactScreen({ data }: { data: any }) {
                 </span>
               </div>
             )}
-          </GlobalHotKeys>
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
@@ -204,8 +192,8 @@ function FilmstripItem({
               isSelected
                 ? "ring-2 ring-inset ring-yellow-500"
                 : hasError
-                  ? "ring-2 ring-inset ring-red-500"
-                  : ""
+                ? "ring-2 ring-inset ring-red-500"
+                : ""
             )}
           >
             {hasError && (
@@ -218,13 +206,16 @@ function FilmstripItem({
             )}
           </div>
         )}
-        <img
+        <Image
           ref={imageRef}
           src={screen.url}
           alt="gallery"
           draggable={false}
           className="h-full w-auto object-contain"
           onLoad={updateSize}
+          width={0}
+          height={0}
+          sizes="100vw"
         />
         {/* Render redaction overlays using the natural dimensions and scale factors */}
         {imgDimensions.width > 0 &&

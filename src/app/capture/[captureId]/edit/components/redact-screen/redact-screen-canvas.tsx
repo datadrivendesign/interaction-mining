@@ -1,200 +1,143 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Pencil, Eraser } from "lucide-react";
+import { useState, useRef, createContext, useEffect, useCallback } from "react";
+import { HotKeys, KeyMap } from "react-hotkeys";
 import { useFormContext } from "react-hook-form";
+import CanvasComponent, { CanvasRef } from "./canvas";
 import { TraceFormData } from "../../page";
 import { FrameData } from "../extract-frames";
-import { HotKeys } from "react-hotkeys";
+import Toolbar from "./toolbar";
+import Layers from "./layers";
 
-export interface Redaction {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { Redaction } from "./types";
+import { useHotkeys } from "react-hotkeys-hook";
 
-export default function RedactScreenCanvas({
-  screen,
-  // redactions,
-  // onRedactionsChange,
-}: {
-  screen: FrameData;
-  // redactions: Redaction[];
-  // onRedactionsChange: (screenId: string, newRedactions: Redaction[]) => void;
-}) {
+type RedactCanvasMode = "pencil" | "eraser" | "select";
+
+export const RedactCanvasContext = createContext<{
+  mode: RedactCanvasMode;
+  setMode: (mode: RedactCanvasMode) => void;
+  redactions: Redaction[];
+  selected: Redaction | null;
+  deleteRedaction: (id: string) => void;
+  selectRedaction: (id: string | null) => void;
+  createRedaction: (
+    newRedaction: Redaction,
+    options?: {
+      select?: boolean;
+    }
+  ) => void;
+  updateRedaction: (id: string, updatedRedaction: Partial<Redaction>) => void;
+}>({
+  mode: "select",
+  setMode: () => {},
+  redactions: [] as Redaction[],
+  selected: {} as Redaction,
+  deleteRedaction: () => {},
+  selectRedaction: () => {},
+  createRedaction: () => {},
+  updateRedaction: () => {},
+});
+
+export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
+  const redactions = (watch("redactions") || {})[screen.id] || [];
+  const [selected, setSelected] = useState<Redaction | null>(null);
+  const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
-  const redactions = watch("redactions") as { [screenId: string]: Redaction[] };
+  const canvasRef = useRef<CanvasRef>(null);
 
-  const onRedactionsChange = (screenId: string, newRedactions: Redaction[]) => {
+  const deleteRedaction = (id: string) => {
+    const newRedactions = redactions.filter((r) => r.id !== id);
+
+    if (selected?.id === id) {
+      setSelected(null);
+    }
+
     setValue("redactions", {
-      ...redactions,
-      [screenId]: newRedactions,
+      redactions,
+      [screen.id]: newRedactions,
     });
   };
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imgRef = useRef<HTMLImageElement>(new Image());
+  const selectRedaction = (id: string | null) => {
+    if (id === null) {
+      setSelected(null);
+      return;
+    }
+    setSelected(redactions.find((r) => r.id === id) || null);
+  };
 
-  const [mode, setMode] = useState<"pencil" | "eraser">("pencil");
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPos, setStartPos] = useState<{ x: number; y: number }>({
-    x: 0,
-    y: 0,
-  });
-  const [currentRect, setCurrentRect] = useState<Redaction | null>(null);
+  const createRedaction = (
+    newRedaction: Redaction,
+    option?: {
+      select?: boolean;
+    }
+  ) => {
+    const newRedactions = [...redactions, newRedaction];
+    setValue("redactions", {
+      redactions,
+      [screen.id]: newRedactions,
+    });
 
-  // Load base image once
-  useEffect(() => {
-    const img = imgRef.current;
-    img.src = screen.url;
-    img.onload = redrawCanvas;
-  }, [screen.url]);
+    if (option?.select) {
+      setSelected(newRedaction);
+    }
+  };
 
-  // Re‑draw whenever redactions or transient rect changes
-  useEffect(() => {
-    redrawCanvas();
-  }, [redactions, currentRect]);
-
-  const redrawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const img = imgRef.current;
-    if (!canvas || !img.complete) return;
-
-    const ctx = canvas.getContext("2d")!;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-
-    // Draw original
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-
-    // Draw saved redactions
-    ctx.fillStyle = "black";
-
-    // Check if redactions exist for the current screen,
-    if (redactions[screen.id]) {
-      redactions[screen.id].forEach((r) => {
-        ctx.fillRect(
-          r.x * canvas.width,
-          r.y * canvas.height,
-          r.width * canvas.width,
-          r.height * canvas.height
-        );
+  const updateRedaction = useCallback(
+    (id: string, updatedRedaction: Partial<Redaction>) => {
+      const newRedactions = redactions.map((redaction) => {
+        return redaction.id === id
+          ? { ...redaction, ...updatedRedaction }
+          : redaction;
       });
-    } else {
-      onRedactionsChange(screen.id, []);
-    }
 
-    // Draw in‑progress rectangle
-    if (currentRect) {
-      ctx.globalAlpha = 0.5;
-      ctx.fillRect(
-        currentRect.x * canvas.width,
-        currentRect.y * canvas.height,
-        currentRect.width * canvas.width,
-        currentRect.height * canvas.height
-      );
-      ctx.globalAlpha = 1;
-    }
-  }, [redactions, currentRect, screen.id]);
-
-  const toNormalized = (evt: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    return {
-      x: (evt.clientX - rect.left) / rect.width,
-      y: (evt.clientY - rect.top) / rect.height,
-    };
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (mode === "pencil") {
-      const { x, y } = toNormalized(e);
-      setStartPos({ x, y });
-      setCurrentRect({ x, y, width: 0, height: 0 });
-      setIsDrawing(true);
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDrawing && currentRect) {
-      const { x, y } = toNormalized(e);
-      setCurrentRect({
-        x: Math.min(startPos.x, x),
-        y: Math.min(startPos.y, y),
-        width: Math.abs(x - startPos.x),
-        height: Math.abs(y - startPos.y),
+      setValue("redactions", {
+        redactions,
+        [screen.id]: newRedactions,
       });
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (isDrawing && currentRect) {
-      onRedactionsChange(screen.id, [...redactions[screen.id], currentRect]);
-      setCurrentRect(null);
-      setIsDrawing(false);
-    }
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (mode === "eraser") {
-      const { x, y } = toNormalized(e);
-      const idx = redactions[screen.id].findIndex(
-        (r) => x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height
-      );
-      if (idx >= 0)
-        onRedactionsChange(
-          screen.id,
-          redactions[screen.id].filter((_, i) => i !== idx)
-        );
-    }
-  };
-
-  const keymap = {
-    PENCIL: "p",
-    ERASER: "e",
-    CANCEL: "esc",
-  };
-  const handlers = {
-    PENCIL: () => setMode("pencil"),
-    ERASER: () => setMode("eraser"),
-    CANCEL: () => {
-      setIsDrawing(false);
-      setCurrentRect(null);
     },
-  };
+    [redactions, setValue, screen.id]
+  );
+
+  useHotkeys("v", () => setMode("select"));
+  useHotkeys("p", () => setMode("pencil"));
+  useHotkeys("e", () => setMode("eraser"));
+
+  useHotkeys("esc", () => {
+    setMode("select");
+    setSelected(null);
+  });
+  useHotkeys("backspace", () => {
+    if (mode === "select") {
+      deleteRedaction(selected?.id || "");
+    }
+  });
 
   return (
-    <HotKeys keyMap={keymap} handlers={handlers} className="w-full h-full" tabIndex={0}>
-      <div className="flex items-center h-full w-full p-4">
-        <aside className="flex flex-col justify-center items-center bg-neutral-100 dark:bg-neutral-900 p-1 rounded-lg shadow-lg">
-          <button
-            onClick={() => setMode("pencil")}
-            className={`p-2 rounded ${mode === "pencil" ? "bg-blue-500 text-white" : ""}`}
-          >
-            <Pencil className="size-5" />
-          </button>
-          <button
-            onClick={() => setMode("eraser")}
-            className={`p-2 rounded ${mode === "eraser" ? "bg-blue-500 text-white" : ""}`}
-          >
-            <Eraser className="size-5" />
-          </button>
-        </aside>
-
-        <div className="relative flex justify-center items-center w-full h-full">
-          <canvas
-            ref={canvasRef}
-            className="w-fit h-full cursor-crosshair rounded-lg"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onClick={handleClick}
-            style={{ cursor: mode === "eraser" ? "pointer" : "crosshair" }}
-          />
-        </div>
+    <RedactCanvasContext.Provider
+      value={{
+        mode,
+        setMode,
+        redactions,
+        selected,
+        deleteRedaction,
+        selectRedaction,
+        createRedaction,
+        updateRedaction,
+      }}
+    >
+      <div className="relative flex items-center w-full h-full bg-neutral-50 dark:bg-neutral-950">
+        <Toolbar mode={mode} setMode={setMode} />
+        <Layers redactions={redactions} deleteRedaction={deleteRedaction} />
+        <CanvasComponent
+          ref={canvasRef}
+          screen={screen}
+          redactions={redactions}
+          mode={mode}
+        />
       </div>
-    </HotKeys>
+    </RedactCanvasContext.Provider>
   );
 }

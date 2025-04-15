@@ -23,36 +23,12 @@ import ExtractFrames, { type FrameData } from "./components/extract-frames";
 import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairScreen from "./components/repair-screen/index";
 import RepairDoc from "./components/repair-screen/doc.mdx";
-import RedactDoc from "./components/redact-screen/doc.mdx";
 import Review from "./components/review/review";
 import ReviewDoc from "./components/review/doc.mdx";
+import RedactScreen, { type Redaction } from "./components/redact-screen";
+import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleSave } from "./util";
-import RedactScreen from "./components/redact-screen/redact-screen";
-import type { Redaction } from "./components/redact-screen/redact-screen-canvas";
-
-const traceSteps = [
-  {
-    title: "Selection",
-    description: "Select the screens you want to use to create a new trace.",
-    content: <ExtractFrameDoc />,
-  },
-  {
-    title: "Repair",
-    description: "Repair interactions that are broken or missing.",
-    content: <RepairDoc />,
-  },
-  {
-    title: "Redact",
-    description: "Redact sensitive information from the screens.",
-    content: <RedactDoc />,
-  },
-  {
-    title: "Review",
-    description: "Review the trace and finish the trace creation process.",
-    content: <ReviewDoc />,
-  },
-];
 
 export type TraceFormData = {
   screens: FrameData[];
@@ -60,6 +36,13 @@ export type TraceFormData = {
   redactions: { [key: string]: Redaction[] };
   description: string;
 };
+
+enum TraceSteps {
+  Extract = 0,
+  Repair = 1,
+  Redact = 2,
+  Review = 3,
+}
 
 export default function Page() {
   const params = useParams();
@@ -114,7 +97,7 @@ export default function Page() {
       }
     }
 
-    if (stepIndex < traceSteps.length - 1) {
+    if (stepIndex < Object.keys(TraceSteps).length - 1) {
       setStepIndex(stepIndex + 1);
     } else {
       // Submit the form
@@ -150,7 +133,7 @@ export default function Page() {
       case 1:
         return <RepairScreen />;
       case 2:
-        return <RedactScreen data={capture} />;
+        return <RedactScreen />;
       case 3:
         return <Review />;
       default:
@@ -168,14 +151,14 @@ export default function Page() {
           {!isTraceLoading ? (
             <>
               <div className="relative flex w-full h-full overflow-hidden">
-                <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-6 max-w-sm border-r border-neutral-200 dark:border-neutral-800 overflow-auto">
+                {/* <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-6 max-w-sm border-r border-neutral-200 dark:border-neutral-800 overflow-auto">
                   <h1 className="text-lg font-semibold text-neutral-950 dark:text-neutral-50 mb-4">
                     Instructions
                   </h1>
                   <article className="prose prose-neutral dark:prose-invert leading-snug">
                     {docRender()}
                   </article>
-                </aside>
+                </aside> */}
                 <div className="flex flex-col grow w-full justify-center items-center">
                   {editorRender()}
                 </div>
@@ -190,16 +173,11 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {traceSteps[stepIndex].title}
+                      {TraceSteps[stepIndex]}
                     </span>
                   </h1>
-                  <span className="block lg:hidden">
-                    <Sheet
-                      title={"Instructions"}
-                      description={traceSteps[stepIndex].description}
-                    >
-                      {traceSteps[stepIndex].content}
-                    </Sheet>
+                  <span className="block">
+                    <Sheet title={"Instructions"}>{docRender()}</Sheet>
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -210,7 +188,7 @@ export default function Page() {
                   >
                     Back
                   </Button>
-                  {stepIndex < traceSteps.length - 1 ? (
+                  {stepIndex < TraceSteps.Review ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
                     <Button onClick={handleNext}>Finish</Button>

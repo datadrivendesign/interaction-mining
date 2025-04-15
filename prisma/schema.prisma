@@ -1,6 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
+  output   = "app/generated/prisma/client"
 }
 
 datasource db {
@@ -9,7 +10,7 @@ datasource db {
 }
 
 type AppsCategory {
-  id   Int
+  id   String
   name String
 }
 

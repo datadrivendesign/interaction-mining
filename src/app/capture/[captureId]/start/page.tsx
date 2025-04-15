@@ -68,16 +68,8 @@ export default function Page({}: {}) {
         setCaptureState(CaptureState.UPLOADED);
       }
     }
-  }, [capture]);
-
-  // Dummy functions
-  const handleProcess = () => {
-    // wait 5 seconds before setting the state to processing
-    setCaptureState(CaptureState.PROCESSING);
-    setTimeout(() => {
-      setCaptureState(CaptureState.PROCESSED);
-    }, 5000);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capture, uploadList.length]);
 
   const redirectToFrameExtract = () => {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;

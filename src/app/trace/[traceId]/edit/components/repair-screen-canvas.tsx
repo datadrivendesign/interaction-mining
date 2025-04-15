@@ -112,13 +112,14 @@ export default function RepairScreenCanvas({
         }));
       }
     },
-    [width, height]
+    [ref, width, height, setGesture]
   );
 
   useEffect(() => {
+    const { x: markerX, y: markerY }  = markerPixelPosition
     if (
-      (markerPixelPosition.x !== gesture.x ||
-        markerPixelPosition.y !== gesture.y) &&
+      (markerX !== gesture.x ||
+        markerY !== gesture.y) &&
       width &&
       height
     ) {
@@ -127,7 +128,7 @@ export default function RepairScreenCanvas({
         y: gesture.y ? gesture.y * height : null,
       });
     }
-  }, [gesture, width, height]);
+  }, [gesture, markerPixelPosition, width, height]);
 
   return (
     <>
@@ -185,9 +186,6 @@ export default function RepairScreenCanvas({
                   draggable={false}
                   className="w-auto h-full rounded-lg cursor-crosshair"
                   fill
-                  // width={0}
-                  // height={0}
-                  // sizes="100vw"
                   onClick={handleImageClick}
                   onMouseMove={() => {
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
@@ -300,7 +298,7 @@ function GestureSelection() {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
       setGesture((prev) => ({ ...prev, type: null }));
     }
-  }, [value]);
+  }, [value, setGesture]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

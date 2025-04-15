@@ -106,7 +106,7 @@ function FocusView({ screen }: { screen: FrameData }) {
       ...gestures,
       [screen.id]: gesture,
     });
-  }, [gesture]);
+  }, [gesture, gestures, screen.id, setValue]);
 
   return (
     <>

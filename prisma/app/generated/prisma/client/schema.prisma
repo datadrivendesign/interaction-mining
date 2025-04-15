@@ -1,0 +1,130 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
+  output        = "app/generated/prisma/client"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+type AppsCategory {
+  id   String
+  name String
+}
+
+type ScreenGesture {
+  type         String?
+  scrollDeltaX Float?
+  scrollDeltaY Float?
+  x            Float?
+  y            Float?
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+type AppMetadata {
+  company     String
+  name        String
+  cover       String
+  description String
+  icon        String
+  rating      Float
+  reviews     Float
+  genre       String[]
+  downloads   String
+  url         String
+}
+
+model App {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int?          @default(0) @map("__v")
+  category    AppsCategory?
+  packageName String        @unique
+  metadata    AppMetadata
+  Capture     Capture[]
+
+  @@fulltext([metadata.name])
+  @@map("apps")
+}
+
+model Redaction {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  v      Int    @default(0) @map("__v")
+  label  String
+  screen String @db.ObjectId
+
+  @@map("redactions")
+}
+
+model Screen {
+  id      String        @id @default(auto()) @map("_id") @db.ObjectId
+  v       Int           @default(0) @map("__v")
+  created DateTime      @default(now()) @db.Date
+  gesture ScreenGesture
+  src     String
+  vh      String
+  traceId String        @map("trace") @db.ObjectId
+  trace   Trace         @relation(fields: [traceId], references: [id])
+
+  @@map("screens")
+}
+
+model Trace {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int      @default(0) @map("__v")
+  appId       String   @map("app") @db.ObjectId
+  created     DateTime @default(now()) @db.Date
+  name        String?
+  description String
+  screenIds   String[] @map("screens") @db.ObjectId
+  screens     Screen[]
+  taskId      String?  @default("") @map("task") @db.ObjectId
+  task        Task?    @relation(fields: [taskId], references: [id])
+  worker      String
+
+  @@map("traces")
+}
+
+model User {
+  id    String  @id @default(auto()) @map("_id") @db.ObjectId
+  email String  @unique
+  name  String?
+  role  Role    @default(USER)
+
+  @@map("users")
+}
+
+model Task {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  // appId    String   @map("app") @db.ObjectId
+  // app      App      @relation(fields: [appId], references: [id])
+  appId       String
+  os          String
+  traceIds    String[]  @map("traces") @db.ObjectId
+  traces      Trace[]
+  description String
+  Capture     Capture[]
+
+  @@map("tasks")
+}
+
+model Capture {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  appId_ String? @map("app") @db.ObjectId
+  app    App?    @relation(fields: [appId_], references: [id])
+  appId  String // stupid frickin packageName
+  // userId String @map("user") @db.ObjectId
+  // traceId String @map("trace") @db.ObjectId
+  // trace   Trace  @relation(fields: [traceId], references: [id])
+  taskId String  @map("task") @db.ObjectId
+  task   Task    @relation(fields: [taskId], references: [id])
+  otp    String
+  src    String
+
+  @@map("captures")
+}
