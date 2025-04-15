@@ -72,6 +72,8 @@ export default function RepairScreenCanvas({
     y: null,
   });
 
+  // console.log("repair screen canvas rendered");
+
   const [markerPixelPosition, setMarkerPixelPosition] = useState<{
     x: number | null;
     y: number | null;
@@ -111,22 +113,19 @@ export default function RepairScreenCanvas({
         }));
       }
     },
-    [width, height]
+    [ref, width, height, setGesture]
   );
 
   useEffect(() => {
-    if (
-      (markerPixelPosition.x !== gesture.x ||
-        markerPixelPosition.y !== gesture.y) &&
-      width &&
-      height
-    ) {
+    const { x: markerX, y: markerY } = markerPixelPosition;
+    const { x: gestureX, y: gestureY } = gesture;
+    if ((markerX !== gestureX || markerY !== gestureY) && width && height) {
       setMarkerPixelPosition({
-        x: gesture.x ? gesture.x * width : null,
-        y: gesture.y ? gesture.y * height : null,
+        x: gestureX ? gestureX * width : null,
+        y: gestureY ? gestureY * height : null,
       });
     }
-  }, [gesture, width, height]);
+  }, [gesture, markerPixelPosition, width, height]);
 
   return (
     <>
@@ -233,7 +232,9 @@ function DraggableMarker({
           top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
           width: "calc(var(--marker-radius) * 2)",
           height: "calc(var(--marker-radius) * 2)",
-          transform: `translate3d(${transform?.x ?? 0}px, ${transform?.y ?? 0}px, 0)`,
+          transform: `translate3d(${transform?.x ?? 0}px, ${
+            transform?.y ?? 0
+          }px, 0)`,
         }}
         className={clsx(
           "absolute z-50 flex justify-center items-center bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-colors duration-150 ease-in-out",
@@ -249,7 +250,9 @@ function DraggableMarker({
         style={{
           left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
           top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
-          transform: `translate3d(${transform?.x ?? 0}px, ${transform?.y ?? 0}px, 0)`,
+          transform: `translate3d(${transform?.x ?? 0}px, ${
+            transform?.y ?? 0
+          }px, 0)`,
         }}
       >
         <GestureSelection />
@@ -302,7 +305,7 @@ function GestureSelection() {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
       setGesture((prev) => ({ ...prev, type: null }));
     }
-  }, [value]);
+  }, [value, setGesture]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

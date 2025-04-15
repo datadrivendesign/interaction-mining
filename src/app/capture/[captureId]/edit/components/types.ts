@@ -39,10 +39,24 @@ export const ScreenGestureSchema = z
     { message: "Each screen must have a gesture" }
   );
 
+export const RedactionSchema = z.record(
+  z.array(
+    z.object({
+      id: z.string(),
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+      annotation: z.string(),
+    })
+  )
+);
+
 export const TraceFormSchema: ZodType<TraceFormData> = z
   .object({
     screens: ScreenSchema,
     gestures: GestureSchema,
+    redactions: RedactionSchema,
     description: z.string().nonempty({
       message: "A description is required",
     }),
