@@ -1,8 +1,6 @@
-
-
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import useSWR from "swr";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
@@ -43,7 +41,7 @@ export default function ExtractFrames({ capture }: { capture: any }) {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // State for video playback tracking.
+  // State for video playback tracking
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -54,34 +52,48 @@ export default function ExtractFrames({ capture }: { capture: any }) {
     fileFetcher
   );
 
-  // Capture a frame (snapshot) from the video.
+  // When capturing a frame, use the state’s currentTime as the target snapshot time
   const handleCaptureFrame = async () => {
     if (videoRef.current !== null) {
-      const frame = await extractVideoFrame(videoRef.current);
-      setValue("screens", [...frames, frame].sort((a, b) => a.timestamp - b.timestamp));
+      const snapshotTime = currentTime;
+      const frame = await extractVideoFrame(videoRef.current, snapshotTime);
+      setValue(
+        "screens",
+        [...frames, frame].sort((a, b) => a.timestamp - b.timestamp)
+      );
     }
   };
 
-  // Extract a frame from the video element.
-  const extractVideoFrame = (video: HTMLVideoElement): Promise<FrameData> => {
+  const extractVideoFrame = (
+    video: HTMLVideoElement,
+    snapshotTime: number
+  ): Promise<FrameData> => {
     return new Promise((resolve, reject) => {
       const canvas: HTMLCanvasElement = document.createElement("canvas");
       const context = canvas.getContext("2d");
-      if (context === null) {
+      if (!context) {
         console.error("HTML canvas could not get 2d context");
         reject("canvas creation error");
         return;
       }
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const time = video.currentTime;
 
-      const eventCallback = () => {
-        video.removeEventListener("seeked", eventCallback);
-        storeFrame(video, context, canvas, time, resolve);
-      };
-      video.addEventListener("seeked", eventCallback);
-      video.currentTime = time;
+      // If the video is already near the target time, capture immediately
+      if (Math.abs(video.currentTime - snapshotTime) < 0.1) {
+        storeFrame(video, context, canvas, snapshotTime, resolve);
+      } else {
+        // If the video is ended, force a pause so that seeking works correctly.
+        if (video.ended || video.currentTime >= video.duration) {
+          video.pause();
+        }
+        const onSeeked = () => {
+          video.removeEventListener("seeked", onSeeked);
+          storeFrame(video, context, canvas, snapshotTime, resolve);
+        };
+        video.addEventListener("seeked", onSeeked);
+        video.currentTime = snapshotTime;
+      }
     });
   };
 
@@ -100,46 +112,17 @@ export default function ExtractFrames({ capture }: { capture: any }) {
     });
   };
 
-  // Callback for timeline scrubber and frame clicks.
+  // Whenever the user scrubs or clicks, update both the video element and the local state
+  // Force a pause if the video had ended
   const handleSetTime = (time: number) => {
-    if (videoRef.current !== null) {
+    if (videoRef.current) {
       videoRef.current.currentTime = time;
+      if (videoRef.current.ended || videoRef.current.currentTime === videoDuration) {
+        videoRef.current.pause();
+      }
+      setCurrentTime(time);
     }
   };
-
-  // Attach event listeners to the video element to update state.
-  useEffect(() => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(video.currentTime);
-    };
-
-    const handleLoadedMetadata = () => {
-      setVideoDuration(video.duration);
-    };
-
-    const handlePlay = () => {
-      setIsPlaying(true);
-    };
-
-    const handlePause = () => {
-      setIsPlaying(false);
-    };
-
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handlePause);
-
-    return () => {
-      video.removeEventListener("timeupdate", handleTimeUpdate);
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      video.removeEventListener("play", handlePlay);
-      video.removeEventListener("pause", handlePause);
-    };
-  }, []);
 
   return (
     <div className="flex flex-col w-full h-[calc(100dvh-var(--nav-height))]">
@@ -151,11 +134,19 @@ export default function ExtractFrames({ capture }: { capture: any }) {
               {isCapturesLoading ? (
                 <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]" />
               ) : (
-                // Removed native controls to let custom controls work.
+                // Inline event handlers keep our state in sync
                 <video
                   crossOrigin="anonymous"
-                  className="z-0 max-w-full max-h-[calc(100%-4rem)] mb-4 rounded-lg"
                   ref={videoRef}
+                  onTimeUpdate={(e) =>
+                    setCurrentTime(e.currentTarget.currentTime)
+                  }
+                  onLoadedMetadata={(e) =>
+                    setVideoDuration(e.currentTarget.duration)
+                  }
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  className="z-0 max-w-full max-h-[calc(100%-4rem)] mb-4 rounded-lg"
                 >
                   <source src={captures[0].fileUrl} type="video/mp4" />
                 </video>
@@ -193,12 +184,16 @@ export default function ExtractFrames({ capture }: { capture: any }) {
         }}
         onBackward={() => {
           if (videoRef.current) {
-            videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 2, 0);
+            const newTime = Math.max(videoRef.current.currentTime - 2, 0);
+            videoRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
           }
         }}
         onForward={() => {
           if (videoRef.current) {
-            videoRef.current.currentTime = videoRef.current.currentTime + 2;
+            const newTime = videoRef.current.currentTime + 2;
+            videoRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
           }
         }}
         onCapture={handleCaptureFrame}

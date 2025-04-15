@@ -1,11 +1,11 @@
 "use client";
 import React from "react";
-import { SkipBack, Play, Pause, SkipForward, Camera} from "lucide-react";
+import { SkipBack, Play, Pause, SkipForward, Camera } from "lucide-react";
 import { FrameData } from "./extract-frames";
 import { Button } from "@/components/ui/button";
 
 export type FrameTimelineProps = {
-  frames: FrameData[]; // optional—if needed for extra purposes
+  frames: FrameData[];
   currentTime: number;
   videoDuration: number;
   isPlaying: boolean;
@@ -27,7 +27,7 @@ export default function FrameTimeline({
   onForward,
   onCapture,
 }: FrameTimelineProps) {
-  // Handler for when the scrubber (range input) is used.
+  // Handler for slider updates.
   const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
     onSetTime(newTime);
@@ -35,9 +35,9 @@ export default function FrameTimeline({
 
   return (
     <div className="relative w-full h-20 p-4 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
-      {/* Playback Controls (placed at the top-left) */}
+      {/* Playback Controls */}
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 p-2 rounded-md bg-white dark:bg-neutral-900 ">
+        <div className="flex items-center gap-2 p-2 rounded-md bg-white dark:bg-neutral-900">
           <button
             onClick={onBackward}
             title="Back 2 seconds"
@@ -60,7 +60,7 @@ export default function FrameTimeline({
             <SkipForward size={20} />
           </button>
         </div>
-        {/* Display current time and total duration */}
+        {/* Display the current time and total duration */}
         <div className="text-sm text-white">
           {currentTime.toFixed(2)} / {videoDuration.toFixed(2)}
         </div>
@@ -83,6 +83,7 @@ export default function FrameTimeline({
         step="0.01"
         value={currentTime}
         onChange={handleScrubChange}
+        onInput={handleScrubChange} // immediate feedback while dragging
         className="w-full h-2 bg-gray-300 rounded-lg appearance-none"
       />
     </div>
