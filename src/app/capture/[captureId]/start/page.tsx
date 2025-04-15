@@ -36,7 +36,6 @@ import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCapture } from "@/lib/hooks";
-import { getTask } from '@/lib/actions';
 
 
 enum CaptureState {
@@ -78,18 +77,6 @@ export default function Page({}: {}) {
       console.log("Capture", capture);
     }
   }, [capture]);
-
-  
-
-
-  // Dummy functions
-  const handleProcess = () => {
-    // wait 5 seconds before setting the state to processing
-    setCaptureState(CaptureState.PROCESSING);
-    setTimeout(() => {
-      setCaptureState(CaptureState.PROCESSED);
-    }, 5000);
-  };
 
   const redirectToFrameExtract = () => {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;

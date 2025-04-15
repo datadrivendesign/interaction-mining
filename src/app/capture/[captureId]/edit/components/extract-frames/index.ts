@@ -1,3 +1,3 @@
-import ExtractFrames from "./extract-frames";
-export default ExtractFrames  
+import ExtractFramesIOS from "./extract-frames";
+export default ExtractFramesIOS  
 export * from "./extract-frames";
