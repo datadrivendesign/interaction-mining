@@ -229,62 +229,64 @@ export default function Page() {
           className="relative flex flex-col w-dvw h-dvh bg-white dark:bg-black"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
-          {!isTraceLoading ? (
-            <>
-              <div className="relative flex w-full h-full overflow-hidden">
-                {/* <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-6 max-w-sm border-r border-neutral-200 dark:border-neutral-800 overflow-auto">
-                  <h1 className="text-lg font-semibold text-neutral-950 dark:text-neutral-50 mb-4">
-                    Instructions
-                  </h1>
-                  <article className="prose prose-neutral dark:prose-invert leading-snug">
-                    {docRender()}
-                  </article>
-                </aside> */}
-                <div className="flex flex-col grow w-full justify-center items-center">
-                  {editorRender()}
+          <GestureOptionsContext.Provider value={{ gestureOptions }}>
+            {!isTraceLoading ? (
+              <>
+                <div className="relative flex w-full h-full overflow-hidden">
+                  {/* <aside className="sticky top-0 left-0 hidden lg:flex flex-col grow w-full p-6 max-w-sm border-r border-neutral-200 dark:border-neutral-800 overflow-auto">
+                    <h1 className="text-lg font-semibold text-neutral-950 dark:text-neutral-50 mb-4">
+                      Instructions
+                    </h1>
+                    <article className="prose prose-neutral dark:prose-invert leading-snug">
+                      {docRender()}
+                    </article>
+                  </aside> */}
+                  <div className="flex flex-col grow w-full justify-center items-center">
+                    {editorRender()}
+                  </div>
                 </div>
+                <nav
+                  ref={navRef}
+                  className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
+                >
+                  <div className="flex gap-2 items-center">
+                    <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
+                      <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
+                        New Trace <ChevronRight className="size-6" />{" "}
+                      </span>
+                      <span className="inline-flex items-center text-black dark:text-white">
+                        {TraceSteps[stepIndex]}
+                      </span>
+                    </h1>
+                    <span className="block">
+                      <Sheet title={"Instructions"}>{docRender()}</Sheet>
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handlePrevious}
+                      disabled={stepIndex === 0}
+                    >
+                      Back
+                    </Button>
+                    {stepIndex < TraceSteps.Review ? (
+                      <Button onClick={handleNext}>Next</Button>
+                    ) : (
+                      <Button onClick={handleNext}>Finish</Button>
+                    )}
+                  </div>
+                </nav>
+              </>
+            ) : (
+              <div className="flex flex-col grow justify-center items-center w-full h-full">
+                <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+                  Loading trace...
+                </h1>
               </div>
-              <nav
-                ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
-              >
-                <div className="flex gap-2 items-center">
-                  <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
-                    <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
-                      New Trace <ChevronRight className="size-6" />{" "}
-                    </span>
-                    <span className="inline-flex items-center text-black dark:text-white">
-                      {TraceSteps[stepIndex]}
-                    </span>
-                  </h1>
-                  <span className="block">
-                    <Sheet title={"Instructions"}>{docRender()}</Sheet>
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handlePrevious}
-                    disabled={stepIndex === 0}
-                  >
-                    Back
-                  </Button>
-                  {stepIndex < TraceSteps.Review ? (
-                    <Button onClick={handleNext}>Next</Button>
-                  ) : (
-                    <Button onClick={handleNext}>Finish</Button>
-                  )}
-                </div>
-              </nav>
-            </>
-          ) : (
-            <div className="flex flex-col grow justify-center items-center w-full h-full">
-              <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                Loading trace...
-              </h1>
-            </div>
-          )}
+            )}
+          </GestureOptionsContext.Provider>
         </main>
       </FormProvider>
     </>
