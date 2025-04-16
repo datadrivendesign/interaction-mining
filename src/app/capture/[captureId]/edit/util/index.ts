@@ -12,6 +12,7 @@ export const GestureOptionsContext = createContext<{
 });
 
 export async function handleSave(data: TraceFormData, capture: Capture) {
+  console.log("save trace")
   // Transpose gestures on to screens
   let screens = data.screens.map((screen) => {
     return {

@@ -7,15 +7,18 @@ import {
   useEffect,
   useCallback,
   useReducer,
+  useMemo,
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "motion/react";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowDownFromLine, ArrowLeft, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, Circle, CircleDot, CircleHelp, CircleStop, Expand, Grab, IterationCcw, IterationCw, Search, Shrink } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
 import { Screen } from "@prisma/client";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -144,6 +147,81 @@ export function InspectView({ data }: { data: any }) {
     }
   }, [loading]);
 
+  const gestureOptions = useMemo<GestureOption[]>(() => [
+    {
+      value: "Tap",
+      label: "Tap",
+      icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
+    },
+    {
+      value: "Double tap",
+      label: "Double tap",
+      icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
+    },
+    {
+      value: "Touch and hold",
+      label: "Touch and hold",
+      icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+    },
+    {
+      value: "Swipe",
+      label: "Swipe",
+      subGestures: [{
+        value: "Swipe up",
+        label: "Swipe up",
+        icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+      }, {
+        value: "Swipe down",
+        label: "Swipe down",
+        icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+      }, {
+        value: "Swipe left",
+        label: "Swipe left",
+        icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+      }, {
+        value: "Swipe right",
+        label: "Swipe right",
+        icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+      }]
+    },
+    {
+      value: "Drag",
+      label: "Drag",
+      icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
+    },
+    {
+      value: "Zoom",
+      label: "Zoom",
+      subGestures: [{
+        value: "Zoom in",
+        label: "Zoom in",
+        icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
+      }, {
+        value: "Zoom out",
+        label: "Zoom out",
+        icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
+      }]
+    },
+    {
+      value: "Rotate",
+      label: "Rotate",
+      subGestures: [{
+        value: "Rotate cw",
+        label: "Rotate cw",
+        icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+      }, {
+        value: "Rotate ccw",
+        label: "Rotate ccw",
+        icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+      }]
+    },
+    {
+      value: "Other",
+      label: "Other",
+      icon: <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
+    }
+  ], []);
+
   return (
     <div className="flex flex-col grow w-full h-full p-4 pr-0">
       <button
@@ -226,6 +304,32 @@ export function InspectView({ data }: { data: any }) {
                   priority
                   onLoad={handleImageLoad}
                 />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="cursor-pointer aspect-square w-[12%] absolute rounded-full opacity-70 bg-green-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                        style={{
+                          left: `${(screen.gesture.x ?? 0) * 100}%`,
+                          top: `${(screen.gesture.y ?? 0) * 100}%`,
+                        }}
+                      >
+                        {gestureOptions
+                          .flatMap((option) => 
+                              [option, ...(option.subGestures ?? [])]
+                          )
+                          .find((option) => 
+                            option.value === screen.gesture.type)?.icon
+                        }
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>
+                        {screen.gesture.description}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </figure>
             ))}
           </div>

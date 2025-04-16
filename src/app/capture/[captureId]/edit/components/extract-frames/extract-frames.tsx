@@ -55,85 +55,83 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
     fileFetcher
   );
 
-  async function populateFrameData(
-    captures: CaptureListedFile[]
-  ): Promise<{
-    frames: FrameData[], 
-    vhs: { [key: string]: any }, 
-    gestures: { [key: string]: ScreenGesture }
-  }> {
-
-    function createScreenGesture(gesture: CaptureScreenGesture): ScreenGesture {
-      const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture
-      console.log(gesture)
-      const screenGesture: ScreenGesture = {
-        type: null,
-        x,
-        y,
-        scrollDeltaX,
-        scrollDeltaY,
-        description: ""
-      }
-      if (!type) {
-        screenGesture.type = null
-      } else if (type === "TYPE_VIEW_CLICKED") {
-        screenGesture.type = "Tap"
-      } else if (type === "TYPE_VIEW_LONG_CLICKED") {
-        screenGesture.type = "Touch and hold"
-      } else if (type === "TYPE_VIEW_SCROLLED") {
-        // get directionality of scroll/swipe,choose dominant delta direction
-        if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
-          screenGesture.type = "Swipe right"
-        } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
-          screenGesture.type = "Swipe left"
-        } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
-          screenGesture.type = "Swipe up"
-        } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
-          screenGesture.type = "Swipe down"
-        } else { // fall through case, don't know what will reach
-          screenGesture.type = "Swipe"
-        }
-      } else {
-        screenGesture.type = null
-      }      
-      return screenGesture
-    }
-
-    console.log("Capture: ", capture);
-    const frameData: FrameData[] = [];
-    const frameVHs: { [key: string]: any } = {};
-    const frameGestures: { [key: string]: ScreenGesture } = {};
-    for (const c of captures) {
-      try {
-        const frameResponse = await fetch(c.fileUrl);
-        console.log(c)
-        const frameJson: CaptureScreenFile = await frameResponse.json();
-        const b64img = `data:image/png;base64,${frameJson.img}`.trim();
-        const frame: FrameData = { 
-          id: frameJson.created + Math.random().toString(),
-          url: b64img,
-          timestamp: Date.parse(frameJson.created),
-        };
-        frameData.push(frame);
-        if (frameJson.vh) {
-          frameVHs[frame.id] = JSON.parse(frameJson.vh);
-        }
-        if (frameJson.gesture) {
-          frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
-        }
-      } catch(e) {
-        console.error("Error fetching frame data:", e);
-        toast.error("Error fetching frame data");
-      }
-    }
-    return {
-      frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
-      vhs: frameVHs,
-      gestures: frameGestures,
-    }
-  }
-
   useEffect(() => {
+    const populateFrameData = async (
+      captures: CaptureListedFile[]
+    ): Promise<{
+      frames: FrameData[], 
+      vhs: { [key: string]: any }, 
+      gestures: { [key: string]: ScreenGesture }
+    }> => {
+  
+      function createScreenGesture(gesture: CaptureScreenGesture): ScreenGesture {
+        const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture
+        const screenGesture: ScreenGesture = {
+          type: null,
+          x,
+          y,
+          scrollDeltaX,
+          scrollDeltaY,
+          description: ""
+        }
+        if (!type) {
+          screenGesture.type = null
+        } else if (type === "TYPE_VIEW_CLICKED") {
+          screenGesture.type = "Tap"
+        } else if (type === "TYPE_VIEW_LONG_CLICKED") {
+          screenGesture.type = "Touch and hold"
+        } else if (type === "TYPE_VIEW_SCROLLED") {
+          // get directionality of scroll/swipe,choose dominant delta direction
+          if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+            screenGesture.type = "Swipe right"
+          } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+            screenGesture.type = "Swipe left"
+          } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+            screenGesture.type = "Swipe up"
+          } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+            screenGesture.type = "Swipe down"
+          } else { // fall through case, don't know what will reach
+            screenGesture.type = "Swipe"
+          }
+        } else {
+          screenGesture.type = null
+        }      
+        return screenGesture
+      }
+  
+      console.log("Capture: ", capture);
+      const frameData: FrameData[] = [];
+      const frameVHs: { [key: string]: any } = {};
+      const frameGestures: { [key: string]: ScreenGesture } = {};
+      for (const c of captures) {
+        try {
+          const frameResponse = await fetch(c.fileUrl);
+          console.log(c)
+          const frameJson: CaptureScreenFile = await frameResponse.json();
+          const b64img = `data:image/png;base64,${frameJson.img}`.trim();
+          const frame: FrameData = { 
+            id: frameJson.created + Math.random().toString(),
+            url: b64img,
+            timestamp: Date.parse(frameJson.created),
+          };
+          frameData.push(frame);
+          if (frameJson.vh) {
+            frameVHs[frame.id] = JSON.parse(frameJson.vh);
+          }
+          if (frameJson.gesture) {
+            frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
+          }
+        } catch(e) {
+          console.error("Error fetching frame data:", e);
+          toast.error("Error fetching frame data");
+        }
+      }
+      return {
+        frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
+        vhs: frameVHs,
+        gestures: frameGestures,
+      }
+    }
     populateFrameData(captures).then(({ frames, vhs, gestures }) => {
       originalFrames.current = [...frames];
       originalVHs.current = {...vhs};
@@ -142,7 +140,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       setValue("vhs", vhs)
       setValue("gestures", gestures)
     });
-  }, [captures])
+  }, [captures, capture, setValue])  // TODO: check if this screws up Android
 
   return (
   <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">

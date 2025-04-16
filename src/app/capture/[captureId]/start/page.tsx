@@ -124,7 +124,7 @@ export default function Page({}: {}) {
                 <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
-                    {`https://overhaul-backend.d1z04mdf4ss7va.amplifyapp.com/capture/upload`}
+                    {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
                   </Link>{" "}
                   and enter the following capture session code:
                 </p>
