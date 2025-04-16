@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, ChevronRight, Circle, CircleDot, CircleStop, Expand, Grab, IterationCcw, IterationCw, Loader2, Shrink } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useCapture } from "@/lib/hooks";
@@ -11,6 +11,7 @@ import { ScreenGesture } from "@prisma/client";
 import { toast } from "sonner";
 
 import {
+  GestureOption,
   ScreenGestureSchema,
   ScreenSchema,
   TraceFormSchema,

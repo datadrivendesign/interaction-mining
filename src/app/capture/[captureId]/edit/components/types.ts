@@ -74,3 +74,10 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
     },
     { message: "Each screen must have a gesture" }
   );
+
+  export type GestureOption = {
+    value: string;
+    label: string;
+    icon?: React.JSX.Element;
+    subGestures?: GestureOption[];
+  }

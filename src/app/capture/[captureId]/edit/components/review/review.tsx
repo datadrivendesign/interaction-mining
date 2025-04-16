@@ -5,6 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../../page";
+import { ScreenGesture } from "@prisma/client";
+import { Circle, CircleDot, CircleStop, ArrowUpFromLine, ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, Grab, Shrink, Expand, IterationCw, IterationCcw } from "lucide-react";
+import { GestureOption } from "../types";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
@@ -30,14 +33,85 @@ export default function Review() {
   );
 }
 
+export const gestureOptions: GestureOption[] = [
+  {
+    value: "Tap",
+    label: "Tap",
+    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Double tap",
+    label: "Double tap",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+    subGestures: [{
+      value: "Swipe up",
+      label: "Swipe up",
+      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe down",
+      label: "Swipe down",
+      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe left",
+      label: "Swipe left",
+      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Swipe right",
+      label: "Swipe right",
+      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
+  },
+  {
+    value: "Zoom",
+    label: "Zoom",
+    subGestures: [{
+      value: "Zoom in",
+      label: "Zoom in",
+      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Zoom out",
+      label: "Zoom out",
+      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  },
+  {
+    value: "Rotate",
+    label: "Rotate",
+    subGestures: [{
+      value: "Rotate cw",
+      label: "Rotate cw",
+      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+    }, {
+      value: "Rotate ccw",
+      label: "Rotate ccw",
+      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+    }]
+  }
+];
+
 function SaveTraceGallery() {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens");
+  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
       {screens.map((screen) => (
         <div
-          className="flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
+          className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
           key={`${screen.id}`}
         >
           <Image
@@ -47,8 +121,29 @@ function SaveTraceGallery() {
             draggable={false}
             width={0}
             height={0}
-            sizes="100vw"
-          />
+            sizes="100vw" >
+          </Image>
+
+          <div
+            style={{
+              left: `${(gestures[screen.id].x ?? 0) * 100}%`,
+              top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
+              width: "10%",
+              aspectRatio: 1,
+              position: 'absolute',
+              borderRadius: '50%',
+              opacity: '0.5',
+              backgroundColor: '#ff9100',
+              transform: 'translate(-50%, -50%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {gestureOptions
+              .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
+              .find((option) => option.value === gestures[screen.id].type)?.icon}
+          </div>
         </div>
       ))}
     </div>
