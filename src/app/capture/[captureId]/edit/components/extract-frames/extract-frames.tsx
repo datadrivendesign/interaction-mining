@@ -151,10 +151,7 @@ export default function ExtractFrames({ capture }: { capture: any }) {
                   <source src={captures[0].fileUrl} type="video/mp4" />
                 </video>
               )}
-              <Button onClick={handleCaptureFrame}>
-                <Camera className="mr-2" />
-                Snapshot
-              </Button>
+    
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
