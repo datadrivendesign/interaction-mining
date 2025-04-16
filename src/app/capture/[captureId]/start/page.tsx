@@ -100,7 +100,7 @@ export default function Page({}: {}) {
                 {!isCaptureLoading && capture ? (
                   <QRCodeSVG
                     className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
-                    value={`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`}
+                    value={`https://overhaul-backend.d1z04mdf4ss7va.amplifyapp.com/capture/${captureId}/upload`}
                   />
                 ) : (
                   <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
@@ -115,7 +115,7 @@ export default function Page({}: {}) {
                 <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
-                    {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
+                    {`https://overhaul-backend.d1z04mdf4ss7va.amplifyapp.com/capture/upload`}
                   </Link>{" "}
                   and enter the following capture session code:
                 </p>

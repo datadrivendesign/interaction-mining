@@ -73,8 +73,6 @@ export default function RepairScreenCanvas({
     y: null,
   });
 
-  // console.log("repair screen canvas rendered");
-
   const [markerPixelPosition, setMarkerPixelPosition] = useState<{
     x: number | null;
     y: number | null;
@@ -99,6 +97,7 @@ export default function RepairScreenCanvas({
     }
   };
 
+  console.log("repair screen canvas")
   // Update marker position on drag
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {

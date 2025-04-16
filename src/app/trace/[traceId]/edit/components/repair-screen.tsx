@@ -101,11 +101,15 @@ function FocusView({ screen }: { screen: Screen }) {
 
   // Update gesture in form data
   useEffect(() => {
-    setValue("gestures", {
-      ...gestures,
-      [screen.id]: gesture,
-    });
-  }, [gesture]);
+    // only update if gesture has changed
+    const currentGesture = gestures[screen.id]
+    if (currentGesture !== gesture) {      
+      setValue("gestures", {
+        ...gestures,
+        [screen.id]: gesture,
+      });
+    }
+  }, [gesture, gestures, setValue, screen.id]);
 
   return (
     <>

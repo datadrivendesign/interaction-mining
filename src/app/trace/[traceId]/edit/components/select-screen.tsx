@@ -184,7 +184,7 @@ export default function SelectScreen({
         selection.items.map((index) => screens[index])
       );
     }
-  }, [selection.items]);
+  }, [selection.items, screens, setValue]);
 
   return (
     <>

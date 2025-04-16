@@ -27,6 +27,9 @@
       ],
       "@/*": [
         "./src/*"
+      ],
+      "@prisma/client": [
+        "./prisma/app/generated/prisma/client"
       ]
     },
     "target": "ES2017"
