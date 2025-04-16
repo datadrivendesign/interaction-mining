@@ -20,6 +20,7 @@ type ScreenGesture {
   scrollDeltaY Float?
   x            Float?
   y            Float?
+  description String?
 }
 
 enum Role {
@@ -34,7 +35,7 @@ type AppMetadata {
   description String
   icon        String
   rating      Float
-  reviews     Float
+  reviews     Float?
   genre       String[]
   downloads   String
   url         String

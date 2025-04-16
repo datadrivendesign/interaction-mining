@@ -24,8 +24,36 @@ export const GestureSchema = z.record(
     }),
     scrollDeltaX: z.number() || z.null(),
     scrollDeltaY: z.number() || z.null(),
+    description: z.string({
+      message: "Description is required",
+    }),
   })
 );
+
+
+export type FrameData = {
+  id: string;
+  url: string;
+  timestamp: number;
+};
+
+export const GestureOptionSchema: z.ZodType<{
+  value: string;
+  label: string;
+  icon?: React.JSX.Element;
+  subGestures?: any;
+}> = z.lazy((): z.ZodType<any> => // 👈 annotate the return type here
+  z.object({
+    value: z.string(),
+    label: z.string(),
+    icon: z.custom<React.JSX.Element>().optional(),
+    subGestures: z.array(GestureOptionSchema).optional(),
+  })
+);
+
+// Then define the type from schema (for safety & completion support)
+export type GestureOption = z.infer<typeof GestureOptionSchema>;
+
 
 export const ScreenGestureSchema = z
   .object({
@@ -55,6 +83,7 @@ export const RedactionSchema = z.record(
 export const TraceFormSchema: ZodType<TraceFormData> = z
   .object({
     screens: ScreenSchema,
+    vhs: z.record(z.any()).optional(),
     gestures: GestureSchema,
     redactions: RedactionSchema,
     description: z.string().nonempty({
@@ -74,10 +103,3 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
     },
     { message: "Each screen must have a gesture" }
   );
-
-  export type GestureOption = {
-    value: string;
-    label: string;
-    icon?: React.JSX.Element;
-    subGestures?: GestureOption[];
-  }

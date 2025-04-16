@@ -1,13 +1,14 @@
 "use client";
-import React from "react";
+
+import React, { useContext } from "react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../../page";
 import { ScreenGesture } from "@prisma/client";
-import { Circle, CircleDot, CircleStop, ArrowUpFromLine, ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, Grab, Shrink, Expand, IterationCw, IterationCcw } from "lucide-react";
-import { GestureOption } from "../types";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { GestureOptionsContext } from "../../util";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
@@ -107,6 +108,8 @@ function SaveTraceGallery() {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens");
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
+  const { gestureOptions } = useContext(GestureOptionsContext);
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
       {screens.map((screen) => (
@@ -124,26 +127,28 @@ function SaveTraceGallery() {
             sizes="100vw" >
           </Image>
 
-          <div
-            style={{
-              left: `${(gestures[screen.id].x ?? 0) * 100}%`,
-              top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
-              width: "10%",
-              aspectRatio: 1,
-              position: 'absolute',
-              borderRadius: '50%',
-              opacity: '0.5',
-              backgroundColor: '#ff9100',
-              transform: 'translate(-50%, -50%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {gestureOptions
-              .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
-              .find((option) => option.value === gestures[screen.id].type)?.icon}
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className="cursor-pointer aspect-square w-[12%] absolute rounded-full opacity-70 bg-green-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                  style={{
+                    left: `${(gestures[screen.id].x ?? 0) * 100}%`,
+                    top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
+                  }}
+                >
+                  {gestureOptions
+                    .flatMap((option) => [option, ...(option.subGestures ?? [])])
+                    .find((option) => option.value === gestures[screen.id].type)?.icon}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>
+                  {gestures[screen.id].description}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       ))}
     </div>
