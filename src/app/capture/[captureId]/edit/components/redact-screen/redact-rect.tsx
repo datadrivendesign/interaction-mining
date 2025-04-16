@@ -33,13 +33,15 @@ export default function RedactRectangle({
     let node = ref.current;
     if (node) {
       if (type === "blur") {
-        node.cache();
+        // node.cache();
         node.filters([Konva.Filters.Blur]);
         node.blurRadius(10);
         node.fill("black");
-        node.opacity(0.75);
+        node.opacity(1.0);
       } else {
         node.filters([]);
+        node.fill("black");
+        node.opacity(1.0);
       }
     }
   }, [type]);

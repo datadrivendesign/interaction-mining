@@ -42,7 +42,7 @@ export interface CanvasRef {
 }
 
 const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
-  function CanvasComponent ({ screen, redactions }, ref) {
+  function CanvasComponent({ screen, redactions }, ref) {
     const [refMeasure, { width, height }] = useMeasure();
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -302,7 +302,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       if (!stage || !transformer) return;
 
       if (mode !== "select") {
-        console.log("I ran");
         selectRedaction(null);
         setOverlay((prev: any) =>
           prev.filter((o: any) => o.type !== `annotation`)
@@ -317,31 +316,34 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const selectedNode = stage.findOne(
           `#redaction-${selectedRedaction.id}`
         );
-        console.log(`stage:`)
-        console.log(stage)
-        console.log(`selectedNode: ${selectedNode}`)
 
-        transformer.nodes([selectedNode]);
-        transformer.getLayer().batchDraw();
+        if (selectedNode) {
+          transformer.nodes([selectedNode]);
+          transformer.getLayer().batchDraw();
 
-        setOverlay((prev: any) => [
-          ...prev.filter((o: any) => o.type !== `annotation`),
-          {
-            type: "annotation",
-            nodeId: `#redaction-${selectedRedaction.id}`,
-            render: () => (
-              <AnnotationCard
-                key={`annotation-${selectedRedaction.id}`}
-                annotation={selectedRedaction.annotation}
-                onChange={(value) => {
-                  updateRect(selectedRedaction.id, {
-                    annotation: value,
-                  });
-                }}
-              />
-            ),
-          },
-        ]);
+          setOverlay((prev: any) => [
+            ...prev.filter((o: any) => o.type !== `annotation`),
+            {
+              type: "annotation",
+              nodeId: `#redaction-${selectedRedaction.id}`,
+              render: () => (
+                <AnnotationCard
+                  key={`annotation-${selectedRedaction.id}`}
+                  annotation={selectedRedaction.annotation}
+                  onChange={(value) => {
+                    updateRect(selectedRedaction.id, {
+                      annotation: value,
+                    });
+                  }}
+                />
+              ),
+            },
+          ]);
+        } else {
+          console.warn(
+            `No node found for selected redaction with id: ${selectedRedaction.id}`
+          );
+        }
       } else {
         transformer.nodes([]);
         transformer.getLayer().batchDraw();

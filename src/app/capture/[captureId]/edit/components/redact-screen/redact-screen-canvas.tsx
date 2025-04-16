@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, createContext, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, createContext, useCallback, useMemo } from "react";
 import { HotKeys, KeyMap } from "react-hotkeys";
 import { useFormContext } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
@@ -41,10 +41,7 @@ export const RedactCanvasContext = createContext<{
 
 export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
-  const redactions = useMemo(
-    () => (watch("redactions") || {})[screen.id] || [], 
-    [screen.id, watch]
-  );
+  const redactions = (watch("redactions") || {})[screen.id] || [];
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 

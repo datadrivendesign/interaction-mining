@@ -178,14 +178,9 @@ export default function Page() {
       // }
     }
 
-    console.log("save data")
     if (stepIndex < TraceSteps.Review) {
-      console.log("branch 1")
-      console.log(TraceSteps)
-      console.log("stepIndex %d total %d", stepIndex, TraceSteps.Review)
       setStepIndex(stepIndex + 1);
     } else {
-      console.log("branch 2")
       // Submit the form
       const data = methods.getValues();
       handleSave(data, capture!);
