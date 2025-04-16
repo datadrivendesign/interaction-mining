@@ -102,10 +102,15 @@ function FocusView({ screen }: { screen: FrameData }) {
 
   // Update gesture in form data
   useEffect(() => {
-    setValue("gestures", {
-      ...gestures,
-      [screen.id]: gesture,
-    });
+    // only update if gesture has changed
+    const currentGesture = gestures[screen.id]
+    // dumb way to do object equality but pay the price to fix linter error
+    if (JSON.stringify(currentGesture) !== JSON.stringify(gesture)) {      
+      setValue("gestures", {
+        ...gestures,
+        [screen.id]: gesture,
+      });
+    }
   }, [gesture, gestures, screen.id, setValue]);
 
   return (

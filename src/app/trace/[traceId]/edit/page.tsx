@@ -72,7 +72,7 @@ export default function Page() {
       }, {} as { [key: string]: ScreenGesture }),
       redactions: {},
     });
-  }, [trace]);
+  }, [trace, methods]);
 
   // Function to perform step-level validation
   const validateStep = async (): Promise<boolean> => {
