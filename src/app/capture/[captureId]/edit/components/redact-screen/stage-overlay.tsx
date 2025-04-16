@@ -64,7 +64,6 @@ const Overlay: React.FC<OverlayContainerProps> = ({ stage, overlays }) => {
 
   useEffect(() => {
     if (!stage) return;
-    console.log("Overlays updated", overlays);
 
     // Perform an initial update
     updatePositions();
