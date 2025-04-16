@@ -32,6 +32,10 @@ export default function FrameTimeline({
     const newTime = parseFloat(e.target.value);
     onSetTime(newTime);
   };
+    // Calculate percentage for the progress fill
+    const progressPercent = videoDuration
+    ? (currentTime / videoDuration) * 100
+    : 0;
 
   return (
     <div className="relative w-full h-20 p-4 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
@@ -85,6 +89,9 @@ export default function FrameTimeline({
         onChange={handleScrubChange}
         onInput={handleScrubChange} // immediate feedback while dragging
         className="w-full h-2 bg-gray-300 rounded-lg appearance-none"
+        style={{
+          background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${progressPercent}%, #d1d5db ${progressPercent}%, #d1d5db 100%)`,
+        }}
       />
     </div>
   );
