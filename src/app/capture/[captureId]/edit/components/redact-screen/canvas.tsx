@@ -21,7 +21,7 @@ import useImage from "use-image";
 import { useGesture } from "@use-gesture/react";
 import { useMeasure } from "@uidotdev/usehooks";
 
-import { FrameData } from "../extract-frames";
+import { FrameData } from "../types";
 import AnnotationCard from "./annotation-card";
 import Overlay from "./stage-overlay";
 import { cn } from "@/lib/utils";
@@ -317,6 +317,9 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const selectedNode = stage.findOne(
           `#redaction-${selectedRedaction.id}`
         );
+        console.log(`stage:`)
+        console.log(stage)
+        console.log(`selectedNode: ${selectedNode}`)
 
         transformer.nodes([selectedNode]);
         transformer.getLayer().batchDraw();

@@ -80,12 +80,14 @@ export default function RepairScreenCanvas({
   gesture,
   setGesture,
   gestureOptions,
+  os
 }: {
   screen: FrameData;
   vh: any;
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
+  os: string;
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
@@ -131,7 +133,6 @@ export default function RepairScreenCanvas({
     }
   };
 
-  console.log("repair screen canvas")
   // Update marker position on drag
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -156,30 +157,15 @@ export default function RepairScreenCanvas({
   useEffect(() => {
     const { x: markerX, y: markerY } = markerPixelPosition;
     const { x: gestureX, y: gestureY } = gesture;
-    if ((markerX !== gestureX || markerY !== gestureY) && width && height) {
+    if (width && height && gestureX && gestureY && 
+      (markerX !== gestureX*width || markerY !== gestureY*height)
+    ) {
       setMarkerPixelPosition({
         x: gestureX ? gestureX * width : null,
         y: gestureY ? gestureY * height : null,
       });
     }
-  }, [gesture, width, height]);
-
-  useEffect(() => {
-    // find new box at gesture position
-    if (showBoxes && gesture.x !== null && gesture.y !== null) {
-      const gestureX = gesture.x
-      const gestureY = gesture.y
-      console.log(gestureX, gestureY)
-      const foundBox = boxes.findLast(box => (
-        gestureX >= box.x / rootBounds.width && 
-        gestureX <= (box.x + box.width) / rootBounds.width &&
-        gestureY >= box.y / rootBounds.height && 
-        gestureY <= (box.y + box.height) / rootBounds.height
-      )) ?? {}
-      console.log(foundBox)
-      setFocusedBox(foundBox)
-    }
-  }, [gesture.x, gesture.y, showBoxes])
+  }, [gesture, markerPixelPosition, width, height]);
 
   // Extract bounding boxes from hierarchy data
   const { boxes, rootBounds } = useMemo(() => {
@@ -221,6 +207,24 @@ export default function RepairScreenCanvas({
     traverse(vh);
     return { boxes, rootBounds };
   }, [vh]);
+
+  useEffect(() => {
+    // find new box at gesture position
+    if (showBoxes && 
+      gesture.x !== null && gesture.y !== null && 
+      rootBounds.height != null && rootBounds.width != null
+    ) {
+      const gestureX = gesture.x
+      const gestureY = gesture.y
+      const foundBox = boxes.findLast(box => (
+        gestureX >= box.x / rootBounds.width && 
+        gestureX <= (box.x + box.width) / rootBounds.width &&
+        gestureY >= box.y / rootBounds.height && 
+        gestureY <= (box.y + box.height) / rootBounds.height
+      )) ?? {}
+      setFocusedBox(foundBox)
+    }
+  }, [gesture.x, gesture.y, rootBounds, boxes, showBoxes])
 
   return (
     <>
@@ -287,23 +291,27 @@ export default function RepairScreenCanvas({
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
                 />
-                <BoundingBoxOverlay 
-                  showRedaction={showBoxes}
-                  mergedRef={
-                    mergedRef as MutableRefObject<HTMLImageElement | null>
-                  }
-                  height={height}
-                  width={width}
-                  boxes={boxes} 
-                  rootBounds={rootBounds}
-                />
+                {os === 'android' ? 
+                  <BoundingBoxOverlay 
+                    showRedaction={showBoxes}
+                    mergedRef={
+                      mergedRef as MutableRefObject<HTMLImageElement | null>
+                    }
+                    height={height}
+                    width={width}
+                    boxes={boxes} 
+                    rootBounds={rootBounds}
+                  /> : 
+                  <></>}
               </DroppableArea>
             </div>
-            <FocusedElementTab 
-              showRedaction={showBoxes}
-              setShowRedaction={setShowBoxes}
-              focusedBox={focusedBox} 
-            />
+            {os === 'android' ? 
+              <FocusedElementTab 
+                showRedaction={showBoxes}
+                setShowRedaction={setShowBoxes}
+                focusedBox={focusedBox} 
+              /> : 
+              <></>}
           </div>
         </DndContext>
       </GestureContext.Provider>
@@ -319,76 +327,6 @@ function DroppableArea({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-const gestureOptions: GestureOption[] = [
-  {
-    value: "Tap",
-    label: "Tap",
-    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Double tap",
-    label: "Double tap",
-    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Touch and hold",
-    label: "Touch and hold",
-    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Swipe",
-    label: "Swipe",
-    subGestures: [{
-      value: "Swipe up",
-      label: "Swipe up",
-      icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe down",
-      label: "Swipe down",
-      icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe left",
-      label: "Swipe left",
-      icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Swipe right",
-      label: "Swipe right",
-      icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  },
-  {
-    value: "Drag",
-    label: "Drag",
-    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
-  },
-  {
-    value: "Zoom",
-    label: "Zoom",
-    subGestures: [{
-      value: "Zoom in",
-      label: "Zoom in",
-      icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Zoom out",
-      label: "Zoom out",
-      icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  },
-  {
-    value: "Rotate",
-    label: "Rotate",
-    subGestures: [{
-      value: "Rotate cw",
-      label: "Rotate cw",
-      icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-    }, {
-      value: "Rotate ccw",
-      label: "Rotate ccw",
-      icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-    }]
-  }
-];
 
 function DraggableMarker({
   position,

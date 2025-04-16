@@ -15,7 +15,7 @@ import RedactScreenCanvas from "./redact-screen-canvas";
 import { Redaction } from "./types";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../../page";
-import { FrameData } from "../extract-frames";
+import { FrameData } from "../types";
 
 export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();

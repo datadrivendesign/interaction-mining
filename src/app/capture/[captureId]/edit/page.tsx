@@ -168,19 +168,24 @@ export default function Page() {
       }
     } else if (stepIndex === 2) {
       // Validate the "description" field
-      const validation = TraceFormSchema.safeParse(methods.getValues());
-      if (!validation.success) {
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
-        return;
-      }
+      // const validation = TraceFormSchema.safeParse(methods.getValues());
+      // if (!validation.success) {
+      //   const errors = validation.error.issues || "Invalid input";
+      //   errors.forEach((error) => {
+      //     toast.error(error.message);
+      //   });
+      //   return;
+      // }
     }
 
-    if (stepIndex < Object.keys(TraceSteps).length - 1) {
+    console.log("save data")
+    if (stepIndex < TraceSteps.Review) {
+      console.log("branch 1")
+      console.log(TraceSteps)
+      console.log("stepIndex %d total %d", stepIndex, TraceSteps.Review)
       setStepIndex(stepIndex + 1);
     } else {
+      console.log("branch 2")
       // Submit the form
       const data = methods.getValues();
       handleSave(data, capture!);
@@ -212,7 +217,7 @@ export default function Page() {
       case 0:
         return <ExtractFrames capture={capture} />;
       case 1:
-        return <RepairScreen />;
+        return <RepairScreen capture={capture} />;
       case 2:
         return <RedactScreen />;
       case 3:

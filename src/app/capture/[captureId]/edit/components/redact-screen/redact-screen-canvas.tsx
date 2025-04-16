@@ -5,7 +5,7 @@ import { HotKeys, KeyMap } from "react-hotkeys";
 import { useFormContext } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
 import { TraceFormData } from "../../page";
-import { FrameData } from "../extract-frames";
+import { FrameData } from "../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
 
@@ -82,7 +82,6 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
       redactions,
       [screen.id]: newRedactions,
     });
-
     if (option?.select) {
       setSelected(newRedaction);
     }

@@ -19,11 +19,12 @@ import { TraceFormData } from "../../page";
 import { FrameData } from "../types";
 import { GestureOptionsContext } from "../../util";
 
-export default function RepairScreen() {
+export default function RepairScreen({ capture }: { capture: any } ) {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens") as FrameData[];
   const vhs = watch("vhs") as { [key: string]: any };
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
+  const os = capture?.task ? capture.task.os : "none"
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
@@ -64,6 +65,7 @@ export default function RepairScreen() {
                 key={focusViewIndex}
                 vh = {vhs[screens[focusViewIndex].id]}
                 screen={screens[focusViewIndex]}
+                os={os}
               />
             ) : (
               <div className="flex justify-center items-center w-full h-full">
@@ -88,12 +90,19 @@ export default function RepairScreen() {
   );
 }
 
-function FocusView({ screen , vh }: { screen: FrameData, vh: any }) {
+function FocusView({
+  screen, 
+  vh, 
+  os 
+}: { 
+  screen: FrameData; 
+  vh: any; 
+  os: string; 
+}) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
   const { gestureOptions } = useContext(GestureOptionsContext);
-
 
   // Find applicable gesture for screen or set to default template
   const [gesture, setGesture] = useState<ScreenGesture>(
@@ -129,6 +138,7 @@ function FocusView({ screen , vh }: { screen: FrameData, vh: any }) {
           gesture={gesture}
           setGesture={setGesture}
           gestureOptions={gestureOptions}
+          os={os}
         />
       </div>
     </>

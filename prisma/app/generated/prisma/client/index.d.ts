@@ -1579,6 +1579,7 @@ export namespace Prisma {
     scrollDeltaY?: boolean
     x?: boolean
     y?: boolean
+    description?: boolean
   }, ExtArgs["result"]["screenGesture"]>
 
 
@@ -1589,9 +1590,10 @@ export namespace Prisma {
     scrollDeltaY?: boolean
     x?: boolean
     y?: boolean
+    description?: boolean
   }
 
-  export type ScreenGestureOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"type" | "scrollDeltaX" | "scrollDeltaY" | "x" | "y", ExtArgs["result"]["screenGesture"]>
+  export type ScreenGestureOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"type" | "scrollDeltaX" | "scrollDeltaY" | "x" | "y" | "description", ExtArgs["result"]["screenGesture"]>
 
   export type $ScreenGesturePayload = {
     name: "ScreenGesture"
@@ -1602,6 +1604,7 @@ export namespace Prisma {
       scrollDeltaY: number | null
       x: number | null
       y: number | null
+      description: string | null
     }
     composites: {}
   }
@@ -1621,6 +1624,7 @@ export namespace Prisma {
     readonly scrollDeltaY: FieldRef<"ScreenGesture", 'Float'>
     readonly x: FieldRef<"ScreenGesture", 'Float'>
     readonly y: FieldRef<"ScreenGesture", 'Float'>
+    readonly description: FieldRef<"ScreenGesture", 'String'>
   }
     
 
@@ -1688,7 +1692,7 @@ export namespace Prisma {
       description: string
       icon: string
       rating: number
-      reviews: number
+      reviews: number | null
       genre: string[]
       downloads: string
       url: string
@@ -9859,7 +9863,7 @@ export namespace Prisma {
     description: string
     icon: string
     rating: number
-    reviews: number
+    reviews?: number | null
     genre?: string[]
     downloads: string
     url: string
@@ -10033,6 +10037,7 @@ export namespace Prisma {
     scrollDeltaY?: number | null
     x?: number | null
     y?: number | null
+    description?: string | null
   }
 
   export type TraceScalarRelationFilter = {
@@ -10046,6 +10051,7 @@ export namespace Prisma {
     scrollDeltaY?: SortOrder
     x?: SortOrder
     y?: SortOrder
+    description?: SortOrder
   }
 
   export type ScreenCountOrderByAggregateInput = {
@@ -10324,7 +10330,7 @@ export namespace Prisma {
     description: string
     icon: string
     rating: number
-    reviews: number
+    reviews?: number | null
     genre?: AppMetadataCreategenreInput | string[]
     downloads: string
     url: string
@@ -10414,6 +10420,7 @@ export namespace Prisma {
     scrollDeltaY?: number | null
     x?: number | null
     y?: number | null
+    description?: string | null
   }
 
   export type TraceCreateNestedOneWithoutScreensInput = {
@@ -10682,7 +10689,7 @@ export namespace Prisma {
     description?: StringFilter<"AppMetadata"> | string
     icon?: StringFilter<"AppMetadata"> | string
     rating?: FloatFilter<"AppMetadata"> | number
-    reviews?: FloatFilter<"AppMetadata"> | number
+    reviews?: FloatNullableFilter<"AppMetadata"> | number | null
     genre?: StringNullableListFilter<"AppMetadata">
     downloads?: StringFilter<"AppMetadata"> | string
     url?: StringFilter<"AppMetadata"> | string
@@ -10792,6 +10799,7 @@ export namespace Prisma {
     scrollDeltaY?: FloatNullableFilter<"ScreenGesture"> | number | null
     x?: FloatNullableFilter<"ScreenGesture"> | number | null
     y?: FloatNullableFilter<"ScreenGesture"> | number | null
+    description?: StringNullableFilter<"ScreenGesture"> | string | null
   }
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -10899,7 +10907,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     icon?: StringFieldUpdateOperationsInput | string
     rating?: FloatFieldUpdateOperationsInput | number
-    reviews?: FloatFieldUpdateOperationsInput | number
+    reviews?: NullableFloatFieldUpdateOperationsInput | number | null
     genre?: AppMetadataUpdategenreInput | string[]
     downloads?: StringFieldUpdateOperationsInput | string
     url?: StringFieldUpdateOperationsInput | string
@@ -10968,6 +10976,7 @@ export namespace Prisma {
     scrollDeltaY?: NullableFloatFieldUpdateOperationsInput | number | null
     x?: NullableFloatFieldUpdateOperationsInput | number | null
     y?: NullableFloatFieldUpdateOperationsInput | number | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type TraceUpsertWithoutScreensInput = {
@@ -11353,6 +11362,15 @@ export namespace Prisma {
     divide?: number
   }
 
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+    unset?: boolean
+  }
+
   export type AppMetadataUpdategenreInput = {
     set?: string[]
     push?: string | string[]
@@ -11377,15 +11395,6 @@ export namespace Prisma {
     taskId?: StringFieldUpdateOperationsInput | string
     otp?: StringFieldUpdateOperationsInput | string
     src?: StringFieldUpdateOperationsInput | string
-  }
-
-  export type NullableFloatFieldUpdateOperationsInput = {
-    set?: number | null
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-    unset?: boolean
   }
 
   export type ScreenCreateManyTraceInput = {
