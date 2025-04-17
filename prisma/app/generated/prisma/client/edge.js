@@ -174,7 +174,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/erikji/Work/odim/odim-frontend-next/prisma/app/generated/prisma/client",
+      "value": "/Users/carlguo/Research/odim/odim-frontend-next/prisma/app/generated/prisma/client",
       "fromEnvVar": null
     },
     "config": {
@@ -200,7 +200,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/erikji/Work/odim/odim-frontend-next/prisma/schema.prisma",
+    "sourceFilePath": "/Users/carlguo/Research/odim/odim-frontend-next/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

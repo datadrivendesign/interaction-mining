@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { redirect, useParams } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, ChevronRight, Circle, CircleDot, CircleHelp, CircleStop, Expand, Grab, IterationCcw, IterationCw, Loader2, Shrink } from "lucide-react";
@@ -31,6 +31,7 @@ import RedactScreen, { type Redaction } from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { GestureOptionsContext, handleSave } from "./util";
+import { useRouter } from "next/navigation";
 
 export type TraceFormData = {
   screens: FrameData[];
@@ -55,6 +56,7 @@ export default function Page() {
   });
 
   const [navRef, { height }] = useMeasure();
+  const router = useRouter();
 
   const methods = useForm<TraceFormData>({
     defaultValues: {
@@ -145,7 +147,7 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    if (stepIndex === 0) {
+    if (stepIndex === TraceSteps.Extract) {
       // Validate the "screens")
       const validation = ScreenSchema.safeParse(methods.getValues().screens);
       if (!validation.success) {
@@ -155,7 +157,7 @@ export default function Page() {
         });
         return;
       }
-    } else if (stepIndex === 1) {
+    } else if (stepIndex === TraceSteps.Repair) {
       // Validate the "gestures"
       const validation = ScreenGestureSchema.safeParse(methods.getValues());
       if (!validation.success) {
@@ -166,24 +168,27 @@ export default function Page() {
         });
         return;
       }
-    } else if (stepIndex === 2) {
-      // Validate the "description" field
-      // const validation = TraceFormSchema.safeParse(methods.getValues());
-      // if (!validation.success) {
-      //   const errors = validation.error.issues || "Invalid input";
-      //   errors.forEach((error) => {
-      //     toast.error(error.message);
-      //   });
-      //   return;
-      // }
     }
 
     if (stepIndex < TraceSteps.Review) {
       setStepIndex(stepIndex + 1);
     } else {
+      // Validate the "description" field
+      const validation = TraceFormSchema.safeParse(methods.getValues());
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        return;
+      }
       // Submit the form
       const data = methods.getValues();
-      handleSave(data, capture!);
+      handleSave(data, capture!).then(() => {
+        router.push(`/app/${capture!.appId_!}`)
+      }).catch((reason: string) => {
+        console.error(reason)
+      });
     }
   };
   const handlePrevious = () => {

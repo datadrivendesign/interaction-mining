@@ -37,7 +37,9 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     toast.error(
       "Failed to upload screen images: Failed to generate presigned URLs."
     );
-    return;
+    return Promise.reject(
+      "Failed to upload screen images: Failed to generate presigned URLs."
+    );
   }
 
   const screenUploadRes = await Promise.all(
@@ -69,7 +71,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
 
   if (!screenUploadRes || screenUploadRes.some((res) => !res!.ok)) {
     toast.error("Failed to upload screen images.");
-    return;
+    return Promise.reject("Failed to upload screen images.");
   }
 
   // check if there are view hierarchies, if so then upload them
@@ -88,7 +90,9 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       toast.error(
         "Failed to upload screen images: Failed to generate presigned URLs."
       );
-      return;
+      return Promise.reject(
+        "Failed to upload screen images: Failed to generate presigned URLs."
+      );
     }
 
     const vhUploadRes = await Promise.all(
@@ -120,7 +124,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
 
     if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
       toast.error("Failed to upload screen view hierarchies.");
-      return;
+      return Promise.reject("Failed to upload screen view hierarchies.");
     }
   }
 
@@ -144,7 +148,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
 
   if (!trace.ok) {
     toast.error("Failed to create trace.");
-    return;
+    return Promise.reject("Failed to create trace.");
   }
 
   toast.success("Trace created successfully.");
