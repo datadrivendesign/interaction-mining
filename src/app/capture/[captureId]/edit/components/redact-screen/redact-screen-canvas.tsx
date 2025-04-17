@@ -41,21 +41,22 @@ export const RedactCanvasContext = createContext<{
 
 export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
-  const redactions = (watch("redactions") || {})[screen.id] || [];
+  const redactions = watch("redactions") || {};
+  const redaction: Redaction[] = redactions[screen.id] || [];
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
   const canvasRef = useRef<CanvasRef>(null);
 
   const deleteRedaction = (id: string) => {
-    const newRedactions = redactions.filter((r) => r.id !== id);
+    const newRedactions = redaction.filter((r) => r.id !== id);
 
     if (selected?.id === id) {
       setSelected(null);
     }
 
     setValue("redactions", {
-      redactions,
+      ...redactions,
       [screen.id]: newRedactions,
     });
   };
@@ -65,7 +66,7 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
       setSelected(null);
       return;
     }
-    setSelected(redactions.find((r) => r.id === id) || null);
+    setSelected(redaction.find((r) => r.id === id) || null);
   };
 
   const createRedaction = (
@@ -74,9 +75,9 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
       select?: boolean;
     }
   ) => {
-    const newRedactions = [...redactions, newRedaction];
+    const newRedactions = [...redaction, newRedaction];
     setValue("redactions", {
-      redactions,
+      ...redactions,
       [screen.id]: newRedactions,
     });
     if (option?.select) {
@@ -86,14 +87,14 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
 
   const updateRedaction = useCallback(
     (id: string, updatedRedaction: Partial<Redaction>) => {
-      const newRedactions = redactions.map((redaction) => {
+      const newRedactions = redaction.map((redaction) => {
         return redaction.id === id
           ? { ...redaction, ...updatedRedaction }
           : redaction;
       });
 
       setValue("redactions", {
-        redactions,
+        ...redactions,
         [screen.id]: newRedactions,
       });
     },
@@ -119,7 +120,7 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
       value={{
         mode,
         setMode,
-        redactions,
+        redactions: redaction,
         selected,
         deleteRedaction,
         selectRedaction,
@@ -129,11 +130,11 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
     >
       <div className="relative flex items-center w-full h-full bg-neutral-50 dark:bg-neutral-950">
         <Toolbar mode={mode} setMode={setMode} />
-        <Layers redactions={redactions} deleteRedaction={deleteRedaction} />
+        <Layers redactions={redaction} deleteRedaction={deleteRedaction} />
         <CanvasComponent
           ref={canvasRef}
           screen={screen}
-          redactions={redactions}
+          redactions={redaction}
           mode={mode}
         />
       </div>
