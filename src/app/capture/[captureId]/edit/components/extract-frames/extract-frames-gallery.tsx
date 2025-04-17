@@ -82,19 +82,30 @@ export function FrameGalleryAndroid({
 
 export function FrameGalleryIOS({
   frames,
+  gestures,
   setTime,
 }: {
   frames: FrameData[];
+  gestures: { [key: string]: ScreenGesture };
   setTime: (_: number) => void;
 }) {
-  const { watch, setValue } = useFormContext<TraceFormData>();
+  const { setValue } = useFormContext<TraceFormData>();
 
   const setFrameData = (value: FrameData[]) => setValue("screens", value);
+  const setGestureData = (value: { [key: string]: ScreenGesture }) => {
+    setValue('gestures', value)
+  };
 
   const handleDeleteFrame = (index: number) => {
+    // remove frame from view
     const newFrameData = [...frames];
     newFrameData.splice(index, 1);
     setFrameData(newFrameData);
+    // remove frame from gestures
+    const updatedGestures = Object.fromEntries(
+      Object.entries(gestures).filter(([key]) => key !== frames[index].id)
+    );
+    setGestureData(updatedGestures)
   };
 
   return (

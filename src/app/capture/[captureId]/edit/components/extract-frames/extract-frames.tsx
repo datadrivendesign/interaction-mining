@@ -174,6 +174,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
 const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   const { setValue, watch } = useFormContext<TraceFormData>();
   const frames = watch("screens") as FrameData[];
+  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -271,7 +272,11 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={67}>
           <div className="flex w-full h-full overflow-auto">
-            <FrameGalleryIOS frames={frames} setTime={handleSetTime} />
+            <FrameGalleryIOS 
+              frames={frames} 
+              gestures={gestures} 
+              setTime={handleSetTime} 
+            />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
