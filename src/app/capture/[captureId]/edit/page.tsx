@@ -31,6 +31,7 @@ import RedactScreen, { type Redaction } from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { GestureOptionsContext, handleSave } from "./util";
+import { useRouter } from "next/navigation";
 
 export type TraceFormData = {
   screens: FrameData[];
@@ -55,6 +56,7 @@ export default function Page() {
   });
 
   const [navRef, { height }] = useMeasure();
+  const router = useRouter();
 
   const methods = useForm<TraceFormData>({
     defaultValues: {
@@ -183,7 +185,7 @@ export default function Page() {
       // Submit the form
       const data = methods.getValues();
       handleSave(data, capture!).then(() => {
-        redirect(`/app/${capture!.appId_!}`)
+        router.push(`/app/${capture!.appId_!}`)
       }).catch((reason: string) => {
         console.error(reason)
       });
