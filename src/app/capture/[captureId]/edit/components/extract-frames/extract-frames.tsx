@@ -99,7 +99,6 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
         return screenGesture
       }
   
-      console.log("Capture: ", capture);
       const frameData: FrameData[] = [];
       const frameVHs: { [key: string]: any } = {};
       const frameGestures: { [key: string]: ScreenGesture } = {};
