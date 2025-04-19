@@ -11,20 +11,22 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import {  ScreenGesture } from "@prisma/client";
+import { ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
-import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../../page";
+import { useFormContext, useWatch } from "react-hook-form";
+import { TraceFormData } from "../types";
 import { FrameData } from "../types";
 import { GestureOptionsContext } from "../../util";
 
-export default function RepairScreen({ capture }: { capture: any } ) {
-  const { watch } = useFormContext<TraceFormData>();
-  const screens = watch("screens") as FrameData[];
-  const vhs = watch("vhs") as { [key: string]: any };
-  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
-  const os = capture?.task ? capture.task.os : "none"
+export default function RepairScreen({ capture }: { capture: any }) {
+  const [watchScreens, watchVHs, watchGestures] = useWatch({
+    name: ["screens", "vhs", "gestures"],
+  });
+  const screens = watchScreens as FrameData[];
+  const vhs = watchVHs as { [key: string]: any };
+  const gestures = watchGestures as { [key: string]: ScreenGesture };
+  const os = capture?.task ? capture.task.os : "none";
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
@@ -63,7 +65,7 @@ export default function RepairScreen({ capture }: { capture: any } ) {
             {focusViewIndex > -1 ? (
               <FocusView
                 key={focusViewIndex}
-                vh = {vhs[screens[focusViewIndex].id]}
+                vh={vhs[screens[focusViewIndex].id]}
                 screen={screens[focusViewIndex]}
                 os={os}
               />
@@ -91,13 +93,13 @@ export default function RepairScreen({ capture }: { capture: any } ) {
 }
 
 function FocusView({
-  screen, 
-  vh, 
-  os 
-}: { 
-  screen: FrameData; 
-  vh: any; 
-  os: string; 
+  screen,
+  vh,
+  os,
+}: {
+  screen: FrameData;
+  vh: any;
+  os: string;
 }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
@@ -118,9 +120,9 @@ function FocusView({
   // Update gesture in form data
   useEffect(() => {
     // only update if gesture has changed
-    const currentGesture = gestures[screen.id]
+    const currentGesture = gestures[screen.id];
     // dumb way to do object equality but pay the price to fix linter error
-    if (JSON.stringify(currentGesture) !== JSON.stringify(gesture)) {      
+    if (JSON.stringify(currentGesture) !== JSON.stringify(gesture)) {
       setValue("gestures", {
         ...gestures,
         [screen.id]: gesture,
@@ -156,7 +158,6 @@ function Filmstrip({
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
 }) {
-  
   return (
     <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
       {screens?.map((screen: FrameData, index: number) => (
@@ -164,15 +165,17 @@ function Filmstrip({
           key={screen.id}
           index={index}
           isSelected={focusViewIndex === index}
-          hasError={!gestures[screen.id] || 
-            gestures[screen.id].type === null || 
-            gestures[screen.id].description === undefined || 
-            gestures[screen.id].description === ""} 
+          hasError={
+            !gestures[screen.id] ||
+            gestures[screen.id].type === null ||
+            gestures[screen.id].description === undefined ||
+            gestures[screen.id].description === ""
+          }
           onClick={() => setFocusViewIndex(index)}
         >
           <Image
             key={screen.id}
-            src={screen.url}
+            src={screen.src}
             alt="gallery"
             draggable={false}
             className="h-full w-auto object-contain"
@@ -214,8 +217,8 @@ function FilmstripItem({
                 isSelected
                   ? "ring-2 ring-inset ring-yellow-500"
                   : hasError
-                    ? "ring-2 ring-inset ring-red-500"
-                    : ""
+                  ? "ring-2 ring-inset ring-red-500"
+                  : ""
               )}
             >
               {hasError && (

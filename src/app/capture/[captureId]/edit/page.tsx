@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { redirect, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, ChevronRight, Circle, CircleDot, CircleHelp, CircleStop, Expand, Grab, IterationCcw, IterationCw, Loader2, Shrink } from "lucide-react";
@@ -15,6 +15,7 @@ import {
   GestureOption,
   ScreenGestureSchema,
   ScreenSchema,
+  TraceFormData,
   TraceFormSchema,
 } from "./components/types";
 
@@ -32,14 +33,6 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { GestureOptionsContext, handleSave } from "./util";
 import { useRouter } from "next/navigation";
-
-export type TraceFormData = {
-  screens: FrameData[];
-  vhs?: { [key: string]: any };
-  gestures: { [key: string]: ScreenGesture };
-  redactions: { [key: string]: Redaction[] };
-  description: string;
-};
 
 enum TraceSteps {
   Extract = 0,

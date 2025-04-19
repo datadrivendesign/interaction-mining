@@ -11,7 +11,12 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import { Check, ChevronRight, ChevronsUpDown, CircleDashed } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  ChevronsUpDown,
+  CircleDashed,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
 import {
@@ -59,20 +64,20 @@ export const GestureContext = createContext<{
     y: null,
     scrollDeltaX: null,
     scrollDeltaY: null,
-    description: ""
+    description: "",
   },
   setGesture: () => {},
   gestureOptions: [],
 });
 
 type FocusedBox = {
-  id?: string, 
-  class?: string, 
-  x?: number, 
-  y?: number, 
-  width?: number, 
-  height?: number
-}
+  id?: string;
+  class?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
 
 export default function RepairScreenCanvas({
   screen,
@@ -80,7 +85,7 @@ export default function RepairScreenCanvas({
   gesture,
   setGesture,
   gestureOptions,
-  os
+  os,
 }: {
   screen: FrameData;
   vh: any;
@@ -91,17 +96,16 @@ export default function RepairScreenCanvas({
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
-  const mergedRef = useMemo(
-    () => { return mergeRefs(ref, imageRef)},
-    [ref, imageRef]
-  );
+  const mergedRef = useMemo(() => {
+    return mergeRefs(ref, imageRef);
+  }, [ref, imageRef]);
 
-  const [showBoxes, setShowBoxes] = useState<boolean>(false)
-  const [focusedBox, setFocusedBox] = useState<FocusedBox>({})
+  const [showBoxes, setShowBoxes] = useState<boolean>(false);
+  const [focusedBox, setFocusedBox] = useState<FocusedBox>({});
   // memoize gesture and setGesture to avoid unnecessary re-renders
   const memoizedGestureState = useMemo(() => {
-    return { gesture, setGesture }
-  }, [gesture, setGesture]);  
+    return { gesture, setGesture };
+  }, [gesture, setGesture]);
   const [tooltip, setTooltip] = useState<{
     x: number | null;
     y: number | null;
@@ -127,8 +131,18 @@ export default function RepairScreenCanvas({
         ...prev,
         x: relativeX,
         y: relativeY,
-        scrollDeltaX: prev.type === "Swipe left" ? -0.02 : (prev.type === "Swipe right" ? 0.02 : 0),
-        scrollDeltaY: prev.type === "Swipe down" ? -0.02 : (prev.type === "Swipe up" ? 0.02 : 0)
+        scrollDeltaX:
+          prev.type === "Swipe left"
+            ? -0.02
+            : prev.type === "Swipe right"
+              ? 0.02
+              : 0,
+        scrollDeltaY:
+          prev.type === "Swipe down"
+            ? -0.02
+            : prev.type === "Swipe up"
+              ? 0.02
+              : 0,
       }));
     }
   };
@@ -146,8 +160,18 @@ export default function RepairScreenCanvas({
           ...prev,
           x: prev.x! + deltaX,
           y: prev.y! + deltaY,
-          scrollDeltaX: prev.type === "Swipe left" ? -0.02 : (prev.type === "Swipe right" ? 0.02 : 0),
-          scrollDeltaY: prev.type === "Swipe down" ? -0.02 : (prev.type === "Swipe up" ? 0.02 : 0)
+          scrollDeltaX:
+            prev.type === "Swipe left"
+              ? -0.02
+              : prev.type === "Swipe right"
+                ? 0.02
+                : 0,
+          scrollDeltaY:
+            prev.type === "Swipe down"
+              ? -0.02
+              : prev.type === "Swipe up"
+                ? 0.02
+                : 0,
         }));
       }
     },
@@ -157,8 +181,12 @@ export default function RepairScreenCanvas({
   useEffect(() => {
     const { x: markerX, y: markerY } = markerPixelPosition;
     const { x: gestureX, y: gestureY } = gesture;
-    if (width && height && gestureX && gestureY && 
-      (markerX !== gestureX*width || markerY !== gestureY*height)
+    if (
+      width &&
+      height &&
+      gestureX &&
+      gestureY &&
+      (markerX !== gestureX * width || markerY !== gestureY * height)
     ) {
       setMarkerPixelPosition({
         x: gestureX ? gestureX * width : null,
@@ -189,7 +217,7 @@ export default function RepairScreenCanvas({
         }
         // do not collect boxes with no width or height
         if (width <= 0 || height <= 0) {
-          return
+          return;
         }
         boxes.push({
           x,
@@ -210,21 +238,26 @@ export default function RepairScreenCanvas({
 
   useEffect(() => {
     // find new box at gesture position
-    if (showBoxes && 
-      gesture.x !== null && gesture.y !== null && 
-      rootBounds.height != null && rootBounds.width != null
+    if (
+      showBoxes &&
+      gesture.x !== null &&
+      gesture.y !== null &&
+      rootBounds.height != null &&
+      rootBounds.width != null
     ) {
-      const gestureX = gesture.x
-      const gestureY = gesture.y
-      const foundBox = boxes.findLast(box => (
-        gestureX >= box.x / rootBounds.width && 
-        gestureX <= (box.x + box.width) / rootBounds.width &&
-        gestureY >= box.y / rootBounds.height && 
-        gestureY <= (box.y + box.height) / rootBounds.height
-      )) ?? {}
-      setFocusedBox(foundBox)
+      const gestureX = gesture.x;
+      const gestureY = gesture.y;
+      const foundBox =
+        boxes.findLast(
+          (box) =>
+            gestureX >= box.x / rootBounds.width &&
+            gestureX <= (box.x + box.width) / rootBounds.width &&
+            gestureY >= box.y / rootBounds.height &&
+            gestureY <= (box.y + box.height) / rootBounds.height
+        ) ?? {};
+      setFocusedBox(foundBox);
     }
-  }, [gesture.x, gesture.y, rootBounds, boxes, showBoxes])
+  }, [gesture.x, gesture.y, rootBounds, boxes, showBoxes]);
 
   return (
     <>
@@ -276,9 +309,7 @@ export default function RepairScreenCanvas({
                   <DraggableMarker position={markerPixelPosition} />
                 ) : null}
                 <Image
-                  ref={
-                    mergedRef as MutableRefObject<HTMLImageElement | null>
-                  }
+                  ref={mergedRef as MutableRefObject<HTMLImageElement | null>}
                   src={screen.url}
                   alt="gallery"
                   draggable={false}
@@ -291,27 +322,31 @@ export default function RepairScreenCanvas({
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
                 />
-                {os === 'android' ? 
-                  <BoundingBoxOverlay 
+                {os === "android" ? (
+                  <BoundingBoxOverlay
                     showRedaction={showBoxes}
                     mergedRef={
                       mergedRef as MutableRefObject<HTMLImageElement | null>
                     }
                     height={height}
                     width={width}
-                    boxes={boxes} 
+                    boxes={boxes}
                     rootBounds={rootBounds}
-                  /> : 
-                  <></>}
+                  />
+                ) : (
+                  <></>
+                )}
               </DroppableArea>
             </div>
-            {os === 'android' ? 
-              <FocusedElementTab 
+            {os === "android" ? (
+              <FocusedElementTab
                 showRedaction={showBoxes}
                 setShowRedaction={setShowBoxes}
-                focusedBox={focusedBox} 
-              /> : 
-              <></>}
+                focusedBox={focusedBox}
+              />
+            ) : (
+              <></>
+            )}
           </div>
         </DndContext>
       </GestureContext.Provider>
@@ -338,7 +373,7 @@ function DraggableMarker({
     useDraggable({
       id: "gestureMarker",
     });
-  
+
   const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
 
   return (
@@ -361,11 +396,13 @@ function DraggableMarker({
         {...listeners}
         {...attributes}
       >
-        {gesture.type
-            ? gestureOptions
-              .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
-              .find((option) => option.value === gesture.type )?.icon
-            :  <CircleDashed className="size-4 text-yellow-800 hover:text-black" />}
+        {gesture.type ? (
+          gestureOptions
+            .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
+            .find((option) => option.value === gesture.type)?.icon
+        ) : (
+          <CircleDashed className="size-4 text-yellow-800 hover:text-black" />
+        )}
       </motion.div>
       <div
         className="absolute z-50 ml-2"
@@ -378,16 +415,6 @@ function DraggableMarker({
         }}
       >
         <GestureSelection />
-        {gesture.type !== null ?        
-          <Textarea 
-            className="ml-1 border-black text-black placeholder-gray-500 text-sm w-full h-full"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.75)' }}
-            placeholder="Specify gesture, why gesture, and interacted element."
-            value={gesture.description ? gesture.description : ""}
-            onChange={(e) => setGesture((prev) => ({ ...prev, description: e.target.value }))}
-          /> : 
-          <></>
-        }
       </div>
     </>
   );
@@ -396,32 +423,32 @@ function DraggableMarker({
 function FocusedElementTab({
   showRedaction,
   setShowRedaction,
-  focusedBox
+  focusedBox,
 }: {
-  showRedaction: boolean,
-  setShowRedaction: React.Dispatch<React.SetStateAction<boolean>>,
-  focusedBox: FocusedBox
+  showRedaction: boolean;
+  setShowRedaction: React.Dispatch<React.SetStateAction<boolean>>;
+  focusedBox: FocusedBox;
 }) {
-  return(
+  return (
     <Card className="absolute right-0 top-0 mr-5 mt-5 w-auto h-auto">
       <CardHeader>
         <CardTitle>Gesture Interaction Element</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-1 mb-5">
-          <Switch 
+          <Switch
             checked={showRedaction}
-            onCheckedChange={(checked) => {setShowRedaction(checked)}}
+            onCheckedChange={(checked) => {
+              setShowRedaction(checked);
+            }}
           />
           <span className="pl-3">Show Bounding Boxes</span>
         </div>
         {showRedaction ? (
           <>
             <div className="space-y-1 flex flex-row mb-5">
-              <div 
-                className="w-15 flex flex-col justify-center items-center"
-              >
-                <Label 
+              <div className="w-15 flex flex-col justify-center items-center">
+                <Label
                   htmlFor="x0"
                   className="text-sm font-bold leading-none mb-1"
                 >
@@ -431,12 +458,11 @@ function FocusedElementTab({
                   id="x0"
                   className="text-sm font-normal text-muted-foreground"
                   readOnly={true}
-                  value={focusedBox.x ?? -1} />
+                  value={focusedBox.x ?? -1}
+                />
               </div>
-              <div 
-                className="w-15 flex flex-col justify-center items-center mr-3"
-              >
-                <Label 
+              <div className="w-15 flex flex-col justify-center items-center mr-3">
+                <Label
                   htmlFor="y0"
                   className="text-sm font-bold leading-none mb-1"
                 >
@@ -446,12 +472,11 @@ function FocusedElementTab({
                   id="y0"
                   className="text-sm font-normal text-muted-foreground"
                   readOnly={true}
-                  value={focusedBox.y ?? -1} />
+                  value={focusedBox.y ?? -1}
+                />
               </div>
-              <div 
-                className="w-15 flex flex-col justify-center items-center"
-              >
-                <Label 
+              <div className="w-15 flex flex-col justify-center items-center">
+                <Label
                   htmlFor="x1"
                   className="text-sm font-bold leading-none mb-1"
                 >
@@ -461,12 +486,11 @@ function FocusedElementTab({
                   id="x1"
                   className="text-sm font-normal text-muted-foreground"
                   readOnly={true}
-                  value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)} />
+                  value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)}
+                />
               </div>
-              <div 
-                className="w-15 flex flex-col justify-center items-center"
-              >
-                <Label 
+              <div className="w-15 flex flex-col justify-center items-center">
+                <Label
                   htmlFor="y1"
                   className="text-sm font-bold leading-none mb-1"
                 >
@@ -476,11 +500,12 @@ function FocusedElementTab({
                   id="y1"
                   className="text-sm font-normal text-muted-foreground"
                   readOnly={true}
-                  value={(focusedBox.y ?? -1) + (focusedBox.height ?? -1)} />
+                  value={(focusedBox.y ?? -1) + (focusedBox.height ?? -1)}
+                />
               </div>
             </div>
             <div className="space-y-1 mb-5">
-              <Label 
+              <Label
                 htmlFor="elemId"
                 className="text-base font-bold leading-none"
               >
@@ -490,10 +515,11 @@ function FocusedElementTab({
                 id="elemId"
                 className="text-sm font-normal text-muted-foreground"
                 readOnly={true}
-                value={focusedBox.id ?? ""} />
+                value={focusedBox.id ?? ""}
+              />
             </div>
             <div className="space-y-1">
-              <Label 
+              <Label
                 className="text-base font-bold leading-none"
                 htmlFor="elemClass"
               >
@@ -503,14 +529,16 @@ function FocusedElementTab({
                 id="elemClass"
                 className="text-sm font-normal text-muted-foreground"
                 readOnly={true}
-                value={focusedBox.class ?? ""} />
+                value={focusedBox.class ?? ""}
+              />
             </div>
           </>
-        ) :
-        <></>}
+        ) : (
+          <></>
+        )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function GestureSelection() {
@@ -538,12 +566,12 @@ function GestureSelection() {
           aria-expanded={open}
           className="w-50 justify-between"
         >
-          {value ? 
-            gestureOptions
-              .flat()
-              .flatMap((option) => [option, ...(option.subGestures ?? [])])
-              .find((option) => option.value === value)?.label : 
-            "Select gesture..."}
+          {value
+            ? gestureOptions
+                .flat()
+                .flatMap((option) => [option, ...(option.subGestures ?? [])])
+                .find((option) => option.value === value)?.label
+            : "Select gesture..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -572,7 +600,7 @@ function GestureSelection() {
                   />
                   {option.label}
 
-                  {option.subGestures && 
+                  {option.subGestures && (
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -582,40 +610,61 @@ function GestureSelection() {
                           <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-50 p-0" align="start" side="right">
+                      <PopoverContent
+                        className="w-50 p-0"
+                        align="start"
+                        side="right"
+                      >
                         <Command>
                           <CommandList>
-                            {option.subGestures.map((gesture: GestureOption) => (
-                              <CommandItem
-                                key={gesture.value}
-                                value={gesture.value}
-                                onSelect={(currentValue) => {
-                                  setValue(
-                                    currentValue === value ? "" : currentValue
-                                  );
-                                  setOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "h-4 w-4",
-                                    gesture.value === value ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {gesture.label}
-                              </CommandItem>
-                            ))}
+                            {option.subGestures.map(
+                              (gesture: GestureOption) => (
+                                <CommandItem
+                                  key={gesture.value}
+                                  value={gesture.value}
+                                  onSelect={(currentValue) => {
+                                    setValue(
+                                      currentValue === value ? "" : currentValue
+                                    );
+                                    setOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "h-4 w-4",
+                                      gesture.value === value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {gesture.label}
+                                </CommandItem>
+                              )
+                            )}
                           </CommandList>
                         </Command>
-                      </PopoverContent>  
+                      </PopoverContent>
                     </Popover>
-                  }
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
+      <div className="flex flex-col bg-white dark:bg-black mt-1">
+        <Textarea
+          className="text-sm w-full h-full opacity-100"
+          placeholder="How did you interact with this element?"
+          value={gesture.description ? gesture.description : ""}
+          onChange={(e) =>
+            setGesture((prev) => ({
+              ...prev,
+              description: e.target.value,
+            }))
+          }
+        />
+      </div>
     </Popover>
   );
 }
@@ -626,20 +675,21 @@ function BoundingBoxOverlay({
   height,
   width,
   boxes,
-  rootBounds
+  rootBounds,
 }: {
-  showRedaction: boolean,
-  mergedRef: MutableRefObject<HTMLImageElement | null>,
-  height: number | null,
-  width: number | null,
-  boxes: any[],
-  rootBounds: any
+  showRedaction: boolean;
+  mergedRef: MutableRefObject<HTMLImageElement | null>;
+  height: number | null;
+  width: number | null;
+  boxes: any[];
+  rootBounds: any;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   useEffect(() => {
     const svg = svgRef.current;
-    const img = (mergedRef as MutableRefObject<HTMLImageElement | null>).current
+    const img = (mergedRef as MutableRefObject<HTMLImageElement | null>)
+      .current;
     if (!height || !width || !img || !svg) return;
     // Use ResizeObserver to synchronize SVG dimensions with image dimensions
     const resizeObserver = new ResizeObserver(() => {

@@ -2,9 +2,9 @@
 
 import { useState, useRef, createContext, useCallback, useMemo } from "react";
 import { HotKeys, KeyMap } from "react-hotkeys";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
-import { TraceFormData } from "../../page";
+import { TraceFormData } from "../types";
 import { FrameData } from "../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
@@ -40,8 +40,11 @@ export const RedactCanvasContext = createContext<{
 });
 
 export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
-  const { watch, setValue } = useFormContext<TraceFormData>();
-  const redactions = watch("redactions") || {};
+  const { setValue } = useFormContext<TraceFormData>();
+  const [watchRedactions] = useWatch({
+    name: ["redactions"],
+  });
+  const redactions = watchRedactions || {};
   const redaction: Redaction[] = redactions[screen.id] || [];
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");

@@ -1,9 +1,14 @@
 import { Capture, Screen } from "@prisma/client";
-import { TraceFormData } from "../page";
-import { createTrace, generatePresignedScreenUpload, generatePresignedVHUpload } from "@/lib/actions";
+import { FrameData, TraceFormData } from "../components/types";
+import {
+  createTrace,
+  generatePresignedScreenUpload,
+  generatePresignedVHUpload,
+} from "@/lib/actions";
 import { toast } from "sonner";
 import { GestureOption } from "../components/types";
 import { createContext } from "react";
+import { ActionPayload } from "@/lib/actions/types";
 
 export const GestureOptionsContext = createContext<{
   gestureOptions: GestureOption[];
@@ -12,9 +17,9 @@ export const GestureOptionsContext = createContext<{
 });
 
 export async function handleSave(data: TraceFormData, capture: Capture) {
-  console.log("save trace")
+  console.log("save trace");
   // Transpose gestures on to screens
-  let screens = data.screens.map((screen) => {
+  let screens = data.screens.map((screen: FrameData) => {
     return {
       created: new Date(),
       gesture: data.gestures[screen.id],
@@ -43,14 +48,14 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   }
 
   const screenUploadRes = await Promise.all(
-    data.screens.map(async (screen, index) => {
+    data.screens.map(async (screen: FrameData, index: number) => {
       var res;
 
       if (generateScreenUploadRes[index].ok) {
         res = await fetch(generateScreenUploadRes[index].data.uploadUrl, {
           method: "PUT",
           body: Buffer.from(
-            screen.url.split("data:image/png;base64,")[1],
+            screen.src.split("data:image/png;base64,")[1],
             "base64"
           ),
           headers: { "Content-Type": "image/png" },
@@ -75,18 +80,15 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   }
 
   // check if there are view hierarchies, if so then upload them
-  const vhs = data.vhs
+  const vhs = data.vhs;
   if (vhs && Object.keys(vhs).length > 0) {
     const generateVHUploadRes = await Promise.all(
       screens.map((_) => {
-        return generatePresignedVHUpload(capture.id, "application/json")
+        return generatePresignedVHUpload(capture.id, "application/json");
       })
-    )
+    );
 
-    if (
-      !generateVHUploadRes ||
-      generateVHUploadRes.some((res) => !res.ok)
-    ) {
+    if (!generateVHUploadRes || generateVHUploadRes.some((res) => !res.ok)) {
       toast.error(
         "Failed to upload screen images: Failed to generate presigned URLs."
       );
@@ -96,7 +98,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     }
 
     const vhUploadRes = await Promise.all(
-      data.screens.map(async (screen, index) => {
+      data.screens.map(async (screen: FrameData, index: number) => {
         var res;
         const vh = vhs[screen.id];
         if (!vh) {
@@ -108,28 +110,31 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
             body: JSON.stringify(vh),
             headers: { "Content-Type": "application/json" },
           });
-  
+
           if (!res.ok) {
             toast.error("Failed to upload view hierarchies.");
             return { ok: false, message: "Failed to upload view hierarchies." };
           }
-  
+
           // Set screen src to S3 URL
           screens[index].vh = generateVHUploadRes[index].data.fileUrl;
-  
+
           return generateVHUploadRes[index];
         }
       })
     );
 
-    if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
+    if (
+      !vhUploadRes ||
+      vhUploadRes.some((res) => !res!.ok)
+    ) {
       toast.error("Failed to upload screen view hierarchies.");
       return Promise.reject("Failed to upload screen view hierarchies.");
     }
   }
 
   // Create trace AND screen records
-  console.log(capture)
+  console.log(capture);
   const trace = await createTrace(
     {
       name: "New Trace",
