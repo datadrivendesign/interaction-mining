@@ -1,5 +1,5 @@
 import { getCapture, getIosApp } from "@/lib/actions";
-import type { Metadata, ResolvingMetadata } from "next";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 export async function generateMetadata({

@@ -1,11 +1,26 @@
+import { ScreenGesture } from "@prisma/client";
 import { z, ZodType } from "zod";
-import { TraceFormData } from "../page";
+import { Redaction } from "./redact-screen";
+
+export type TraceFormData = {
+  screens: FrameData[];
+  vhs?: { [key: string]: any };
+  gestures: { [key: string]: ScreenGesture };
+  redactions: { [key: string]: Redaction[] };
+  description: string;
+};
+
+export type FrameData = {
+  id: string;
+  src: string;
+  timestamp: number;
+};
 
 export const ScreenSchema = z
   .array(
     z.object({
       id: z.string(),
-      url: z.string(),
+      src: z.string(),
       timestamp: z.number(),
     })
   )
@@ -30,30 +45,23 @@ export const GestureSchema = z.record(
   })
 );
 
-
-export type FrameData = {
-  id: string;
-  url: string;
-  timestamp: number;
-};
-
 export const GestureOptionSchema: z.ZodType<{
   value: string;
   label: string;
   icon?: React.JSX.Element;
   subGestures?: any;
-}> = z.lazy((): z.ZodType<any> => // 👈 annotate the return type here
-  z.object({
-    value: z.string(),
-    label: z.string(),
-    icon: z.custom<React.JSX.Element>().optional(),
-    subGestures: z.array(GestureOptionSchema).optional(),
-  })
+}> = z.lazy(
+  (): z.ZodType<any> => // 👈 annotate the return type here
+    z.object({
+      value: z.string(),
+      label: z.string(),
+      icon: z.custom<React.JSX.Element>().optional(),
+      subGestures: z.array(GestureOptionSchema).optional(),
+    })
 );
 
 // Then define the type from schema (for safety & completion support)
 export type GestureOption = z.infer<typeof GestureOptionSchema>;
-
 
 export const ScreenGestureSchema = z
   .object({
