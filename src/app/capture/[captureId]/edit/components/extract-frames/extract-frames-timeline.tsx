@@ -69,13 +69,10 @@ export default function FrameTimeline({
           {currentTime.toFixed(2)} / {videoDuration.toFixed(2)}
         </div>
         <div>
-          <button
-            onClick={onCapture}
-            title="Capture frame"
-            className="p-2 rounded-full bg-white dark:bg-neutral-900 shadow hover:bg-gray-500 dark:hover:bg-neutral-800 text-white hover:text-gray-800 transition"
-          >
+          <Button onClick={onCapture}
+            title="Capture frame">
             <Camera className="mr-1" size={20} />
-          </button>
+          </Button>
         </div>
       </div>
 
