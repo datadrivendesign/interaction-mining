@@ -14,7 +14,7 @@ import {
 import RedactScreenCanvas from "./redact-screen-canvas";
 import { Redaction } from "./types";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../../page";
+import { TraceFormData } from "../types";
 import { FrameData } from "../types";
 
 export default function RedactScreen() {
@@ -106,7 +106,7 @@ function Filmstrip({
         >
           <Image
             key={screen.id}
-            src={screen.url}
+            src={screen.src}
             alt="gallery"
             draggable={false}
             className="h-full w-auto object-contain"
@@ -208,7 +208,7 @@ function FilmstripItem({
         )}
         <Image
           ref={imageRef}
-          src={screen.url}
+          src={screen.src}
           alt="gallery"
           draggable={false}
           className="h-full w-auto object-contain"

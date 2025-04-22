@@ -310,7 +310,7 @@ export default function RepairScreenCanvas({
                 ) : null}
                 <Image
                   ref={mergedRef as MutableRefObject<HTMLImageElement | null>}
-                  src={screen.url}
+                  src={screen.src}
                   alt="gallery"
                   draggable={false}
                   className="w-auto h-full rounded-lg cursor-crosshair"

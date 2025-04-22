@@ -5,7 +5,7 @@ import React from "react";
 import { prettyNumber } from "@/lib/utils/number";
 import { X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../../page";
+import { TraceFormData } from "../types";
 import { FrameData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 
@@ -67,7 +67,7 @@ export function FrameGalleryAndroid({
           </div>
           <Image
             className="z-0 object-cover w-full h-auto rounded-lg"
-            src={frame.url}
+            src={frame.src}
             alt={`Extracted frame at ${frame.timestamp}`}
             draggable={false}
             width={0}
@@ -138,7 +138,7 @@ export function FrameGalleryIOS({
           </div>
           <Image
             className="z-0 object-cover w-full h-auto rounded-lg"
-            src={frame.url}
+            src={frame.src}
             alt={`Extracted frame at ${frame.timestamp}`}
             draggable={false}
             width={0}

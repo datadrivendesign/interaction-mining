@@ -125,7 +125,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     }, []);
 
     // Load the image from the screen URL and calculate scaling
-    const [image] = useImage(screen.url);
+    const [image] = useImage(screen.src);
     // Calculate common layout dimensions and offsets only when dependencies change.
     const { displayWidth, displayHeight, offsetX, offsetY } = useMemo(() => {
       const vPadding =

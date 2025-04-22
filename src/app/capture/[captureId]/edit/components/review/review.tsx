@@ -5,10 +5,11 @@ import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../../page";
+import { TraceFormData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { GestureOptionsContext } from "../../util";
+import { FrameData } from "../types";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
@@ -42,14 +43,14 @@ function SaveTraceGallery() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
-      {screens.map((screen) => (
+      {screens.map((screen: FrameData) => (
         <div
           className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
           key={`${screen.id}`}
         >
           <Image
             className="z-0 object-cover w-full h-auto rounded-lg"
-            src={screen.url}
+            src={screen.src}
             alt={`Extracted frame at ${screen.timestamp}`}
             draggable={false}
             width={0}
