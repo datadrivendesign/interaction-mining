@@ -75,18 +75,33 @@ export const ScreenGestureSchema = z
     { message: "Each screen must have a gesture" }
   );
 
-export const RedactionSchema = z.record(
-  z.array(
-    z.object({
-      id: z.string(),
-      x: z.number(),
-      y: z.number(),
-      width: z.number(),
-      height: z.number(),
-      annotation: z.string(),
-    })
+export const RedactionSchema = z
+  .record(
+    z.array(
+      z.object({
+        id: z.string(),
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+        annotation: z.string(),
+      })
+    )
   )
-);
+  .refine(
+    (data) => {
+      // Validate that each screen has description
+      for (let screen of Object.keys(data)) {
+        for (let redaction of data[screen]) {
+          if (!redaction.annotation) {
+            return false;
+          }
+        }
+      }
+      return true;
+    },
+    { message: "Each redaction must have an annotation." }
+  );
 
 export const TraceFormSchema: ZodType<TraceFormData> = z
   .object({

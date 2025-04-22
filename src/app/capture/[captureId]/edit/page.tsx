@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   FrameData,
   GestureOption,
+  RedactionSchema,
   ScreenGestureSchema,
   ScreenSchema,
   TraceFormData,
@@ -153,6 +154,17 @@ export default function Page() {
     } else if (stepIndex === TraceSteps.Repair) {
       // Validate the "gestures"
       const validation = ScreenGestureSchema.safeParse(methods.getValues());
+      if (!validation.success) {
+        console.log(validation.error.issues);
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        return;
+      }
+    } else if (stepIndex === TraceSteps.Redact) {
+      // Validate the "redactions"
+      const validation = RedactionSchema.safeParse(methods.getValues().redactions);
       if (!validation.success) {
         console.log(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";
