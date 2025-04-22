@@ -1,9 +1,9 @@
-import { NextConfig } from 'next';
-import createMDX from '@next/mdx';
+import { NextConfig } from "next";
+import createMDX from "@next/mdx";
 
 const nextConfig: NextConfig = {
   turbopack: {},
-  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   images: {
     remotePatterns: [
       {
@@ -12,17 +12,17 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.amazonaws.com"
+        hostname: "*.amazonaws.com",
       },
       {
         protocol: "https",
-        hostname: "*.mzstatic.com"
-      }
+        hostname: "*.mzstatic.com",
+      },
     ],
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '500mb',
+      bodySizeLimit: "500mb",
     },
     reactCompiler: true,
   },
@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
 
 const withMDX = createMDX({
   // Add markdown plugins here, as desired
-})
+});
 
 // Merge MDX config with Next.js config
 export default withMDX(nextConfig);
