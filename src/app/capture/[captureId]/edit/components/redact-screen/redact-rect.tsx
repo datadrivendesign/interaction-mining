@@ -46,6 +46,20 @@ export default function RedactRectangle({
     }
   }, [type]);
 
+  const onTransform = (e: any) => {
+    // set opacity
+    const node = ref.current;
+    if (node) {
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+      node.scaleX(1);
+      node.scaleY(1);
+      node.width(node.width() * scaleX);
+      node.height(node.height() * scaleY);
+    }
+    handleTransform(e, redaction.id);
+  }
+
   return (
     <Rect
       ref={ref}
@@ -58,7 +72,9 @@ export default function RedactRectangle({
       onClick={(e) => handleRectClick(e, redaction.id)}
       onTap={(e) => handleRectClick(e, redaction.id)}
       onDragMove={(e) => handleDrag(e, redaction.id)}
-      onTransform={(e) => handleTransform(e, redaction.id)}
+      onTransform={onTransform}
+      // onMouseDown={handleOnMouseDown}
+      // onMouseUp={handleOnMouseUp}
     />
   );
 }
