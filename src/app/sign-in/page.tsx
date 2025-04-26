@@ -1,13 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
-import { signIn } from "@/lib/auth";
+import { signIn, signOut } from "@/lib/auth";
 
 export default async function Page() {
   const handleGoogleSignIn = async () => {
     "use server";
-    
+
     await signIn("google");
+  };
+
+  const handleSignOut = async () => {
+    "use server";
+
+    await signOut();
   };
 
   return (
@@ -47,6 +53,13 @@ export default async function Page() {
                 sizes="100vw"
               />
               Sign in with Apple
+            </span>
+          </Button>
+          <Button className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
+            onClick={handleSignOut}
+          >
+            <span className="inline-flex items-center text-white dark:text-black font-medium">
+                Sign out
             </span>
           </Button>
         </CardHeader>

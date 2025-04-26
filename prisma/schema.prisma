@@ -126,6 +126,7 @@ model User {
   email         String?         @unique
   emailVerified DateTime?
   image         String?
+  role          Role           @default(USER)
   accounts      Account[]
   sessions      Session[]
   // Optional for WebAuthn support
@@ -139,7 +140,7 @@ model User {
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  @db.ObjectId
+  userId            String  @db.ObjectId @unique
   type              String
   provider          String
   providerAccountId String
