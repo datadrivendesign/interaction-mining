@@ -60,8 +60,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },  
 });
-
-export const getSession = () => {
-  const { data: session, status } = useSession();
-  return { session, status };
-};
