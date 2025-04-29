@@ -1,5 +1,5 @@
 "use client";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn, signOut, SessionProvider } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
@@ -17,10 +17,8 @@ import {
 } from "@/components/ui/avatar";
 
 export default function NavigationBar() {
-  const { data: session } = useSession();
-
   return (
-    <>
+    <SessionProvider>
       <nav className="sticky z-40 top-0 flex w-full justify-center bg-white dark:bg-black">
         <div className="flex w-full max-w-screen-2xl px-4 py-4 justify-between">
           <div className="flex basis-1/2 h-full">
@@ -43,42 +41,47 @@ export default function NavigationBar() {
                 Contribute
               </span>
             </Link>
-            {session ? (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Avatar className="cursor-pointer">
-                      <AvatarImage src={session.user?.image ?? ""} alt="User avatar" />
-                      <AvatarFallback>
-                        {session.user?.email?.charAt(0).toUpperCase() ?? "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </DropdownMenuTrigger>
-
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/user/${session.user?.id}`}>Dashboard</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-              </>
-            ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => signIn(undefined, { callbackUrl: "/" })}
-              >
-                Sign In
-              </Button>
-            )}
+            <SessionContent />
           </div>
         </div>
       </nav>
+    </SessionProvider>
+  );
+}
+
+function SessionContent() {
+  const { data: session } = useSession();
+
+  return session ? (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Avatar className="cursor-pointer">
+            <AvatarImage src={session.user?.image ?? ""} alt="User avatar" />
+            <AvatarFallback>
+              {session.user?.email?.charAt(0).toUpperCase() ?? "U"}
+            </AvatarFallback>
+          </Avatar>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem asChild>
+            <Link href={`/user/${session.user?.id}`}>Dashboard</Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+            Sign Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
+  ) : (
+    <Button
+      variant="default"
+      size="sm"
+      onClick={() => signIn(undefined, { callbackUrl: "/" })}
+    >
+      Sign In
+    </Button>
   );
 }

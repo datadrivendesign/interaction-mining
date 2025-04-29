@@ -1,37 +1,28 @@
-import { prisma } from "@/lib/prisma";
+import { getUser } from "@/lib/actions/index";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { notFound } from "next/navigation";
+import { Param } from "@prisma/client/runtime/library";
 
-interface PageProps {
-  params: { userId: string };
-}
 
-export default async function AdminUserDetails({ params }: PageProps) {
-  const user = await prisma.user.findUnique({
-    where: { id: params.userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-      role: true,
-      // traces: {
-      //   select: {
-      //     id: true,
-      //     createdAt: true,
-      //   },
-      // },
-    },
-  });
+export default async function AdminUserDetails({ params }: { params: Promise<{ userid: string }> }) {
+  const { userid } = await params; // Await the params promise before destructuring
 
-  if (!user) {
+  if (!userid) { // Validate userId directly
+    console.error("User ID is undefined");
+    notFound();
+  }
+
+  console.log("User details:", userid);
+  const user = await getUser(userid);
+
+  if (!user) { // Check if user is null or undefined
     notFound();
   }
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
-      {/* User Info Card */}
+      {/* User Profile Card */}
       <div className="flex items-center gap-6">
         <Avatar className="w-20 h-20">
           <AvatarImage src={user.image ?? ""} alt="User avatar" />
@@ -49,8 +40,8 @@ export default async function AdminUserDetails({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Traces Section */}
-      <div className="space-y-4">
+      {/* User Traces Section */}
+      {/* <div className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">Uploaded Traces</h2>
 
         {user.traces.length === 0 ? (
@@ -69,7 +60,7 @@ export default async function AdminUserDetails({ params }: PageProps) {
             </ul>
           </div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 }

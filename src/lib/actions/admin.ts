@@ -13,3 +13,29 @@ export async function updateUserRole(userId: string, newRole: string) {
     console.error("Failed to update user role:", error);
   }
 }
+
+export async function getUser(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId},
+      select: {
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        // traces: {
+        //   select: {
+        //     id: true,
+        //     createdAt: true,
+        //   },
+        // },
+      },
+    });
+
+    return user;
+  } catch (error) {
+    console.error("Failed to fetch user details:", error);
+    return null;
+  }
+}
+
