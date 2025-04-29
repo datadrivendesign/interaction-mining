@@ -1,4 +1,5 @@
 import NavigationBar from "@/components/navigation-bar";
+import { SessionProvider } from "next-auth/react";
 
 export default function RootLayout({
   children,
@@ -7,7 +8,9 @@ export default function RootLayout({
 }>) {
   return (
     <>
-      <NavigationBar />
+      <SessionProvider>
+        <NavigationBar />
+      </SessionProvider>
       {children}
     </>
   );

@@ -1,7 +1,6 @@
 import { getSession, updateUserRole } from "@/lib/actions/index";
 import { prisma } from "@/lib/prisma";
 import { UserRoleSelector } from "@/components/ui/roleselector";
-
 import {
   Table,
   TableBody,
@@ -10,7 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react"
 
 export default async function AdminPage() {
   const session = await getSession();
@@ -78,12 +80,13 @@ export default async function AdminPage() {
                 <TableHead className="text-muted-foreground">Name</TableHead>
                 <TableHead className="text-muted-foreground">Email</TableHead>
                 <TableHead className="text-muted-foreground">Role</TableHead>
+                <TableHead className="text-muted-foreground"></TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id} className="hover:bg-muted/10 border-0">
+                <TableRow key={user.id} className="hover:bg-muted/10 border-0" >
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -92,6 +95,16 @@ export default async function AdminPage() {
                       currentRole={user.role}
                     />
                   </TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/admin/user/${user.id}`}
+                    >
+                      <Button variant="outline" size="icon" className="hover">
+                      <ChevronRight />  
+                      </Button>
+                    </Link>
+                  </TableCell>
+              
                 </TableRow>
               ))}
             </TableBody>

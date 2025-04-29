@@ -1,19 +1,21 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
-import { signIn, signOut } from "@/lib/auth";
+import { signIn, signOut } from "next-auth/react"; // use next-auth/react here
+import { useSearchParams } from "next/navigation";
 
-export default async function Page() {
+export default function SignInPage() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
   const handleGoogleSignIn = async () => {
-    "use server";
-
-    await signIn("google");
+    await signIn("google", { callbackUrl });
   };
 
   const handleSignOut = async () => {
-    "use server";
-
-    await signOut();
+    await signOut({ callbackUrl: "/" });
   };
 
   return (
@@ -23,11 +25,13 @@ export default async function Page() {
           <CardTitle className="text-center text-2xl font-black">
             Sign in to ODIM
           </CardTitle>
-          <Button className="flex grow justify-center items-center w-full rounded-lg px-4 py-2">
-            <span
-              className="inline-flex items-center text-white dark:text-black font-medium"
-              onClick={handleGoogleSignIn}
-            >
+
+          {/* Google */}
+          <Button
+            className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
+            onClick={handleGoogleSignIn}
+          >
+            <span className="inline-flex items-center text-white dark:text-black font-medium">
               <Image
                 className="w-auto h-4 mr-4"
                 src="/third-party-logos/g.webp"
@@ -39,6 +43,8 @@ export default async function Page() {
               Sign in with Google
             </span>
           </Button>
+
+          {/* Apple (disabled for now) */}
           <Button
             className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
             disabled
@@ -55,11 +61,14 @@ export default async function Page() {
               Sign in with Apple
             </span>
           </Button>
-          <Button className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
+
+          {/* Sign Out */}
+          <Button
+            className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
             onClick={handleSignOut}
           >
             <span className="inline-flex items-center text-white dark:text-black font-medium">
-                Sign out
+              Sign out
             </span>
           </Button>
         </CardHeader>
