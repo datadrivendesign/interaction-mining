@@ -1,8 +1,8 @@
 'use client';
 
 import { useTransition } from "react";
-import { toast } from "sonner"; // Install if not already
-import { updateUserRole } from "@/lib/actions/admin";
+import { toast } from "sonner";
+import { updateUserRole } from "@/lib/actions/index";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface UserRoleSelectorProps {
@@ -34,8 +34,8 @@ export function UserRoleSelector({ userId, currentRole }: UserRoleSelectorProps)
         <SelectValue placeholder="Select role" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="USER">USER</SelectItem>
-        <SelectItem value="ADMIN">ADMIN</SelectItem>
+        <SelectItem value="USER">User</SelectItem>
+        <SelectItem value="ADMIN">Admin</SelectItem>
       </SelectContent>
     </Select>
   );
