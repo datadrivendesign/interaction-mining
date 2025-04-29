@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"NODE_OPTIONS='--inspect' next dev\" \"prisma generate --watch\"",
+    "dev": "concurrently \"cross-env NODE_OPTIONS='--inspect' next dev\" \"prisma generate --watch\"",
     "build": "npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint"
@@ -54,6 +54,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
+    "cross-env": "^7.0.3",
     "d3-format": "^3.1.0",
     "extend": "^3.0.2",
     "framer-motion": "^11.11.11",
