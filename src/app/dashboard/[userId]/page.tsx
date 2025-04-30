@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter, usePathname } from "next/navigation";
 import { getUserCaptures } from "@/lib/actions/index";
 import {
   Card,
@@ -15,6 +15,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const pathname = usePathname();
+
+  if(!session){
+    redirect(`/sign-in?callbackUrl=${pathname}`);
+  }
+
   const router = useRouter();
   const [captures, setCaptures] = useState([]);
 

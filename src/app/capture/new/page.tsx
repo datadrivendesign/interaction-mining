@@ -9,10 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { redirect } from "next/navigation";
 
 export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
+
+  if (!session) {
+      redirect(`/sign-in?callbackUrl=${encodeURIComponent("/capture/new")}`);
+    }
 
   const [platform, setPlatform] = useState("android");
   const [app, setApp] = useState("");

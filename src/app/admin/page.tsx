@@ -13,18 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react"
+import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
   const session = await getSessionData();
 
   if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold">
-          Please sign in to access this page.
-        </h1>
-      </div>
-    );
+    redirect("/sign-in?callbackUrl=/admin");
   }
 
   if (session.user.role !== "ADMIN") {
