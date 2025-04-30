@@ -8,10 +8,24 @@ import { useSearchParams } from "next/navigation";
 
 export default function SignInPage() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = searchParams.get("callbackUrl");
+  
+  // Enhanced callback URL validation
+  const safeCallbackUrl = (() => {
+    if (!callbackUrl) return "/dashboard";
+    // Only allow relative URLs or URLs from our domain
+    if (callbackUrl.startsWith("/")) return callbackUrl;
+    try {
+      const url = new URL(callbackUrl);
+      if (url.hostname === window.location.hostname) return callbackUrl;
+    } catch (e) {
+      // Invalid URL
+    }
+    return "/dashboard";
+  })();
 
   const handleGoogleSignIn = async () => {
-    await signIn("google", { callbackUrl });
+    await signIn("google", { callbackUrl: safeCallbackUrl });
   };
 
   const handleSignOut = async () => {
