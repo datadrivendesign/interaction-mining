@@ -21,12 +21,11 @@ import useImage from "use-image";
 import { useGesture } from "@use-gesture/react";
 import { useMeasure } from "@uidotdev/usehooks";
 
-import { FrameData } from "../types";
+import { FrameData, Redaction } from "../types";
 import AnnotationCard from "./annotation-card";
 import Overlay from "./stage-overlay";
 import { cn } from "@/lib/utils";
 import { RedactCanvasContext } from "./redact-screen-canvas";
-import { Redaction } from "./types";
 import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
 import Konva from "konva";
@@ -411,7 +410,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         width: image.width,
         height: image.height,
       });
-      
+
       console.log("redactions", redactions);
 
       renderLayer.add(renderImage);

@@ -1,6 +1,6 @@
 "use client";
 import { Rect } from "react-konva";
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { useEffect, useRef } from "react";
 import Konva from "konva";
 
@@ -46,19 +46,22 @@ export default function RedactRectangle({
     }
   }, [type]);
 
-  const onTransform = (e: any) => {
+  const onTransformStart = (e: any) => {
     // set opacity
     const node = ref.current;
     if (node) {
-      const scaleX = node.scaleX();
-      const scaleY = node.scaleY();
-      node.scaleX(1);
-      node.scaleY(1);
-      node.width(node.width() * scaleX);
-      node.height(node.height() * scaleY);
+      node.opacity(0.75);
     }
     handleTransform(e, redaction.id);
-  }
+  };
+
+  const onTransformEnd = (e: any) => {
+    const node = ref.current;
+    if (node) {
+      node.opacity(1);
+    }
+    handleTransform(e, redaction.id);
+  };
 
   return (
     <Rect
@@ -72,9 +75,11 @@ export default function RedactRectangle({
       onClick={(e) => handleRectClick(e, redaction.id)}
       onTap={(e) => handleRectClick(e, redaction.id)}
       onDragMove={(e) => handleDrag(e, redaction.id)}
-      onTransform={onTransform}
-      // onMouseDown={handleOnMouseDown}
-      // onMouseUp={handleOnMouseUp}
+      onTransformStart={onTransformStart}
+      onTransform={(e) => handleTransform(e, redaction.id)}
+      onTransofrmEnd={onTransformEnd}
+      onDragStart={onTransformStart}
+      onDragEnd={onTransformEnd}
     />
   );
 }

@@ -40,23 +40,23 @@ export type CaptureListedFile = {
   fileKey: string;
   fileName: string;
   fileUrl: string;
-}
+};
 
 export type CaptureScreenGesture = {
-  type?: string,
-  x: number,
-  y: number,
-  scrollDeltaX: number,
-  scrollDeltaY: number,
-  description?: string,
-}
+  type?: string;
+  x: number;
+  y: number;
+  scrollDeltaX: number;
+  scrollDeltaY: number;
+  description?: string;
+};
 
 export type CaptureScreenFile = {
-  vh: string,
-  img: string,
-  created: string,
-  gesture: CaptureScreenGesture
-}
+  vh: string;
+  img: string;
+  created: string;
+  gesture: CaptureScreenGesture;
+};
 
 /**
  * Fetches a capture from the database.
@@ -66,9 +66,12 @@ export type CaptureScreenFile = {
  * @returns ActionPayload
  */
 export const getCapture = unstable_cache(
-  async (
-    { id, taskId, otp, includes }: GetCaptureProps,
-  ): Promise<ActionPayload<CaptureWithTask>> => {
+  async ({
+    id,
+    taskId,
+    otp,
+    includes,
+  }: GetCaptureProps): Promise<ActionPayload<CaptureWithTask>> => {
     const { task = false, app = false } = includes || {};
 
     if (!id && !taskId && !otp) {
@@ -164,7 +167,7 @@ export async function generatePresignedCaptureUpload(
     const fileKey = `uploads/${captureId}/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -178,7 +181,7 @@ export async function generatePresignedCaptureUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -296,7 +299,9 @@ export async function getUploadedCaptureFiles(captureId: string) {
     }
 
     // filter to only show shallow keys
-    response.Contents = response.Contents.filter((file) => file.Key!.split("/").length === 3);
+    response.Contents = response.Contents.filter(
+      (file) => file.Key!.split("/").length === 3
+    );
 
     // Map the file URLs from S3 object keys
     const fileUrls = response.Contents.map((file) => ({
