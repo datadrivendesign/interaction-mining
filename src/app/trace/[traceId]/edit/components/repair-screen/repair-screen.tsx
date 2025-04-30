@@ -1,8 +1,24 @@
 "use client";
-import React, { use, useCallback, useEffect, useState } from "react";
+
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
-import { CircleAlert } from "lucide-react";
+import {
+  ArrowDownFromLine,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  ArrowUpFromLine,
+  Circle,
+  CircleAlert,
+  CircleDot,
+  CircleHelp,
+  CircleStop,
+  Expand,
+  Grab,
+  IterationCcw,
+  IterationCw,
+  Shrink,
+} from "lucide-react";
 
 import {
   ResizableHandle,
@@ -10,16 +26,122 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import { Screen, ScreenGesture } from "@prisma/client";
+import { Prisma, Screen, ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
-import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../page";
+import { useFormContext, useWatch } from "react-hook-form";
+import { TraceFormData } from "../types";
 
-export default function RepairScreen() {
-  const { getValues } = useFormContext<TraceFormData>();
-  const screens = getValues("screens") as Screen[];
-  const gestures = getValues("gestures") as { [key: string]: ScreenGesture };
+export const gestureOptions = [
+  {
+    value: "tap",
+    label: "Tap",
+    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "double tap",
+    label: "Double tap",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "touch and hold",
+    label: "Touch and hold",
+    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "swipe",
+    label: "Swipe",
+    subGestures: [
+      {
+        value: "swipe up",
+        label: "Swipe up",
+        icon: (
+          <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "swipe down",
+        label: "Swipe down",
+        icon: (
+          <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "swipe left",
+        label: "Swipe left",
+        icon: (
+          <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "swipe right",
+        label: "Swipe right",
+        icon: (
+          <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+  },
+  {
+    value: "drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "zoom",
+    label: "Zoom",
+    subGestures: [
+      {
+        value: "zoom in",
+        label: "Zoom in",
+        icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "zoom out",
+        label: "Zoom out",
+        icon: <Expand className="size-4 text-yellow-800 hover:text-black" />,
+      },
+    ],
+  },
+  {
+    value: "rotate",
+    label: "Rotate",
+    subGestures: [
+      {
+        value: "rotate cw",
+        label: "Rotate clockwise",
+        icon: (
+          <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "rotate ccw",
+        label: "Rotate counter-clockwise",
+        icon: (
+          <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+  },
+  {
+    value: "other",
+    label: "Other",
+    icon: <CircleHelp className="size-4 text-yellow-800 hover:text-black" />,
+  },
+];
+
+export default function RepairScreen({
+  trace,
+}: {
+  trace: any;
+}) {
+  const [watchScreens, watchVHs, watchGestures] = useWatch({
+    name: ["screens", "vhs", "gestures"],
+  });
+  const screens = watchScreens as Screen[];
+  const vhs = watchVHs as { [key: string]: any };
+  const gestures = watchGestures as { [key: string]: ScreenGesture };
+  const os = trace?.task ? trace.task.os : "none";
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
@@ -58,11 +180,13 @@ export default function RepairScreen() {
             {focusViewIndex > -1 ? (
               <FocusView
                 key={focusViewIndex}
+                vh={vhs[screens[focusViewIndex].id]}
                 screen={screens[focusViewIndex]}
+                os={os}
               />
             ) : (
               <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">
+                <span className="text-3xl lg:text-4xl text-neutral-400 dark:text-neutral-500 font-semibold">
                   Select a screen from the filmstrip.
                 </span>
               </div>
@@ -83,7 +207,15 @@ export default function RepairScreen() {
   );
 }
 
-function FocusView({ screen }: { screen: Screen }) {
+function FocusView({
+  screen,
+  vh,
+  os,
+}: {
+  screen: Screen;
+  vh: any;
+  os: string;
+}) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
@@ -94,22 +226,23 @@ function FocusView({ screen }: { screen: Screen }) {
       type: null,
       x: null,
       y: null,
-      scrollDeltaX: null,
-      scrollDeltaY: null,
+      scrollDeltaX: 0,
+      scrollDeltaY: 0,
     }
   );
 
   // Update gesture in form data
   useEffect(() => {
     // only update if gesture has changed
-    const currentGesture = gestures[screen.id]
-    if (currentGesture !== gesture) {      
+    const currentGesture = gestures[screen.id];
+    // dumb way to do object equality but pay the price to fix linter error
+    if (JSON.stringify(currentGesture) !== JSON.stringify(gesture)) {
       setValue("gestures", {
         ...gestures,
         [screen.id]: gesture,
       });
     }
-  }, [gesture, gestures, setValue, screen.id]);
+  }, [gesture, gestures, screen.id, setValue]);
 
   return (
     <>
@@ -117,8 +250,11 @@ function FocusView({ screen }: { screen: Screen }) {
         <RepairScreenCanvas
           key={screen.id}
           screen={screen}
+          vh={vh}
           gesture={gesture}
           setGesture={setGesture}
+          gestureOptions={gestureOptions}
+          os={os}
         />
       </div>
     </>
@@ -143,7 +279,12 @@ function Filmstrip({
           key={screen.id}
           index={index}
           isSelected={focusViewIndex === index}
-          hasError={gestures[screen.id].type === null}
+          hasError={
+            !gestures[screen.id] ||
+            gestures[screen.id].type === null ||
+            gestures[screen.id].description === undefined ||
+            gestures[screen.id].description === ""
+          }
           onClick={() => setFocusViewIndex(index)}
         >
           <Image
