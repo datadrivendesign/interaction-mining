@@ -22,7 +22,7 @@ export default function ProfilePage() {
         </Avatar>
 
         <div>
-          <h1 className="text-2xl font-bold">Welcome back, {session.user?.name ?? "User"} 👋</h1>
+          <h1 className="text-2xl font-bold">Welcome back, {session.user?.name ?? "User"}</h1>
           <p className="text-muted-foreground text-sm">{session.user?.email}</p>
         </div>
       </div>

@@ -109,7 +109,7 @@ model Capture {
   appId_ String? @map("app") @db.ObjectId
   app    App?    @relation(fields: [appId_], references: [id])
   appId  String // stupid frickin packageName
-  // userId String @map("user") @db.ObjectId
+  userId String @map("user") @db.ObjectId
   // traceId String @map("trace") @db.ObjectId
   // trace   Trace  @relation(fields: [traceId], references: [id])
   taskId String  @map("task") @db.ObjectId
@@ -129,6 +129,7 @@ model User {
   role          Role           @default(USER)
   accounts      Account[]
   sessions      Session[]
+  captures      String[] @default([]) @map("captures") @db.ObjectId
   // Optional for WebAuthn support
   Authenticator Authenticator[]
 

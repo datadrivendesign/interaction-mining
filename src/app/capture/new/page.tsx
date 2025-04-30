@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { createCaptureTask, getAllApps } from "@/lib/actions/capture";
+import { createCaptureTask, getAllApps } from "@/lib/actions/index";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -24,22 +24,26 @@ export default function CaptureNewPage() {
       const appList = await getAllApps();
       setApps(appList);
     }
+  
     fetchApps();
   }, []);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting capture task:", { platform, app, description });
     if (!session?.user?.id) return;
 
     const result = await createCaptureTask({
       userId: session.user.id,
-      platform,
-      app,
+      os: platform,
+      appId: app,
       description,
     });
 
     if (result?.captureId) {
-      router.push(`/capture/${result.captureId}`);
+      console.log("Capture task created successfully:", result.captureId);
+      router.push(`/capture/${result.captureId}/start`);
     }
   };
 
