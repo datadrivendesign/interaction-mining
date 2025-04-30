@@ -81,12 +81,18 @@ export async function getApp(id: string): Promise<App | null> {
 }
 
 export async function getAllApps() {
+  console.log("Fetching all apps...");
   try {
     const apps = await prisma.app.findMany({
       select: { id: true, metadata: true, packageName: true },
       orderBy: { id: "asc" },
     });
-    return apps;
+
+    return apps.map(app => ({
+      id: app.id,
+      package: app.packageName,
+      name: app.metadata.name,
+    }));
   } catch (error) {
     console.error("Failed to fetch apps:", error);
     return [];

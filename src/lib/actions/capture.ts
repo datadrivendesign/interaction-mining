@@ -325,17 +325,43 @@ export async function getUploadedCaptureFiles(captureId: string) {
  * @param data Data to create the capture task with.
  * @returns ActionPayload
  */
-export async function createCaptureTask(
-  data: Prisma.CaptureCreateInput
-): Promise<ActionPayload<{ captureId: string }>> {
+export async function createCaptureTask({
+  appId,
+  os,
+  description,
+  userId
+}: {
+  appId: string;
+  os: string;
+  description: string;
+  userId: string;
+}) {
+  console.log("📩 Received on server:", { appId, os, description });
   try {
+    const task = await prisma.task.create({
+      data: { appId, os, description },
+    });
+  
     const capture = await prisma.capture.create({
-      data,
+      data: {
+        appId,
+        taskId: task.id,
+        userId: userId,
+        otp:"",
+        src: "",
+      },
     });
 
-    return { ok: true, message: "Capture task created.", data: { captureId: capture.id } };
-  } catch (err) {
-    console.error("Error creating capture task:", err);
-    return { ok: false, message: "Failed to create capture task.", data: null };
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        captures: { push: capture.id },
+      },
+    });
+
+    return { captureId: capture.id };
+  } catch (error) {
+    console.error('Error creating capture/task:', error);
+    throw new Error('Failed to create capture and task');
   }
 }
