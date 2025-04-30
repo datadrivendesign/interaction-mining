@@ -1,8 +1,8 @@
-import { getSession } from "@/lib/actions";
+import { getSessionData } from "@/lib/actions";
 import { redirect } from "next/navigation";
 
 export async function useAuthCheck(callbackUrl: string = "/") {
-  const session = await getSession();
+  const session = await getSessionData();
   if (!session) redirect(`/sign-in?callbackUrl=${callbackUrl}`);
   return session;
 }

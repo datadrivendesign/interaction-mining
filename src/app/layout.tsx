@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import classNames from "classnames";
 import Configuration from "./components/configuration";
+import { SessionProvider } from "next-auth/react";
 
 const robotoMono = Roboto_Mono({
   subsets: ["latin"],
@@ -44,8 +45,10 @@ export default function RootLayout({
             "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans bg-white text-black dark:bg-black dark:text-white"
           )}
         >
-          <Toaster />
-          {children}
+          <SessionProvider>
+            <Toaster />
+            {children}
+          </SessionProvider>
         </body>
       </html>
     </Configuration>

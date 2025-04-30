@@ -319,3 +319,23 @@ export async function getUploadedCaptureFiles(captureId: string) {
     };
   }
 }
+
+/**
+ * Creates a new capture task in the database.
+ * @param data Data to create the capture task with.
+ * @returns ActionPayload
+ */
+export async function createCaptureTask(
+  data: Prisma.CaptureCreateInput
+): Promise<ActionPayload<{ captureId: string }>> {
+  try {
+    const capture = await prisma.capture.create({
+      data,
+    });
+
+    return { ok: true, message: "Capture task created.", data: { captureId: capture.id } };
+  } catch (err) {
+    console.error("Error creating capture task:", err);
+    return { ok: false, message: "Failed to create capture task.", data: null };
+  }
+}
