@@ -1,4 +1,4 @@
-import { getSession, updateUserRole } from "@/lib/actions/index";
+import { getSessionData, updateUserRole } from "@/lib/actions/index";
 import { prisma } from "@/lib/prisma";
 import { UserRoleSelector } from "@/components/ui/roleselector";
 import {
@@ -15,7 +15,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react"
 
 export default async function AdminPage() {
-  const session = await getSession();
+  const session = await getSessionData();
 
   if (!session) {
     return (
