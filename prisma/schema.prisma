@@ -1,6 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
+  output        = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -19,7 +20,15 @@ type ScreenGesture {
   scrollDeltaY Float?
   x            Float?
   y            Float?
-  description String?
+  description  String?
+}
+
+type ScreenRedaction {
+  x           Float  @map("startX")
+  y           Float  @map("startY")
+  width       Float  @map("endX")
+  height      Float  @map("endY")
+  description String @map("label")
 }
 
 enum Role {
@@ -33,11 +42,11 @@ type AppMetadata {
   cover       String
   description String
   icon        String
-  rating      Float
-  reviews     Float?
+  rating      String
+  reviews     String?
   genre       String[]
   downloads   String
-  url         String
+  url         String?
 }
 
 model App {
@@ -47,29 +56,35 @@ model App {
   packageName String        @unique
   metadata    AppMetadata
   Capture     Capture[]
+  Trace       Trace[]
 
   @@fulltext([metadata.name])
   @@map("apps")
 }
 
 model Redaction {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  v      Int    @default(0) @map("__v")
-  label  String
-  screen String @db.ObjectId
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int    @default(0) @map("__v")
+  x           Float  @map("startX")
+  y           Float  @map("startY")
+  deltaX      Float  @map("endX")
+  deltaY      Float  @map("endY")
+  description String @map("label")
+  screenId    String @map("screen") @db.ObjectId
 
   @@map("redactions")
 }
 
 model Screen {
-  id      String        @id @default(auto()) @map("_id") @db.ObjectId
-  v       Int           @default(0) @map("__v")
-  created DateTime      @default(now()) @db.Date
-  gesture ScreenGesture
-  src     String
-  vh      String
-  traceId String        @map("trace") @db.ObjectId
-  trace   Trace         @relation(fields: [traceId], references: [id])
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  v          Int               @default(0) @map("__v")
+  created    DateTime          @default(now()) @db.Date
+  gesture    ScreenGesture
+  redactions ScreenRedaction[]
+  src        String
+  vh         String
+  traceId    String            @map("trace") @db.ObjectId
+  trace      Trace             @relation(fields: [traceId], references: [id])
 
   @@map("screens")
 }
@@ -78,6 +93,7 @@ model Trace {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   v           Int      @default(0) @map("__v")
   appId       String   @map("app") @db.ObjectId
+  app         App      @relation(fields: [appId], references: [id])
   created     DateTime @default(now()) @db.Date
   name        String?
   description String

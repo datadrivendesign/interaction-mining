@@ -1,9 +1,24 @@
 "use client";
 
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { GlobalHotKeys } from "react-hotkeys";
-import { CircleAlert } from "lucide-react";
+import {
+  ArrowDownFromLine,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  ArrowUpFromLine,
+  Circle,
+  CircleAlert,
+  CircleDot,
+  CircleHelp,
+  CircleStop,
+  Expand,
+  Grab,
+  IterationCcw,
+  IterationCw,
+  Shrink,
+} from "lucide-react";
 
 import {
   ResizableHandle,
@@ -17,7 +32,112 @@ import { cn } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
 import { TraceFormData } from "../types";
 import { FrameData } from "../types";
-import { GestureOptionsContext } from "../../util";
+
+export   const gestureOptions = [
+  {
+    value: "Tap",
+    label: "Tap",
+    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "Double tap",
+    label: "Double tap",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: (
+      <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+    ),
+  },
+  {
+    value: "Swipe",
+    label: "Swipe",
+    subGestures: [
+      {
+        value: "Swipe up",
+        label: "Swipe up",
+        icon: (
+          <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "Swipe down",
+        label: "Swipe down",
+        icon: (
+          <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "Swipe left",
+        label: "Swipe left",
+        icon: (
+          <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "Swipe right",
+        label: "Swipe right",
+        icon: (
+          <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+  },
+  {
+    value: "Drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "Zoom",
+    label: "Zoom",
+    subGestures: [
+      {
+        value: "Zoom in",
+        label: "Zoom in",
+        icon: (
+          <Shrink className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "Zoom out",
+        label: "Zoom out",
+        icon: (
+          <Expand className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+  },
+  {
+    value: "Rotate",
+    label: "Rotate",
+    subGestures: [
+      {
+        value: "Rotate cw",
+        label: "Rotate cw",
+        icon: (
+          <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "Rotate ccw",
+        label: "Rotate ccw",
+        icon: (
+          <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+  },
+  {
+    value: "Other",
+    label: "Other",
+    icon: (
+      <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
+    ),
+  },
+];
 
 export default function RepairScreen({ capture }: { capture: any }) {
   const [watchScreens, watchVHs, watchGestures] = useWatch({
@@ -104,7 +224,6 @@ function FocusView({
   const { watch, setValue } = useFormContext<TraceFormData>();
 
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
-  const { gestureOptions } = useContext(GestureOptionsContext);
 
   // Find applicable gesture for screen or set to default template
   const [gesture, setGesture] = useState<ScreenGesture>(

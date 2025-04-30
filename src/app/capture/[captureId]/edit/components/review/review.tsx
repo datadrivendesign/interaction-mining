@@ -8,7 +8,7 @@ import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { GestureOptionsContext } from "../../util";
+import { gestureOptions } from "../repair-screen";
 import { FrameData } from "../types";
 
 export default function Review() {
@@ -39,7 +39,6 @@ function SaveTraceGallery() {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens");
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
-  const { gestureOptions } = useContext(GestureOptionsContext);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
