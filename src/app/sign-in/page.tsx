@@ -63,14 +63,14 @@ export default function SignInPage() {
           </Button>
 
           {/* Sign Out */}
-          <Button
+          {/* <Button
             className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
             onClick={handleSignOut}
           >
             <span className="inline-flex items-center text-white dark:text-black font-medium">
               Sign out
             </span>
-          </Button>
+          </Button> */}
         </CardHeader>
       </Card>
     </div>

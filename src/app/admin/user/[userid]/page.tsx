@@ -1,25 +1,25 @@
-import { getUser } from "@/lib/actions/index";
+import { getUser, getUserCaptures } from "@/lib/actions/index";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { notFound } from "next/navigation";
-import { Param } from "@prisma/client/runtime/library";
-
 
 export default async function AdminUserDetails({ params }: { params: Promise<{ userid: string }> }) {
-  const { userid } = await params; // Await the params promise before destructuring
+  const { userid } = await params;
 
-  if (!userid) { // Validate userId directly
+  if (!userid) {
     console.error("User ID is undefined");
     notFound();
   }
 
-  const user = await getUser(userid);
+  const [user, captures] = await Promise.all([
+    getUser(userid),
+    getUserCaptures(userid)
+  ]);
 
-  if (!user) { // Check if user is null or undefined
+  if (!user) {
     notFound();
   }
-
-  user.traces =  []; // Ensure traces is an array
 
   return (
     <div className="p-32 max-w-7xl mx-auto">
@@ -43,27 +43,34 @@ export default async function AdminUserDetails({ params }: { params: Promise<{ u
         </div>
 
         {/* Right column: Traces */}
-        <div className="md:col-span-2 space-y-6">
-          <h2 className="text-2xl font-semibold tracking-tight">Uploaded Traces</h2>
-
-          {user.traces.length === 0 ? (
-            <p className="text-muted-foreground">No traces uploaded yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {user.traces.map((trace) => (
-                <li
-                  key={trace.id}
-                  className="flex justify-between items-center rounded-md border p-3 bg-muted/5"
-                >
-                  <span className="font-mono text-xs">{trace.id}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(trace.createdAt).toLocaleDateString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {captures.length === 0 ? (
+          <p className="text-muted-foreground">No captures uploaded yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {captures.map((cap) => (
+              <Card key={cap.id} className="rounded-md hover:shadow-sm transition">
+                <CardHeader className="flex flex-row items-center gap-4 p-4">
+                  <img
+                    src={cap.app?.metadata?.icon || "/placeholder.png"}
+                    alt="App Icon"
+                    className="w-10 h-10 rounded object-cover"
+                  />
+                  <div className="w-full">
+                    <CardTitle className="text-sm font-medium">
+                      {cap.app?.metadata?.name ?? "Unnamed App"}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {cap.task?.description ?? "No description"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Platform: {cap.task?.os ?? "Unknown OS"} | ID: {cap.id.slice(0, 6)}...
+                    </p>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

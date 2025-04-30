@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
 import { unstable_cache } from "next/cache";
+import { getAppByPackageName } from "./app";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -336,7 +337,6 @@ export async function createCaptureTask({
   description: string;
   userId: string;
 }) {
-  console.log("📩 Received on server:", { appId, os, description });
   try {
     const task = await prisma.task.create({
       data: { appId, os, description },
@@ -363,5 +363,41 @@ export async function createCaptureTask({
   } catch (error) {
     console.error('Error creating capture/task:', error);
     throw new Error('Failed to create capture and task');
+  }
+}
+
+export async function getUserCaptures(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        captures: true,
+      },
+    });
+
+    if (!user || !user.captures?.length) return [];
+
+    const captures = await prisma.capture.findMany({
+      where: {
+        id: { in: user.captures },
+      },
+      include: {
+        app: true,
+        task: true,
+      },
+    });
+
+    const enrichedCaptures = await Promise.all(
+      captures.map(async (cap) => {
+        const app = await getAppByPackageName(cap.appId);
+        return { ...cap, app };
+      })
+    );
+
+    return enrichedCaptures;
+
+  } catch (error) {
+    console.error("Failed to fetch user captures:", error);
+    return [];
   }
 }
