@@ -1,37 +1,82 @@
-"use client";
+'use client';
 
 import { useSession } from "next-auth/react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getUserCaptures } from "@/lib/actions/index";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [captures, setCaptures] = useState([]);
 
-  if (!session) return null; // or a loading skeleton
+  useEffect(() => {
+    async function fetchCaptures() {
+      if (!session?.user?.id) return;
+      const data = await getUserCaptures(session.user.id);
+      setCaptures(data);
+    }
+    fetchCaptures();
+  }, [session]);
+
+  if (!session) return null;
 
   return (
-    <div className="p-10 max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center gap-6">
-        <Avatar className="w-20 h-20">
+    <div className="p-6 max-w-4xl mx-auto space-y-8">
+      <div className="flex items-center gap-4">
+        <Avatar className="w-16 h-16">
           <AvatarImage src={session.user?.image ?? ""} alt="User avatar" />
           <AvatarFallback>
-            {session.user?.name?.charAt(0).toUpperCase() ?? "U"}
+            {session.user?.name?.[0]?.toUpperCase() ?? "U"}
           </AvatarFallback>
         </Avatar>
-
         <div>
-          <h1 className="text-2xl font-bold">Welcome back, {session.user?.name ?? "User"}</h1>
+          <h1 className="text-xl font-semibold">Welcome, {session.user?.name}</h1>
           <p className="text-muted-foreground text-sm">{session.user?.email}</p>
         </div>
       </div>
 
-      <div>
+      <div className="space-y-4">
+        {captures.map((cap) => (
+          <Card key={cap.id} className="border bg-muted/50 hover:shadow-md transition rounded-xl">
+            <CardHeader className="flex flex-row items-center gap-4 p-4">
+              <img
+                src={cap.app?.metadata?.icon || "/placeholder.png"}
+                alt="App Icon"
+                className="w-10 h-10 rounded object-cover"
+              />
+              <div className="flex flex-col w-full">
+                <CardTitle className="text-base font-medium">
+                  {cap.app?.metadata?.name ?? "Unnamed App"}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground line-clamp-1">
+                  {cap.task?.description ?? "No description provided"}
+                </p>
+                <div className="text-sm text-muted-foreground line-clamp-1">
+                  <span>{cap.task?.os ?? "Unknown OS"}</span>
+                  {/* <span>Capture ID: {cap.id.slice(0, 6)}...</span> */}
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex justify-end">
         <Button onClick={() => router.push("/capture/new")}>
-          Start Capture
+          + New Capture
         </Button>
       </div>
+
+
     </div>
   );
 }

@@ -68,6 +68,13 @@ function SessionContent() {
           <DropdownMenuItem asChild>
             <Link href={`/dashboard/${session.user?.id}`}>Dashboard</Link>
           </DropdownMenuItem>
+
+          {session.user?.role === "ADMIN" && (
+            <DropdownMenuItem asChild>
+              <Link href="/admin">Admin Dashboard</Link>
+            </DropdownMenuItem>
+          )}
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
             Sign Out
