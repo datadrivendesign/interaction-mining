@@ -66,7 +66,7 @@ function SessionContent() {
 
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem asChild>
-            <Link href={`/user/${session.user?.id}`}>Dashboard</Link>
+            <Link href={`/dashboard/${session.user?.id}`}>Dashboard</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
