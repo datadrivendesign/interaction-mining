@@ -37,6 +37,6 @@ export async function uploadToS3(
   return {
     ok: true,
     message: "File uploaded successfully",
-    data: uploadData.fileUrl,
+    data: uploadData,
   };
 }
