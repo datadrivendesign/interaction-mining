@@ -9,7 +9,7 @@ import { FrameData } from "../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
 
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { useHotkeys } from "react-hotkeys-hook";
 
 type RedactCanvasMode = "pencil" | "eraser" | "select";

@@ -24,11 +24,11 @@ type ScreenGesture {
 }
 
 type ScreenRedaction {
-  x           Float  @map("startX")
-  y           Float  @map("startY")
-  width       Float  @map("endX")
-  height      Float  @map("endY")
-  description String @map("label")
+  x          Float  @map("startX")
+  y          Float  @map("startY")
+  width      Float  @map("endX")
+  height     Float  @map("endY")
+  annotation String @map("label")
 }
 
 enum Role {
