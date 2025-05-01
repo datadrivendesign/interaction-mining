@@ -29,6 +29,7 @@ import { RedactCanvasContext } from "./redact-screen-canvas";
 import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
 import Konva from "konva";
+import { clamp } from "motion/react";
 
 export interface CanvasComponentProps {
   screen: FrameData;
@@ -238,23 +239,13 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       }
     };
 
-    // function to handle dragging of rectangles
-    const handleDrag = useCallback(
-      (e: any, id: string) => {
-        const pos = e.target.position();
-        const newX = (pos.x - offsetX) / displayWidth;
-        const newY = (pos.y - offsetY) / displayHeight;
-        updateRect(id, { x: newX, y: newY });
-      },
-      [offsetX, offsetY, displayWidth, displayHeight, updateRect]
-    );
-
-    // function to handle transformation of rectangles
+    // const handleTransform = () => {};
     const handleTransform = useCallback(
       (e: any, id: string) => {
         const node = e.target;
         const scaleX = node.scaleX();
         const scaleY = node.scaleY();
+
         // Reset scale to 1
         node.scaleX(1);
         node.scaleY(1);
@@ -262,29 +253,16 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         // Calculate new positions and dimensions in normalized coordinates
         const newX = (node.x() - offsetX) / displayWidth;
         const newY = (node.y() - offsetY) / displayHeight;
-        const rawWidth = (node.width() * scaleX) / displayWidth;
-        const rawHeight = (node.height() * scaleY) / displayHeight;
+        const newWidth = (node.width() * scaleX) / displayWidth;
+        const newHeight = (node.height() * scaleY) / displayHeight;
 
-        // Handle negative resizing: if width or height is negative, adjust position and flip size
-        let updatedX = newX;
-        let updatedY = newY;
-        let updatedWidth = rawWidth;
-        let updatedHeight = rawHeight;
+        let clampedX = newX;
+        let clampedY = newY;
+        let clampedWidth = clamp(0, 1, newWidth);
+        let clampedHeight = clamp(0, 1, newHeight);
 
-        if (rawWidth < 0) {
-          updatedX = newX + rawWidth;
-          updatedWidth = Math.abs(rawWidth);
-        }
-        if (rawHeight < 0) {
-          updatedY = newY + rawHeight;
-          updatedHeight = Math.abs(rawHeight);
-        }
-
-        // Clamp the values so the redaction stays within [0, 1]
-        const clampedX = Math.max(0, updatedX);
-        const clampedY = Math.max(0, updatedY);
-        const clampedWidth = Math.min(updatedWidth, 1 - clampedX);
-        const clampedHeight = Math.min(updatedHeight, 1 - clampedY);
+        clampedX = clamp(0, 1 - clampedWidth, newX);
+        clampedY = clamp(0, 1 - clampedHeight, newY);
 
         updateRect(id, {
           x: clampedX,
@@ -292,9 +270,75 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           width: clampedWidth,
           height: clampedHeight,
         });
+
+        // Update the position of the node
+        node.setAttrs({
+          x: clampedX * displayWidth + offsetX,
+          y: clampedY * displayHeight + offsetY,
+          width: clampedWidth * displayWidth,
+          height: clampedHeight * displayHeight,
+        });
+
+        node.getLayer().batchDraw();
       },
       [offsetX, offsetY, displayWidth, displayHeight, updateRect]
     );
+
+    // const boundingBoxFunction = (oldBox: any, newBox: any) => {
+    //   // make sure resize does not go outside the stage
+    //   const node = transformerRef.current;
+
+    //   const scaleX = node.scaleX();
+    //   const scaleY = node.scaleY();
+
+    //   // Reset scale to 1
+    //   node.scaleX(1);
+    //   node.scaleY(1);
+
+    //   // Calculate new positions and dimensions in normalized coordinates
+    //   const newX = (node.x() - offsetX) / displayWidth;
+    //   const newY = (node.y() - offsetY) / displayHeight;
+    //   const newWidth = (node.width() * scaleX) / displayWidth;
+    //   const newHeight = (node.height() * scaleY) / displayHeight;
+
+    //   console.log(newX, newY, newWidth, newHeight);
+
+    //   const isValidSize =
+    //     newWidth > 0 &&
+    //     newX + newWidth < 1 &&
+    //     newHeight > 0 &&
+    //     newY + newHeight < 1;
+
+    //   const isValidPosition =
+    //     newX >= 0 && newY >= 0 && newX + newWidth <= 1 && newY + newHeight <= 1;
+
+    //   if (!isValidSize || !isValidPosition) {
+    //     return oldBox;
+    //   }
+
+    //   let clampedX = newX;
+    //   let clampedY = newY;
+    //   let clampedWidth = clamp(0, 1, newWidth);
+    //   let clampedHeight = clamp(0, 1, newHeight);
+
+    //   clampedX = clamp(0, 1 - clampedWidth, newX);
+    //   clampedY = clamp(0, 1 - clampedHeight, newY);
+
+    //   updateRect(node.id, {
+    //     x: clampedX,
+    //     y: clampedY,
+    //     width: clampedWidth,
+    //     height: clampedHeight,
+    //   });
+
+    //   return {
+    //     ...newBox,
+    //     x: clampedX * displayWidth + offsetX,
+    //     y: clampedY * displayHeight + offsetY,
+    //     width: clampedWidth * displayWidth,
+    //     height: clampedHeight * displayHeight,
+    //   };
+    // };
 
     useEffect(() => {
       const stage = stageRef.current;
@@ -405,7 +449,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                   offsetY={offsetY}
                   mode={mode}
                   handleRectClick={handleRectClick}
-                  handleDrag={handleDrag}
                   handleTransform={handleTransform}
                 />
               ))}
@@ -420,7 +463,12 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                 />
               )}
               {mode === "select" && (
-                <Transformer keepRatio={false} ref={transformerRef} />
+                <Transformer
+                  // boundBoxFunc={boundingBoxFunction}
+                  keepRatio={false}
+                  rotateEnabled={false}
+                  ref={transformerRef}
+                />
               )}
             </Layer>
           </Stage>
