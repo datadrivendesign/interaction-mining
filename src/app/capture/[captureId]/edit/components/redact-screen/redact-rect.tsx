@@ -1,6 +1,6 @@
 "use client";
 import { Rect } from "react-konva";
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { useEffect, useRef } from "react";
 import Konva from "konva";
 
@@ -13,7 +13,6 @@ export default function RedactRectangle({
   offsetY,
   mode,
   handleRectClick,
-  handleDrag,
   handleTransform,
 }: {
   type?: "black-box" | "blur";
@@ -24,7 +23,6 @@ export default function RedactRectangle({
   offsetY: number;
   mode: string;
   handleRectClick: (e: any, id: string) => void;
-  handleDrag: (e: any, id: string) => void;
   handleTransform: (e: any, id: string) => void;
 }) {
   const ref = useRef<Konva.Rect>(null);
@@ -46,6 +44,23 @@ export default function RedactRectangle({
     }
   }, [type]);
 
+  const onTransformStart = (e: any) => {
+    // set opacity
+    const node = ref.current;
+    if (node) {
+      node.opacity(0.75);
+    }
+    handleTransform(e, redaction.id);
+  };
+
+  const onTransformEnd = (e: any) => {
+    const node = ref.current;
+    if (node) {
+      node.opacity(1);
+    }
+    handleTransform(e, redaction.id);
+  };
+
   return (
     <Rect
       ref={ref}
@@ -57,8 +72,12 @@ export default function RedactRectangle({
       draggable={mode === "select"}
       onClick={(e) => handleRectClick(e, redaction.id)}
       onTap={(e) => handleRectClick(e, redaction.id)}
-      onDragMove={(e) => handleDrag(e, redaction.id)}
+      onTransformStart={onTransformStart}
       onTransform={(e) => handleTransform(e, redaction.id)}
+      onTransofrmEnd={onTransformEnd}
+      onDragStart={onTransformStart}
+      onDragMove={(e) => handleTransform(e, redaction.id)}
+      onDragEnd={onTransformEnd}
     />
   );
 }

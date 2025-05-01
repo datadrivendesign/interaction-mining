@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/resizable";
 
 import RedactScreenCanvas from "./redact-screen-canvas";
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../types";
 import { FrameData } from "../types";
