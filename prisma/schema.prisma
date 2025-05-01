@@ -42,8 +42,8 @@ type AppMetadata {
   cover       String
   description String
   icon        String
-  rating      String
-  reviews     String?
+  rating      Float
+  reviews     Float?
   genre       String[]
   downloads   String
   url         String?

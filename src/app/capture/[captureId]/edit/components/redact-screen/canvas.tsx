@@ -357,100 +357,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       getStage: () => stageRef.current,
     }));
 
-    const handleExport = useCallback(() => {
-      // const stage = stageRef.current;
-      // const transformer = transformerRef.current;
-      // if (!stage) return;
-      // transformer.hide();
-
-      // // Get the layer and image
-      // const layer = stage.findOne("Layer");
-      // if (!layer) return;
-
-      // const image = layer.findOne("Image");
-      // if (!image) return;
-
-      // const dataURL = stage.toDataURL({
-      //   x: image.x(),
-      //   y: image.y(),
-      //   width: image.width(),
-      //   height: image.height(),
-      //   pixelRatio: 1,
-      //   mimeType: "image/png",
-      // });
-      // transformer.show();
-
-      if (!image) return;
-
-      const container = document.createElement("div");
-      container.style.position = "absolute";
-      container.style.top = "0";
-      container.style.left = "0";
-      container.style.width = `${image.width}px`;
-      container.style.height = `${image.height}px`;
-      container.style.zIndex = "-9999";
-      document.body.appendChild(container);
-
-      // create new canvas
-      var renderStage = new Konva.Stage({
-        container: container,
-        width: image.width,
-        height: image.height,
-      });
-
-      // create new layer
-      const renderLayer = new Konva.Layer();
-      renderStage.add(renderLayer);
-
-      // create new image with original resolution
-      const renderImage = new Konva.Image({
-        image: image,
-        x: 0,
-        y: 0,
-        width: image.width,
-        height: image.height,
-      });
-
-      console.log("redactions", redactions);
-
-      renderLayer.add(renderImage);
-
-      // render redactions
-      redactions.forEach((redaction) => {
-        const rect = new Konva.Rect({
-          x: redaction.x * image.width,
-          y: redaction.y * image.height,
-          width: redaction.width * image.width,
-          height: redaction.height * image.height,
-          fill: "black",
-          opacity: 1,
-        });
-        renderLayer.add(rect);
-      });
-      renderLayer.batchDraw();
-
-      // export the canvas to data URL
-      const dataURL = renderStage.toDataURL({
-        x: 0,
-        y: 0,
-        width: image.width,
-        height: image.height,
-        pixelRatio: 1,
-        mimeType: "image/png",
-      });
-
-      // delete the container
-      document.body.removeChild(container);
-
-      // create a link to download the image
-      const link = document.createElement("a");
-      link.href = dataURL;
-      link.download = "redacted-image.png";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }, [image, redactions]);
-
     return (
       <div className="relative w-full h-full">
         <div
@@ -467,14 +373,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             mode === "eraser" && "cursor-normal"
           )}
         >
-          <div className="absolute top-0 left-0 z-10 flex items-center justify-between w-full p-2">
-            <button
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md shadow-md hover:bg-blue-600"
-              onClick={handleExport}
-            >
-              Export
-            </button>
-          </div>
           <Stage
             ref={stageRef}
             width={width ?? 0}
