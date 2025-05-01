@@ -115,3 +115,48 @@ export async function getAppByPackageName(packageName: string): Promise<App | nu
     return null;
   }
 }
+
+export async function checkIfAppExists(packageName: string): Promise<boolean> {
+  if (!packageName) return false;
+
+  try {
+    const app = await prisma.app.findUnique({
+      where: { packageName },
+    });
+
+    return!! app;
+  } catch (error) {
+    console.error("Failed to check if app exists:", error);
+    return false;
+  }
+}
+
+
+export async function saveApp(appData: App): Promise<{ ok: boolean, data: App | null }> {
+  if (!appData || !appData.packageName) return { ok: false, data: null };
+
+  try {
+    const existingApp = await prisma.app.findFirst({
+      where: {
+        packageName: appData.packageName,
+      },
+    });
+
+    if (existingApp) {
+      console.log("App already exists:", existingApp.packageName);
+      return { ok: true, data: existingApp };
+    }
+
+    const newApp = await prisma.app.create({
+      data: {
+        packageName: appData.packageName,
+        metadata: appData.metadata,
+      },
+    });
+
+    return { ok: true, data: newApp };
+  } catch (error) {
+    console.error("Failed to save scraped app:", error);
+    return { ok: false, data: error as App | null };
+  }
+}
