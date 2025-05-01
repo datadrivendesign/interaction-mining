@@ -1,5 +1,5 @@
 "use server";
-import { Prisma, Screen, Trace } from "@prisma/client";
+import { Prisma, Trace } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
@@ -9,10 +9,7 @@ interface GetTracesParams {
   taskId?: string;
   limit?: number;
   page?: number;
-  includes?: {
-    app?: boolean;
-    screens?: boolean;
-  };
+  includes?: Prisma.TraceInclude;
 }
 
 export async function getTraces({
@@ -81,19 +78,19 @@ export async function getTraces({
 }
 
 interface GetTraceParams {
-  includes?: {
-    app?: boolean;
-    screens?: boolean;
-  };
+  includes?: Prisma.TraceInclude;
 }
 
-export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
-  const {
-    // app = false,
-    screens = false,
-  } = includes || {};
+// export type Trace<
+//   Includes extends Prisma.TraceInclude | undefined = undefined,
+// > = Prisma.TraceGetPayload<{
+//   include: Includes;
+// }>;
 
-  let trace = null;
+export async function getTrace(id: string, { includes }: GetTraceParams = {}):
+  Promise<ActionPayload<Trace>> {
+  const { app = false, screens = false, task = false } = includes || {};
+
   if (!id || !isValidObjectId(id)) {
     return {
       ok: false,
@@ -102,14 +99,17 @@ export async function getTrace(id: string, { includes }: GetTraceParams = {}) {
     };
   }
 
+  const query: Prisma.TraceWhereUniqueInput = {
+    id,
+  };
+
   try {
-    trace = await prisma.trace.findUnique({
-      where: {
-        id,
-      },
+    const trace = await prisma.trace.findUnique({
+      where: query,
       include: {
-        // app,
+        app,
         screens,
+        task,
       },
     });
 

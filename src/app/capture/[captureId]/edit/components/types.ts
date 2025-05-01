@@ -1,6 +1,20 @@
 import { ScreenGesture } from "@prisma/client";
 import { z, ZodType } from "zod";
-import { Redaction } from "./redact-screen";
+
+export type FrameData = {
+  id: string;
+  src: string;
+  timestamp: number;
+};
+
+export interface Redaction {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  annotation: string;
+}
 
 export type TraceFormData = {
   screens: FrameData[];
@@ -8,12 +22,6 @@ export type TraceFormData = {
   gestures: { [key: string]: ScreenGesture };
   redactions: { [key: string]: Redaction[] };
   description: string;
-};
-
-export type FrameData = {
-  id: string;
-  src: string;
-  timestamp: number;
 };
 
 export const ScreenSchema = z
