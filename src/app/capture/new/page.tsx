@@ -32,7 +32,7 @@ export default function CaptureNewPage() {
     ANDROID = "android"
   }
 
-  const [platform, setPlatform] = useState<OS>(OS.ANDROID);//"android");
+  const [platform, setPlatform] = useState<OS>(OS.ANDROID);
   const [app, setApp] = useState("");
   const [description, setDescription] = useState("");
   const [apps, setApps] = useState<AppListItem[]>([]);
@@ -51,8 +51,8 @@ export default function CaptureNewPage() {
     const app = {
       packageName: data.appId,
       category: {
-        id: platform == OS.ANDROID ? data.primaryGenre : data.genre,
-        name: platform == OS.IOS ? data.primaryGenreId : data.genreId,
+        id: platform == OS.ANDROID ? data.genre : data.primaryGenreId,
+        name: platform == OS.ANDROID ? data.genreId : data.primaryGenre,
       },
       metadata: {
         company: data.developer ?? "unknown",
@@ -141,7 +141,11 @@ export default function CaptureNewPage() {
           <ToggleGroup 
             type="single" 
             value={platform} 
-            onValueChange={(platform) => setPlatform(platform as OS)} 
+            onValueChange={(selectPlatform) => {
+              if (selectPlatform) {
+                setPlatform(selectPlatform as OS)
+              }
+            }} 
             className="w-full"
           >
             <ToggleGroupItem 
@@ -189,7 +193,7 @@ export default function CaptureNewPage() {
         {showAddApp && (
           <div className="space-y-2">
             <Label htmlFor="newAppId">
-              Enter {platform === "android" ? "Package Name" : "iOS Bundle ID"}
+              Enter {platform === OS.ANDROID ? "Package Name" : "iOS Bundle ID"}
             </Label>
             <input
               type="text"

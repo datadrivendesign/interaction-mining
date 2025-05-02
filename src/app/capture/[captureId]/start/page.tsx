@@ -80,6 +80,8 @@ export default function Page({}: {}) {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
   };
 
+  console.log(process.env.NEXT_PUBLIC_DEPLOYMENT_URL)
+
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
       <Card className="w-full max-w-screen-sm">
@@ -196,7 +198,7 @@ export default function Page({}: {}) {
                     className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
                     value={
                       os === "android"
-                        ? `https:///api/capture/${captureId}`
+                        ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
                         : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
                     }
                   />
