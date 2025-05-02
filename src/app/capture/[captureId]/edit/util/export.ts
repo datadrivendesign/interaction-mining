@@ -99,15 +99,23 @@ export async function exportRedactedImage(
 export async function handleSave(data: TraceFormData, capture: Capture) {
   // Transpose gestures on to screens
   let screens = data.screens.map((screen: FrameData) => {
+    const gesture = data.gestures[screen.id] ?? {
+      type: null,
+      x: null,
+      y: null,
+      scrollDeltaX: null,
+      scrollDeltaY: null,
+      description: null,
+    };
+    const redactions = data.redactions[screen.id] ?? [];
     return {
-      id: screen.id,
-      created: new Date(),
-      gesture: data.gestures[screen.id] ?? null,
-      redactions: data.redactions[screen.id] ?? null,
       src: screen.src,
       vh: "",
+      created: new Date(),
+      gesture: { set: gesture },
+      redactions: { set: redactions },
     };
-  }) as Partial<Screen>[];
+  });
 
   const uploadScreenResponse = await Promise.all(
     screens.map(async (screen: any) => {
@@ -260,11 +268,19 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   const trace = await createTrace(
     {
       name: "New Trace",
-      description: data.description ?? "broken",
-      appId: capture!.appId_!,
-      taskId: capture!.taskId!,
+      description: data.description,
+      app: {
+        connect: {
+          id: capture.appId_,
+        },
+      },
+      task: {
+        connect: {
+          id: capture.taskId,
+        },
+      },
       screens: {
-        create: [...screens] as Screen[],
+        create: screens,
       },
       worker: "web",
     },

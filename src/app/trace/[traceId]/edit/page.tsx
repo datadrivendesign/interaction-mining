@@ -15,9 +15,8 @@ import SelectScreenDoc from "./components/select-screen.mdx";
 import RepairInteractionsDoc from "./components/repair-interactions.mdx";
 // import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
 
-import { TraceSWRKeys, traceFetcher, useTrace } from "./util";
 import { Screen, ScreenGesture } from "@prisma/client";
-import useSWR from "swr";
+import { useTrace } from "@/lib/hooks";
 
 const traceSteps = [
   {
@@ -53,11 +52,13 @@ export default function Page() {
   const traceId = params.traceId as string;
   const [navRef, { height }] = useMeasure();
 
-  const { trace, isLoading: isTraceLoading } = useTrace(traceId);
+  const { trace, isLoading: isTraceLoading } = useTrace(traceId, {
+    includes: { screens: true },
+  });
 
   const methods = useForm<TraceFormData>({
     defaultValues: {
-      screens: trace?.screens,
+      screens: [],
       gestures: {},
       redactions: {},
     },
@@ -66,10 +67,13 @@ export default function Page() {
   useEffect(() => {
     methods.reset({
       screens: trace?.screens,
-      gestures: trace?.screens.reduce((acc, screen) => {
-        acc[screen.id] = screen.gesture;
-        return acc;
-      }, {} as { [key: string]: ScreenGesture }),
+      gestures: trace?.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.gesture;
+          return acc;
+        },
+        {} as { [key: string]: ScreenGesture }
+      ),
       redactions: {},
     });
   }, [trace, methods]);

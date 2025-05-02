@@ -31,10 +31,7 @@ interface GetCaptureProps {
   id?: string;
   taskId?: string;
   otp?: string;
-  includes?: {
-    app?: boolean;
-    task?: boolean;
-  };
+  includes?: Prisma.CaptureInclude;
 }
 
 export type CaptureListedFile = {
