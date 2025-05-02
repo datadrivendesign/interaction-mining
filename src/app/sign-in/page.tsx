@@ -1,20 +1,13 @@
 "use client";
 
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
-import { signIn, signOut } from "next-auth/react"; // use next-auth/react here
 
 export default function SignInPage() {
-  const safeCallbackUrl = "/dashboard/"; // Hardcoded fallback for callbackUrl
-
   const handleGoogleSignIn = async () => {
-    await signIn("google", { callbackUrl: safeCallbackUrl });
-    window.location.href = safeCallbackUrl; // Redirect after sign-in
-  };
-
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await signIn("google", { callbackUrl: "/" }); // or "/"
   };
 
   return (
@@ -25,7 +18,6 @@ export default function SignInPage() {
             Sign in to ODIM
           </CardTitle>
 
-          {/* Google */}
           <Button
             className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
             onClick={handleGoogleSignIn}
@@ -43,7 +35,6 @@ export default function SignInPage() {
             </span>
           </Button>
 
-          {/* Apple (disabled for now) */}
           <Button
             className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
             disabled
@@ -60,16 +51,6 @@ export default function SignInPage() {
               Sign in with Apple
             </span>
           </Button>
-
-          {/* Sign Out */}
-          {/* <Button
-            className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
-            onClick={handleSignOut}
-          >
-            <span className="inline-flex items-center text-white dark:text-black font-medium">
-              Sign out
-            </span>
-          </Button> */}
         </CardHeader>
       </Card>
     </div>
