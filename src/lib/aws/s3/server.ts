@@ -60,7 +60,7 @@ export async function generatePresignedUploadURL(
 export async function deleteFromS3(fileKey: string) {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Prefix: fileKey,
     });
 
@@ -71,7 +71,7 @@ export async function deleteFromS3(fileKey: string) {
     }
 
     const deleteCommand = new DeleteObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
     });
 

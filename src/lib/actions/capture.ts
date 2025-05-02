@@ -230,7 +230,7 @@ export async function generatePresignedCaptureUploadImg(
     const fileKey = `uploads/${captureId}/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -244,7 +244,7 @@ export async function generatePresignedCaptureUploadImg(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -261,7 +261,7 @@ export async function generatePresignedCaptureUploadImg(
 export async function deleteUploadedFile(fileKey: string) {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Prefix: fileKey,
     });
 
@@ -272,7 +272,7 @@ export async function deleteUploadedFile(fileKey: string) {
     }
 
     const deleteCommand = new DeleteObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
     });
 
@@ -299,7 +299,7 @@ export async function deleteUploadedFile(fileKey: string) {
 export async function getUploadedCaptureFiles(captureId: string) {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Prefix: `uploads/${captureId}/`,
     });
 
@@ -318,7 +318,7 @@ export async function getUploadedCaptureFiles(captureId: string) {
     const fileUrls = response.Contents.map((file) => ({
       fileKey: file.Key!,
       fileName: file.Key!.split("/")[file.Key!.split("/").length - 1],
-      fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.Key!}`,
+      fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.Key!}`,
     }));
 
     return {

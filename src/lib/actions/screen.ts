@@ -102,7 +102,7 @@ export async function generatePresignedScreenUpload(
     const fileKey = `uploads/${captureId}/screens/${Date.now()}.${extension}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -116,7 +116,7 @@ export async function generatePresignedScreenUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -154,7 +154,7 @@ export async function generatePresignedVHUpload(
     const fileKey = `uploads/${captureId}/vhs/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -168,7 +168,7 @@ export async function generatePresignedVHUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -237,11 +237,11 @@ async function uploadToS3({
   contentType: string;
 }): Promise<string> {
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+    Bucket: process.env.AWS_UPLOAD_BUCKET!,
     Key: fileName,
     Body: content,
     ContentType: contentType,
   });
   await s3.send(command);
-  return `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+  return `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
 }
