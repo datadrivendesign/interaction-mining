@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, Capture, App, Task } from "@prisma/client";
 import {
   S3Client,
   PutObjectCommand,
@@ -26,6 +26,11 @@ const s3 = new S3Client({
 export type CaptureWithTask = Prisma.CaptureGetPayload<{
   include: { task: true };
 }>;
+
+
+type CaptureWithTaskAndApp = Prisma.CaptureGetPayload<{
+  include: { app: true, task: true }
+}>
 
 interface GetCaptureProps {
   id?: string;
@@ -55,6 +60,14 @@ export type CaptureScreenFile = {
   created: string;
   gesture: CaptureScreenGesture;
 };
+
+export type EnrichedCapture = Capture & {
+  app?: App | null;
+  task?: Task & {
+    description: string;
+    os: string;
+  };
+}
 
 /**
  * Fetches a capture from the database.
@@ -373,7 +386,9 @@ export async function createCaptureTask({
   }
 }
 
-export async function getUserCaptures(userId: string) {
+export async function getUserCaptures(
+  userId: string
+): Promise<CaptureWithTaskAndApp[]> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -396,6 +411,14 @@ export async function getUserCaptures(userId: string) {
 
     return captures 
 
+    // const enrichedCaptures = await Promise.all(
+    //   captures.map(async (cap) => {
+    //     const app = await getAppByPackageName(cap.appId);
+    //     return { ...cap, app };
+    //   })
+    // );
+
+    // return enrichedCaptures;
   } catch (error) {
     console.error("Failed to fetch user captures:", error);
     return [];

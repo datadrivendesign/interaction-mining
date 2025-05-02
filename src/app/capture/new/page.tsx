@@ -13,6 +13,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { redirect } from "next/navigation";
 import { App } from "@prisma/client";
 
+export interface AppListItem {
+  id: string;
+  package: string;
+  name: string;
+}
+
 export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -29,14 +35,14 @@ export default function CaptureNewPage() {
   const [platform, setPlatform] = useState<OS>(OS.ANDROID);//"android");
   const [app, setApp] = useState("");
   const [description, setDescription] = useState("");
-  const [apps, setApps] = useState<AppItemList[]>([]);
+  const [apps, setApps] = useState<AppListItem[]>([]);
   const [showAddApp, setShowAddApp] = useState(false);
   const [newAppId, setNewAppId] = useState("");
 
   useEffect(() => {
     async function fetchApps() {
       const appList = await getAllApps();
-      setApps(appList);
+      setApps(appList); 
     }
     fetchApps();
   }, []);
@@ -69,12 +75,10 @@ export default function CaptureNewPage() {
   async function handleAddApp() {
     if (!newAppId) return;
 
-    console.log("Checking if app exists:", newAppId);
+    console.log("Check if app exists:", newAppId);
     const existing = await checkIfAppExists(newAppId);
     if (existing) {
-      console.log("App already in DB:", existing);
       toast.success("App already exists!");
-      // console.log();
       setApp(newAppId);
       setShowAddApp(false);
       return;
@@ -99,12 +103,7 @@ export default function CaptureNewPage() {
       toast.success("App added!");
       const updatedApps = await getAllApps();
       setApps(updatedApps);
-      console.log("Updated app list:", updatedApps);
-      setTimeout(() => {
-        setApp(saved.data?.packageName || newAppId); 
-      }, 100); // Delay to ensure UI updates
-      // setApp(saved.data?.packageName);
-      console.log("App set to:", saved.data?.packageName);
+      setTimeout(() => { setApp(saved.data?.packageName || newAppId); }, 0); 
       setShowAddApp(false);
       setNewAppId("");
     } else {
