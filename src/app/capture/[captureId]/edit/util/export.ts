@@ -271,7 +271,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       description: data.description,
       app: {
         connect: {
-          id: capture.appId_,
+          id: capture.appId_!,
         },
       },
       task: {
