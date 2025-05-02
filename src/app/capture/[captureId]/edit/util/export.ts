@@ -112,8 +112,8 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       src: screen.src,
       vh: "",
       created: new Date(),
-      gesture: { set: gesture },
-      redactions: { set: redactions },
+      gesture,
+      redactions: redactions,
     };
   });
 
