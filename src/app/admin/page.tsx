@@ -14,6 +14,17 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react"
 import { redirect } from "next/navigation";
+import { DefaultSession } from "next-auth";
+
+declare module "next-auth" {
+  interface User {
+    role: string;
+  }
+
+  interface Session {
+    user: User & {role: string};
+  }
+}
 
 export default async function AdminPage() {
   const session = await getSessionData();

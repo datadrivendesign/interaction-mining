@@ -157,7 +157,20 @@ export async function saveApp(appData: App): Promise<{ ok: boolean, data: App | 
     const newApp = await prisma.app.create({
       data: {
         packageName: appData.packageName,
-        metadata: appData.metadata,
+        category: appData.category || null,
+        metadata: {
+          company: appData.metadata.company,
+          name: appData.metadata.name,
+          cover: appData.metadata.cover,
+          description: appData.metadata.description,
+          icon: appData.metadata.icon,
+          rating: appData.metadata.rating,
+          reviews: appData.metadata.reviews,
+          genre: appData.metadata.genre,
+          downloads: appData.metadata.downloads,
+          url: appData.metadata.url,
+        },
+        v: appData.v ?? 0,
       },
     });
 
