@@ -33,8 +33,8 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchCaptures() {
       if (!session?.user?.id) return;
-      const data = await getUserCaptures(session.user.id);
-      setCaptures(data);
+      const captureData = await getUserCaptures(session.user.id);
+      setCaptures(captureData);
     }
     fetchCaptures();
   }, [session]);
