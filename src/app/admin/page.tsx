@@ -19,7 +19,7 @@ export default async function AdminPage() {
   const session = await getSessionData();
 
   if (!session) {
-    redirect(`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/sign-in?callbackUrl=/admin`);
+    redirect(`${process.env.NEXTAUTH_URL}/sign-in?callbackUrl=/admin`);
   }
 
   if (session!.user!.role !== "ADMIN") {
