@@ -15,6 +15,7 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "@/components/ui/avatar";
+import { Role } from "@prisma/client";
 
 export default function NavigationBar() {
   return (
@@ -69,7 +70,7 @@ function SessionContent() {
             <Link href={`/dashboard/${session.user?.id}`}>Dashboard</Link>
           </DropdownMenuItem>
 
-          {session.user?.role === "ADMIN" && (
+          {session.user?.role === Role.ADMIN && (
             <DropdownMenuItem asChild>
               <Link href="/admin">Admin Dashboard</Link>
             </DropdownMenuItem>

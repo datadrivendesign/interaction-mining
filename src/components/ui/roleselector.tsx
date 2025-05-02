@@ -4,16 +4,17 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { updateUserRole } from "@/lib/actions/index";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Role } from "@prisma/client";
 
 interface UserRoleSelectorProps {
   userId: string;
-  currentRole: string;
+  currentRole: Role;
 }
 
 export function UserRoleSelector({ userId, currentRole }: UserRoleSelectorProps) {
   const [isPending, startTransition] = useTransition();
 
-  const handleRoleChange = (newRole: string) => {
+  const handleRoleChange = (newRole: Role) => {
     startTransition(async () => {
       try {
         await updateUserRole(userId, newRole);
@@ -34,8 +35,8 @@ export function UserRoleSelector({ userId, currentRole }: UserRoleSelectorProps)
         <SelectValue placeholder="Select role" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="USER">User</SelectItem>
-        <SelectItem value="ADMIN">Admin</SelectItem>
+        <SelectItem value={Role.USER}>User</SelectItem>
+        <SelectItem value={Role.ADMIN}>Admin</SelectItem>
       </SelectContent>
     </Select>
   );

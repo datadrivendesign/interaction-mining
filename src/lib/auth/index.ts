@@ -1,9 +1,35 @@
-import NextAuth from "next-auth";
+import NextAuth, { Session, DefaultSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 
 import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
+
+// types/next-auth.d.ts
+import { JWT } from "next-auth/jwt"
+
+declare module "next-auth" {
+  /**
+   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
+  interface Session {
+    user: {
+      /** The user's role. */
+      role: string
+    } & DefaultSession["user"]
+  }
+  interface User {
+    role: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
+  interface JWT {
+    /** The user's role */
+    role: string
+  }
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),

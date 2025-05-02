@@ -6,7 +6,8 @@
     "dev": "concurrently \"cross-env NODE_OPTIONS='--inspect' next dev\" \"prisma generate --watch\"",
     "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",
