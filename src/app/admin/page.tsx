@@ -14,6 +14,17 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react"
 import { redirect } from "next/navigation";
+import { DefaultSession } from "next-auth";
+
+declare module "next-auth" {
+  interface User {
+    role?: string;
+  }
+
+  interface Session {
+    user?: User;
+  }
+}
 
 export default async function AdminPage() {
   const session = await getSessionData();
@@ -22,7 +33,7 @@ export default async function AdminPage() {
     redirect("/sign-in?callbackUrl=/admin");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session.user?.role !== "ADMIN") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

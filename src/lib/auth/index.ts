@@ -49,13 +49,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   events: {
-    async signIn({ user, account, profile }) {
+    async signIn({user}) {
       // Custom logic on sign in
       console.log("User signed in:", user);
     },
-    async signOut({ token }) {
+    async signOut({}) {
       // Custom logic on sign out
-      console.log("User signed out:", token);
+      console.log("User signed out:");
     },
   },  
 });
