@@ -67,12 +67,12 @@ function SessionContent() {
 
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem asChild>
-            <Link href={`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/dashboard/${session.user?.id}`}>Dashboard</Link>
+            <Link href={`${process.env.NEXTAUTH_URL}/dashboard/${session.user?.id}`}>Dashboard</Link>
           </DropdownMenuItem>
 
           {session.user?.role === Role.ADMIN && (
             <DropdownMenuItem asChild>
-              <Link href={`${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/admin`}>Admin Dashboard</Link>
+              <Link href={`${process.env.NEXTAUTH_URL}/admin`}>Admin Dashboard</Link>
             </DropdownMenuItem>
           )}
 
@@ -87,7 +87,7 @@ function SessionContent() {
     <Button
       variant="default"
       size="sm"
-      onClick={() => signIn(undefined, { callbackUrl: `${process.env.NEXT_PUBLIC_NEXTAUTH_URL}/` })}
+      onClick={() => signIn(undefined, { callbackUrl: `${process.env.NEXTAUTH_URL}/` })}
     >
       Sign In
     </Button>
