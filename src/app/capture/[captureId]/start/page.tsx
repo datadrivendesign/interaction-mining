@@ -124,7 +124,7 @@ export default function Page({}: {}) {
                 <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
-                    {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
+                    {`here`}
                   </Link>{" "}
                   and enter the following capture session code:
                 </p>
