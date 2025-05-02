@@ -231,10 +231,79 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       );
     }
 
+    // recurse until you find element that matches redaction coordinates
+    function redactVH(
+      node: any, 
+      r: Redaction, 
+      imgWidth: number, 
+      imgHeight: number
+    ) {
+      if (node.bounds_in_screen) {
+        const [left, top, right, bottom] = node.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        const width = right - left;
+        const height = bottom - top;
+        const x = left;
+        const y = top;
+        if (
+          width === r.width * imgWidth &&
+          height === r.height * imgHeight && 
+          x === r.x * imgWidth &&
+          y === r.y * imgHeight
+        ) {
+          if ("content-desc" in node) {
+            node["content-desc"] = "REDACTED"
+          } 
+          if ("text_field" in node) {
+            node.text_field = "REDACTED"
+          }
+        }
+      }
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => 
+          redactVH(child, r, imgWidth, imgHeight)
+        );
+      }
+    }
+
     const vhUploadRes = await Promise.all(
       data.screens.map(async (screen: FrameData, index: number) => {
         var res;
         const vh = vhs[screen.id];
+
+        // redact the vh elements before you upload them
+        // get screen height and width
+        let imgWidth = 0;
+        let imgHeight = 0;
+        if (vh.bounds_in_screen) { // try to grab coordinates directly from vh
+          const [left, top, right, bottom] = vh.bounds_in_screen
+            .split(" ")
+            .map(Number);
+          imgWidth = right - left;
+          imgHeight = bottom - top;
+        } else { // do the image render method
+          const image = new Image();
+          await new Promise<void>((resolve, reject) => {
+            image.onload = () => {
+              resolve();
+            };
+            image.onerror = (err) => {
+              console.error("Error loading image:", err);
+              reject(new Error("Failed to load image"));
+            };
+            image.src = screen.src;
+          });
+          imgWidth = image.width;
+          imgHeight = image.height;
+        }
+        const redactions = data.redactions[screen.id]
+        for (const r of redactions) {
+          redactVH(vh, r, imgWidth, imgHeight);
+        }
+
+
+
         if (!vh) {
           return { ok: false, message: "Failed to find view hierarchies." };
         }

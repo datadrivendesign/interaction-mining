@@ -343,15 +343,20 @@ export async function createCaptureTask({
     const task = await prisma.task.create({
       data: { appId, os, description },
     });
+
+    const app = await prisma.app.findFirst({
+      where: {packageName: appId}
+    })
   
     const capture = await prisma.capture.create({
       data: {
+        appId_: app!.id,
         appId,
         taskId: task.id,
         userId: userId,
         otp:"",
         src: "",
-      },
+      }
     });
 
     await prisma.user.update({
@@ -389,14 +394,7 @@ export async function getUserCaptures(userId: string) {
       },
     });
 
-    const enrichedCaptures = await Promise.all(
-      captures.map(async (cap) => {
-        const app = await getAppByPackageName(cap.appId);
-        return { ...cap, app };
-      })
-    );
-
-    return enrichedCaptures;
+    return captures 
 
   } catch (error) {
     console.error("Failed to fetch user captures:", error);

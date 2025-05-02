@@ -12,6 +12,12 @@ interface GetAppParams {
   sort?: "asc" | "desc";
 }
 
+export type AppItemList = {
+  id: string,
+  package: string,
+  name: string
+}
+
 export async function getApps({
   limit,
   page = 1,
@@ -80,9 +86,8 @@ export async function getApp(id: string): Promise<App | null> {
   return app;
 }
 
-export async function getAllApps() {
+export async function getAllApps(): Promise<AppItemList[]> {
   try {
-    console.log("Fetching all apps...");
     const apps = await prisma.app.findMany({
       select: { id: true, metadata: true, packageName: true },
       orderBy: { id: "asc" },
@@ -99,7 +104,9 @@ export async function getAllApps() {
   }
 }
 
-export async function getAppByPackageName(packageName: string): Promise<App | null> {
+export async function getAppByPackageName(
+  packageName: string
+): Promise<App | null> {
   if (!packageName) return null;
 
   try {
