@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { updateUserRole } from "@/lib/actions/index";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Role } from "@prisma/client";
 
 interface UserRoleSelectorProps {
   userId: string;
@@ -13,7 +14,7 @@ interface UserRoleSelectorProps {
 export function UserRoleSelector({ userId, currentRole }: UserRoleSelectorProps) {
   const [isPending, startTransition] = useTransition();
 
-  const handleRoleChange = (newRole: string) => {
+  const handleRoleChange = (newRole: Role) => {
     startTransition(async () => {
       try {
         await updateUserRole(userId, newRole);

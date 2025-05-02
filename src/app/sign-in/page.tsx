@@ -4,28 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { signIn, signOut } from "next-auth/react"; // use next-auth/react here
-import { useSearchParams } from "next/navigation";
 
 export default function SignInPage() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl");
-  
-  // Enhanced callback URL validation
-  const safeCallbackUrl = (() => {
-    if (!callbackUrl) return "/dashboard";
-    // Only allow relative URLs or URLs from our domain
-    if (callbackUrl.startsWith("/")) return callbackUrl;
-    try {
-      const url = new URL(callbackUrl);
-      if (url.hostname === window.location.hostname) return callbackUrl;
-    } catch (e) {
-      // Invalid URL
-    }
-    return "/dashboard";
-  })();
+  const safeCallbackUrl = "/dashboard/"; // Hardcoded fallback for callbackUrl
 
   const handleGoogleSignIn = async () => {
     await signIn("google", { callbackUrl: safeCallbackUrl });
+    window.location.href = safeCallbackUrl; // Redirect after sign-in
   };
 
   const handleSignOut = async () => {

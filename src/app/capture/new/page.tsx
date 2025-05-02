@@ -12,6 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { redirect } from "next/navigation";
 
+export interface AppListItem {
+  id: string;
+  package: string;
+  name: string;
+}
+
 export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -23,14 +29,14 @@ export default function CaptureNewPage() {
   const [platform, setPlatform] = useState("android");
   const [app, setApp] = useState("");
   const [description, setDescription] = useState("");
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState<AppListItem[]>([]);
   const [showAddApp, setShowAddApp] = useState(false);
   const [newAppId, setNewAppId] = useState("");
 
   useEffect(() => {
     async function fetchApps() {
       const appList = await getAllApps();
-      setApps(appList);
+      setApps(appList); 
     }
     fetchApps();
   }, []);
@@ -38,60 +44,55 @@ export default function CaptureNewPage() {
   async function handleAddApp() {
     if (!newAppId) return;
 
-    console.log("🔍 Checking if app exists:", newAppId);
+    console.log("Check if app exists:", newAppId);
     const existing = await checkIfAppExists(newAppId);
     if (existing) {
-      console.log("✅ App already in DB:", existing);
       toast.success("App already exists!");
-      // console.log();
       setApp(newAppId);
       setShowAddApp(false);
       return;
     }
 
-    console.log("🔍 Scraping app data from store...");
+    console.log("Scraping app data from store");
     const result = platform === "android"
       ? await getAndroidApp({ appId: newAppId })
       : await getIosApp({ appId: newAppId });
 
-    console.log("📦 Scraper result:", result);
+    console.log("Scraper result:", result);
     if (!result || !result.ok) {
       toast.error("Failed to fetch app from store.");
       return;
     }
 
-    console.log("💾 Saving app to DB...");
+    console.log("Saving app to DB");
     const saved = await saveApp({
+      id:"",
       packageName: result.data.appId,
-      category: {
-        id: result.data.primaryGenre || "Unknown",
-        name: result.data.primaryGenreSlug || "unknown",
-      },
+      v: 0,
+      category: result.data.primaryGenre ? {
+        id: result.data.primaryGenre,
+        name: result.data.primaryGenreSlug || "",
+      } : null,
       metadata: {
-        company: result.data.developer ?? "Unknown",
-        name: result.data.title ?? "Untitled",
-        cover: result.data.screenshots?.[0] ?? result.data.icon ?? "",
-        description: result.data.description ?? "",
-        icon: result.data.icon ?? "",
-        rating: result.data.score ?? 0,
-        reviews: result.data.reviews ?? 0,
-        genre: result.data.genres ?? [],
-        downloads: result.data.installs ?? "N/A",
-        url: result.data.url ?? "",
+        company: result.data.developer || "",
+        name: result.data.title || "",
+        cover: result.data.screenshots?.[0] || result.data.icon || "",
+        description: result.data.description || "",
+        icon: result.data.icon || "",
+        rating: parseFloat(result.data.score) || 0,
+        reviews: result.data.reviews ? parseFloat(result.data.reviews) : null,
+        genre: Array.isArray(result.data.genres) ? result.data.genres : [],
+        downloads: result.data.installs || "N/A",
+        url: result.data.url || "",
       },
     });
-    console.log("💾 Save result:", saved);
+    console.log("Save result:", saved);
 
     if (saved.ok) {
       toast.success("App added!");
       const updatedApps = await getAllApps();
       setApps(updatedApps);
-      console.log("🔄 Updated app list:", updatedApps);
-      setTimeout(() => {
-        setApp(saved.data?.packageName || newAppId); 
-      }, 100); // Delay to ensure UI updates
-      // setApp(saved.data?.packageName);
-      console.log("✅ App set to:", saved.data?.packageName);
+      setTimeout(() => { setApp(saved.data?.packageName || newAppId); }, 0); 
       setShowAddApp(false);
       setNewAppId("");
     } else {

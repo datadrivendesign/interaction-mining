@@ -12,6 +12,15 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Capture, App, Task } from "@prisma/client";
+
+export type EnrichedCapture = Capture & {
+  app?: App | null;
+  task?: Task & {
+    description: string;
+    os: string;
+  };
+}
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -22,7 +31,7 @@ export default function ProfilePage() {
   }
 
   const router = useRouter();
-  const [captures, setCaptures] = useState([]);
+  const [captures, setCaptures] = useState<EnrichedCapture[]>([]);
 
   useEffect(() => {
     async function fetchCaptures() {
