@@ -95,13 +95,12 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
           ? { ...redaction, ...updatedRedaction }
           : redaction;
       });
-
       setValue("redactions", {
         ...redactions,
         [screen.id]: newRedactions,
       });
     },
-    [redactions, setValue, screen.id]
+    [redaction, redactions, setValue, screen.id]
   );
 
   useHotkeys("v", () => setMode("select"));

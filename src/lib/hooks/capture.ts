@@ -1,12 +1,10 @@
 import { toast } from "sonner";
 import { getCapture } from "../actions";
 import useSWR from "swr";
+import { Prisma } from "@prisma/client";
 
 interface CaptureFetcherOptions {
-  includes?: {
-    app?: boolean;
-    task?: boolean;
-  };
+  includes?: Prisma.CaptureInclude;
 }
 
 export async function captureFetcher([_, captureId, options]: [
