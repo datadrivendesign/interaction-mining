@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 export default async function AdminUserDetails({ params }: { params: Promise<{ userid: string }> }) {
   const { userid } = await params;
@@ -52,7 +53,7 @@ export default async function AdminUserDetails({ params }: { params: Promise<{ u
               {captures.map((cap) => (
                 <Card key={cap.id} className="rounded-md hover:shadow-sm transition">
                   <CardHeader className="flex flex-row items-center gap-4 p-4">
-                    <img
+                    <Image
                       src={cap.app?.metadata?.icon || "/placeholder.png"}
                       alt="App Icon"
                       className="w-10 h-10 rounded object-cover"

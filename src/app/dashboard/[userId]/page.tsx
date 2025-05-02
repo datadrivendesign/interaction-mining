@@ -12,6 +12,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Prisma } from "@prisma/client";
+import Image from "next/image";
+
+type CaptureIncludeRelations = Prisma.CaptureGetPayload<{
+  include: { app: true, task: true }
+}>
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -22,7 +28,7 @@ export default function ProfilePage() {
   }
 
   const router = useRouter();
-  const [captures, setCaptures] = useState([]);
+  const [captures, setCaptures] = useState<CaptureIncludeRelations[]>([]);
 
   useEffect(() => {
     async function fetchCaptures() {
@@ -54,7 +60,7 @@ export default function ProfilePage() {
         {captures.map((cap) => (
           <Card key={cap.id} className="border bg-muted/50 hover:shadow-md transition rounded-xl">
             <CardHeader className="flex flex-row items-center gap-4 p-4">
-              <img
+              <Image
                 src={cap.app?.metadata?.icon || "/placeholder.png"}
                 alt="App Icon"
                 className="w-10 h-10 rounded object-cover"

@@ -22,7 +22,7 @@ export default async function AdminPage() {
     redirect("/sign-in?callbackUrl=/admin");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (session!.user!.role !== "ADMIN") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

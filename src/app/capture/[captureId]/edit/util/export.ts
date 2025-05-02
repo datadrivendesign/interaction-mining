@@ -264,7 +264,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       appId: capture!.appId_!,
       taskId: capture!.taskId!,
       screens: {
-        create: [...screens],
+        create: [...screens] as Screen[],
       },
       worker: "web",
     },

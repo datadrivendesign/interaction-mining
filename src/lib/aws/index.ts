@@ -1,2 +1,2 @@
-export * from "s3/client";
-export * from "s3/server";
+export * from "./s3/client";
+export * from "./s3/server";
