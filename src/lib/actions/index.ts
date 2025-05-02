@@ -8,4 +8,3 @@ export * from "@/lib/actions/trace";
 export * from "@/lib/actions/task";
 export * from "@/lib/actions/session";
 export * from "@/lib/actions/admin";
-export * from "@/lib/actions/redaction";
