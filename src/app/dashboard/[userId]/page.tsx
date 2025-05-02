@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const pathname = usePathname();
 
   if(!session){
-    redirect(`${process.env.NEXTAUTH_URL}/sign-in?callbackUrl=/admin`);
+    redirect(`/sign-in?callbackUrl=/admin`);
   }
 
   const router = useRouter();
