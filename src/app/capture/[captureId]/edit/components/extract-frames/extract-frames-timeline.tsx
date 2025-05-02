@@ -1,95 +1,120 @@
 "use client";
-import React from "react";
-import { SkipBack, Play, Pause, SkipForward, Camera } from "lucide-react";
+
+import React, { useRef, useState } from "react";
+import { Play, Pause, Camera } from "lucide-react";
 import { FrameData } from "./extract-frames";
 import { Button } from "@/components/ui/button";
 
 export type FrameTimelineProps = {
-  frames: FrameData[];
+  thumbnails: FrameData[];
   currentTime: number;
   videoDuration: number;
   isPlaying: boolean;
-  onSetTime: (time: number) => void;
+  onSetTime: (t: number) => void;
   onPlayPause: () => void;
-  onBackward: () => void;
-  onForward: () => void;
   onCapture: () => void;
 };
 
 export default function FrameTimeline({
-  frames,
+  thumbnails,
   currentTime,
   videoDuration,
   isPlaying,
   onSetTime,
   onPlayPause,
-  onBackward,
-  onForward,
   onCapture,
 }: FrameTimelineProps) {
-  // Handler for slider updates.
-  const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = parseFloat(e.target.value);
-    onSetTime(newTime);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Map pointer X -> video time
+  const getTimeFromEvent = (e: MouseEvent | React.MouseEvent) => {
+    const rect = stripRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const pct = Math.min(
+      Math.max((e.clientX - rect.left) / rect.width, 0),
+      1
+    );
+    return pct * videoDuration;
   };
-    // Calculate percentage for the progress fill
-    const progressPercent = videoDuration
-    ? (currentTime / videoDuration) * 100
-    : 0;
+
+  // Start scrub on pointer down
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    stripRef.current?.setPointerCapture(e.pointerId);
+    setDragging(true);
+    const t = getTimeFromEvent(e);
+    if (t !== undefined) onSetTime(t);
+    if (!isPlaying) onPlayPause();
+  };
+
+  // Scrub on pointer move when dragging
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    const t = getTimeFromEvent(e);
+    if (t !== undefined) onSetTime(t);
+  };
+
+  // End scrub on pointer up
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    stripRef.current?.releasePointerCapture(e.pointerId);
+    setDragging(false);
+  };
 
   return (
-    <div className="relative w-full h-20 p-4 border-t border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900">
-      {/* Playback Controls */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 p-2 rounded-md bg-white dark:bg-neutral-900">
-          <button
-            onClick={onBackward}
-            title="Back 2 seconds"
-            className="text-white hover:text-gray-500"
-          >
-            <SkipBack size={20} />
-          </button>
-          <button
-            onClick={onPlayPause}
-            title={isPlaying ? "Pause" : "Play"}
-            className="text-white hover:text-gray-500"
-          >
-            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-          </button>
-          <button
-            onClick={onForward}
-            title="Forward 2 seconds"
-            className="text-white hover:text-gray-500"
-          >
-            <SkipForward size={20} />
-          </button>
-        </div>
-        {/* Display the current time and total duration */}
-        <div className="text-sm text-white">
-          {currentTime.toFixed(2)} / {videoDuration.toFixed(2)}
-        </div>
-        <div>
-          <Button onClick={onCapture}
-            title="Capture frame">
-            <Camera className="mr-1" size={20} />
-          </Button>
-        </div>
+    <div className="flex items-center py-2 pr-4 bg-neutral-100 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700">
+      {/* Play/Pause */}
+      <button
+        onClick={onPlayPause}
+        title={isPlaying ? "Pause" : "Play"}
+        className="mr-2 p-2"
+      >
+        {isPlaying ? <Pause size={28} /> : <Play size={28} />}
+      </button>
+
+      <div
+        ref={stripRef}
+        className="relative flex-1 overflow-x-auto whitespace-nowrap cursor-pointer mr-4"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
+        {thumbnails.map((thumb) => (
+          <img
+            key={thumb.id}
+            src={thumb.url}
+            alt={`${thumb.timestamp.toFixed(2)}s`}
+            className="inline-block rounded-sm"
+            style={{
+              height: '3rem',
+              width: 'auto',
+              marginLeft: '-2px',
+            }}
+          />
+        ))}
+
+        {/* Red playhead */}
+        <div
+          className="absolute top-0 bottom-0 w-[2px] bg-yellow-500 pointer-events-none"
+          style={{
+            left: videoDuration
+              ? `${(currentTime / videoDuration) * 100}%`
+              : '0%',
+            transform: 'translateX(-50%)',
+          }}
+        />
       </div>
 
-      {/* Progress Scrubber */}
-      <input
-        type="range"
-        min={0}
-        max={videoDuration}
-        step="0.01"
-        value={currentTime}
-        onChange={handleScrubChange}
-        onInput={handleScrubChange} // immediate feedback while dragging
-        className="w-full h-2 bg-gray-300 rounded-lg appearance-none"
-        style={{
-          background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${progressPercent}%, #d1d5db ${progressPercent}%, #d1d5db 100%)`,
-        }}
-      />
+      {/* Capture */}
+      <Button
+        variant="secondary"
+        onClick={onCapture}
+        title="Capture frame"
+        className="px-4 py-2 text-base"
+      >
+        <Camera className="mr-1" size={20} />
+        Capture
+      </Button>
     </div>
   );
 }
+
