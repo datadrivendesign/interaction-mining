@@ -41,11 +41,14 @@ export const RedactCanvasContext = createContext<{
 
 export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchRedactions] = useWatch({
+  const [ watchRedactions ] = useWatch({
     name: ["redactions"],
   });
   const redactions = watchRedactions || {};
-  const redaction: Redaction[] = redactions[screen.id] || [];
+  const redaction: Redaction[] = useMemo(
+    () => redactions[screen.id] || [],
+    [redactions, screen.id]
+  );
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
