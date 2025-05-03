@@ -109,6 +109,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     };
     const redactions = data.redactions[screen.id] ?? [];
     return {
+      id: screen.id,
       src: screen.src,
       vh: "",
       created: new Date(),
