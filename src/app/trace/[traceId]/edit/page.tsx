@@ -5,6 +5,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Prisma, ScreenGesture, ScreenRedaction } from "@prisma/client";
 
 import { toast } from "sonner";
 
@@ -25,9 +26,7 @@ import Review from "./components/review/review";
 import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
-
-import { useTrace } from "@/lib/hooks/trace";
-import { Prisma, ScreenGesture, ScreenRedaction } from "@prisma/client";
+import { useTrace } from "@/lib/hooks";
 
 enum TraceSteps {
   Extract = 0,
@@ -60,13 +59,58 @@ export default function Page() {
   const methods = useForm<TraceFormData>({
     defaultValues: {
       screens: [],
-      vhs: {},
       gestures: {},
       redactions: {},
       description: "",
     },
     resolver: zodResolver(TraceFormSchema),
   });
+
+  useEffect(() => {
+    methods.reset({
+      screens: trace?.screens,
+      gestures: trace?.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.gesture;
+          return acc;
+        },
+        {} as { [key: string]: ScreenGesture }
+      ),
+      redactions: {},
+    });
+  }, [trace, methods]);
+
+  // Function to perform step-level validation
+  const validateStep = async (): Promise<boolean> => {
+    const data = methods.getValues();
+    // Example validation: Ensure at least one screen exists and, for Step 2, each screen has a gesture
+    if (stepIndex === 0) {
+      if (!data.screens || data.screens.length === 0) {
+        alert("No screens were generated.");
+        return false;
+      }
+    }
+    if (stepIndex === 1) {
+      const missingGesture = data.screens.some((screen) => !screen.gesture);
+      if (missingGesture) {
+        alert("Please add a gesture to all screens.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const onSubmit = (data: FormData) => {
+    // Here you can assemble and transform the data as needed before sending it to your backend.
+    console.log("Final backend-ready data:", data);
+  };
+
+  // // Form state
+  // const [formScreens, setFormScreens] = useState<Screen[]>([]);
+  // const [formEdits, setFormEdits] = useState({
+  //   gestures: {} as { [key: string]: ScreenGesture },
+  //   redactions: {},
+  // });
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -175,7 +219,7 @@ export default function Page() {
       const gestures = trace.screens.reduce(
         (acc, screen) => {
           if (screen.gesture) {
-            acc[screen.id] = screen.gesture
+            acc[screen.id] = screen.gesture;
           }
           return acc;
         },

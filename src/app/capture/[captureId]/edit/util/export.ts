@@ -99,16 +99,27 @@ export async function exportRedactedImage(
 export async function handleSave(data: TraceFormData, capture: Capture) {
   // Transpose gestures on to screens
   let screens = data.screens.map((screen: FrameData) => {
+    const gesture = data.gestures[screen.id] ?? {
+      type: null,
+      x: null,
+      y: null,
+      scrollDeltaX: null,
+      scrollDeltaY: null,
+      description: null,
+    };
+    const redactions = data.redactions[screen.id] ?? [];
     return {
-      created: new Date(),
-      gesture: data.gestures[screen.id],
+      id: screen.id,
       src: screen.src,
       vh: "",
+      created: new Date(),
+      gesture,
+      redactions: redactions,
     };
-  }) as Screen[];
+  });
 
   const uploadScreenResponse = await Promise.all(
-    screens.map(async (screen: Screen) => {
+    screens.map(async (screen: any) => {
       // get file from s3 url
       const res = await fetch(screen.src);
       if (!res.ok) {
@@ -136,38 +147,44 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   }
 
   const uploadRedactionScreenResponse = await Promise.all(
-    screens.map(async (screen: Screen) => {
+    screens.map(async (screen: any) => {
+      console.log("here!!!", data.redactions, screen.id);
 
       if (!data.redactions[screen.id]) {
         return { ok: true, message: "No redactions", data: null };
       }
 
       // Get redaction image
-      console.log("Redacting image", screen);
       let dataURL = await exportRedactedImage(
         data.redactions[screen.id],
         screen.src
       );
+
       if (!dataURL) {
         toast.error("Failed to export redacted image.");
         return Promise.reject("Failed to export redacted image.");
       }
 
       // Create a new file from the data URL
-      const file = new File(
-        [dataURL.split("data:image/png;base64,")[1]],
-        `${screen.id}.png`,
-        { type: "image/png" }
-      );
+      const byteString = atob(dataURL.split(",")[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const file = new File([ab], `${screen.id}.png`, { type: "image/png" });
 
       const key = `${DateTime.now()}.png`;
       const prefix = `uploads/${capture.id}/redacted-screens`;
-      const uploadRes = uploadToS3(file, prefix, key);
+      const uploadRes = await uploadToS3(file, prefix, key);
 
       if (!uploadRes) {
         toast.error("Failed to upload redacted image.");
         return Promise.reject("Failed to upload redacted image.");
       }
+
+      // Set screen src to S3 URL
+      screen.src = uploadRes.data.fileUrl;
       return uploadRes;
     })
   );
@@ -179,6 +196,23 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     toast.error("Failed to upload redacted screen images.");
     return Promise.reject("Failed to upload redacted screen images.");
   }
+
+  console.log("screens", screens);
+
+  // Cleaning up the screen objects
+  screens = screens.map((screen: any) => {
+    // delete screen id
+    delete screen.id;
+
+    // delete redaction id
+    if (screen.redactions) {
+      screen.redactions = screen.redactions.map((redaction: any) => {
+        delete redaction.id;
+        return redaction;
+      });
+    }
+    return screen;
+  });
 
   // check if there are view hierarchies, if so then upload them
   const vhs = data.vhs;
@@ -236,10 +270,18 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     {
       name: "New Trace",
       description: data.description,
-      created: new Date(),
-      appId: capture!.appId_!,
+      app: {
+        connect: {
+          id: capture.appId_,
+        },
+      },
+      task: {
+        connect: {
+          id: capture.taskId,
+        },
+      },
       screens: {
-        create: [...screens],
+        create: screens,
       },
       worker: "web",
     },

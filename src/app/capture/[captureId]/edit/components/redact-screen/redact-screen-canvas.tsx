@@ -9,7 +9,7 @@ import { FrameData } from "../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
 
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { useHotkeys } from "react-hotkeys-hook";
 
 type RedactCanvasMode = "pencil" | "eraser" | "select";
@@ -41,11 +41,14 @@ export const RedactCanvasContext = createContext<{
 
 export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchRedactions] = useWatch({
+  const [ watchRedactions ] = useWatch({
     name: ["redactions"],
   });
   const redactions = watchRedactions || {};
-  const redaction: Redaction[] = redactions[screen.id] || [];
+  const redaction: Redaction[] = useMemo(
+    () => redactions[screen.id] || [],
+    [redactions, screen.id]
+  );
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
@@ -95,13 +98,12 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
           ? { ...redaction, ...updatedRedaction }
           : redaction;
       });
-
       setValue("redactions", {
         ...redactions,
         [screen.id]: newRedactions,
       });
     },
-    [redactions, setValue, screen.id]
+    [redaction, redactions, setValue, screen.id]
   );
 
   useHotkeys("v", () => setMode("select"));

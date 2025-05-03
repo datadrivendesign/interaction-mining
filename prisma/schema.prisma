@@ -24,11 +24,11 @@ type ScreenGesture {
 }
 
 type ScreenRedaction {
-  x           Float  @map("startX")
-  y           Float  @map("startY")
-  width       Float  @map("endX")
-  height      Float  @map("endY")
-  description String @map("label")
+  x          Float  @map("startX")
+  y          Float  @map("startY")
+  width      Float  @map("endX")
+  height     Float  @map("endY")
+  annotation String @map("label")
 }
 
 enum Role {
@@ -42,8 +42,8 @@ type AppMetadata {
   cover       String
   description String
   icon        String
-  rating      String
-  reviews     String?
+  rating      Float
+  reviews     Float?
   genre       String[]
   downloads   String
   url         String?
@@ -99,8 +99,8 @@ model Trace {
   description String
   screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
-  taskId      String?  @default("") @map("task") @db.ObjectId
-  task        Task?    @relation(fields: [taskId], references: [id])
+  taskId      String   @default("") @map("task") @db.ObjectId
+  task        Task     @relation(fields: [taskId], references: [id])
   worker      String
 
   @@map("traces")
@@ -130,15 +130,15 @@ model Task {
 }
 
 model Capture {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  appId_ String? @map("app") @db.ObjectId
-  app    App?    @relation(fields: [appId_], references: [id])
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  appId_ String @map("app") @db.ObjectId
+  app    App    @relation(fields: [appId_], references: [id])
   appId  String // stupid frickin packageName
   // userId String @map("user") @db.ObjectId
   // traceId String @map("trace") @db.ObjectId
   // trace   Trace  @relation(fields: [traceId], references: [id])
-  taskId String  @map("task") @db.ObjectId
-  task   Task    @relation(fields: [taskId], references: [id])
+  taskId String @map("task") @db.ObjectId
+  task   Task   @relation(fields: [taskId], references: [id])
   otp    String
   src    String
 
