@@ -9,7 +9,7 @@ import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
 import { TraceFormData } from "../types";
 
 import {
-  CaptureListedFile,
+  ListedFiles,
   CaptureScreenFile,
   CaptureScreenGesture,
   getUploadedCaptureFiles,
@@ -47,6 +47,7 @@ export default function ExportFrames({ capture }: { capture: any }) {
   );
 }
 
+
 const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const { setValue } = useFormContext<TraceFormData>();
   const [watchScreens, watchVHs, watchGestures] = useWatch({
@@ -55,19 +56,19 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const originalFrames = useRef<FrameData[]>([]);
   const originalVHs = useRef<{ [key: string]: any }>({});
   const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
-  const frames = watchScreens as FrameData[];
-  const vhs = watchVHs as { [key: string]: any };
-  const gestures = watchGestures as { [key: string]: ScreenGesture };
+  const currFrames = watchScreens as FrameData[];
+  const currVHs = watchVHs as { [key: string]: any };
+  const currGestures = watchGestures as { [key: string]: ScreenGesture };
 
   // Fetch file data
-  const { data: captures = [], isLoading: isCapturesLoading } = useSWR(
+  const { data: files = [], isLoading: isFilesLoading } = useSWR(
     capture.id ? ["", capture.id] : null,
     fileFetcher
   );
-
+  
   useEffect(() => {
     const populateFrameData = async (
-      captures: CaptureListedFile[]
+      files: ListedFiles[]
     ): Promise<{
       frames: FrameData[];
       vhs: { [key: string]: any };
@@ -77,6 +78,8 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
         gesture: CaptureScreenGesture
       ): ScreenGesture {
         const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
+        console.log("gesture")
+        console.log(gesture)
         const screenGesture: ScreenGesture = {
           type: null,
           x,
@@ -114,14 +117,13 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       const frameData: FrameData[] = [];
       const frameVHs: { [key: string]: any } = {};
       const frameGestures: { [key: string]: ScreenGesture } = {};
-      for (const c of captures) {
+      for (const [i, c] of files.entries()) {
         try {
           const frameResponse = await fetch(c.fileUrl);
-          console.log(c);
           const frameJson: CaptureScreenFile = await frameResponse.json();
           const b64img = `data:image/png;base64,${frameJson.img}`.trim();
           const frame: FrameData = {
-            id: frameJson.created + Math.random().toString(),
+            id: frameJson.created + i.toString(), // + Math.random().toString(), why do this?
             src: b64img,
             timestamp: Date.parse(frameJson.created),
           };
@@ -143,27 +145,34 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
         gestures: frameGestures,
       };
     };
-    populateFrameData(captures).then(({ frames, vhs, gestures }) => {
+    populateFrameData(files).then(({ frames, vhs, gestures }) => {
       originalFrames.current = [...frames];
       originalVHs.current = { ...vhs };
       originalGestures.current = { ...gestures };
-      setValue("screens", frames);
-      setValue("vhs", vhs);
-      setValue("gestures", gestures);
+
+      // Only populate data if the form state is empty
+      if (currFrames.length === 0 &&
+        Object.keys(currVHs).length === 0 &&
+        Object.keys(currGestures).length === 0
+      ) {
+        setValue("screens", frames);
+        setValue("vhs", vhs);
+        setValue("gestures", gestures);
+      }
     });
-  }, [captures, capture, setValue]); // TODO: check if this screws up Android
+  }, [currFrames.length, files, setValue]); 
 
   return (
     <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
           <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
-            {isCapturesLoading ?? (
+            {isFilesLoading ?? (
               <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
             )}
             <Button
               onClick={() => {
-                if (originalFrames.current.length !== frames.length) {
+                if (originalFrames.current.length !== currFrames.length) {
                   setValue("screens", originalFrames.current);
                   setValue("vhs", originalVHs.current);
                   setValue("gestures", originalGestures.current);
@@ -178,9 +187,9 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
         <ResizablePanel defaultSize={67}>
           <div className="flex w-full h-full overflow-auto">
             <FrameGalleryAndroid
-              frames={frames}
-              vhs={vhs}
-              gestures={gestures}
+              frames={currFrames}
+              vhs={currVHs}
+              gestures={currGestures}
             />
           </div>
         </ResizablePanel>

@@ -25,14 +25,17 @@ import { FrameData, Redaction } from "../types";
 import AnnotationCard from "./annotation-card";
 import Overlay from "./stage-overlay";
 import { cn } from "@/lib/utils";
-import { RedactCanvasContext } from "./redact-screen-canvas";
+import { RedactCanvasContext, vhBox, vhRootBounds } from "./redact-screen-canvas";
 import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
-import Konva from "konva";
 import { clamp } from "motion/react";
 
 export interface CanvasComponentProps {
   screen: FrameData;
+  vh: {
+    "vhBoxes": vhBox[], 
+    "rootBounds": vhRootBounds
+  };
   redactions: Redaction[];
   mode: "pencil" | "eraser" | "select";
 }
@@ -43,9 +46,10 @@ export interface CanvasRef {
 }
 
 const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
-  function CanvasComponent({ screen, redactions }, ref) {
+  function CanvasComponent({ screen, redactions, vh }, ref) {
     const [refMeasure, { width, height }] = useMeasure();
     const containerRef = useRef<HTMLDivElement>(null);
+    const { vhBoxes, rootBounds } = vh;
 
     const {
       mode,
@@ -128,6 +132,8 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     // Load the image from the screen URL and calculate scaling
     const [image] = useImage(screen.src);
     // Calculate common layout dimensions and offsets only when dependencies change.
+    // TODO: displayWidth and displayHeight calculate absolute width + height
+    // TODO: offsetX and offsetY calculate absolute x + y from top left corner
     const { displayWidth, displayHeight, offsetX, offsetY } = useMemo(() => {
       const vPadding =
         typeof window !== "undefined"
@@ -284,62 +290,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       [offsetX, offsetY, displayWidth, displayHeight, updateRect]
     );
 
-    // const boundingBoxFunction = (oldBox: any, newBox: any) => {
-    //   // make sure resize does not go outside the stage
-    //   const node = transformerRef.current;
-
-    //   const scaleX = node.scaleX();
-    //   const scaleY = node.scaleY();
-
-    //   // Reset scale to 1
-    //   node.scaleX(1);
-    //   node.scaleY(1);
-
-    //   // Calculate new positions and dimensions in normalized coordinates
-    //   const newX = (node.x() - offsetX) / displayWidth;
-    //   const newY = (node.y() - offsetY) / displayHeight;
-    //   const newWidth = (node.width() * scaleX) / displayWidth;
-    //   const newHeight = (node.height() * scaleY) / displayHeight;
-
-    //   console.log(newX, newY, newWidth, newHeight);
-
-    //   const isValidSize =
-    //     newWidth > 0 &&
-    //     newX + newWidth < 1 &&
-    //     newHeight > 0 &&
-    //     newY + newHeight < 1;
-
-    //   const isValidPosition =
-    //     newX >= 0 && newY >= 0 && newX + newWidth <= 1 && newY + newHeight <= 1;
-
-    //   if (!isValidSize || !isValidPosition) {
-    //     return oldBox;
-    //   }
-
-    //   let clampedX = newX;
-    //   let clampedY = newY;
-    //   let clampedWidth = clamp(0, 1, newWidth);
-    //   let clampedHeight = clamp(0, 1, newHeight);
-
-    //   clampedX = clamp(0, 1 - clampedWidth, newX);
-    //   clampedY = clamp(0, 1 - clampedHeight, newY);
-
-    //   updateRect(node.id, {
-    //     x: clampedX,
-    //     y: clampedY,
-    //     width: clampedWidth,
-    //     height: clampedHeight,
-    //   });
-
-    //   return {
-    //     ...newBox,
-    //     x: clampedX * displayWidth + offsetX,
-    //     y: clampedY * displayHeight + offsetY,
-    //     width: clampedWidth * displayWidth,
-    //     height: clampedHeight * displayHeight,
-    //   };
-    // };
-
     useEffect(() => {
       const stage = stageRef.current;
       const transformer = transformerRef.current;
@@ -426,7 +376,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             onMouseUp={handleStageMouseUp}
             onWheel={(e) => {}}
             draggable={mode === "select"}
-            scaleX={stageScale}
+            scaleX={stageScale} // TODO: defines x and y scaling
             scaleY={stageScale}
           >
             <Layer>
@@ -439,8 +389,22 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                   height={displayHeight}
                 />
               )}
+              {
+                // add vh bouding boxes here
+                rootBounds && vhBoxes.map((box: vhBox, index: number) => (
+                  <Rect
+                    key={box.id + index}
+                    x={(box.x/rootBounds.width)*displayWidth + offsetX}
+                    y={(box.y/rootBounds.height)*displayHeight + offsetY}
+                    width={(box.width/rootBounds.width)*displayWidth}
+                    height={(box.height/rootBounds.height)*displayHeight}
+                    stroke="red"
+                    strokeWidth={1}
+                  />
+                ))
+              }
               {(redactions || []).map((redaction) => (
-                <RedactRectangle
+                <RedactRectangle  // redaction rectanges
                   key={redaction.id}
                   redaction={redaction}
                   displayWidth={displayWidth}
@@ -452,7 +416,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                   handleTransform={handleTransform}
                 />
               ))}
-              {newRect && image && (
+              {newRect && image && (  // draws rectangle while drawing
                 <Rect
                   x={newRect.x * displayWidth + offsetX}
                   y={newRect.y * displayHeight + offsetY}

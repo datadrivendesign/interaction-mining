@@ -39,7 +39,7 @@ interface GetCaptureProps {
   includes?: Prisma.CaptureInclude;
 }
 
-export type CaptureListedFile = {
+export type ListedFiles = {
   fileKey: string;
   fileName: string;
   fileUrl: string;
