@@ -77,6 +77,14 @@ export async function getTraces({
   }
 }
 
+type TraceWithIncludes = Prisma.TraceGetPayload<{
+  include: {
+    app: boolean;
+    screens: boolean;
+    task: boolean;
+  };
+}>;
+
 interface GetTraceParams {
   includes?: Prisma.TraceInclude;
 }
@@ -88,7 +96,7 @@ interface GetTraceParams {
 // }>;
 
 export async function getTrace(id: string, { includes }: GetTraceParams = {}):
-  Promise<ActionPayload<Trace>> {
+  Promise<ActionPayload<TraceWithIncludes>> {
   const { app = false, screens = false, task = false } = includes || {};
 
   if (!id || !isValidObjectId(id)) {

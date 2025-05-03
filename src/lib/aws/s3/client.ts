@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionPayload } from "@/lib/actions/types";
-import { generatePresignedUploadURL } from "../server";
+import { generatePresignedUploadURL } from "./server";
 
 export async function uploadToS3(
   file: File,
@@ -37,6 +37,6 @@ export async function uploadToS3(
   return {
     ok: true,
     message: "File uploaded successfully",
-    data: uploadData.fileUrl,
+    data: uploadData,
   };
 }
