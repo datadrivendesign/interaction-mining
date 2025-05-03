@@ -121,15 +121,15 @@ model Task {
 }
 
 model Capture {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  appId_ String @map("app") @db.ObjectId
-  app    App    @relation(fields: [appId_], references: [id])
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  appId_ String  @map("app") @db.ObjectId
+  app    App     @relation(fields: [appId_], references: [id])
   appId  String // stupid frickin packageName
-  userId String @map("user") @db.ObjectId
+  userId String? @map("user") @db.ObjectId
   // traceId String @map("trace") @db.ObjectId
   // trace   Trace  @relation(fields: [traceId], references: [id])
-  taskId String @map("task") @db.ObjectId
-  task   Task   @relation(fields: [taskId], references: [id])
+  taskId String  @map("task") @db.ObjectId
+  task   Task    @relation(fields: [taskId], references: [id])
   otp    String
   src    String
 
@@ -142,10 +142,10 @@ model User {
   email         String?         @unique
   emailVerified DateTime?
   image         String?
-  role          Role           @default(USER)
+  role          Role            @default(USER)
   accounts      Account[]
   sessions      Session[]
-  captures      String[] @default([]) @map("captures") @db.ObjectId
+  captures      String[]        @default([]) @map("captures") @db.ObjectId
   // Optional for WebAuthn support
   Authenticator Authenticator[]
 
@@ -157,7 +157,7 @@ model User {
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  @db.ObjectId @unique
+  userId            String  @unique @db.ObjectId
   type              String
   provider          String
   providerAccountId String
