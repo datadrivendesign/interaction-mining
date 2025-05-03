@@ -62,6 +62,7 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
+    console.log("values", methods.getValues().gestures)
     if (stepIndex === TraceSteps.Extract) {
       // Validate the "screens")
       const validation = ScreenSchema.safeParse(methods.getValues().screens);
@@ -74,7 +75,9 @@ export default function Page() {
       }
     } else if (stepIndex === TraceSteps.Repair) {
       // Validate the "gestures"
-      const validation = ScreenGestureSchema.safeParse(methods.getValues());
+      const validation = ScreenGestureSchema.safeParse(
+        methods.getValues()
+      );
       if (!validation.success) {
         console.log(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";
@@ -122,7 +125,8 @@ export default function Page() {
         });
     }
   };
-  const handlePrevious = () => {
+  const handlePrev = () => {
+    console.log("values", methods.getValues().gestures)
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
     }
@@ -192,7 +196,7 @@ export default function Page() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    onClick={handlePrevious}
+                    onClick={handlePrev}
                     disabled={stepIndex === 0}
                   >
                     Back

@@ -22,7 +22,9 @@ export default function RedactScreen() {
   const screens = getValues("screens") as FrameData[];
   const redactions = getValues("redactions") as {
     [screenId: string]: Redaction[];
-  };
+  }
+  // TODO: pass vh by watch, then pass by prop in readct-screen-canvas
+  const vhs = getValues("vhs") as { [key: string]: any };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
@@ -49,6 +51,7 @@ export default function RedactScreen() {
               <FocusView
                 key={focusViewIndex}
                 screen={screens[focusViewIndex]}
+                vh={vhs[screens[focusViewIndex].id]}
               />
             ) : (
               <div className="flex justify-center items-center w-full h-full">
@@ -72,11 +75,11 @@ export default function RedactScreen() {
   );
 }
 
-function FocusView({ screen }: { screen: FrameData }) {
+function FocusView({ screen, vh }: { screen: FrameData, vh: any}) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
-        <RedactScreenCanvas screen={screen} />
+        <RedactScreenCanvas screen={screen} vh={vh} />
       </div>
     </>
   );

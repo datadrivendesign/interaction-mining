@@ -52,6 +52,7 @@ import { FrameData, GestureOption } from "../types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -70,7 +71,7 @@ export const GestureContext = createContext<{
   gestureOptions: [],
 });
 
-type FocusedBox = {
+export type FocusedBox = {
   id?: string;
   class?: string;
   x?: number;
@@ -100,7 +101,7 @@ export default function RepairScreenCanvas({
     return mergeRefs(ref, imageRef);
   }, [ref, imageRef]);
 
-  const [showBoxes, setShowBoxes] = useState<boolean>(false);
+  const [showBoxes, setShowBoxes] = useState<boolean>(true);
   const [focusedBox, setFocusedBox] = useState<FocusedBox>({});
   // memoize gesture and setGesture to avoid unnecessary re-renders
   const memoizedGestureState = useMemo(() => {
@@ -131,18 +132,6 @@ export default function RepairScreenCanvas({
         ...prev,
         x: relativeX,
         y: relativeY,
-        scrollDeltaX:
-          prev.type === "Swipe left"
-            ? -0.02
-            : prev.type === "Swipe right"
-              ? 0.02
-              : 0,
-        scrollDeltaY:
-          prev.type === "Swipe down"
-            ? -0.02
-            : prev.type === "Swipe up"
-              ? 0.02
-              : 0,
       }));
     }
   };
@@ -160,18 +149,6 @@ export default function RepairScreenCanvas({
           ...prev,
           x: prev.x! + deltaX,
           y: prev.y! + deltaY,
-          scrollDeltaX:
-            prev.type === "Swipe left"
-              ? -0.02
-              : prev.type === "Swipe right"
-                ? 0.02
-                : 0,
-          scrollDeltaY:
-            prev.type === "Swipe down"
-              ? -0.02
-              : prev.type === "Swipe up"
-                ? 0.02
-                : 0,
         }));
       }
     },
@@ -341,7 +318,7 @@ export default function RepairScreenCanvas({
             {os === "android" ? (
               <FocusedElementTab
                 showRedaction={showBoxes}
-                setShowRedaction={setShowBoxes}
+                setShowElements={setShowBoxes}
                 focusedBox={focusedBox}
               />
             ) : (
@@ -420,127 +397,6 @@ function DraggableMarker({
   );
 }
 
-function FocusedElementTab({
-  showRedaction,
-  setShowRedaction,
-  focusedBox,
-}: {
-  showRedaction: boolean;
-  setShowRedaction: React.Dispatch<React.SetStateAction<boolean>>;
-  focusedBox: FocusedBox;
-}) {
-  return (
-    <Card className="absolute right-0 top-0 mr-5 mt-5 w-auto h-auto">
-      <CardHeader>
-        <CardTitle>Gesture Interaction Element</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-1 mb-5">
-          <Switch
-            checked={showRedaction}
-            onCheckedChange={(checked) => {
-              setShowRedaction(checked);
-            }}
-          />
-          <span className="pl-3">Show Bounding Boxes</span>
-        </div>
-        {showRedaction ? (
-          <>
-            <div className="space-y-1 flex flex-row mb-5">
-              <div className="w-15 flex flex-col justify-center items-center">
-                <Label
-                  htmlFor="x0"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  x0
-                </Label>
-                <Input
-                  id="x0"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={focusedBox.x ?? -1}
-                />
-              </div>
-              <div className="w-15 flex flex-col justify-center items-center mr-3">
-                <Label
-                  htmlFor="y0"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  y0
-                </Label>
-                <Input
-                  id="y0"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={focusedBox.y ?? -1}
-                />
-              </div>
-              <div className="w-15 flex flex-col justify-center items-center">
-                <Label
-                  htmlFor="x1"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  x1
-                </Label>
-                <Input
-                  id="x1"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)}
-                />
-              </div>
-              <div className="w-15 flex flex-col justify-center items-center">
-                <Label
-                  htmlFor="y1"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  y1
-                </Label>
-                <Input
-                  id="y1"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={(focusedBox.y ?? -1) + (focusedBox.height ?? -1)}
-                />
-              </div>
-            </div>
-            <div className="space-y-1 mb-5">
-              <Label
-                htmlFor="elemId"
-                className="text-base font-bold leading-none"
-              >
-                Element Id
-              </Label>
-              <Input
-                id="elemId"
-                className="text-sm font-normal text-muted-foreground"
-                readOnly={true}
-                value={focusedBox.id ?? ""}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label
-                className="text-base font-bold leading-none"
-                htmlFor="elemClass"
-              >
-                Element Class
-              </Label>
-              <Input
-                id="elemClass"
-                className="text-sm font-normal text-muted-foreground"
-                readOnly={true}
-                value={focusedBox.class ?? ""}
-              />
-            </div>
-          </>
-        ) : (
-          <></>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 function GestureSelection() {
   const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
@@ -549,7 +405,22 @@ function GestureSelection() {
   // Update gesture type when value changes
   useEffect(() => {
     if (value !== "") {
-      setGesture((prev) => ({ ...prev, type: value }));
+      setGesture((prev) => ({ 
+        ...prev, 
+        type: value,
+        scrollDeltaX:
+        value === "Swipe left"
+            ? -0.02
+            : value === "Swipe right"
+              ? 0.02
+              : 0,
+      scrollDeltaY:
+        value === "Swipe down"
+          ? -0.02
+          : value === "Swipe up"
+            ? 0.02
+            : 0,
+      }));
     } else {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
       setGesture((prev) => ({ ...prev, type: null }));
@@ -666,92 +537,5 @@ function GestureSelection() {
         />
       </div>
     </Popover>
-  );
-}
-
-function BoundingBoxOverlay({
-  showRedaction,
-  mergedRef,
-  height,
-  width,
-  boxes,
-  rootBounds,
-}: {
-  showRedaction: boolean;
-  mergedRef: MutableRefObject<HTMLImageElement | null>;
-  height: number | null;
-  width: number | null;
-  boxes: any[];
-  rootBounds: any;
-}) {
-  const svgRef = useRef<SVGSVGElement | null>(null);
-
-  useEffect(() => {
-    const svg = svgRef.current;
-    const img = (mergedRef as MutableRefObject<HTMLImageElement | null>)
-      .current;
-    if (!height || !width || !img || !svg) return;
-    // Use ResizeObserver to synchronize SVG dimensions with image dimensions
-    const resizeObserver = new ResizeObserver(() => {
-      svg.style.width = `${width}px`;
-      svg.style.height = `${height}px`;
-    });
-    resizeObserver.observe(img);
-    // Cleanup observer
-    return () => {
-      resizeObserver.unobserve(img);
-    };
-  }, [height, width, mergedRef, svgRef]);
-
-  if (!rootBounds) {
-    return null; // Render nothing if rootBounds is not available
-  }
-
-  return (
-    <div>
-      {showRedaction && (
-        <svg
-          ref={svgRef}
-          viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
-          preserveAspectRatio="xMinYMin meet"
-          className="pointer-events-none top-0 left-0 absolute cursor-crosshair"
-        >
-          {boxes.map((box: any, index: number) => (
-            <BoundingBox
-              key={box.id + index}
-              x={box.x}
-              y={box.y}
-              width={box.width}
-              height={box.height}
-            />
-          ))}
-        </svg>
-      )}
-    </div>
-  );
-}
-
-function BoundingBox({
-  x,
-  y,
-  width,
-  height,
-}: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}) {
-  return (
-    <rect
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      fill={"transparent"}
-      stroke="red"
-      strokeWidth="1"
-      className="pointer-events-none"
-    />
   );
 }

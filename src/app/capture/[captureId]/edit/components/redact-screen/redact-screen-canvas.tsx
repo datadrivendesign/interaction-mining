@@ -14,6 +14,22 @@ import { useHotkeys } from "react-hotkeys-hook";
 
 type RedactCanvasMode = "pencil" | "eraser" | "select";
 
+export type vhRootBounds = {
+  x:number, 
+  y:number, 
+  width: number, 
+  height: number
+} | null;
+
+export type vhBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  class: string;
+  id: string;
+};
+
 export const RedactCanvasContext = createContext<{
   mode: RedactCanvasMode;
   setMode: (mode: RedactCanvasMode) => void;
@@ -39,7 +55,13 @@ export const RedactCanvasContext = createContext<{
   updateRedaction: () => {},
 });
 
-export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
+export default function RedactScreenCanvas({ 
+  screen, 
+  vh 
+}: { 
+  screen: FrameData, 
+  vh: any 
+}) {
   const { setValue } = useFormContext<TraceFormData>();
   const [ watchRedactions ] = useWatch({
     name: ["redactions"],
@@ -49,6 +71,7 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
     () => redactions[screen.id] || [],
     [redactions, screen.id]
   );
+
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
@@ -120,6 +143,47 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
     }
   });
 
+  // Extract bounding boxes from hierarchy data
+  const { vhBoxes, rootBounds } = useMemo(() => {
+    if (!vh) return { vhBoxes: [], rootBounds: null };
+
+    const vhBoxes: vhBox[] = [];
+    let rootBounds: vhRootBounds = null;
+
+    function traverse(node: any) {
+      if (node.bounds_in_screen) {
+        const [left, top, right, bottom] = node.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        const width = right - left;
+        const height = bottom - top;
+        const x: number = left;
+        const y: number = top;
+        // If rootBounds is not set, this is the root node
+        if (!rootBounds) {
+          rootBounds = { x, y, width, height };
+        }
+        // do not collect boxes with no width or height
+        if (width <= 0 || height <= 0) {
+          return;
+        }
+        vhBoxes.push({
+          x,
+          y,
+          width,
+          height,
+          class: node.class_name,
+          id: node.id || `null_id_${Math.random().toString()}`,
+        });
+      }
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => traverse(child));
+      }
+    }
+    traverse(vh);
+    return { vhBoxes, rootBounds };
+  }, [vh]);
+
   return (
     <RedactCanvasContext.Provider
       value={{
@@ -140,6 +204,7 @@ export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
           ref={canvasRef}
           screen={screen}
           redactions={redaction}
+          vh={{vhBoxes, rootBounds}}
           mode={mode}
         />
       </div>
