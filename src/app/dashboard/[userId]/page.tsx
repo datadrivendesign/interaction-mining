@@ -64,8 +64,8 @@ export default function ProfilePage() {
                 src={cap.app?.metadata?.icon || "/placeholder.png"}
                 alt="App Icon"
                 className="w-10 h-10 rounded object-cover"
-                width={0}
-                height={0}
+                width={40}
+                height={40}
               />
               <div className="flex flex-col w-full">
                 <CardTitle className="text-base font-medium">

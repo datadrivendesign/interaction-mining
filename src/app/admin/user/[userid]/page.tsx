@@ -57,6 +57,8 @@ export default async function AdminUserDetails({ params }: { params: Promise<{ u
                       src={cap.app?.metadata?.icon || "/placeholder.png"}
                       alt="App Icon"
                       className="w-10 h-10 rounded object-cover"
+                      width={40}
+                      height={40}
                     />
                     <div className="w-full">
                       <CardTitle className="text-sm font-medium">
