@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const pathname = usePathname();
 
   if(!session){
-    redirect(`/sign-in?callbackUrl=/admin`);
+    redirect(`/sign-in`);
   }
 
   const router = useRouter();
@@ -59,6 +59,7 @@ export default function ProfilePage() {
       <div className="space-y-4">
         {captures.map((cap) => (
           <Card key={cap.id} className="border bg-muted/50 hover:shadow-md transition rounded-xl">
+            <a href={`/capture/${cap.id}/edit`} className="block w-full h-full">
             <CardHeader className="flex flex-row items-center gap-4 p-4">
               <Image
                 src={cap.app?.metadata?.icon || "/placeholder.png"}
@@ -80,6 +81,7 @@ export default function ProfilePage() {
                 </div>
               </div>
             </CardHeader>
+            </a>
           </Card>
         ))}
       </div>
