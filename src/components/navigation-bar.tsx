@@ -19,7 +19,6 @@ import { Role } from "@prisma/client";
 
 export default function NavigationBar() {
   return (
-    <SessionProvider>
       <nav className="sticky z-40 top-0 flex w-full justify-center bg-white dark:bg-black">
         <div className="flex w-full max-w-screen-2xl px-4 py-4 justify-between">
           <div className="flex basis-1/2 h-full">
@@ -46,7 +45,6 @@ export default function NavigationBar() {
           </div>
         </div>
       </nav>
-    </SessionProvider>
   );
 }
 

@@ -8,9 +8,7 @@ export default function RootLayout({
 }>) {
   return (
     <>
-      <SessionProvider>
-        <NavigationBar />
-      </SessionProvider>
+      <NavigationBar />
       {children}
     </>
   );
