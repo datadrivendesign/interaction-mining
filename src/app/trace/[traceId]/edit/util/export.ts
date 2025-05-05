@@ -1,6 +1,6 @@
 "use client";
 import { Capture, Screen } from "@prisma/client";
-import { FrameData, TraceFormData } from "../components/types";
+import { TraceFormData } from "../components/types";
 import { createTrace, generatePresignedVHUpload } from "@/lib/actions";
 import { toast } from "sonner";
 import Konva from "konva";
@@ -98,12 +98,16 @@ export async function exportRedactedImage(
 
 export async function handleSave(data: TraceFormData, capture: Capture) {
   // Transpose gestures on to screens
-  let screens = data.screens.map((screen: FrameData) => {
+  let screens = data.screens.map((screen: Screen) => {
     return {
+      id: screen.id,
+      v: screen.v,
       created: new Date(),
       gesture: data.gestures[screen.id],
+      redactions: data.redactions[screen.id],
       src: screen.src,
-      vh: "",
+      vh: screen.vh,
+      traceId: screen.traceId,
     };
   }) as Screen[];
 
@@ -137,7 +141,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
 
   const uploadRedactionScreenResponse = await Promise.all(
     screens.map(async (screen: Screen) => {
-
       if (!data.redactions[screen.id]) {
         return { ok: true, message: "No redactions", data: null };
       }
@@ -199,7 +202,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     }
 
     const vhUploadRes = await Promise.all(
-      data.screens.map(async (screen: FrameData, index: number) => {
+      data.screens.map(async (screen: Screen, index: number) => {
         var res;
         const vh = vhs[screen.id];
         if (!vh) {
@@ -237,7 +240,16 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       name: "New Trace",
       description: data.description,
       created: new Date(),
-      appId: capture!.appId_!,
+      app: {
+        connect: {
+          id: capture.appId,
+        },
+      },
+      task: {
+        connect: {
+          id: capture.taskId,
+        },
+      },
       screens: {
         create: [...screens],
       },
