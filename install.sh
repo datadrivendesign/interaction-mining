@@ -1,4 +1,41 @@
 #!/bin/bash
+set -e
+CLEANUP_DIRS=()
+
+cleanup_on_exit() {
+  echo "Cleaning up due to error..."
+  for DIR in "${CLEANUP_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+      echo "Removing $DIR"
+      rm -rf "$DIR"
+    fi
+  done
+}
+
+trap cleanup_on_exit EXIT
+
+echo "Check Prerequisites before You Begin"
+echo ""
+echo "Please ensure the following dependencies are installed on your system:"
+echo ""
+echo "Frontend (Web) Requirements:"
+echo "  - Node.js (v16 or v18 recommended)"
+echo "  - npm"
+echo ""
+echo "Mobile (Android) Requirements:"
+echo "  Android Studio and ensure you install:"
+echo "     - Android SDK Platform 34"
+echo "     - Android SDK Build-Tools 30.0.3 or higher"
+echo "     - Kotlin Plugin v1.7.20"
+echo ""
+read -p "Do you want to continue with setup? (y/n): " CONTINUE
+if [[ "$CONTINUE" != "y" ]]; then
+  echo "Exiting setup. Please install required dependencies first."
+  exit 1
+fi
+
+echo "Starting ODIM Setup..."
+# --- Frontend Setup ---
 
 read -p "Use SSH for cloning? (y/n): " USE_SSH
 if [[ "$USE_SSH" == "y" ]]; then
@@ -9,10 +46,11 @@ fi
 
 # Clone the repo
 echo "Cloning repository $REPO_URL..."
-git clone "$REPO_URL"
+git clone "$REPO_URL" 
 
 REPO_NAME=$(basename "${REPO_URL%.git}")
 echo "Repository cloned to $REPO_NAME"
+CLEANUP_DIRS+=("$REPO_NAME")
 
 # Move into the repo directory
 cd "$REPO_NAME" || { echo "Failed to enter directory $REPO_NAME"; exit 1; }
@@ -74,6 +112,8 @@ Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
 # Clone the mobile app repo
 echo "Cloning mobile app repository $Mobile_REPO_URL..."
 git clone "$Mobile_REPO_URL"
+echo "Repository cloned to $Mobile_REPO_NAME"
+CLEANUP_DIRS+=("$Mobile_REPO_NAME")
 
 cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
 
@@ -98,6 +138,7 @@ echo "ODIM Setup Complete!"
 echo "Frontend: cd odim-frontend-next && npm run dev"
 echo "Mobile APK: odim-mobile/app/build/outputs/apk/debug/app-debug.apk"
 
+trap - EXIT
 
 # Start the development server
 echo "Starting development server..."
