@@ -2,7 +2,7 @@
 set -e
 
 # Hardcoded repo URL
-REPO_URL="https://github.com/data-driven-design/odim-frontend-next"
+REPO_URL="https://github.com/datadrivendesign/odim-frontend-next"
 REPO_NAME=$(basename "$REPO_URL" .git)
 
 # Clone the repo
@@ -53,6 +53,8 @@ npm install
 
 
 # --- Mobile App Setup ---
+
+cd ..
 
 Mobile_REPO_URL="https://github.com/datadrivendesign/mobile-odim.git"
 Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
