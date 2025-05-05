@@ -1,18 +1,26 @@
 #!/bin/bash
 set -e
+
+SCRIPT_ROOT=$(pwd)
+SCRIPT_ROOT=$(pwd)
 CLEANUP_DIRS=()
 
 cleanup_on_exit() {
-  echo "Cleaning up due to error..."
-  for DIR in "${CLEANUP_DIRS[@]}"; do
-    if [ -d "$DIR" ]; then
-      echo "Removing $DIR"
-      rm -rf "$DIR"
-    fi
-  done
+  cd "$SCRIPT_ROOT"
+  if [[ $EXIT_CODE ]]; then
+    echo "An error occurred. Cleaning up..."
+    for DIR in "${CLEANUP_DIRS[@]}"; do
+      if [ -d "$DIR" ]; then
+        echo "Removing $DIR"
+        rm -rf "$DIR"
+      fi
+    done
+  else
+    echo "Script completed successfully."
+  fi
 }
 
-trap cleanup_on_exit EXIT
+trap 'EXIT_CODE=$?; cleanup_on_exit' EXIT
 
 echo "Check Prerequisites before You Begin"
 echo ""
@@ -45,16 +53,17 @@ else
 fi
 
 # Clone the repo
+
 echo "Cloning repository $REPO_URL..."
 git clone "$REPO_URL" 
 
 REPO_NAME=$(basename "${REPO_URL%.git}")
-echo "Repository cloned to $REPO_NAME"
 CLEANUP_DIRS+=("$REPO_NAME")
+echo "Repository cloned to $REPO_NAME"
+
 
 # Move into the repo directory
 cd "$REPO_NAME" || { echo "Failed to enter directory $REPO_NAME"; exit 1; }
-echo $REPO_NAME
 
 # Check if npm is installed
 if ! command -v npm &> /dev/null; then
@@ -110,26 +119,28 @@ Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
 
 
 # Clone the mobile app repo
+CLEANUP_DIRS+=("$Mobile_REPO_NAME")
 echo "Cloning mobile app repository $Mobile_REPO_URL..."
 git clone "$Mobile_REPO_URL"
 echo "Repository cloned to $Mobile_REPO_NAME"
-CLEANUP_DIRS+=("$Mobile_REPO_NAME")
 
 cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
 
-API_FILE="app/src/main/java/edu/illinois/odim/utils/LocalStorageOps.kt"
+# API_FILE="app/src/main/java/edu/illinois/odim/utils/LocalStorageOps.kt"
 
-if [ -f "$API_FILE" ]; then
-  echo "Updating BASE_URL in $API_FILE"
-  sed -i.bak "s|val BASE_URL = \".*\"|val BASE_URL = \"$API_BASE_URL\"|" "$API_FILE"
-else
-  echo "ERROR: Could not find $API_FILE"
-  exit 1
-fi
+# if [ -f "$API_FILE" ]; then
+#   echo "Updating BASE_URL in $API_FILE"
+#   sed -i.bak "s|val BASE_URL = \".*\"|val BASE_URL = \"$API_BASE_URL\"|" "$API_FILE"
+# else
+#   echo "ERROR: Could not find $API_FILE"
+#   exit 1
+# fi
 
+set +e
 echo "Building APK..."
 chmod +x ./gradlew
 ./gradlew assembleDebug
+set -e
 
 cd ..
 
