@@ -19,7 +19,6 @@ if ! command -v npm &> /dev/null; then
 fi
 
 echo "Let's set up environment variables:"
-read -p "Enter your MongoDB connection URI: " MONGO_URI
 read -p "MongoDB connection URI (DATABASE_URL): " DATABASE_URL
 read -p "MongoDB database name (DATABASE_NAME): " DATABASE_NAME
 read -p "AWS region: " AWS_REGION
