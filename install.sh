@@ -1,16 +1,22 @@
 #!/bin/bash
-set -e
 
-# Hardcoded repo URL
-REPO_URL="https://github.com/datadrivendesign/odim-frontend-next"
-REPO_NAME=$(basename "$REPO_URL" .git)
+read -p "Use SSH for cloning? (y/n): " USE_SSH
+if [[ "$USE_SSH" == "y" ]]; then
+  REPO_URL="git@github.com:datadrivendesign/odim-frontend-next.git"
+else
+  REPO_URL="https://github.com/datadrivendesign/odim-frontend-next"
+fi
 
 # Clone the repo
 echo "Cloning repository $REPO_URL..."
 git clone "$REPO_URL"
 
+REPO_NAME=$(basename "${REPO_URL%.git}")
+echo "Repository cloned to $REPO_NAME"
+
 # Move into the repo directory
 cd "$REPO_NAME" || { echo "Failed to enter directory $REPO_NAME"; exit 1; }
+echo $REPO_NAME
 
 # Check if npm is installed
 if ! command -v npm &> /dev/null; then
@@ -55,8 +61,15 @@ npm install
 
 cd ..
 
-Mobile_REPO_URL="https://github.com/datadrivendesign/mobile-odim.git"
+read -p "Use SSH for cloning? (y/n): " USE_SSH
+if [[ "$USE_SSH" == "y" ]]; then
+  Mobile_REPO_URL="git@github.com:datadrivendesign/mobile-odim.git"
+else
+  Mobile_REPO_URL="https://github.com/datadrivendesign/mobile-odim.git"
+fi
+
 Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
+
 
 # Clone the mobile app repo
 echo "Cloning mobile app repository $Mobile_REPO_URL..."
@@ -88,4 +101,5 @@ echo "Mobile APK: odim-mobile/app/build/outputs/apk/debug/app-debug.apk"
 
 # Start the development server
 echo "Starting development server..."
+cd $REPO_NAME
 npm run dev
