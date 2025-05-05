@@ -178,13 +178,14 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       const prefix = `uploads/${capture.id}/redacted-screens`;
       const uploadRes = await uploadToS3(file, prefix, key);
 
-      if (!uploadRes) {
+      if (!uploadRes.ok) {
         toast.error("Failed to upload redacted image.");
         return Promise.reject("Failed to upload redacted image.");
       }
+      console.log("uploadRes", uploadRes);
 
       // Set screen src to S3 URL
-      screen.src = uploadRes.data.fileUrl;
+      screens.find((s: any) => s.id === screen.id)!.src = uploadRes.data.fileUrl;
       return uploadRes;
     })
   );
