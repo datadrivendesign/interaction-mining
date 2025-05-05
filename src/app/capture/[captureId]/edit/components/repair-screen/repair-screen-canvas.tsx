@@ -217,6 +217,7 @@ export default function RepairScreenCanvas({
     // find new box at gesture position
     if (
       showBoxes &&
+      rootBounds &&
       gesture.x !== null &&
       gesture.y !== null &&
       rootBounds.height != null &&
