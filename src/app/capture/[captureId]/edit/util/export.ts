@@ -362,13 +362,14 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
           id: capture.appId_!,
         },
       },
+      captureId: capture.id,
+      screens: {
+        create: screens,
+      },
       task: {
         connect: {
           id: capture.taskId,
         },
-      },
-      screens: {
-        create: screens,
       },
       worker: "web",
     },

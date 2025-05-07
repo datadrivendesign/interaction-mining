@@ -95,8 +95,10 @@ interface GetTraceParams {
 //   include: Includes;
 // }>;
 
-export async function getTrace(id: string, { includes }: GetTraceParams = {}):
-  Promise<ActionPayload<TraceWithIncludes>> {
+export async function getTrace(
+  id: string,
+  { includes }: GetTraceParams = {}
+): Promise<ActionPayload<TraceWithIncludes>> {
   const { app = false, screens = false, task = false } = includes || {};
 
   if (!id || !isValidObjectId(id)) {
@@ -177,32 +179,31 @@ export async function createTrace(
 
 export async function updateTrace(
   id: string,
-  updates: Partial<{ name: string; description: string }>
-) {
-  // Validate the trace ID
-  if (!id || !isValidObjectId(id)) {
-    let e = new Error("Invalid trace ID.");
-    e.name = "TypeError";
-    throw e;
-  }
+  data: Prisma.TraceUpdateInput
+): Promise<ActionPayload<Trace>> {
+  let trace: Trace | null = {} as Trace;
 
-  // Check if there are any updates to apply
-  if (!updates || Object.keys(updates).length === 0) {
-    let e = new Error("No updates provided.");
-    e.name = "ValidationError";
-    throw e;
-  }
+  const query: Prisma.TraceWhereUniqueInput = {
+    id,
+  };
 
   try {
-    // Perform the update on the trace
-    const updatedTrace = await prisma.trace.update({
-      where: { id },
-      data: updates,
+    trace = await prisma.trace.update({
+      where: query,
+      data,
     });
 
-    return updatedTrace;
-  } catch (error) {
-    console.error("Failed to update trace:", error);
-    throw new Error("An error occurred while updating the trace.");
+    return {
+      ok: true,
+      message: "Trace updated.",
+      data: trace,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      message: "Failed to update trace.",
+      data: null,
+    };
   }
 }

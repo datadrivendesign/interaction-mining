@@ -1,67 +1,60 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ChevronRight, Loader2 } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Prisma, ScreenGesture, ScreenRedaction } from "@prisma/client";
+
+import { toast } from "sonner";
+
+import {
+  RedactionSchema,
+  ScreenGestureSchema,
+  ScreenSchema,
+  TraceFormData,
+  TraceFormSchema,
+} from "./components/types";
 
 import { Button } from "@/components/ui/button";
-
 import Sheet from "./components/sheet";
-import SelectScreen from "./components/select-screen";
-import RepairScreen from "./components/repair-screen";
-// import RedactScreen from "./components/redact-screen";
-import SelectScreenDoc from "./components/select-screen.mdx";
-import RepairInteractionsDoc from "./components/repair-interactions.mdx";
-// import RedactPersonalDataDoc from "./components/redact-personal-data.mdx";
 
-import { Screen, ScreenGesture } from "@prisma/client";
+import RepairScreen from "./components/repair-screen/index";
+import RepairDoc from "./components/repair-screen/doc.mdx";
+import Review from "./components/review/review";
+import ReviewDoc from "./components/review/doc.mdx";
+import RedactScreen from "./components/redact-screen";
+import RedactDoc from "./components/redact-screen/doc.mdx";
 import { useTrace } from "@/lib/hooks";
+import { handleSave } from "./util/export";
 
-const traceSteps = [
-  {
-    title: "Selection",
-    description: "Select the screens you want to use to create a new trace.",
-    content: <SelectScreenDoc />,
-  },
-  {
-    title: "Repair",
-    description: "Repair interactions that are broken or missing.",
-    content: <RepairInteractionsDoc />,
-  },
-  // {
-  //   title: "Redaction",
-  //   description: "Redact personal data from the trace.",
-  //   content: <RedactPersonalDataDoc />,
-  // },
-  // {
-  //   title: "Review",
-  //   description: "Review the trace and finish the trace creation process.",
-  //   content: <SelectScreenDoc />,
-  // },
-];
-
-export type TraceFormData = {
-  screens: Screen[];
-  gestures: { [key: string]: ScreenGesture };
-  redactions: { [key: string]: string };
-};
+enum TraceSteps {
+  // Extract = 0,
+  // Repair = 1,
+  // Redact = 2,
+  // Review = 3,
+  Repair = 0,
+  Review = 1,
+}
 
 export default function Page() {
   const params = useParams();
   const traceId = params.traceId as string;
-  const [navRef, { height }] = useMeasure();
-
   const { trace, isLoading: isTraceLoading } = useTrace(traceId, {
-    includes: { screens: true },
+    includes: { app: true, screens: true, task: true },
   });
+
+  const [navRef, { height }] = useMeasure();
 
   const methods = useForm<TraceFormData>({
     defaultValues: {
       screens: [],
       gestures: {},
       redactions: {},
+      description: "",
     },
+    resolver: zodResolver(TraceFormSchema),
   });
 
   useEffect(() => {
@@ -74,89 +67,175 @@ export default function Page() {
         },
         {} as { [key: string]: ScreenGesture }
       ),
-      redactions: {},
+      redactions: trace?.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.redactions ?? [];
+          return acc;
+        },
+        {} as { [key: string]: ScreenRedaction[] }
+      ),
+      vhs: trace?.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.vh ?? {
+            x: null,
+            y: null,
+            width: null,
+            height: null,
+          };
+          return acc;
+        },
+        {} as { [key: string]: any }
+      ),
+      description: trace?.description ?? "",
     });
   }, [trace, methods]);
 
-  // Function to perform step-level validation
-  const validateStep = async (): Promise<boolean> => {
-    const data = methods.getValues();
-    // Example validation: Ensure at least one screen exists and, for Step 2, each screen has a gesture
-    if (stepIndex === 0) {
-      if (!data.screens || data.screens.length === 0) {
-        alert("No screens were generated.");
-        return false;
-      }
-    }
-    if (stepIndex === 1) {
-      const missingGesture = data.screens.some((screen) => !screen.gesture);
-      if (missingGesture) {
-        alert("Please add a gesture to all screens.");
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const onSubmit = (data: FormData) => {
-    // Here you can assemble and transform the data as needed before sending it to your backend.
-    console.log("Final backend-ready data:", data);
-  };
-
-  // // Form state
-  // const [formScreens, setFormScreens] = useState<Screen[]>([]);
-  // const [formEdits, setFormEdits] = useState({
-  //   gestures: {} as { [key: string]: ScreenGesture },
-  //   redactions: {},
-  // });
-
   const [stepIndex, setStepIndex] = useState(0);
 
-  const handleNext = () => {
-    if (stepIndex < traceSteps.length - 1) {
+  const handleNext = async () => {
+    if (stepIndex === TraceSteps.Repair) {
+      const validation = ScreenSchema.safeParse(methods.getValues().screens);
+      console.log("validation", validation);
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        return;
+      }
+    } 
+
+    if (stepIndex < TraceSteps.Review) {
       setStepIndex(stepIndex + 1);
+    } else {
+      // Validate the "description" field
+      const validation = TraceFormSchema.safeParse(methods.getValues());
+      console.log("validation", validation);
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        return;
+      }
+      // Submit the form
+      const data = methods.getValues();
+      console.log("Submitting data", data);
+
+      handleSave(data, trace!)
     }
   };
-
   const handlePrevious = () => {
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
     }
   };
 
-  const renderStep = () => {
+  const docRender = () => {
     switch (stepIndex) {
       case 0:
-        return <SelectScreen trace={trace!} />;
+        return <RepairDoc />;
       case 1:
-        return <RepairScreen />;
+        return <ReviewDoc />;
       default:
         return null;
     }
   };
 
+  const editorRender = () => {
+    if (isTraceLoading || !trace) {
+      return null;
+    } else {
+      switch (stepIndex) {
+        case 0:
+          return <RepairScreen trace={trace} />;
+        case 1:
+          return <Review />;
+        default:
+          return null;
+      }
+    }
+  };
+
+  // load values from trace into form
+  useEffect(() => {
+    if (trace) {
+      const screens = trace.screens;
+      const gestures = trace.screens.reduce(
+        (acc, screen) => {
+          if (screen.gesture) {
+            acc[screen.id] = screen.gesture;
+          }
+          return acc;
+        },
+        {} as { [key: string]: ScreenGesture }
+      );
+
+      const redactions = trace.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.redactions ?? [];
+
+          for (const redaction of acc[screen.id]) {
+            // replace id field with random id
+            // @ts-ignore
+            redaction.id = crypto.randomUUID();
+          }
+
+          return acc;
+        },
+        {} as { [key: string]: ScreenRedaction[] }
+      );
+
+      const vhs = trace.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.vh ?? {
+            x: null,
+            y: null,
+            width: null,
+            height: null,
+          };
+          return acc;
+        },
+        {} as { [key: string]: any }
+      );
+
+      const description = trace.description ?? "";
+
+      console.log("Resetting form with trace data", {
+        screens,
+        gestures,
+        redactions,
+        vhs,
+        description,
+      });
+
+      methods.reset({
+        screens,
+        gestures,
+        redactions,
+        vhs,
+        description,
+      });
+    }
+  }, [trace, methods]);
+
   return (
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col min-w-dvw min-h-dvh bg-white dark:bg-black"
+          className="relative flex flex-col w-dvw h-dvh bg-white dark:bg-black"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex grow w-full gap-4">
-                <aside className="sticky top-0 left-0 hidden lg:flex flex-col shrink w-full h-full p-8 pr-0 max-w-xs">
-                  <article className="prose prose-neutral dark:prose-invert leading-snug">
-                    {traceSteps[stepIndex].content}
-                  </article>
-                </aside>
+              <div className="relative flex w-full h-full overflow-hidden">
                 <div className="flex flex-col grow w-full justify-center items-center">
-                  {renderStep()}
+                  {editorRender()}
                 </div>
               </div>
               <nav
                 ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full px-8 py-4 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm"
+                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
               >
                 <div className="flex gap-2 items-center">
                   <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
@@ -164,16 +243,11 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {traceSteps[stepIndex].title}
+                      {TraceSteps[stepIndex]}
                     </span>
                   </h1>
-                  <span className="block lg:hidden">
-                    <Sheet
-                      title={"Trace Creation Help"}
-                      description={traceSteps[stepIndex].description}
-                    >
-                      {traceSteps[stepIndex].content}
-                    </Sheet>
+                  <span className="block">
+                    <Sheet title={"Instructions"}>{docRender()}</Sheet>
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -184,10 +258,10 @@ export default function Page() {
                   >
                     Back
                   </Button>
-                  {stepIndex < traceSteps.length - 1 ? (
+                  {stepIndex < TraceSteps.Review ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
-                    <Button>Finish</Button>
+                    <Button onClick={handleNext}>Finish</Button>
                   )}
                 </div>
               </nav>
