@@ -100,8 +100,8 @@ model Trace {
   description String
   screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
-  taskId      String   @default("") @map("task") @db.ObjectId
-  task        Task     @relation(fields: [taskId], references: [id])
+  taskId      String?  @default("") @map("task") @db.ObjectId
+  task        Task?    @relation(fields: [taskId], references: [id])
   worker      String
 
   @@map("traces")
