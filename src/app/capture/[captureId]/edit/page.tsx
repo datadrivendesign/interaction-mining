@@ -114,12 +114,12 @@ export default function Page() {
       const data = methods.getValues();
 
       handleSave(data, capture!)
-        // .then(() => {
-        //   router.push(`/app/${capture!.appId_!}`);
-        // })
-        // .catch((reason: string) => {
-        //   console.error(reason);
-        // });
+        .then(() => {
+          router.push(`/app/${capture!.appId_!}`);
+        })
+        .catch((reason: string) => {
+          console.error(reason);
+        });
     }
   };
   const handlePrevious = () => {

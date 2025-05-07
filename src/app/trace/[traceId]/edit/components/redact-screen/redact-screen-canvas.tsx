@@ -1,33 +1,17 @@
 "use client";
 
 import { useState, useRef, createContext, useCallback, useMemo } from "react";
+import { HotKeys, KeyMap } from "react-hotkeys";
 import { useFormContext, useWatch } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
-import { TraceFormData } from "../types";
-import { FrameData } from "../types";
+import { TraceFormData, Redaction } from "../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
 
-import { Redaction } from "../types";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Screen } from "@prisma/client";
 
 type RedactCanvasMode = "pencil" | "eraser" | "select";
-
-export type vhRootBounds = {
-  x:number, 
-  y:number, 
-  width: number, 
-  height: number
-} | null;
-
-export type vhBox = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  class: string;
-  id: string;
-};
 
 export const RedactCanvasContext = createContext<{
   mode: RedactCanvasMode;
@@ -54,23 +38,13 @@ export const RedactCanvasContext = createContext<{
   updateRedaction: () => {},
 });
 
-export default function RedactScreenCanvas({ 
-  screen, 
-  vh 
-}: { 
-  screen: FrameData, 
-  vh: any 
-}) {
+export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const [ watchRedactions ] = useWatch({
+  const [watchRedactions] = useWatch({
     name: ["redactions"],
   });
   const redactions = watchRedactions || {};
-  const redaction: Redaction[] = useMemo(
-    () => redactions[screen.id] || [],
-    [redactions, screen.id]
-  );
-
+  const redaction: Redaction[] = redactions[screen.id] || [];
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
@@ -120,12 +94,13 @@ export default function RedactScreenCanvas({
           ? { ...redaction, ...updatedRedaction }
           : redaction;
       });
+
       setValue("redactions", {
         ...redactions,
         [screen.id]: newRedactions,
       });
     },
-    [redaction, redactions, setValue, screen.id]
+    [redactions, setValue, screen.id]
   );
 
   useHotkeys("v", () => setMode("select"));
@@ -141,47 +116,6 @@ export default function RedactScreenCanvas({
       deleteRedaction(selected?.id || "");
     }
   });
-
-  // Extract bounding boxes from hierarchy data
-  const { vhBoxes, rootBounds } = useMemo(() => {
-    if (!vh) return { vhBoxes: [], rootBounds: null };
-
-    const vhBoxes: vhBox[] = [];
-    let rootBounds: vhRootBounds = null;
-
-    function traverse(node: any) {
-      if (node.bounds_in_screen) {
-        const [left, top, right, bottom] = node.bounds_in_screen
-          .split(" ")
-          .map(Number);
-        const width = right - left;
-        const height = bottom - top;
-        const x: number = left;
-        const y: number = top;
-        // If rootBounds is not set, this is the root node
-        if (!rootBounds) {
-          rootBounds = { x, y, width, height };
-        }
-        // do not collect boxes with no width or height
-        if (width <= 0 || height <= 0) {
-          return;
-        }
-        vhBoxes.push({
-          x,
-          y,
-          width,
-          height,
-          class: node.class_name,
-          id: node.id || `null_id_${Math.random().toString()}`,
-        });
-      }
-      if (node.children && node.children.length > 0) {
-        node.children.forEach((child: any) => traverse(child));
-      }
-    }
-    traverse(vh);
-    return { vhBoxes, rootBounds };
-  }, [vh]);
 
   return (
     <RedactCanvasContext.Provider
@@ -203,7 +137,6 @@ export default function RedactScreenCanvas({
           ref={canvasRef}
           screen={screen}
           redactions={redaction}
-          vh={{vhBoxes, rootBounds}}
           mode={mode}
         />
       </div>

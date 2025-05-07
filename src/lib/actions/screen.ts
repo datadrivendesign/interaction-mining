@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Screen } from "@prisma/client";
+import { Prisma, Screen } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -69,6 +69,53 @@ export async function createScreen(data: Screen): Promise<Screen | null> {
     throw new Error("Failed to create screen.");
   }
   return screen;
+}
+
+export async function updateScreen(
+  id: string,
+  data: Partial<Screen>
+): Promise<ActionPayload<Screen>> {
+  let screen: Screen | null = {} as Screen;
+
+  if (!id || !isObjectIdOrHexString(id)) {
+    return {
+      ok: false,
+      message: "Invalid screen ID",
+      data: null,
+    };
+  }
+
+  const query: Prisma.ScreenWhereUniqueInput = {
+    id,
+  };
+
+  try {
+    screen = await prisma.screen.update({
+      where: query,
+      data,
+    });
+  } catch (err: any) {
+    console.error(err);
+    return {
+      ok: false,
+      message: "Failed to update screen.",
+      data: null,
+    };
+  }
+
+  if (!screen) {
+    return {
+      ok: false,
+      message: "Screen not found.",
+      data: null,
+    };
+  }
+
+  return {
+    ok: true,
+    message: "Screen updated successfully.",
+    data: screen,
+  };
 }
 
 /**
