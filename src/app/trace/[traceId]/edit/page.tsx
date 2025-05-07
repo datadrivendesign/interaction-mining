@@ -24,8 +24,6 @@ import RepairScreen from "./components/repair-screen/index";
 import RepairDoc from "./components/repair-screen/doc.mdx";
 import Review from "./components/review/review";
 import ReviewDoc from "./components/review/doc.mdx";
-import RedactScreen from "./components/redact-screen";
-import RedactDoc from "./components/redact-screen/doc.mdx";
 import { useTrace } from "@/lib/hooks";
 import { handleSave } from "./util/export";
 
