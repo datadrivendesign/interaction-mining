@@ -1,7 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
-  output        = "../node_modules/.prisma/client"
+  // output        = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -91,9 +91,10 @@ model Screen {
 
 model Trace {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int?      @default(0) @map("__v")
+  v           Int?     @default(0) @map("__v")
   appId       String   @map("app") @db.ObjectId
   app         App      @relation(fields: [appId], references: [id])
+  captureId   String?  @map("capture") @db.ObjectId
   created     DateTime @default(now()) @db.Date
   name        String?
   description String

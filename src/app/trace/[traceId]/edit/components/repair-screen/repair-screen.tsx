@@ -26,7 +26,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import { Prisma, Screen, ScreenGesture } from "@prisma/client";
+import { Screen, ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";

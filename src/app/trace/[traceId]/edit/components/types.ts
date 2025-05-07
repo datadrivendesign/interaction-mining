@@ -1,6 +1,5 @@
 import { Screen, ScreenGesture } from "@prisma/client";
 import { z, ZodType } from "zod";
-
 export interface Redaction {
   id: string;
   x: number;
@@ -22,27 +21,29 @@ export const ScreenSchema = z
   .array(
     z.object({
       id: z.string(),
+      v: z.number().nullable(),
+      created: z.date(),
       src: z.string(),
       gesture: z.object({
         type: z.string().or(z.null()),
-        x: z.number().optional(),
-        y: z.number().optional(),
-        scrollDeltaX: z.number().optional(),
-        scrollDeltaY: z.number().optional(),
+        x: z.number().nullable(),
+        y: z.number().nullable(),
+        scrollDeltaX: z.number().nullable(),
+        scrollDeltaY: z.number().nullable(),
+        description: z.string().nullable(),
       }),
       redactions: z
         .array(
           z.object({
-            id: z.string(),
             x: z.number(),
             y: z.number(),
             width: z.number(),
             height: z.number(),
-            description: z.string().optional(),
+            annotation: z.string(),
           })
-        )
-        .optional(),
-      vhs: z.any().optional(),
+        ),
+      vh: z.string(),
+      traceId: z.string(),
     })
   )
   .min(1, { message: "At least one screen is required" });

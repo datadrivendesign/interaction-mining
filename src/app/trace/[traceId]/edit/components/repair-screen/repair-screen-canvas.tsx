@@ -374,7 +374,7 @@ function DraggableMarker({
       id: "gestureMarker",
     });
 
-  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
+  const { gesture, gestureOptions } = useContext(GestureContext);
 
   return (
     <>
@@ -399,7 +399,11 @@ function DraggableMarker({
         {gesture.type ? (
           gestureOptions
             .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
-            .find((option) => option.value === gesture.type)?.icon
+            .find(
+              (option) =>
+                option.value === gesture.type ||
+                option.value.toLowerCase() === gesture.type?.toLowerCase()
+            )?.icon
         ) : (
           <CircleDashed className="size-4 text-yellow-800 hover:text-black" />
         )}
@@ -546,8 +550,6 @@ function GestureSelection() {
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
 
-  console.log("gesture", gesture);
-
   // Update gesture type when value changes
   useEffect(() => {
     if (value !== "") {
@@ -572,7 +574,11 @@ function GestureSelection() {
             ? gestureOptions
                 .flat()
                 .flatMap((option) => [option, ...(option.subGestures ?? [])])
-                .find((option) => option.value === value)?.label
+                .find(
+                  (option) =>
+                    option.value === gesture.type ||
+                    option.value.toLowerCase() === gesture.type?.toLowerCase()
+                )?.label
             : "Select gesture..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

@@ -4,13 +4,12 @@ import { useState, useRef, createContext, useCallback, useMemo } from "react";
 import { HotKeys, KeyMap } from "react-hotkeys";
 import { useFormContext, useWatch } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
-import { TraceFormData } from "../types";
-import { FrameData } from "../types";
+import { TraceFormData, Redaction } from "../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
 
-import { Redaction } from "./types";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Screen } from "@prisma/client";
 
 type RedactCanvasMode = "pencil" | "eraser" | "select";
 
@@ -39,7 +38,7 @@ export const RedactCanvasContext = createContext<{
   updateRedaction: () => {},
 });
 
-export default function RedactScreenCanvas({ screen }: { screen: FrameData }) {
+export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
   const { setValue } = useFormContext<TraceFormData>();
   const [watchRedactions] = useWatch({
     name: ["redactions"],

@@ -6,10 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../types";
-import { ScreenGesture } from "@prisma/client";
+import { Screen, ScreenGesture } from "@prisma/client";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { gestureOptions } from "../repair-screen";
-import { FrameData } from "../types";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
@@ -42,7 +41,7 @@ function SaveTraceGallery() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
-      {screens.map((screen: FrameData) => (
+      {screens.map((screen: Screen) => (
         <div
           className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
           key={`${screen.id}`}
@@ -50,7 +49,7 @@ function SaveTraceGallery() {
           <Image
             className="z-0 object-cover w-full h-auto rounded-lg"
             src={screen.src}
-            alt={`Extracted frame at ${screen.timestamp}`}
+            alt={`Extracted frame at ${screen.id}`}
             draggable={false}
             width={0}
             height={0}

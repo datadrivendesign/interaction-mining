@@ -149,74 +149,74 @@ export function InspectView({ data }: { data: any }) {
 
   const gestureOptions = useMemo<GestureOption[]>(() => [
     {
-      value: "Tap",
+      value: "tap",
       label: "Tap",
       icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
     },
     {
-      value: "Double tap",
+      value: "double tap",
       label: "Double tap",
       icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
     },
     {
-      value: "Touch and hold",
+      value: "touch and hold",
       label: "Touch and hold",
       icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
     },
     {
-      value: "Swipe",
+      value: "swipe",
       label: "Swipe",
       subGestures: [{
-        value: "Swipe up",
+        value: "swipe up",
         label: "Swipe up",
         icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
       }, {
-        value: "Swipe down",
+        value: "swipe down",
         label: "Swipe down",
         icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
       }, {
-        value: "Swipe left",
+        value: "swipe left",
         label: "Swipe left",
         icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
       }, {
-        value: "Swipe right",
+        value: "swipe right",
         label: "Swipe right",
         icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
       }]
     },
     {
-      value: "Drag",
+      value: "drag",
       label: "Drag",
       icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
     },
     {
-      value: "Zoom",
+      value: "zoom",
       label: "Zoom",
       subGestures: [{
-        value: "Zoom in",
+        value: "zoom in",
         label: "Zoom in",
         icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
       }, {
-        value: "Zoom out",
+        value: "zoom out",
         label: "Zoom out",
         icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
       }]
     },
     {
-      value: "Rotate",
+      value: "rotate",
       label: "Rotate",
       subGestures: [{
-        value: "Rotate cw",
+        value: "rotate cw",
         label: "Rotate cw",
         icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
       }, {
-        value: "Rotate ccw",
+        value: "rotate ccw",
         label: "Rotate ccw",
         icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
       }]
     },
     {
-      value: "Other",
+      value: "other",
       label: "Other",
       icon: <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
     }
