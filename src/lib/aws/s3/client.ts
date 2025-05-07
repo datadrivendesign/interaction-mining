@@ -27,6 +27,7 @@ export async function uploadToS3(
   })
 
   if (!res.ok) {
+    console.error("S3 upload failed", await res.text());
     return {
       ok: false,
       message: "Failed to upload file",

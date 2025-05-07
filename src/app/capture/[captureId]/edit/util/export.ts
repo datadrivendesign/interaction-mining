@@ -7,6 +7,7 @@ import Konva from "konva";
 import { Redaction } from "../components/types";
 import { uploadToS3 } from "@/lib/aws/s3/client";
 import { DateTime } from "luxon";
+import plimit from "p-limit";
 
 export async function exportRedactedImage(
   redactions: Redaction[],
@@ -118,27 +119,38 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     };
   });
 
+  const limit = plimit(3);
   const uploadScreenResponse = await Promise.all(
-    screens.map(async (screen: any) => {
-      // get file from s3 url
-      const res = await fetch(screen.src);
-      if (!res.ok) {
-        toast.error("Failed to fetch screen image.");
-        return Promise.reject("Failed to fetch screen image.");
-      }
-      const blob = await res.blob();
-      const file = new File([blob], `${screen.id}.png`, { type: "image/png" });
+    screens.map((screen: any) => 
+      limit(async () => {
+        const res = await fetch(screen.src);
+        if (!res.ok) {
+          toast.error("Failed to fetch screen image.");
+          throw new Error("Failed to fetch screen image.");
+        }
+  
+        const blob = await res.blob();
+        const file = new File([blob], `${screen.id}.png`, { type: "image/png" });
+  
+        const key = `${DateTime.now()}.png`;
+        const prefix = `uploads/${capture.id}/screens`;
+        const uploadRes = await uploadToS3(file, prefix, key);
+  
+        if (!uploadRes || !uploadRes.ok) {
+          toast.error("Failed to upload screen image.");
+          throw new Error("Failed to upload screen image.");
+        }
 
-      const key = `${DateTime.now()}.png`;
-      const prefix = `uploads/${capture.id}/screens`;
-      const uploadRes = await uploadToS3(file, prefix, key);
-
-      if (!uploadRes || !uploadRes.ok) {
-        toast.error("Failed to upload screen image.");
-        return Promise.reject("Failed to upload screen image.");
-      }
-      return uploadRes;
-    })
+        // Set screen src to S3 URL if no redaction
+        if (!data.redactions[screen.id]) {
+          screens.find(
+            (s: any) => s.id === screen.id
+          )!.src = uploadRes.data.fileUrl;
+        }
+  
+        return uploadRes;
+      })
+    )
   );
 
   if (!uploadScreenResponse || uploadScreenResponse.some((res) => !res.ok)) {
@@ -147,47 +159,51 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   }
 
   const uploadRedactionScreenResponse = await Promise.all(
-    screens.map(async (screen: any) => {
-      console.log("here!!!", data.redactions, screen.id);
-
-      if (!data.redactions[screen.id]) {
-        return { ok: true, message: "No redactions", data: null };
-      }
-
-      // Get redaction image
-      let dataURL = await exportRedactedImage(
-        data.redactions[screen.id],
-        screen.src
-      );
-
-      if (!dataURL) {
-        toast.error("Failed to export redacted image.");
-        return Promise.reject("Failed to export redacted image.");
-      }
-
-      // Create a new file from the data URL
-      const byteString = atob(dataURL.split(",")[1]);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      const file = new File([ab], `${screen.id}.png`, { type: "image/png" });
-
-      const key = `${DateTime.now()}.png`;
-      const prefix = `uploads/${capture.id}/redacted-screens`;
-      const uploadRes = await uploadToS3(file, prefix, key);
-
-      if (!uploadRes.ok) {
-        toast.error("Failed to upload redacted image.");
-        return Promise.reject("Failed to upload redacted image.");
-      }
-      console.log("uploadRes", uploadRes);
-
-      // Set screen src to S3 URL
-      screens.find((s: any) => s.id === screen.id)!.src = uploadRes.data.fileUrl;
-      return uploadRes;
-    })
+    screens.map((screen: any) =>
+      limit(async () => {
+        console.log("here!!!", data.redactions, screen.id);
+  
+        if (!data.redactions[screen.id]) {
+          return { ok: true, message: "No redactions", data: null };
+        }
+  
+        // Get redaction image
+        const dataURL = await exportRedactedImage(
+          data.redactions[screen.id],
+          screen.src
+        );
+  
+        if (!dataURL) {
+          toast.error("Failed to export redacted image.");
+          throw new Error("Failed to export redacted image.");
+        }
+  
+        // Create a new file from the data URL
+        const byteString = atob(dataURL.split(",")[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const file = new File([ab], `${screen.id}.png`, { type: "image/png" });
+  
+        const key = `${DateTime.now()}.png`;
+        const prefix = `uploads/${capture.id}/redacted-screens`;
+        const uploadRes = await uploadToS3(file, prefix, key);
+  
+        if (!uploadRes.ok) {
+          toast.error("Failed to upload redacted image.");
+          throw new Error("Failed to upload redacted image.");
+        }
+  
+        // Set screen src to S3 URL
+        screens.find(
+          (s: any) => s.id === screen.id
+        )!.src = uploadRes.data.fileUrl;
+  
+        return uploadRes;
+      })
+    )
   );
 
   if (
@@ -197,8 +213,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     toast.error("Failed to upload redacted screen images.");
     return Promise.reject("Failed to upload redacted screen images.");
   }
-
-  console.log("screens", screens);
 
   // Cleaning up the screen objects
   screens = screens.map((screen: any) => {
@@ -219,12 +233,12 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   const vhs = data.vhs;
   if (vhs && Object.keys(vhs).length > 0) {
     const generateVHUploadRes = await Promise.all(
-      screens.map((_) => {
-        return generatePresignedVHUpload(capture.id, "application/json");
-      })
+      screens.map(() =>
+        limit(() => generatePresignedVHUpload(capture.id, "application/json"))
+      )
     );
-
-    if (!generateVHUploadRes || generateVHUploadRes.some((res) => !res.ok)) {
+    
+    if (!generateVHUploadRes || generateVHUploadRes.some(res => !res.ok)) {
       toast.error(
         "Failed to upload screen images: Failed to generate presigned URLs."
       );
@@ -270,70 +284,73 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     // }
 
     const vhUploadRes = await Promise.all(
-      data.screens.map(async (screen: FrameData, index: number) => {
-        var res;
-        const vh = vhs[screen.id];
-
-        // redact the vh elements before you upload them
-        // get screen height and width
-        let imgWidth = 0;
-        let imgHeight = 0;
-        if (vh.bounds_in_screen) { // try to grab coordinates directly from vh
-          const [left, top, right, bottom] = vh.bounds_in_screen
-            .split(" ")
-            .map(Number);
-          imgWidth = right - left;
-          imgHeight = bottom - top;
-        } else { // do the image render method
-          const image = new Image();
-          await new Promise<void>((resolve, reject) => {
-            image.onload = () => {
-              resolve();
-            };
-            image.onerror = (err) => {
-              console.error("Error loading image:", err);
-              reject(new Error("Failed to load image"));
-            };
-            image.src = screen.src;
-          });
-          imgWidth = image.width;
-          imgHeight = image.height;
-        }
-        // const redactions = data.redactions[screen.id]
-        // for (const r of redactions) {
-        //   redactVH(vh, r, imgWidth, imgHeight);
-        // }
-
-
-
-        if (!vh) {
-          return { ok: false, message: "Failed to find view hierarchies." };
-        }
-        if (generateVHUploadRes[index].ok) {
-          res = await fetch(generateVHUploadRes[index].data.uploadUrl, {
-            method: "PUT",
-            body: JSON.stringify(vh),
-            headers: { "Content-Type": "application/json" },
-          });
-
-          if (!res.ok) {
-            toast.error("Failed to upload view hierarchies.");
-            return { ok: false, message: "Failed to upload view hierarchies." };
+      data.screens.map((screen: FrameData, index: number) =>
+        limit(async () => {
+          let res;
+          const vh = vhs[screen.id];
+    
+          // Try to determine image dimensions
+          let imgWidth = 0;
+          let imgHeight = 0;
+          if (vh.bounds_in_screen) {
+            const [left, top, right, bottom] = vh.bounds_in_screen
+              .split(" ")
+              .map(Number);
+            imgWidth = right - left;
+            imgHeight = bottom - top;
+          } else {
+            const image = new Image();
+            await new Promise<void>((resolve, reject) => {
+              image.onload = () => resolve();
+              image.onerror = err => {
+                console.error("Error loading image:", err);
+                reject(new Error("Failed to load image"));
+              };
+              image.src = screen.src;
+            });
+            imgWidth = image.width;
+            imgHeight = image.height;
           }
-
-          // Set screen src to S3 URL
-          screens[index].vh = generateVHUploadRes[index].data.fileUrl;
-
-          return generateVHUploadRes[index];
-        }
-      })
+    
+          // TODO: Uncomment and apply redactions if needed
+          // const redactions = data.redactions[screen.id]
+          // for (const r of redactions) {
+          //   redactVH(vh, r, imgWidth, imgHeight);
+          // }
+    
+          if (!vh) {
+            return { ok: false, message: "Failed to find view hierarchies." };
+          }
+    
+          const uploadMeta = generateVHUploadRes[index];
+          if (uploadMeta.ok) {
+            res = await fetch(uploadMeta.data.uploadUrl, {
+              method: "PUT",
+              body: JSON.stringify(vh),
+              headers: { "Content-Type": "application/json" },
+            });
+    
+            if (!res.ok) {
+              toast.error("Failed to upload view hierarchies.");
+              return { ok: false, message: "Failed to upload view hierarchies." };
+            }
+    
+            screens[index].vh = uploadMeta.data.fileUrl;
+            return uploadMeta;
+          }
+    
+          return { ok: false, message: "Presigned URL generation failed." };
+        })
+      )
     );
-
-    if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
+    
+    if (!vhUploadRes || vhUploadRes.some(res => !res!.ok)) {
       toast.error("Failed to upload screen view hierarchies.");
       return Promise.reject("Failed to upload screen view hierarchies.");
     }
   }
+
+  console.log("Screens: ", screens);
 
   // Create trace AND screen records
   const trace = await createTrace(
