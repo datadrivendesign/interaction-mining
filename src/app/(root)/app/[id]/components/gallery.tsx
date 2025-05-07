@@ -253,7 +253,7 @@ export function InspectView({ data }: { data: any }) {
         <div className="hidden lg:flex gap-2">
           <Link
             className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
-            href={`/trace/${data.id}`}
+            href={`/trace/${data.id}/edit`}
             target="_blank"
           >
             Open in Trace Inspector
