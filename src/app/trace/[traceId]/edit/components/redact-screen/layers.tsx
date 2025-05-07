@@ -1,7 +1,7 @@
 "use client";
 
 import { useContext, useState } from "react";
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { cn } from "@/lib/utils";
 import { Layers3, Square, X } from "lucide-react";
 import { RedactCanvasContext } from "./redact-screen-canvas";

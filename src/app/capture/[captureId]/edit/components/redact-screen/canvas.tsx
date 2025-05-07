@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import { RedactCanvasContext } from "./redact-screen-canvas";
 import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
-import Konva from "konva";
 import { clamp } from "motion/react";
 
 export interface CanvasComponentProps {

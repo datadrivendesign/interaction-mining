@@ -10,6 +10,7 @@ import React, {
   useMemo,
   useContext,
 } from "react";
+import Konva from "konva";
 import {
   Stage,
   Layer,
@@ -20,18 +21,18 @@ import {
 import useImage from "use-image";
 import { useGesture } from "@use-gesture/react";
 import { useMeasure } from "@uidotdev/usehooks";
+import { cn } from "@/lib/utils";
+import mergeRefs from "@/lib/utils/merge-refs";
 
-import { FrameData, Redaction } from "../types";
+import { Screen } from "@prisma/client";
 import AnnotationCard from "./annotation-card";
 import Overlay from "./stage-overlay";
-import { cn } from "@/lib/utils";
 import { RedactCanvasContext } from "./redact-screen-canvas";
-import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
-import Konva from "konva";
+import { Redaction } from "../types";
 
 export interface CanvasComponentProps {
-  screen: FrameData;
+  screen: Screen;
   redactions: Redaction[];
   mode: "pencil" | "eraser" | "select";
 }

@@ -27,30 +27,21 @@ import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 import { useTrace } from "@/lib/hooks";
+import { handleSave } from "./util/export";
 
 enum TraceSteps {
-  Extract = 0,
-  Repair = 1,
-  Redact = 2,
-  Review = 3,
+  // Extract = 0,
+  // Repair = 1,
+  // Redact = 2,
+  // Review = 3,
+  Repair = 0,
+  Review = 1,
 }
 
 export default function Page() {
   const params = useParams();
   const traceId = params.traceId as string;
-  const {
-    trace,
-    isLoading: isTraceLoading,
-  }: {
-    trace: Prisma.TraceGetPayload<{
-      include: {
-        app: true;
-        screens: true;
-        task: true;
-      };
-    }>;
-    isLoading: boolean;
-  } = useTrace(traceId, {
+  const { trace, isLoading: isTraceLoading } = useTrace(traceId, {
     includes: { app: true, screens: true, task: true },
   });
 
@@ -76,48 +67,35 @@ export default function Page() {
         },
         {} as { [key: string]: ScreenGesture }
       ),
-      redactions: {},
+      redactions: trace?.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.redactions ?? [];
+          return acc;
+        },
+        {} as { [key: string]: ScreenRedaction[] }
+      ),
+      vhs: trace?.screens.reduce(
+        (acc, screen) => {
+          acc[screen.id] = screen.vh ?? {
+            x: null,
+            y: null,
+            width: null,
+            height: null,
+          };
+          return acc;
+        },
+        {} as { [key: string]: any }
+      ),
+      description: trace?.description ?? "",
     });
   }, [trace, methods]);
-
-  // Function to perform step-level validation
-  const validateStep = async (): Promise<boolean> => {
-    const data = methods.getValues();
-    // Example validation: Ensure at least one screen exists and, for Step 2, each screen has a gesture
-    if (stepIndex === 0) {
-      if (!data.screens || data.screens.length === 0) {
-        alert("No screens were generated.");
-        return false;
-      }
-    }
-    if (stepIndex === 1) {
-      const missingGesture = data.screens.some((screen) => !screen.gesture);
-      if (missingGesture) {
-        alert("Please add a gesture to all screens.");
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const onSubmit = (data: FormData) => {
-    // Here you can assemble and transform the data as needed before sending it to your backend.
-    console.log("Final backend-ready data:", data);
-  };
-
-  // // Form state
-  // const [formScreens, setFormScreens] = useState<Screen[]>([]);
-  // const [formEdits, setFormEdits] = useState({
-  //   gestures: {} as { [key: string]: ScreenGesture },
-  //   redactions: {},
-  // });
 
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    if (stepIndex === TraceSteps.Extract) {
-      // Validate the "screens")
+    if (stepIndex === TraceSteps.Repair) {
       const validation = ScreenSchema.safeParse(methods.getValues().screens);
+      console.log("validation", validation);
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -125,37 +103,14 @@ export default function Page() {
         });
         return;
       }
-    } else if (stepIndex === TraceSteps.Repair) {
-      // Validate the "gestures"
-      const validation = ScreenGestureSchema.safeParse(methods.getValues());
-      if (!validation.success) {
-        console.log(validation.error.issues);
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
-        return;
-      }
-    } else if (stepIndex === TraceSteps.Redact) {
-      // Validate the "redactions"
-      const validation = RedactionSchema.safeParse(
-        methods.getValues().redactions
-      );
-      if (!validation.success) {
-        console.log(validation.error.issues);
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
-        return;
-      }
-    }
+    } 
 
     if (stepIndex < TraceSteps.Review) {
       setStepIndex(stepIndex + 1);
     } else {
       // Validate the "description" field
       const validation = TraceFormSchema.safeParse(methods.getValues());
+      console.log("validation", validation);
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -167,13 +122,7 @@ export default function Page() {
       const data = methods.getValues();
       console.log("Submitting data", data);
 
-      // handleSave(data, capture!)
-      //   .then(() => {
-      //     router.push(`/app/${capture!.appId_!}`);
-      //   })
-      //   .catch((reason: string) => {
-      //     console.error(reason);
-      //   });
+      handleSave(data, trace!)
     }
   };
   const handlePrevious = () => {
@@ -187,8 +136,6 @@ export default function Page() {
       case 0:
         return <RepairDoc />;
       case 1:
-        return <RedactDoc />;
-      case 2:
         return <ReviewDoc />;
       default:
         return null;
@@ -203,8 +150,6 @@ export default function Page() {
         case 0:
           return <RepairScreen trace={trace} />;
         case 1:
-          return <RedactScreen />;
-        case 2:
           return <Review />;
         default:
           return null;
@@ -229,6 +174,13 @@ export default function Page() {
       const redactions = trace.screens.reduce(
         (acc, screen) => {
           acc[screen.id] = screen.redactions ?? [];
+
+          for (const redaction of acc[screen.id]) {
+            // replace id field with random id
+            // @ts-ignore
+            redaction.id = crypto.randomUUID();
+          }
+
           return acc;
         },
         {} as { [key: string]: ScreenRedaction[] }
@@ -249,6 +201,14 @@ export default function Page() {
 
       const description = trace.description ?? "";
 
+      console.log("Resetting form with trace data", {
+        screens,
+        gestures,
+        redactions,
+        vhs,
+        description,
+      });
+
       methods.reset({
         screens,
         gestures,
@@ -258,10 +218,6 @@ export default function Page() {
       });
     }
   }, [trace, methods]);
-
-  useEffect(() => {
-    console.log("Form values changed:", methods.getValues());
-  }, [methods.watch()]);
 
   return (
     <>

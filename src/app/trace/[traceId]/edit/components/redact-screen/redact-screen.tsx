@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/resizable";
 
 import RedactScreenCanvas from "./redact-screen-canvas";
-import { Redaction } from "./types";
+import { Redaction } from "../types";
 import { useFormContext } from "react-hook-form";
 import { TraceFormData } from "../types";
-import { FrameData } from "../types";
+import { Screen } from "@prisma/client";
 
 export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();
-  const screens = getValues("screens") as FrameData[];
+  const screens = getValues("screens") as Screen[];
   const redactions = getValues("redactions") as {
     [screenId: string]: Redaction[];
   };
@@ -72,7 +72,7 @@ export default function RedactScreen() {
   );
 }
 
-function FocusView({ screen }: { screen: FrameData }) {
+function FocusView({ screen }: { screen: Screen }) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
@@ -88,14 +88,14 @@ function Filmstrip({
   focusViewIndex,
   setFocusViewIndex,
 }: {
-  screens: FrameData[];
+  screens: Screen[];
   redactions: { [screenId: string]: Redaction[] };
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
 }) {
   return (
     <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
-      {screens?.map((screen: FrameData, index: number) => (
+      {screens?.map((screen: Screen, index: number) => (
         <FilmstripItem
           key={screen.id}
           index={index}
@@ -129,7 +129,7 @@ function FilmstripItem({
   hasError = false,
   ...props
 }: {
-  screen: FrameData;
+  screen: Screen;
   redactions: Array<Redaction>;
   index?: number;
   isSelected?: boolean;
