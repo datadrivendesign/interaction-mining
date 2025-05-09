@@ -29,6 +29,7 @@ import {
   IterationCw,
   Search,
   Shrink,
+  Download,
 } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
@@ -40,6 +41,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
+import { Button } from "@/components/ui/button";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -286,6 +288,17 @@ export function InspectView({ data }: { data: any }) {
     []
   );
 
+  const handleDownload = useCallback(() => {
+    const fileData = JSON.stringify(data, null, 2);
+    const blob = new Blob([fileData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `inspectData-${data.id}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [data]);
+
   return (
     <div className="flex flex-col grow w-full h-full p-4 pr-0">
       <button
@@ -313,27 +326,15 @@ export function InspectView({ data }: { data: any }) {
             })}
           </span>
         </section>
-        {/* <h1 className="text-3xl font-bold tracking-tight">
-          {data?.name || "Untitled Trace"}
-        </h1> */}
-        {/* <div className="hidden lg:flex gap-2">
-          <Link
-            className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
-            href={`/editor?trace=${data.id}`}
-            target="_blank"
+        <div className="hidden lg:flex gap-2">
+          <Button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-900 text-white font-semibold tracking-tight leading-none"
           >
-            Open in editor...
-          </Link>
-          <button className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-900 text-white font-semibold tracking-tight leading-none">
             <Download className="size-4" />
-            Download
-          </button>
-        </div> */}
-        {/* <div className="hidden lg:flex gap-2">
-          <Link href={`/trace/${data.id}/edit`} target="_blank">
-            <Button>Open in Trace Inspector</Button>
-          </Link>
-        </div> */}
+            Download JSON
+          </Button>
+        </div>
       </div>
       <section className="block w-full mb-4">
         <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
