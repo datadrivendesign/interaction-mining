@@ -40,7 +40,6 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
-import { Button } from "@/components/ui/button";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -58,6 +57,13 @@ export function GalleryRoot({
 }) {
   const [_data, setData] = useState<any[]>(data);
   const [inspectData, setInspectData] = useState<any>(null);
+
+  // set default view to first trace
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setInspectData(data[0]);
+    }
+  }, [data]);
 
   return (
     <GalleryContext.Provider
@@ -323,11 +329,11 @@ export function InspectView({ data }: { data: any }) {
             Download
           </button>
         </div> */}
-        <div className="hidden lg:flex gap-2">
+        {/* <div className="hidden lg:flex gap-2">
           <Link href={`/trace/${data.id}/edit`} target="_blank">
             <Button>Open in Trace Inspector</Button>
           </Link>
-        </div>
+        </div> */}
       </div>
       <section className="block w-full mb-4">
         <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
