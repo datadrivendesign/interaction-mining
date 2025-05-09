@@ -40,6 +40,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
+import { Button } from "@/components/ui/button";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -290,11 +291,26 @@ export function InspectView({ data }: { data: any }) {
           Back
         </span>
       </button>
-      {/* <div className="flex justify-between"> */}
-      {/* <h1 className="text-3xl font-bold tracking-tight">
+      <div className="flex justify-between items-start">
+        <section className="mb-4">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {data?.description}
+          </h1>
+          <span className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
+            Created on{" "}
+            {prettyTime(data?.created, {
+              format: "LLLL dd, yyyy",
+            })}
+            {" at "}
+            {prettyTime(data?.created, {
+              format: "hh:mm a",
+            })}
+          </span>
+        </section>
+        {/* <h1 className="text-3xl font-bold tracking-tight">
           {data?.name || "Untitled Trace"}
         </h1> */}
-      {/* <div className="hidden lg:flex gap-2">
+        {/* <div className="hidden lg:flex gap-2">
           <Link
             className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
             href={`/editor?trace=${data.id}`}
@@ -307,31 +323,12 @@ export function InspectView({ data }: { data: any }) {
             Download
           </button>
         </div> */}
-      {/* <div className="hidden lg:flex gap-2">
-          <Link
-            className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
-            href={`/trace/${data.id}/edit`}
-            target="_blank"
-          >
-            Open in Trace Inspector
+        <div className="hidden lg:flex gap-2">
+          <Link href={`/trace/${data.id}/edit`} target="_blank">
+            <Button>Open in Trace Inspector</Button>
           </Link>
-        </div> */}
-      {/* </div> */}
-      <section className="block w-full mb-4">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {data?.description}
-        </h1>
-        <span className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
-          Created on{" "}
-          {prettyTime(data?.created, {
-            format: "LLLL dd, yyyy",
-          })}
-          {" at "}
-          {prettyTime(data?.created, {
-            format: "hh:mm a",
-          })}
-        </span>
-      </section>
+        </div>
+      </div>
       <section className="block w-full mb-4">
         <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
           <div className="flex min-w-full gap-2">
