@@ -13,11 +13,32 @@ import Image from "next/image";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "motion/react";
-import { ArrowDownFromLine, ArrowLeft, ArrowLeftFromLine, ArrowRightFromLine, ArrowUpFromLine, Circle, CircleDot, CircleHelp, CircleStop, Expand, Grab, IterationCcw, IterationCw, Search, Shrink } from "lucide-react";
+import {
+  ArrowDownFromLine,
+  ArrowLeft,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  ArrowUpFromLine,
+  Circle,
+  CircleDot,
+  CircleHelp,
+  CircleStop,
+  Expand,
+  Grab,
+  IterationCcw,
+  IterationCw,
+  Search,
+  Shrink,
+} from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
 import { Screen } from "@prisma/client";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
 
 const GalleryContext = createContext({
@@ -85,10 +106,12 @@ export function Gallery({ traceId }: { traceId: string }) {
             onClick={() => setInspectData(data)}
           >
             <h2 className="text-lg md:text-xl font-bold tracking-tight line-clamp-1">
-              {data?.name || "Untitled Trace"}
+              {data?.description}
             </h2>
             <span className="text-sm md:text-base text-neutral-500 dark:text-neutral-400 line-clamp-1">
-              {data?.description}
+              {prettyTime(data?.created, {
+                format: "LLLL dd, yyyy",
+              })}
             </span>
           </div>
         ))}
@@ -147,80 +170,114 @@ export function InspectView({ data }: { data: any }) {
     }
   }, [loading]);
 
-  const gestureOptions = useMemo<GestureOption[]>(() => [
-    {
-      value: "tap",
-      label: "Tap",
-      icon: <Circle className="size-4 text-yellow-800 hover:text-black" />
-    },
-    {
-      value: "double tap",
-      label: "Double tap",
-      icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />
-    },
-    {
-      value: "touch and hold",
-      label: "Touch and hold",
-      icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />
-    },
-    {
-      value: "swipe",
-      label: "Swipe",
-      subGestures: [{
-        value: "swipe up",
-        label: "Swipe up",
-        icon: <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-      }, {
-        value: "swipe down",
-        label: "Swipe down",
-        icon: <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-      }, {
-        value: "swipe left",
-        label: "Swipe left",
-        icon: <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-      }, {
-        value: "swipe right",
-        label: "Swipe right",
-        icon: <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-      }]
-    },
-    {
-      value: "drag",
-      label: "Drag",
-      icon: <Grab className="size-4 text-yellow-800 hover:text-black" />
-    },
-    {
-      value: "zoom",
-      label: "Zoom",
-      subGestures: [{
-        value: "zoom in",
-        label: "Zoom in",
-        icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />
-      }, {
-        value: "zoom out",
-        label: "Zoom out",
-        icon: <Expand className="size-4 text-yellow-800 hover:text-black" />
-      }]
-    },
-    {
-      value: "rotate",
-      label: "Rotate",
-      subGestures: [{
-        value: "rotate cw",
-        label: "Rotate cw",
-        icon: <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-      }, {
-        value: "rotate ccw",
-        label: "Rotate ccw",
-        icon: <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-      }]
-    },
-    {
-      value: "other",
-      label: "Other",
-      icon: <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
-    }
-  ], []);
+  const gestureOptions = useMemo<GestureOption[]>(
+    () => [
+      {
+        value: "tap",
+        label: "Tap",
+        icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "double tap",
+        label: "Double tap",
+        icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "touch and hold",
+        label: "Touch and hold",
+        icon: (
+          <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "swipe",
+        label: "Swipe",
+        subGestures: [
+          {
+            value: "swipe up",
+            label: "Swipe up",
+            icon: (
+              <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "swipe down",
+            label: "Swipe down",
+            icon: (
+              <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "swipe left",
+            label: "Swipe left",
+            icon: (
+              <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "swipe right",
+            label: "Swipe right",
+            icon: (
+              <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+        ],
+      },
+      {
+        value: "drag",
+        label: "Drag",
+        icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "zoom",
+        label: "Zoom",
+        subGestures: [
+          {
+            value: "zoom in",
+            label: "Zoom in",
+            icon: (
+              <Shrink className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "zoom out",
+            label: "Zoom out",
+            icon: (
+              <Expand className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+        ],
+      },
+      {
+        value: "rotate",
+        label: "Rotate",
+        subGestures: [
+          {
+            value: "rotate cw",
+            label: "Rotate cw",
+            icon: (
+              <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "rotate ccw",
+            label: "Rotate ccw",
+            icon: (
+              <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+        ],
+      },
+      {
+        value: "other",
+        label: "Other",
+        icon: (
+          <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+    []
+  );
 
   return (
     <div className="flex flex-col grow w-full h-full p-4 pr-0">
@@ -233,11 +290,11 @@ export function InspectView({ data }: { data: any }) {
           Back
         </span>
       </button>
-      <div className="flex justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
+      {/* <div className="flex justify-between"> */}
+      {/* <h1 className="text-3xl font-bold tracking-tight">
           {data?.name || "Untitled Trace"}
-        </h1>
-        {/* <div className="hidden lg:flex gap-2">
+        </h1> */}
+      {/* <div className="hidden lg:flex gap-2">
           <Link
             className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
             href={`/editor?trace=${data.id}`}
@@ -250,7 +307,7 @@ export function InspectView({ data }: { data: any }) {
             Download
           </button>
         </div> */}
-        <div className="hidden lg:flex gap-2">
+      {/* <div className="hidden lg:flex gap-2">
           <Link
             className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
             href={`/trace/${data.id}/edit`}
@@ -258,23 +315,22 @@ export function InspectView({ data }: { data: any }) {
           >
             Open in Trace Inspector
           </Link>
-        </div>
-      </div>
-      <span className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
-        Created on{" "}
-        {prettyTime(data?.created, {
-          format: "LLLL dd, yyyy",
-        })}
-        {" at "}
-        {prettyTime(data?.created, {
-          format: "hh:mm a",
-        })}
-      </span>
+        </div> */}
+      {/* </div> */}
       <section className="block w-full mb-4">
-        <h2 className="text-xl font-bold tracking-tight">Task</h2>
-        <p className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
+        <h1 className="text-3xl font-bold tracking-tight">
           {data?.description}
-        </p>
+        </h1>
+        <span className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
+          Created on{" "}
+          {prettyTime(data?.created, {
+            format: "LLLL dd, yyyy",
+          })}
+          {" at "}
+          {prettyTime(data?.created, {
+            format: "hh:mm a",
+          })}
+        </span>
       </section>
       <section className="block w-full mb-4">
         <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
@@ -314,19 +370,20 @@ export function InspectView({ data }: { data: any }) {
                           top: `${(screen.gesture.y ?? 0) * 100}%`,
                         }}
                       >
-                        {gestureOptions
-                          .flatMap((option) => 
-                              [option, ...(option.subGestures ?? [])]
-                          )
-                          .find((option) => 
-                            option.value === screen.gesture.type)?.icon
+                        {
+                          gestureOptions
+                            .flatMap((option) => [
+                              option,
+                              ...(option.subGestures ?? []),
+                            ])
+                            .find(
+                              (option) => option.value === screen.gesture.type
+                            )?.icon
                         }
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      <p>
-                        {screen.gesture.description}
-                      </p>
+                      <p>{screen.gesture.description}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
