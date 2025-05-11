@@ -178,7 +178,7 @@ export default function Page() {
               >
                 <div className="flex gap-2 items-center">
                   <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
-                    <span className="inline-flex items-center text-neutral-500 dark:text-neutral-400">
+                    <span className="inline-flex items-center text-muted-foreground">
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
@@ -207,7 +207,7 @@ export default function Page() {
             </>
           ) : (
             <div className="flex flex-col grow justify-center items-center w-full h-full">
-              <Loader2 className="text-neutral-500 dark:text-neutral-400 size-8 animate-spin" />
+              <Loader2 className="text-muted-foreground size-8 animate-spin" />
               <h1 className="text-xl md:text-2xl font-bold tracking-tight">
                 Loading trace...
               </h1>

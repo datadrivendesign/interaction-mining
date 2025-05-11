@@ -13,10 +13,10 @@ interface GetAppParams {
 }
 
 export type AppItemList = {
-  id: string,
-  package: string,
-  name: string
-}
+  id: string;
+  package: string;
+  name: string;
+};
 
 export async function getApps({
   limit,
@@ -45,7 +45,6 @@ export async function getApps({
         },
       },
     } as Prisma.AppFindManyArgs;
-
 
     // if limit is not provided, return all apps
     if (limit) {
@@ -93,7 +92,7 @@ export async function getAllApps(): Promise<AppItemList[]> {
       orderBy: { id: "asc" },
     });
 
-    return apps.map(app => ({
+    return apps.map((app) => ({
       id: app.id,
       package: app.packageName,
       name: app.metadata.name,
@@ -131,15 +130,16 @@ export async function checkIfAppExists(packageName: string): Promise<boolean> {
       where: { packageName },
     });
 
-    return!! app;
+    return !!app;
   } catch (error) {
     console.error("Failed to check if app exists:", error);
     return false;
   }
 }
 
-
-export async function saveApp(appData: App): Promise<{ ok: boolean, data: App | null }> {
+export async function saveApp(
+  appData: App
+): Promise<{ ok: boolean; data: App | null }> {
   if (!appData || !appData.packageName) return { ok: false, data: null };
 
   try {

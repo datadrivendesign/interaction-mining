@@ -13,7 +13,6 @@ import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
 import { unstable_cache } from "next/cache";
-import { getAppByPackageName } from "./app";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -23,21 +22,9 @@ const s3 = new S3Client({
   },
 });
 
-export type CaptureWithTask = Prisma.CaptureGetPayload<{
-  include: { task: true };
-}>;
-
-
 type CaptureWithTaskAndApp = Prisma.CaptureGetPayload<{
-  include: { app: true, task: true }
-}>
-
-interface GetCaptureProps {
-  id?: string;
-  taskId?: string;
-  otp?: string;
-  includes?: Prisma.CaptureInclude;
-}
+  include: { app: true; task: true };
+}>;
 
 export type ListedFiles = {
   fileKey: string;
@@ -67,7 +54,21 @@ export type EnrichedCapture = Capture & {
     description: string;
     os: string;
   };
+};
+
+interface GetCaptureProps {
+  id?: string;
+  taskId?: string;
+  otp?: string;
+  includes?: Prisma.CaptureInclude;
 }
+
+export type CaptureWith = Prisma.CaptureGetPayload<{
+  include: {
+    app: boolean;
+    task: boolean;
+  };
+}>;
 
 /**
  * Fetches a capture from the database.
@@ -79,13 +80,12 @@ export type EnrichedCapture = Capture & {
 export const getCapture = unstable_cache(
   async ({
     id,
-    taskId,
     otp,
     includes,
-  }: GetCaptureProps): Promise<ActionPayload<CaptureWithTask>> => {
+  }: GetCaptureProps): Promise<ActionPayload<CaptureWith>> => {
     const { task = false, app = false } = includes || {};
 
-    if (!id && !taskId && !otp) {
+    if (!id && !otp) {
       return { ok: false, message: "No search criteria provided.", data: null };
     }
 
@@ -93,13 +93,8 @@ export const getCapture = unstable_cache(
       return { ok: false, message: "Invalid captureId provided.", data: null };
     }
 
-    if (taskId && !isValidObjectId(taskId)) {
-      return { ok: false, message: "Invalid taskId provided.", data: null };
-    }
-
     const query: Prisma.CaptureWhereInput = {
       ...(id ? { id } : {}),
-      ...(taskId ? { taskId } : {}),
       ...(otp ? { otp } : {}),
     };
 
@@ -120,6 +115,74 @@ export const getCapture = unstable_cache(
     } catch (err) {
       console.error("Error fetching capture:", err);
       return { ok: false, message: "Failed to fetch capture.", data: null };
+    }
+  },
+  undefined,
+  { revalidate: 10 }
+);
+
+interface GetCapturesProps {
+  userId?: string;
+  appId?: string;
+  taskId?: string;
+  includes?: Prisma.CaptureInclude;
+}
+
+/**
+ * Fetches a list of captures from the database.
+ * @param userId Id of the user to fetch captures for.
+ * @param appId Id of the app to fetch captures for.
+ * @param taskId Id of the task to fetch captures for.
+ * @returns ActionPayload
+ */
+export const getCaptures = unstable_cache(
+  async ({
+    userId,
+    appId,
+    taskId,
+    includes,
+  }: GetCapturesProps): Promise<ActionPayload<CaptureWith[]>> => {
+    const { task = false, app = false } = includes || {};
+
+    if (!userId && !appId && !taskId) {
+      return { ok: false, message: "No search criteria provided.", data: null };
+    }
+
+    if (userId && !isValidObjectId(userId)) {
+      return { ok: false, message: "Invalid userId provided.", data: null };
+    }
+
+    if (appId && !isValidObjectId(appId)) {
+      return { ok: false, message: "Invalid appId provided.", data: null };
+    }
+
+    if (taskId && !isValidObjectId(taskId)) {
+      return { ok: false, message: "Invalid taskId provided.", data: null };
+    }
+
+    const query: Prisma.CaptureWhereInput = {
+      ...(userId ? { userId } : {}),
+      ...(appId ? { appId } : {}),
+      ...(taskId ? { taskId } : {}),
+    };
+
+    try {
+      const captures = await prisma.capture.findMany({
+        where: query,
+        include: {
+          app,
+          task,
+        },
+      });
+
+      if (!captures) {
+        return { ok: false, message: "No captures found.", data: null };
+      }
+
+      return { ok: true, message: "Captures found.", data: captures };
+    } catch (err) {
+      console.error("Error fetching captures:", err);
+      return { ok: false, message: "Failed to fetch captures.", data: null };
     }
   },
   undefined,
@@ -345,7 +408,7 @@ export async function createCaptureTask({
   appId,
   os,
   description,
-  userId
+  userId,
 }: {
   appId: string;
   os: string;
@@ -358,18 +421,18 @@ export async function createCaptureTask({
     });
 
     const app = await prisma.app.findFirst({
-      where: {packageName: appId}
-    })
-  
+      where: { packageName: appId },
+    });
+
     const capture = await prisma.capture.create({
       data: {
         appId_: app!.id,
         appId,
         taskId: task.id,
         userId: userId,
-        otp:"",
+        otp: "",
         src: "",
-      }
+      },
     });
 
     await prisma.user.update({
@@ -381,8 +444,8 @@ export async function createCaptureTask({
 
     return { captureId: capture.id };
   } catch (error) {
-    console.error('Error creating capture/task:', error);
-    throw new Error('Failed to create capture and task');
+    console.error("Error creating capture/task:", error);
+    throw new Error("Failed to create capture and task");
   }
 }
 
@@ -409,7 +472,7 @@ export async function getUserCaptures(
       },
     });
 
-    return captures 
+    return captures;
 
     // const enrichedCaptures = await Promise.all(
     //   captures.map(async (cap) => {

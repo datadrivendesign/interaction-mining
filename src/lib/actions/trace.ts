@@ -147,10 +147,7 @@ export async function getTrace(
 }
 
 interface CreateTraceIncludesParams {
-  includes?: {
-    screens?: boolean;
-    task?: boolean;
-  };
+  includes?: Prisma.TraceInclude;
 }
 
 export async function createTrace(
