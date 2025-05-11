@@ -52,7 +52,7 @@ export function FrameGalleryAndroid({
               className="group flex p-1 justify-center items-center bg-neutral-800 rounded-lg"
             >
               <span
-                className="text-sm text-neutral-500 dark:text-neutral-400 tracking-tight leading-none slashed-zero tabular-nums group-hover:underline cursor-pointer"
+                className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums group-hover:underline cursor-pointer"
               >
                 {`${(new Date(frame.timestamp)).toISOString()}`}
               </span>
@@ -62,7 +62,7 @@ export function FrameGalleryAndroid({
               className="inline-flex self-end items-center cursor-pointer"
               title="Delete snapshot"
             >
-              <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
+              <X className="size-6 text-muted-foreground hover:opacity-75" />
             </button>
           </div>
           <Image
@@ -122,7 +122,7 @@ export function FrameGalleryIOS({
               onClick={() => setTime(frame.timestamp)}
             >
               <span
-                className="text-sm text-neutral-500 dark:text-neutral-400 tracking-tight leading-none slashed-zero tabular-nums group-hover:underline cursor-pointer"
+                className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums group-hover:underline cursor-pointer"
                 title={`Jump to timestamp: ${prettyNumber(frame.timestamp)}s`}
               >
                 {`${prettyNumber(frame.timestamp)}s`}
@@ -133,7 +133,7 @@ export function FrameGalleryIOS({
               className="inline-flex self-end items-center cursor-pointer"
               title="Delete snapshot"
             >
-              <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
+              <X className="size-6 text-muted-foreground hover:opacity-75" />
             </button>
           </div>
           <Image

@@ -129,7 +129,7 @@ export default function Page() {
                     <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
                   )}
                   {!isDataLoading && app ? (
-                    <p className="text-sm md:text-base font-medium text-neutral-500 dark:text-neutral-400">
+                    <p className="text-sm md:text-base font-medium text-muted-foreground">
                       {app.metadata.developer}
                     </p>
                   ) : (
@@ -214,7 +214,7 @@ export default function Page() {
                   className="no-underline"
                 >
                   <div className="flex flex-col justify-start items-start p-4 md:p-6 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
-                    <span className="text-sm text-neutral-500 dark:text-neutral-400 mb-1 overflow-hidden line-clamp-1">
+                    <span className="text-sm text-muted-foreground mb-1 overflow-hidden line-clamp-1">
                       Apple Support
                     </span>
                     <span className="text-base text-blue-500 underline font-medium mb-1 overflow-hidden line-clamp-1">

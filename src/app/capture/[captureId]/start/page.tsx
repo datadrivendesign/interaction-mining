@@ -100,7 +100,7 @@ export default function Page({}: {}) {
                 <h2 className="text-lg font-semibold mb-2">
                   Using the QR code
                 </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Point the camera on your phone or tablet at this QR code to
                   launch ODIM.
                 </p>
@@ -123,7 +123,7 @@ export default function Page({}: {}) {
                 <h2 className="text-lg font-semibold mb-2">
                   Using the capture session code
                 </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
                     {`here`}
@@ -189,7 +189,7 @@ export default function Page({}: {}) {
               </AccordionTrigger>
               <AccordionContent>
                 <article className="flex flex-col">
-                  <p className="text-neutral-500 dark:text-neutral-400 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     Point the camera on your phone or tablet at this QR code to
                     launch ODIM.
                   </p>
@@ -216,7 +216,7 @@ export default function Page({}: {}) {
               </AccordionTrigger>
               <AccordionContent>
                 <article className="flex flex-col">
-                  <p className="text-neutral-500 dark:text-neutral-400 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     Go to{" "}
                     <Link className="underline" href="/capture/upload">
                       {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
@@ -322,7 +322,7 @@ export default function Page({}: {}) {
                 ))}
               </ul>
             ) : (
-              <div className="flex flex-col justify-center items-center w-full p-4 md:p-6 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-neutral-500 dark:text-neutral-400 transition-colors duration-150 ease-in-out cursor-pointer">
+              <div className="flex flex-col justify-center items-center w-full p-4 md:p-6 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-muted-foreground transition-colors duration-150 ease-in-out cursor-pointer">
                 <span className="inline-flex flex-col items-center text-center text-sm">
                   Once you&rsquo;re ready, start uploading your capture
                   recordings.

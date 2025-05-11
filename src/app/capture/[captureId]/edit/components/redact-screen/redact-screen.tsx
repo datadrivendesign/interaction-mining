@@ -55,7 +55,7 @@ export default function RedactScreen() {
               />
             ) : (
               <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-neutral-400 dark:text-neutral-500 font-semibold">
+                <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
                   Select a screen from the filmstrip.
                 </span>
               </div>
