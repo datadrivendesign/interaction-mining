@@ -7,13 +7,86 @@ import {
   Trace,
 } from "@prisma/client";
 import { TraceFormData } from "../components/types";
-import {
-  updateScreen,
-  updateTrace,
-} from "@/lib/actions";
+import { updateScreen, updateTrace } from "@/lib/actions";
 import { toast } from "sonner";
 import Konva from "konva";
 import { Redaction } from "../components/types";
+import { auth } from "@/lib/auth";
+
+export async function handleSave(data: TraceFormData, trace: Trace) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    toast.error("You must be logged in to save.");
+    return;
+  }
+
+  // Transpose gestures on to screens
+  let screens = data.screens.map((screen: Screen) => {
+    const gesture = data.gestures[screen.id] ?? {
+      type: null,
+      x: null,
+      y: null,
+      scrollDeltaX: null,
+      scrollDeltaY: null,
+      description: null,
+    };
+    const redactions = data.redactions[screen.id] ?? [];
+    return {
+      id: screen.id,
+      src: screen.src,
+      vh: "",
+      created: new Date(),
+      gesture,
+      redactions: redactions,
+    };
+  });
+
+  //  Update gestures
+  const updateScreenRes = await Promise.all(
+    screens.map(
+      async (
+        screen: Partial<Screen> & {
+          id: string;
+          gesture: ScreenGesture;
+          redactions: ScreenRedaction[];
+        }
+      ) => {
+        const redactionWithoutId = screen.redactions.map((redaction) => {
+          // @ts-ignore
+          const { id, ...rest } = redaction;
+          return rest;
+        });
+
+        const res = await updateScreen(screen.id, {
+          gesture: screen.gesture,
+          redactions: redactionWithoutId,
+        });
+
+        console.log("Update screen response", res);
+
+        return res;
+      }
+    )
+  );
+
+  // Check if all updates were successful
+  if (updateScreenRes.some((res) => res.ok === false || res.data === null)) {
+    toast.error("Failed to update screens.");
+    return;
+  }
+
+  const updateTraceRes = await updateTrace(trace.id, {
+    description: data.description,
+  });
+
+  if (updateTraceRes.ok === false || updateTraceRes.data === null) {
+    toast.error("Failed to update trace.");
+    return;
+  }
+
+  toast.success("Trace updated successfully.");
+}
 
 export async function exportRedactedImage(
   redactions: Redaction[],
@@ -101,72 +174,4 @@ export async function exportRedactedImage(
   document.body.removeChild(container);
 
   return dataURL;
-}
-
-export async function handleSave(data: TraceFormData, trace: Trace) {
-  // Transpose gestures on to screens
-  let screens = data.screens.map((screen: Screen) => {
-    const gesture = data.gestures[screen.id] ?? {
-      type: null,
-      x: null,
-      y: null,
-      scrollDeltaX: null,
-      scrollDeltaY: null,
-      description: null,
-    };
-    const redactions = data.redactions[screen.id] ?? [];
-    return {
-      id: screen.id,
-      src: screen.src,
-      vh: "",
-      created: new Date(),
-      gesture,
-      redactions: redactions,
-    };
-  });
-
-  //  Update gestures
-  const updateScreenRes = await Promise.all(
-    screens.map(
-      async (
-        screen: Partial<Screen> & {
-          id: string;
-          gesture: ScreenGesture;
-          redactions: ScreenRedaction[];
-        }
-      ) => {
-        const redactionWithoutId = screen.redactions.map((redaction) => {
-          // @ts-ignore
-          const { id, ...rest } = redaction;
-          return rest;
-        });
-
-        const res = await updateScreen(screen.id, {
-          gesture: screen.gesture,
-          redactions: redactionWithoutId,
-        });
-
-        console.log("Update screen response", res);
-
-        return res;
-      }
-    )
-  );
-
-  // Check if all updates were successful
-  if (updateScreenRes.some((res) => res.ok === false || res.data === null)) {
-    toast.error("Failed to update screens.");
-    return;
-  }
-
-  const updateTraceRes = await updateTrace(trace.id, {
-    description: data.description,
-  });
-
-  if (updateTraceRes.ok === false || updateTraceRes.data === null) {
-    toast.error("Failed to update trace.");
-    return;
-  }
-
-  toast.success("Trace updated successfully.");
 }

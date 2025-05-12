@@ -34,7 +34,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import {
-  captureFetcher,
   fileFetcher,
   handleUploadFile,
   handleDeleteFile,
@@ -54,7 +53,7 @@ export default function Page() {
   // @ts-ignore app is in there it just doesn't know it :)
   const app = capture?.app;
 
-  const { data: uploadList, isLoading: isUploadListLoading } = useSWR(
+  const { data: uploadList } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
     {
@@ -130,7 +129,7 @@ export default function Page() {
                   )}
                   {!isDataLoading && app ? (
                     <p className="text-sm md:text-base font-medium text-muted-foreground">
-                      {app.metadata.developer}
+                      {app.metadata.company}
                     </p>
                   ) : (
                     <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse" />

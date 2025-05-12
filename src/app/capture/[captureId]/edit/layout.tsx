@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getCapture, getUploadedCaptureFiles } from "@/lib/actions";
+import { getCapture, getCaptureFiles } from "@/lib/actions";
 import {
   Card,
   CardHeader,
@@ -24,7 +24,7 @@ export default async function Layout({
   });
 
   // Check if the capture has any uploaded files
-  const render = await getUploadedCaptureFiles(captureId).then((res) => {
+  const render = await getCaptureFiles(captureId).then((res) => {
     if (res.ok) {
       if (res.data.length < 1) {
         return (

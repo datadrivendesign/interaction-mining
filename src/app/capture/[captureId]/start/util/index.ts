@@ -1,8 +1,5 @@
-import {
-  getCapture,
-  getUploadedCaptureFiles,
-  deleteUploadedFile,
-} from "@/lib/actions";
+import { getCapture, getCaptureFiles } from "@/lib/actions";
+import { deleteFromS3 } from "@/lib/aws";
 
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -13,18 +10,18 @@ export enum CaptureSWROperations {
 }
 
 export async function handleDeleteFile(captureId: string, fileKey: string) {
-  let res = await deleteUploadedFile(fileKey);
+  let res = await deleteFromS3(fileKey);
 
   if (res.ok) {
     toast.success("File deleted");
     mutate(
       [CaptureSWROperations.UPLOAD_LIST, captureId],
       (prevData: any) => {
-        return prevData.filter((file: any) => file.key !== fileKey);
+        return prevData.filter((file: any) => file.fileKey !== fileKey);
       },
       {
         optimisticData: (prevData: any) => {
-          return prevData.filter((file: any) => file.key !== fileKey);
+          return prevData.filter((file: any) => file.fileKey !== fileKey);
         },
       }
     );
@@ -46,7 +43,9 @@ export async function captureFetcher([_, captureId]: [string, string]) {
 }
 
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getUploadedCaptureFiles(captureId);
+  let res = await getCaptureFiles(captureId);
+
+  console.log("fileFetcher", res);
 
   if (res.ok) {
     return res.data;

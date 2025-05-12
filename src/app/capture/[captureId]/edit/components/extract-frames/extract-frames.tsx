@@ -8,12 +8,7 @@ import { Camera, ListRestart } from "lucide-react";
 import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
 import { TraceFormData } from "../types";
 
-import {
-  ListedFiles,
-  CaptureScreenFile,
-  CaptureScreenGesture,
-  getUploadedCaptureFiles,
-} from "@/lib/actions";
+import { ListedFiles, CaptureScreenFile, getCaptureFiles } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -24,7 +19,7 @@ import { FrameData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getUploadedCaptureFiles(captureId);
+  let res = await getCaptureFiles(`uploads/${captureId}/`);
 
   if (res.ok) {
     return res.data;
@@ -47,7 +42,6 @@ export default function ExportFrames({ capture }: { capture: any }) {
   );
 }
 
-
 const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const { setValue } = useFormContext<TraceFormData>();
   const [watchScreens, watchVHs, watchGestures] = useWatch({
@@ -65,7 +59,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
     capture.id ? ["", capture.id] : null,
     fileFetcher
   );
-  
+
   useEffect(() => {
     const populateFrameData = async (
       files: ListedFiles[]
@@ -74,14 +68,12 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       vhs: { [key: string]: any };
       gestures: { [key: string]: ScreenGesture };
     }> => {
-      function createScreenGesture(
-        gesture: CaptureScreenGesture
-      ): ScreenGesture {
+      function createScreenGesture(gesture: ScreenGesture): ScreenGesture {
         const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
-        console.log("gesture")
-        console.log(gesture)
+        console.log("gesture");
+        console.log(gesture);
         const screenGesture: ScreenGesture = {
-          type: null,
+          type: type,
           x,
           y,
           scrollDeltaX,
@@ -89,7 +81,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           description: "",
         };
         if (!type) {
-          screenGesture.type = null;
+          screenGesture.type = "other";
         } else if (type === "TYPE_VIEW_CLICKED") {
           screenGesture.type = "Tap";
         } else if (type === "TYPE_VIEW_LONG_CLICKED") {
@@ -109,7 +101,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
             screenGesture.type = "Swipe";
           }
         } else {
-          screenGesture.type = null;
+          screenGesture.type = "other";
         }
         return screenGesture;
       }
@@ -151,7 +143,8 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       originalGestures.current = { ...gestures };
 
       // Only populate data if the form state is empty
-      if (currFrames.length === 0 &&
+      if (
+        currFrames.length === 0 &&
         Object.keys(currVHs).length === 0 &&
         Object.keys(currGestures).length === 0
       ) {
@@ -160,7 +153,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
         setValue("gestures", gestures);
       }
     });
-  }, [currFrames.length, files, setValue]); 
+  }, [currFrames.length, files, setValue]);
 
   return (
     <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">

@@ -3,14 +3,26 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { createCaptureTask, getAllApps, getAndroidApp, getIosApp, checkIfAppExists, saveApp, AppItemList } from "@/lib/actions/index";
+import {
+  createCaptureTask,
+  getAllApps,
+  getAndroidApp,
+  getIosApp,
+  checkIfAppExists,
+  saveApp,
+} from "@/lib/actions/index";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { redirect } from "next/navigation";
 import { App } from "@prisma/client";
 
 export interface AppListItem {
@@ -23,13 +35,9 @@ export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // if (!session) {
-  //   redirect(`/sign-in?callbackUrl=${encodeURIComponent("/capture/new")}`);
-  // }
-
   enum OS {
     IOS = "ios",
-    ANDROID = "android"
+    ANDROID = "android",
   }
 
   const [platform, setPlatform] = useState<OS>(OS.ANDROID);
@@ -42,7 +50,7 @@ export default function CaptureNewPage() {
   useEffect(() => {
     async function fetchApps() {
       const appList = await getAllApps();
-      setApps(appList); 
+      setApps(appList);
     }
     fetchApps();
   }, []);
@@ -62,9 +70,10 @@ export default function CaptureNewPage() {
         icon: data.icon ?? "unknown",
         rating: data.score ?? -1,
         reviews: data.reviews ?? -1,
-        genre: platform == OS.ANDROID ? 
-          (data.categories.map((c: any) => c.name) ?? []) : 
-          (data.genres ?? []),
+        genre:
+          platform == OS.ANDROID
+            ? (data.categories.map((c: any) => c.name) ?? [])
+            : (data.genres ?? []),
         downloads: platform == OS.ANDROID ? data.installs : "-1",
         url: data.url ?? "unknown",
       },
@@ -85,9 +94,10 @@ export default function CaptureNewPage() {
     }
 
     console.log("Scraping app data from store...");
-    const result = platform === "android"
-      ? await getAndroidApp({ appId: newAppId })
-      : await getIosApp({ appId: newAppId });
+    const result =
+      platform === "android"
+        ? await getAndroidApp({ appId: newAppId })
+        : await getIosApp({ appId: newAppId });
 
     console.log("Scraper result:", result);
     if (!result || !result.ok) {
@@ -103,7 +113,9 @@ export default function CaptureNewPage() {
       toast.success("App added!");
       const updatedApps = await getAllApps();
       setApps(updatedApps);
-      setTimeout(() => { setApp(saved.data?.packageName || newAppId); }, 0); 
+      setTimeout(() => {
+        setApp(saved.data?.packageName || newAppId);
+      }, 0);
       setShowAddApp(false);
       setNewAppId("");
     } else {
@@ -131,33 +143,29 @@ export default function CaptureNewPage() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Contribute</h1>
-        <p className="text-muted-foreground">Add your own tasks & contribute to ODIM.</p>
+        <p className="text-muted-foreground">
+          Add your own tasks & contribute to ODIM.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Platform Toggle */}
         <div className="space-y-2">
           <Label>Platform</Label>
-          <ToggleGroup 
-            type="single" 
-            value={platform} 
+          <ToggleGroup
+            type="single"
+            value={platform}
             onValueChange={(selectPlatform) => {
               if (selectPlatform) {
-                setPlatform(selectPlatform as OS)
+                setPlatform(selectPlatform as OS);
               }
-            }} 
+            }}
             className="w-full"
           >
-            <ToggleGroupItem 
-              value={OS.ANDROID} 
-              className="w-full"
-            >
+            <ToggleGroupItem value={OS.ANDROID} className="w-full">
               Android
             </ToggleGroupItem>
-            <ToggleGroupItem 
-              value={OS.IOS} 
-              className="w-full"
-            >
+            <ToggleGroupItem value={OS.IOS} className="w-full">
               iOS
             </ToggleGroupItem>
           </ToggleGroup>
@@ -172,7 +180,9 @@ export default function CaptureNewPage() {
             </SelectTrigger>
             <SelectContent>
               {apps.map((a: any) => (
-                <SelectItem key={a.id} value={a.package}>{a.name}</SelectItem>
+                <SelectItem key={a.id} value={a.package}>
+                  {a.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -211,7 +221,9 @@ export default function CaptureNewPage() {
 
         {/* Task Description */}
         <div className="space-y-2">
-          <Label htmlFor="description">2. Describe what task you’ll perform in the app</Label>
+          <Label htmlFor="description">
+            2. Describe what task you’ll perform in the app
+          </Label>
           <Textarea
             id="description"
             value={description}

@@ -1,11 +1,15 @@
-import { getUser, getUserCaptures } from "@/lib/actions";
+import { getCaptures, getUser } from "@/lib/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 
-export default async function AdminUserDetails({ params }: { params: Promise<{ userid: string }> }) {
+export default async function AdminUserDetails({
+  params,
+}: {
+  params: Promise<{ userid: string }>;
+}) {
   const { userid } = await params;
 
   if (!userid) {
@@ -15,7 +19,13 @@ export default async function AdminUserDetails({ params }: { params: Promise<{ u
 
   const [user, captures] = await Promise.all([
     getUser(userid),
-    getUserCaptures(userid)
+    getCaptures({
+      userId: userid,
+      includes: {
+        app: true,
+        task: true,
+      },
+    }),
   ]);
 
   if (!user) {
@@ -35,7 +45,9 @@ export default async function AdminUserDetails({ params }: { params: Promise<{ u
           </Avatar>
 
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold">{user.name ?? "Unnamed User"}</h1>
+            <h1 className="text-3xl font-bold">
+              {user.name ?? "Unnamed User"}
+            </h1>
             <p className="text-lg text-muted-foreground">{user.email}</p>
             <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
               {user.role}
@@ -51,7 +63,10 @@ export default async function AdminUserDetails({ params }: { params: Promise<{ u
           ) : (
             <div className="space-y-4">
               {captures.map((cap) => (
-                <Card key={cap.id} className="rounded-md hover:shadow-sm transition">
+                <Card
+                  key={cap.id}
+                  className="rounded-md hover:shadow-sm transition"
+                >
                   <CardHeader className="flex flex-row items-center gap-4 p-4">
                     <Image
                       src={cap.app?.metadata?.icon || "/placeholder.png"}
