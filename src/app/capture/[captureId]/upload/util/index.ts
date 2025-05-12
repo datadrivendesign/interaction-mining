@@ -1,14 +1,12 @@
 import {
   getCapture,
   getIosApp,
-  deleteUploadedFile,
-  generatePresignedCaptureUpload,
-  getUploadedCaptureFiles,
-  updateCapture,
+  getCaptureFiles,
 } from "@/lib/actions";
 
 import { mutate } from "swr";
 import { toast } from "sonner";
+import { deleteFromS3, uploadToS3 } from "@/lib/aws";
 
 export enum CaptureSWROperations {
   CAPTURE = "capture",
@@ -35,35 +33,14 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
   }
 
   try {
-    const res = await generatePresignedCaptureUpload(captureId, file.type);
+    const prefix = `uploads/${captureId}`;
+    const fileName = `${Date.now()}.${file.name.split("/")[file.name.split("/").length - 1]}`;
+    const res = await uploadToS3(file, prefix, fileName, file.type);
 
     if (!res.ok) {
       toast.error(`Upload failed: ${res.message}`);
       return {
         error: `Upload failed: ${res.message}`,
-      };
-    }
-
-    const { uploadUrl, filePrefix, fileKey, fileUrl } = res.data;
-
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": file.type },
-    });
-
-    if (!uploadRes.ok) {
-      toast.error("Upload failed: Failed to upload file");
-      return {
-        error: "Upload failed: Failed to upload file. Please try again.",
-      };
-    }
-
-    const updateRes = await updateCapture(captureId, { src: filePrefix });
-    if (!updateRes.ok) {
-      toast.error("Upload failed: Failed to update capture");
-      return {
-        error: "Upload failed: Failed to update capture. Please try again.",
       };
     }
 
@@ -75,18 +52,18 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
       (prev: any) => [
         ...(prev || []),
         {
-          fileKey: fileKey,
-          fileName: fileKey.split("/")[fileKey.split("/").length - 1],
-          fileUrl: fileUrl,
+          fileKey: res.data.fileKey,
+          fileName: res.data.fileName,
+          fileUrl: res.data.fileUrl,
         },
       ],
       {
         optimisticData: (prev: any) => [
           ...(prev || []),
           {
-            fileKey: fileKey,
-            fileName: fileKey.split("/")[fileKey.split("/").length - 1],
-            fileUrl: fileUrl,
+            fileKey: res.data.fileKey,
+            fileName: res.data.fileName,
+            fileUrl: res.data.fileUrl,
           },
         ],
       }
@@ -98,18 +75,18 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
 }
 
 export async function handleDeleteFile(captureId: string, fileKey: string) {
-  let res = await deleteUploadedFile(fileKey);
+  let res = await deleteFromS3(fileKey);
 
   if (res.ok) {
     toast.success("File deleted");
     mutate(
       [CaptureSWROperations.UPLOAD_LIST, captureId],
       (prevData: any) => {
-        return prevData.filter((file: any) => file.key !== fileKey);
+        return prevData.filter((file: any) => file.fileKey !== fileKey);
       },
       {
         optimisticData: (prevData: any) => {
-          return prevData.filter((file: any) => file.key !== fileKey);
+          return prevData.filter((file: any) => file.fileKey !== fileKey);
         },
       }
     );
@@ -140,7 +117,7 @@ export async function captureFetcher([_, captureId]: [string, string]) {
 }
 
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getUploadedCaptureFiles(captureId);
+  let res = await getCaptureFiles(captureId);
 
   if (res.ok) {
     return res.data;

@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
 
-
 declare module "next-auth" {
   /**
    * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
@@ -21,7 +20,6 @@ declare module "next-auth" {
     role: string;
   }
 }
-
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -80,3 +78,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+export async function requireAuth() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("You must be logged in to access this resource.");
+  }
+  return session;
+}

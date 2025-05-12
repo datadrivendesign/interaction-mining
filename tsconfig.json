@@ -39,7 +39,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "prisma/scripts/backfill-users.mjs", "prisma/scripts/backfill-users.mts"  ],
   "exclude": [
     "node_modules"
   ]

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Capture } from "@prisma/client";
 import { DateTime } from "luxon";
 import plimit from "p-limit";
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth";
 
 import {
   createTrace,
@@ -52,9 +52,9 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
           type: "image/png",
         });
 
-        const key = `${DateTime.now()}.png`;
         const prefix = `uploads/${capture.id}/screens`;
-        const uploadRes = await uploadToS3(file, prefix, key);
+        const fileName = `${DateTime.now()}.png`;
+        const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
 
         if (!uploadRes || !uploadRes.ok) {
           toast.error("Failed to upload screen image.");
@@ -106,9 +106,9 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
         }
         const file = new File([ab], `${screen.id}.png`, { type: "image/png" });
 
-        const key = `${DateTime.now()}.png`;
         const prefix = `uploads/${capture.id}/redacted-screens`;
-        const uploadRes = await uploadToS3(file, prefix, key);
+        const fileName = `${DateTime.now()}.png`;
+        const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
 
         if (!uploadRes.ok) {
           toast.error("Failed to upload redacted image.");

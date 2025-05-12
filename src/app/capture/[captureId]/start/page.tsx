@@ -4,20 +4,8 @@ import { useEffect, useState } from "react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
-import {
-  ArrowRight,
-  FileVideo,
-  Minus,
-  X,
-} from "lucide-react";
+import { ArrowRight, FileVideo, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 
 import {
   Card,
@@ -27,16 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import {
-  CaptureSWROperations,
-  fileFetcher,
-  handleDeleteFile,
-} from "./util";
+import { CaptureSWROperations, fileFetcher, handleDeleteFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCapture } from "@/lib/hooks";
-
 
 enum CaptureState {
   IDLE = 0,
@@ -53,24 +36,23 @@ export default function Page({}: {}) {
     CaptureState.IDLE
   );
 
-  const { capture, isLoading: isCaptureLoading } = useCapture(captureId,{
+  const { capture, isLoading: isCaptureLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
 
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
-    capture?.src ? [CaptureSWROperations.UPLOAD_LIST, captureId] : null,
+    [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
     {
       refreshInterval: 10,
     }
   );
-   
+
   let os = capture?.task?.os;
   useEffect(() => {
     if (capture && captureState <= CaptureState.CONNECTED) {
       if (capture.src && uploadList.length > 0) {
         setCaptureState(CaptureState.UPLOADED);
-        
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,202 +62,33 @@ export default function Page({}: {}) {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
   };
 
-  console.log(process.env.NEXT_PUBLIC_DEPLOYMENT_URL)
-
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Start capture session</CardTitle>
           <CardDescription>
-            Choose the method that works best for you to launch ODIM on your
-            phone or tablet. This page will have instructions on what to do
-            next.
+            Open the ODIM app on your device and scan the QR code below to start
+            the capture session.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 pt-0 pb-0 md:pb-6">
-          <div className="hidden md:flex flex-col md:flex-row w-full gap-x-6">
+        <CardContent className="p-6 pt-0">
+          <div className="flex flex-col md:flex-row w-full gap-x-6">
             <div className="flex flex-col md:w-1/2">
-              <article className="flex flex-col">
-                <h2 className="text-lg font-semibold mb-2">
-                  Using the QR code
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  Point the camera on your phone or tablet at this QR code to
-                  launch ODIM.
-                </p>
-                {!isCaptureLoading && capture ? (
-                  <QRCodeSVG
-                    className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
-                    value={
-                      os === "android"
-                        ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
-                        : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
-                    }
-                  />
-                ) : (
-                  <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
-                )}
-              </article>
-            </div>
-            <div className="flex flex-col md:w-1/2">
-              <article className="flex flex-col">
-                <h2 className="text-lg font-semibold mb-2">
-                  Using the capture session code
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  Go to{" "}
-                  <Link className="underline" href="/capture/upload">
-                    {`here`}
-                  </Link>{" "}
-                  and enter the following capture session code:
-                </p>
-                {!isCaptureLoading && capture ? (
-                  <div className="flex items-center gap-2 has-[:disabled]:opacity-50">
-                    <div className="flex items-center">
-                      {capture.otp
-                        .substring(0, 3)
-                        .split("")
-                        .map((digit, index) => (
-                          <div
-                            key={index}
-                            className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800"
-                          >
-                            {digit}
-                          </div>
-                        ))}
-                    </div>
-                    <div role="separator">
-                      <Minus />
-                    </div>
-                    <div className="flex items-center">
-                      {capture.otp
-                        .substring(3, 6)
-                        .split("")
-                        .map((digit, index) => (
-                          <div
-                            key={index}
-                            className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800"
-                          >
-                            {digit}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 has-[:disabled]:opacity-50">
-                    <div className="flex items-center">
-                      <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                      <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                      <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                    </div>
-                    <div role="separator">
-                      <Minus />
-                    </div>
-                    <div className="flex items-center">
-                      <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                      <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                      <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                    </div>
-                  </div>
-                )}
-              </article>
+              {!isCaptureLoading && capture ? (
+                <QRCodeSVG
+                  className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
+                  value={
+                    os === "android"
+                      ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
+                      : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
+                  }
+                />
+              ) : (
+                <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
+              )}
             </div>
           </div>
-          <Accordion type="single" collapsible className="inherit md:hidden">
-            <AccordionItem value="item-1">
-              <AccordionTrigger>
-                <h2 className="text-lg font-semibold">Using the QR code</h2>
-              </AccordionTrigger>
-              <AccordionContent>
-                <article className="flex flex-col">
-                  <p className="text-muted-foreground mb-4">
-                    Point the camera on your phone or tablet at this QR code to
-                    launch ODIM.
-                  </p>
-                  {!isCaptureLoading && capture ? (
-                    <QRCodeSVG
-                    className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
-                    value={
-                      os === "android"
-                        ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
-                        : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
-                    }
-                  />
-                  ) : (
-                    <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
-                  )}
-                </article>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger>
-                <h2 className="text-lg font-semibold">
-                  Using the capture session code
-                </h2>
-              </AccordionTrigger>
-              <AccordionContent>
-                <article className="flex flex-col">
-                  <p className="text-muted-foreground mb-4">
-                    Go to{" "}
-                    <Link className="underline" href="/capture/upload">
-                      {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
-                    </Link>{" "}
-                    and enter the following capture session code:
-                  </p>
-                  {!isCaptureLoading && capture ? (
-                    <div className="flex items-center gap-2 has-[:disabled]:opacity-50">
-                      <div className="flex items-center">
-                        {capture.otp
-                          .substring(0, 3)
-                          .split("")
-                          .map((digit, index) => (
-                            <div
-                              key={index}
-                              className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800"
-                            >
-                              {digit}
-                            </div>
-                          ))}
-                      </div>
-                      <div role="separator">
-                        <Minus />
-                      </div>
-                      <div className="flex items-center">
-                        {capture.otp
-                          .substring(3, 6)
-                          .split("")
-                          .map((digit, index) => (
-                            <div
-                              key={index}
-                              className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800"
-                            >
-                              {digit}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 has-[:disabled]:opacity-50">
-                      <div className="flex items-center">
-                        <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                        <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                        <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                      </div>
-                      <div role="separator">
-                        <Minus />
-                      </div>
-                      <div className="flex items-center">
-                        <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                        <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                        <div className="relative flex h-9 w-9 items-center justify-center border-y border-r border-neutral-200 text-sm shadow-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-800"></div>
-                      </div>
-                    </div>
-                  )}
-                </article>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
         </CardContent>
       </Card>
       <Card

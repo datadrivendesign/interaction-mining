@@ -6,6 +6,7 @@ import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { uploadToS3 } from "../aws";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -119,60 +120,6 @@ export async function updateScreen(
 }
 
 /**
- * Generates a pre-signed URL for direct S3 upload of screen PNG.
- * @param captureId The ID of the capture to upload the file to.
- * @param fileType The MIME type of the file to upload.
- * @returns ActionPayload
- */
-export async function generatePresignedScreenUpload(
-  captureId: string,
-  fileType: string
-): Promise<
-  ActionPayload<{
-    uploadUrl: string;
-    fileKey: string;
-
-    filePrefix: string;
-    fileUrl: string;
-  }>
-> {
-  if (!(fileType === "image/png")) {
-    return {
-      ok: false,
-      message: "Invalid file type. Please upload an PNG",
-      data: null,
-    };
-  }
-
-  try {
-    const extension = fileType.split("/")[fileType.split("/").length - 1];
-    const fileKey = `uploads/${captureId}/screens/${Date.now()}.${extension}`;
-
-    const command = new PutObjectCommand({
-      Bucket: process.env.AWS_UPLOAD_BUCKET!,
-      Key: fileKey,
-      ContentType: fileType,
-    });
-
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
-
-    return {
-      ok: true,
-      message: "Image uploaded to storage",
-      data: {
-        uploadUrl,
-        filePrefix: `uploads/${captureId}/`,
-        fileKey,
-        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
-      },
-    };
-  } catch (err) {
-    console.error("Error uploading image to storage:", err);
-    return { ok: false, message: "Failed to upload image.", data: null };
-  }
-}
-
-/**
  * Generates a pre-signed URL for direct S3 upload of view hierarchy JSON.
  * @param captureId The ID of the capture to upload the file to.
  * @param fileType The MIME type of the file to upload.
@@ -224,71 +171,50 @@ export async function generatePresignedVHUpload(
   }
 }
 
-/**
- * Handles the upload of an Android screen and its view hierarchy.
- * @param data The data containing screen information.
- * @returns ActionPayload with the screen ID or error message.
- */
-export async function handleAndroidScreenUpload(data: {
-  vh: string;
-  img: string;
-  created: string;
-  gesture: {
-    type?: string;
-    scrollDeltaX?: number;
-    scrollDeltaY?: number;
-    x?: number;
-    y?: number;
-  };
-  captureId: string;
-}): Promise<ActionPayload<{ url: string }>> {
-  try {
-    // Upload files to S3
-    const [res] = await Promise.all([
-      uploadToS3({
-        content: JSON.stringify(data),
-        fileName: `uploads/${data.captureId}/${data.created}.json`,
-        contentType: "application/json",
-      }),
-    ]);
-    return {
-      ok: true,
-      message: "Screen uploaded successfully",
-      data: { url: res },
-    };
-  } catch (error) {
-    console.error("Android screen upload error:", error);
-    return {
-      ok: false,
-      message: "Failed to process screen upload",
-      data: null,
-    };
-  }
-}
+// /**
+//  * Handles the upload of an Android screen and its view hierarchy.
+//  * @param data The data containing screen information.
+//  * @returns ActionPayload with the screen ID or error message.
+//  */
+// export async function handleAndroidScreenUpload(data: {
+//   vh: string;
+//   img: string;
+//   created: string;
+//   gesture: {
+//     type?: string;
+//     scrollDeltaX?: number;
+//     scrollDeltaY?: number;
+//     x?: number;
+//     y?: number;
+//   };
+//   captureId: string;
+// }): Promise<ActionPayload<{ url: string }>> {
+//   try {
+//     // Upload files to S3
+//     // create s3 json
+//     const file = new File([JSON.stringify(data.vh)], `${data.created}.json`, {
+//       type: "application/json",
+//     });
+//     const [res] = await Promise.all([
+//       uploadToS3(
+//         file,
+//         `uploads/${data.captureId}`,
+//         `${data.created}.json`,
+//         "application/json"
+//       ),
+//     ]);
 
-/**
- * Uploads content to S3 and returns the public URL.
- * @param content The content to upload (string or Buffer).
- * @param fileName The name of the file to save in S3.
- * @param contentType The MIME type of the content.
- * @returns The public URL of the uploaded file.
- */
-
-async function uploadToS3({
-  content,
-  fileName,
-  contentType,
-}: {
-  content: string;
-  fileName: string;
-  contentType: string;
-}): Promise<string> {
-  const command = new PutObjectCommand({
-    Bucket: process.env.AWS_UPLOAD_BUCKET!,
-    Key: fileName,
-    Body: content,
-    ContentType: contentType,
-  });
-  await s3.send(command);
-  return `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
-}
+//     return {
+//       ok: true,
+//       message: "Screen uploaded successfully",
+//       data: { url: res },
+//     };
+//   } catch (error) {
+//     console.error("Android screen upload error:", error);
+//     return {
+//       ok: false,
+//       message: "Failed to process screen upload",
+//       data: null,
+//     };
+//   }
+// }

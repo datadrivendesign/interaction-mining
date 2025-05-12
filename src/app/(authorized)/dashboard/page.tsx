@@ -9,13 +9,7 @@ import { toast } from "sonner";
 import { Beaker, Cake, CircleDot, Loader2, Plus } from "lucide-react";
 import { Prisma, User } from "@prisma/client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -32,7 +26,6 @@ const os = {
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
-
   const user = session?.user as User;
 
   const [captures, setCaptures] = useState<
@@ -136,32 +129,39 @@ export default function ProfilePage() {
                 <div className="flex flex-col space-y-4">
                   {captures.map((capture) => (
                     <Card key={capture.id}>
-                      <CardHeader className="flex flex-row gap-4 space-y-0">
-                        {capture.app?.metadata?.icon ? (
-                          <Image
-                            src={capture.app?.metadata?.icon}
-                            alt="App Icon"
-                            className="w-16 h-16 rounded-2xl object-cover"
-                            width={64}
-                            height={64}
-                          />
-                        ) : (
-                          <div className="size-16 rounded-2xl bg-muted-background animate-pulse" />
-                        )}
+                      <CardHeader className="flex flex-row justify-between gap-4 space-y-0">
+                        <div className="flex gap-4">
+                          {capture.app?.metadata?.icon ? (
+                            <Image
+                              src={capture.app?.metadata?.icon}
+                              alt="App Icon"
+                              className="w-16 h-16 rounded-2xl object-cover"
+                              width={64}
+                              height={64}
+                            />
+                          ) : (
+                            <div className="size-16 rounded-2xl bg-muted-background animate-pulse" />
+                          )}
 
-                        <div className="flex flex-col w-full">
-                          <h1 className="text-foreground font-semibold">
-                            {capture.app?.metadata?.name ?? "Unnamed App"} (
-                            {capture.task?.os
-                              ? os[capture.task?.os]
-                              : "Unknown OS"}
-                            )
-                          </h1>
-                          <p className="text-sm text-muted-foreground">
-                            {capture.task?.description ??
-                              "No description provided"}
-                          </p>
+                          <div className="flex flex-col w-full">
+                            <h1 className="text-foreground font-semibold">
+                              {capture.app?.metadata?.name ?? "Unnamed App"} (
+                              {capture.task?.os
+                                ? os[capture.task?.os]
+                                : "Unknown OS"}
+                              )
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                              {capture.task?.description ??
+                                "No description provided"}
+                            </p>
+                          </div>
                         </div>
+                        <Button size={"sm"} variant={"secondary"}>
+                          <Link href={`/capture/${capture.id}/start`}>
+                            <span className="text-sm">Edit</span>
+                          </Link>
+                        </Button>
                       </CardHeader>
                     </Card>
                   ))}
