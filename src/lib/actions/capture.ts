@@ -24,12 +24,12 @@ const s3 = new S3Client({
 });
 
 export type CaptureWithTask = Prisma.CaptureGetPayload<{
-  include: { task: true };
+  include: { task: true, app: true };
 }>;
 
 
 type CaptureWithTaskAndApp = Prisma.CaptureGetPayload<{
-  include: { app: true, task: true }
+  include: { app: boolean, task: boolean }
 }>
 
 interface GetCaptureProps {

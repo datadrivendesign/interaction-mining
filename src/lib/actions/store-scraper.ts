@@ -5,38 +5,55 @@ import appStore from "app-store-scraper";
 import gplay from "google-play-scraper";
 
 export async function getIosApp({ appId }: { appId: string }) {
-  let res = await appStore.app({ appId });
+  try {
+    let res = await appStore.app({ appId });
 
-  if (!res) {
+    if (!res) {
+      return {
+        ok: false,
+        message: "Failed to fetch app data",
+        data: null,
+      };
+    }
+
+    return {
+      ok: true,
+      message: "App data fetched",
+      data: res,
+    };
+  } catch (error) {
+    console.error("Error fetching iOS app data:", error);
     return {
       ok: false,
-      message: "Failed to fetch app data",
+      message: "Error fetching iOS app data",
       data: null,
     };
   }
-
-  return {
-    ok: true,
-    message: "App data fetched",
-    data: res,
-  };
 }
 
 export async function getAndroidApp({ appId }: { appId: string }) {
+  try {
+    let res = await gplay.app({ appId });
 
-  let res = await gplay.app({ appId });
+    if (!res) {
+      return {
+        ok: false,
+        message: "Failed to fetch app data",
+        data: null,
+      };
+    }
 
-  if (!res) {
+    return {
+      ok: true,
+      message: "App data fetched",
+      data: res,
+    };
+  } catch (error) {
+    console.error("Error fetching Android app data:", error);
     return {
       ok: false,
-      message: "Failed to fetch app data",
+      message: "Error fetching Android app data",
       data: null,
     };
   }
-
-  return {
-    ok: true,
-    message: "App data fetched",
-    data: res,
-  };
 }
