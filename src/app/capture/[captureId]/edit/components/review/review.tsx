@@ -68,8 +68,12 @@ function SaveTraceGallery() {
                   }}
                 >
                   {gestureOptions
-                    .flatMap((option) => [option, ...(option.subGestures ?? [])])
-                    .find((option) => option.value === gestures[screen.id].type)?.icon}
+                    .flatMap(
+                      (option) => [option, ...(option.subGestures ?? [])]
+                    )
+                    .find(
+                      (option) => option.value === gestures[screen.id].type
+                    )?.icon}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
