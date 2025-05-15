@@ -167,7 +167,8 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         if (!pointerPos) return;
         const clamp = (val: number) => Math.max(0, Math.min(val, 1));
         const normX = clamp((pointerPos.x - offsetX) / displayWidth);
-        const normY = clamp((pointerPos.y - offsetY) / displayHeight);
+        const normY = clamp((pointerPos.y - offsetY) / displayHeight);        
+        // TODO: figure out what this no-op is for
         if (e.target === stage) {
         }
         if (mode === "pencil") {
@@ -183,6 +184,26 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       },
       [offsetX, offsetY, displayWidth, displayHeight, mode, getRelativePointer]
     );
+
+    // const computeIoU = (
+    //   a: { x: number; y: number; width: number; height: number },
+    //   b: { x: number; y: number; width: number; height: number }
+    // ) => {
+    //   const xA = Math.max(a.x, b.x);
+    //   const yA = Math.max(a.y, b.y);
+    //   const xB = Math.min(a.x + a.width, b.x + b.width);
+    //   const yB = Math.min(a.y + a.height, b.y + b.height);
+
+    //   const interWidth = Math.max(0, xB - xA);
+    //   const interHeight = Math.max(0, yB - yA);
+    //   const intersection = interWidth * interHeight;
+
+    //   const areaA = a.width * a.height;
+    //   const areaB = b.width * b.height;
+    //   const union = areaA + areaB - intersection;
+
+    //   return union === 0 ? 0 : intersection / union;
+    // }
 
     // handler for mouse move event
     const handleStageMouseMove = useCallback(
@@ -221,6 +242,29 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           createRedaction(newRect, { select: true });
           setMode("select");
           setNewRect(null);
+
+
+          // // TODO: do intersect-over-union check of redaction of vh boxes here
+          // console.log(`vhBoxes: ${vhBoxes.length}`)
+          // for (const box of vhBoxes) {
+          //   if (!rootBounds) {
+          //     continue;
+          //   }
+          //   const vhBoxDims = {
+          //     x: box.x/rootBounds.width, 
+          //     y: box.y/rootBounds.height, 
+          //     width: box.width/rootBounds.width, 
+          //     height: box.height/rootBounds.height, 
+          //   }
+
+          //   const iou = computeIoU(newRect, vhBoxDims)
+          //   console.log(`iou: ${iou}`)
+          //   if (iou > 0.1) {
+          //     console.log("redaction overlaps with a view element:")
+          //     console.log(box)
+          //   }
+          // }
+
         }
       },
       [newRect, createRedaction, mode, setMode]
