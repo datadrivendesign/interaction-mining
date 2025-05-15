@@ -255,7 +255,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       imgWidth: number,
       imgHeight: number
     ) {
-      // check 
+      // check if node is not null
       if (node.bounds_in_screen) {
         const [left, top, right, bottom] = node.bounds_in_screen
           .split(" ")
@@ -276,6 +276,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
           const nodeRect = { x, y, width, height };
 
           const iou = computeIoU(redactionRect, nodeRect);
+          console.log(`iou: ${iou}`);
           if (iou > 0.1) {
             if ("content-desc" in node && node["content=desc"] !== "none") {
               node["content-desc"] = "REDACTED";
@@ -324,11 +325,14 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
             imgHeight = image.height;
           }
     
-          const redactions = data.redactions[screen.id]
-          redactVH(vh, redactions, imgWidth, imgHeight);
-    
           if (!vh) {
             return { ok: false, message: "Failed to find view hierarchies." };
+          }
+
+          const redactions = data.redactions[screen.id]
+          // Only redact vh if redactions exist
+          if (redactions && redactions.length > 0) {
+            redactVH(vh, redactions, imgWidth, imgHeight);
           }
     
           const uploadMeta = generateVHUploadRes[index];

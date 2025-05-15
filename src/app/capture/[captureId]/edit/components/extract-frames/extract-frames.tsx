@@ -74,6 +74,9 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       vhs: { [key: string]: any };
       gestures: { [key: string]: ScreenGesture };
     }> => {
+
+
+
       function createScreenGesture(
         gesture: CaptureScreenGesture
       ): ScreenGesture {
@@ -88,28 +91,46 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           scrollDeltaY,
           description: "",
         };
+
+        function translateTypeAndroidToODIM(
+          androidType: string,
+          scrollDeltaX: number | null,
+          scrollDeltaY: number | null
+        ): string {
+          console.log(`type: ${type} scrollDeltaX: ${scrollDeltaX} scrollDeltaY: ${scrollDeltaY}`)
+          if (androidType === "TYPE_VIEW_CLICKED" 
+              || androidType == "TYPE_VIEW_SELECTED") {
+            return "tap";
+          } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
+            return "touch and hold";
+          } else if (androidType === "TYPE_VIEW_SCROLLED") {
+            if (scrollDeltaX !== null && scrollDeltaY !== null) {
+              // get direction of scroll/swipe w. dominant delta direction
+              if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+                return "swipe right";
+              } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+                return "swipe left";
+              } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+                return "swipe up";
+              } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+                return "swipe down";
+              } else {
+                return "other";
+              }
+            }
+          }
+          // fall through case, don't know what will reach
+          return "other";
+        }
+
         if (!type) {
           screenGesture.type = null;
-        } else if (type === "TYPE_VIEW_CLICKED") {
-          screenGesture.type = "Tap";
-        } else if (type === "TYPE_VIEW_LONG_CLICKED") {
-          screenGesture.type = "Touch and hold";
-        } else if (type === "TYPE_VIEW_SCROLLED") {
-          // get directionality of scroll/swipe,choose dominant delta direction
-          if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
-            screenGesture.type = "Swipe right";
-          } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
-            screenGesture.type = "Swipe left";
-          } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
-            screenGesture.type = "Swipe up";
-          } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
-            screenGesture.type = "Swipe down";
-          } else {
-            // fall through case, don't know what will reach
-            screenGesture.type = "Swipe";
-          }
         } else {
-          screenGesture.type = null;
+          screenGesture.type = translateTypeAndroidToODIM(
+            type, 
+            scrollDeltaX,
+            scrollDeltaY
+          )
         }
         return screenGesture;
       }
