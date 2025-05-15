@@ -20,39 +20,45 @@ type CaptureIncludeRelations = Prisma.CaptureGetPayload<{
 }>
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
-  const pathname = usePathname();
-
-  if(!session){
-    redirect(`/sign-in`);
-  }
-
+  const { data: session, status} = useSession();
   const router = useRouter();
+
   const [captures, setCaptures] = useState<CaptureIncludeRelations[]>([]);
 
   useEffect(() => {
-    async function fetchCaptures() {
-      if (!session?.user?.id) return;
-      const captureData = await getUserCaptures(session.user.id);
-      setCaptures(captureData);
+    if (status === "unauthenticated") {
+      router.replace("/sign-in");
     }
-    fetchCaptures();
-  }, [session]);
+  }, [status, router]);
 
-  if (!session) return null;
+ useEffect(() => {
+    async function fetchCaptures() {
+      if (session?.user?.id) {
+        const captureData = await getUserCaptures(session.user.id);
+        setCaptures(captureData);
+      }
+    }
+    if (status === "authenticated") fetchCaptures();
+  }, [session, status]);
+
+  if (status === "loading") {
+    return <div className="p-6 text-center text-muted-foreground">Loading session...</div>;
+  }
+
+  if (status==="unauthenticated") return null;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
       <div className="flex items-center gap-4">
         <Avatar className="w-16 h-16">
-          <AvatarImage src={session.user?.image ?? ""} alt="User avatar" />
+          <AvatarImage src={session?.user?.image ?? ""} alt="User avatar" />
           <AvatarFallback>
-            {session.user?.name?.[0]?.toUpperCase() ?? "U"}
+            {session?.user?.name?.[0]?.toUpperCase() ?? "U"}
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-xl font-semibold">Welcome, {session.user?.name}</h1>
-          <p className="text-muted-foreground text-sm">{session.user?.email}</p>
+          <h1 className="text-xl font-semibold">Welcome, {session?.user?.name}</h1>
+          <p className="text-muted-foreground text-sm">{session?.user?.email}</p>
         </div>
       </div>
 
