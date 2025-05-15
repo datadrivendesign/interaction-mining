@@ -74,9 +74,6 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
       vhs: { [key: string]: any };
       gestures: { [key: string]: ScreenGesture };
     }> => {
-
-
-
       function createScreenGesture(
         gesture: CaptureScreenGesture
       ): ScreenGesture {
@@ -144,7 +141,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           const frameJson: CaptureScreenFile = await frameResponse.json();
           const b64img = `data:image/png;base64,${frameJson.img}`.trim();
           const frame: FrameData = {
-            id: frameJson.created + i.toString(), // + Math.random().toString(), why do this?
+            id: frameJson.created + i.toString(),
             src: b64img,
             timestamp: Date.parse(frameJson.created),
           };
@@ -181,7 +178,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
         setValue("gestures", gestures);
       }
     });
-  }, [currFrames.length, files, setValue]); 
+  }, [currFrames.length, currVHs, currGestures, files, setValue]); 
 
   return (
     <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
