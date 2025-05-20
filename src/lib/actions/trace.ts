@@ -18,6 +18,7 @@ interface GetTracesParams {
   userId?: string;
   appId?: string;
   taskId?: string;
+  captureId?: string;
   limit?: number;
   page?: number;
   includes?: Prisma.TraceInclude;
@@ -28,10 +29,12 @@ export async function getTraces({
   userId,
   appId,
   taskId,
+  captureId,
   limit = 10,
   page = 1,
   includes = {},
 }: GetTracesParams): Promise<ActionPayload<Trace[]>> {
+  const { app = false, screens = false, task = false } = includes;
   let traces = [];
 
   if (id && !isValidObjectId(id)) {
@@ -48,6 +51,10 @@ export async function getTraces({
 
   if (taskId && !isValidObjectId(taskId)) {
     return { ok: false, message: "Invalid taskId provided.", data: null };
+  }
+
+  if (captureId && !isValidObjectId(captureId)) {
+    return { ok: false, message: "Invalid captureId provided.", data: null };
   }
 
   // Check if user is authenticated if userId is provided
@@ -67,6 +74,7 @@ export async function getTraces({
     ...(userId ? { userId } : {}),
     ...(appId ? { appId } : {}),
     ...(taskId ? { taskId } : {}),
+    ...(captureId ? { captureId } : {}),
   };
 
   try {
@@ -74,7 +82,11 @@ export async function getTraces({
       where: query,
       take: limit,
       skip: (page - 1) * limit,
-      include: includes,
+      include: {
+        app,
+        screens,
+        task,
+      },
     });
 
     if (!traces) {
@@ -109,7 +121,7 @@ export async function getTrace(
   if (!id || !isValidObjectId(id)) {
     return {
       ok: false,
-      message: "Invalid trace ID.",
+      message: "Invalid traceId.",
       data: null,
     };
   }
@@ -154,8 +166,8 @@ export async function getTrace(
 export async function createTrace(
   data: Prisma.TraceCreateWithoutUserInput,
   { includes }: { includes?: Prisma.TraceInclude } = {}
-): Promise<ActionPayload<Trace>> {
-  let trace = {} as Trace;
+): Promise<ActionPayload<TracePrimitive>> {
+  let trace = {} as TracePrimitive;
 
   let session = await requireAuth();
 

@@ -17,11 +17,6 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const { captureId } = await params;
-  await getCapture({ id: captureId }).then((capture) => {
-    if (!capture.ok) {
-      notFound();
-    }
-  });
 
   // Check if the capture has any uploaded files
   const render = await getCaptureFiles(captureId).then((res) => {

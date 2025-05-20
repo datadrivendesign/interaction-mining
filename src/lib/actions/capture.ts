@@ -73,6 +73,9 @@ export const getCapture = unstable_cache(
         },
       });
 
+      console.log("Querying capture with:", query);
+      console.log("capture", capture);
+
       if (!capture) {
         return { ok: false, message: "Capture not found.", data: null };
       }
@@ -194,8 +197,6 @@ export async function getCaptureFiles(captureId: string) {
       fileName: file.Key.split("/").pop() || "",
       fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.amazonaws.com/${file.Key}`,
     }));
-
-    console.log("Fetched files:", files);
 
     return {
       ok: true,

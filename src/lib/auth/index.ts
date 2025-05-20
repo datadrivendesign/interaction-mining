@@ -54,10 +54,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: session.user.email },
-          include: {
-            captures: true,
-            traces: true,
-          },
         });
         if (dbUser) {
           session.user.role = dbUser.role ?? "USER";

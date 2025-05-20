@@ -9,8 +9,10 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const { traceId } = await params;
-  await getTrace(traceId).then((capture) => {
-    if (!capture.ok) {
+  console.log("params", await params);
+  await getTrace(traceId).then((trace) => {
+    console.log(trace);
+    if (!trace.ok) {
       notFound();
     }
   });

@@ -1,4 +1,6 @@
-import { getSessionData, updateUserRole } from "@/lib/actions/index";
+import Link from "next/link";
+import { redirect } from "next/navigation"
+;
 import { prisma } from "@/lib/prisma";
 import { UserRoleSelector } from "@/components/ui/roleselector";
 import {
@@ -11,23 +13,11 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react"
-import { redirect } from "next/navigation";
-import { DefaultSession } from "next-auth";
-
-declare module "next-auth" {
-  interface User {
-    role: string;
-  }
-
-  interface Session {
-    user: User & {role: string};
-  }
-}
+import { ChevronRight } from "lucide-react";
+import { auth } from "@/lib/auth";
 
 export default async function AdminPage() {
-  const session = await getSessionData();
+  const session = await auth();
 
   if (!session) {
     redirect(`/sign-in?callbackUrl=/admin`);
@@ -92,7 +82,7 @@ export default async function AdminPage() {
 
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id} className="hover:bg-muted/10 border-0" >
+                <TableRow key={user.id} className="hover:bg-muted/10 border-0">
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -102,15 +92,12 @@ export default async function AdminPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/admin/user/${user.id}`}
-                    >
+                    <Link href={`/admin/user/${user.id}`}>
                       <Button variant="outline" size="icon" className="hover">
-                      <ChevronRight />  
+                        <ChevronRight />
                       </Button>
                     </Link>
                   </TableCell>
-              
                 </TableRow>
               ))}
             </TableBody>
