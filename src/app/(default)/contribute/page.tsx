@@ -5,6 +5,7 @@ import { ArrowUpRight, DownloadIcon } from "lucide-react";
 
 import InstallInstructions from "./components/install-instructions.mdx";
 import { Button } from "@/components/ui/button";
+import InstallationVideo from "./components/installation-video.mdx";
 
 export default function Page() {
   return (
@@ -28,6 +29,11 @@ export default function Page() {
               <ArrowUpRight size={20} className="mr-1" />
               Source release pending
             </Button>
+            <div className="flex justify-between items-center gap-8 mt-8">
+              <div className="  w-full max-w-xs mx-auto text-center">
+                <InstallationVideo />
+              </div>
+            </div>
           </aside>
         </section>
       </main>

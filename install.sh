@@ -135,7 +135,6 @@ if ! command -v npm &> /dev/null; then
   echo "npm is not installed. Please install Node.js and npm first."
   exit 1
 fi
-
 echo "Let's set up environment variables (or press enter to skip for now):"
 echo -e "${BLUE}👉 MongoDB connection URI (DATABASE_URL):${NC} \c"
 read DATABASE_URL
