@@ -19,7 +19,7 @@ import { FrameData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getCaptureFiles(`uploads/${captureId}/`);
+  let res = await getCaptureFiles(captureId);
 
   if (res.ok) {
     return res.data;
@@ -88,13 +88,13 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           screenGesture.type = "Touch and hold";
         } else if (type === "TYPE_VIEW_SCROLLED") {
           // get directionality of scroll/swipe,choose dominant delta direction
-          if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+          if (scrollDeltaX! > 0 && scrollDeltaX! > scrollDeltaY!) {
             screenGesture.type = "Swipe right";
-          } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+          } else if (scrollDeltaX! < 0 && scrollDeltaX! < scrollDeltaY!) {
             screenGesture.type = "Swipe left";
-          } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+          } else if (scrollDeltaY! > 0 && scrollDeltaY! > scrollDeltaX!) {
             screenGesture.type = "Swipe up";
-          } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+          } else if (scrollDeltaY! < 0 && scrollDeltaY! < scrollDeltaX!) {
             screenGesture.type = "Swipe down";
           } else {
             // fall through case, don't know what will reach

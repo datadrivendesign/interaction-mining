@@ -11,17 +11,16 @@ export default async function Page({
 
   try {
     const { traceId } = await params;
-    await getTrace(traceId).then((res) => {
+    await getTrace(traceId, { includes: { screens: true } }).then((res) => {
       if (res.ok) {
         trace = res.data;
       }
     });
 
+    console.log("trace", trace);
   } catch {
     notFound();
   }
 
-  return (
-    <>{trace!.id}</>
-  );
+  return <>{trace!.id}</>;
 }

@@ -70,7 +70,7 @@ function SessionContent() {
 
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/${session.user?.id}`}>Dashboard</Link>
+            <Link href={`/dashboard`}>Dashboard</Link>
           </DropdownMenuItem>
 
           {session.user?.role === Role.ADMIN && (

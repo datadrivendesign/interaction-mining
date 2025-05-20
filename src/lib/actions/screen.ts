@@ -171,50 +171,58 @@ export async function generatePresignedVHUpload(
   }
 }
 
-// /**
-//  * Handles the upload of an Android screen and its view hierarchy.
-//  * @param data The data containing screen information.
-//  * @returns ActionPayload with the screen ID or error message.
-//  */
-// export async function handleAndroidScreenUpload(data: {
-//   vh: string;
-//   img: string;
-//   created: string;
-//   gesture: {
-//     type?: string;
-//     scrollDeltaX?: number;
-//     scrollDeltaY?: number;
-//     x?: number;
-//     y?: number;
-//   };
-//   captureId: string;
-// }): Promise<ActionPayload<{ url: string }>> {
-//   try {
-//     // Upload files to S3
-//     // create s3 json
-//     const file = new File([JSON.stringify(data.vh)], `${data.created}.json`, {
-//       type: "application/json",
-//     });
-//     const [res] = await Promise.all([
-//       uploadToS3(
-//         file,
-//         `uploads/${data.captureId}`,
-//         `${data.created}.json`,
-//         "application/json"
-//       ),
-//     ]);
+/**
+ * Handles the upload of an Android screen and its view hierarchy.
+ * @param data The data containing screen information.
+ * @returns ActionPayload with the screen ID or error message.
+ */
+export async function handleAndroidScreenUpload(data: {
+  vh: string;
+  img: string;
+  created: string;
+  gesture: {
+    type?: string;
+    scrollDeltaX?: number;
+    scrollDeltaY?: number;
+    x?: number;
+    y?: number;
+  };
+  captureId: string;
+}): Promise<ActionPayload<{ url: string }>> {
+  try {
+    // Upload files to S3
+    // create s3 json
+    const file = new File([JSON.stringify(data.vh)], `${data.created}.json`, {
+      type: "application/json",
+    });
+    const [res] = await Promise.all([
+      uploadToS3(
+        file,
+        `uploads/${data.captureId}`,
+        `${data.created}.json`,
+        "application/json"
+      ),
+    ]);
 
-//     return {
-//       ok: true,
-//       message: "Screen uploaded successfully",
-//       data: { url: res },
-//     };
-//   } catch (error) {
-//     console.error("Android screen upload error:", error);
-//     return {
-//       ok: false,
-//       message: "Failed to process screen upload",
-//       data: null,
-//     };
-//   }
-// }
+    if (!res.ok) {
+      return {
+        ok: false,
+        message: "Failed to upload view hierarchy",
+        data: null,
+      };
+    }
+
+    return {
+      ok: true,
+      message: "Screen uploaded successfully",
+      data: { url: res.data.fileUrl },
+    };
+  } catch (error) {
+    console.error("Android screen upload error:", error);
+    return {
+      ok: false,
+      message: "Failed to process screen upload",
+      data: null,
+    };
+  }
+}

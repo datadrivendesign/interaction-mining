@@ -6,11 +6,7 @@ import { DateTime } from "luxon";
 import plimit from "p-limit";
 import { auth } from "@/lib/auth";
 
-import {
-  createTrace,
-  generatePresignedVHUpload,
-  updateUser,
-} from "@/lib/actions";
+import { createTrace, generatePresignedVHUpload } from "@/lib/actions";
 import { uploadToS3 } from "@/lib/aws/s3/client";
 
 import { FrameData, TraceFormData, Redaction } from "../components/types";
@@ -80,8 +76,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
   const uploadRedactionScreenResponse = await Promise.all(
     screens.map((screen: any) =>
       limit(async () => {
-        console.log("here!!!", data.redactions, screen.id);
-
         if (!data.redactions[screen.id]) {
           return { ok: true, message: "No redactions", data: null };
         }
@@ -280,7 +274,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       description: data.description,
       app: {
         connect: {
-          id: capture.appId_!,
+          id: capture.appId!,
         },
       },
       captureId: capture.id,
@@ -295,9 +289,13 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       worker: "web",
     },
     {
-      includes: { screens: true },
+      includes: {
+        screens: true,
+      },
     }
   );
+
+  console.log("Trace: ", trace);
 
   if (!trace.ok) {
     toast.error("Failed to create trace.");

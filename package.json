@@ -6,6 +6,8 @@
     "dev": "concurrently \"cross-env NODE_OPTIONS='--inspect' next dev\" \"prisma generate --watch\"",
     "build": "prisma generate && next build",
     "start": "next start",
+    "db:push": "dotenvx run --env-file=.env.local -- npx prisma db push",
+    "db:backfill-users": "dotenvx run --env-file=.env.local -- npx ts-node --esm prisma/scripts/backfill-users.mjs",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
@@ -17,6 +19,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/react": "^0.0.8",
+    "@dotenvx/dotenvx": "^1.44.0",
     "@formity/react": "^0.3.0",
     "@headlessui/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getFromS3 } from "../aws";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth";
+import { updateUser } from "./user";
 
 export type ListedFiles = {
   fileKey: string;
@@ -131,6 +132,8 @@ export const getCaptures = unstable_cache(
       ...(taskId ? { taskId } : {}),
     };
 
+    console.log("Querying captures with:", query);
+
     try {
       const captures = await prisma.capture.findMany({
         where: query,
@@ -197,14 +200,14 @@ export async function getCaptureFiles(captureId: string) {
     return {
       ok: true,
       message: "Uploaded files fetched successfully.",
-      data: files || [],
+      data: files,
     };
   } catch (err) {
     console.error("Error fetching uploaded files:", err);
     return {
       ok: false,
       message: "Failed to fetch uploaded files.",
-      data: [],
+      data: null,
     };
   }
 }
@@ -258,21 +261,20 @@ export async function createCaptureTask({
   appId: string;
   os: string;
   description: string;
-  userId: string;
 }) {
   try {
     const session = await requireAuth();
 
-    if (!session || !session.user) {
+    if (!session || !session.user || !session.user.id) {
       return { ok: false, message: "User not authenticated.", data: null };
     }
 
-    const task = await prisma.task.create({
-      data: { appId, os, description },
-    });
-
     const app = await prisma.app.findFirst({
       where: { packageName: appId },
+    });
+
+    const task = await prisma.task.create({
+      data: { appId, os, description },
     });
 
     const capture = await prisma.capture.create({
@@ -280,8 +282,9 @@ export async function createCaptureTask({
         app: {
           connect: { id: app?.id },
         },
-        appId: app,
-        taskId: task.id,
+        task: {
+          connect: { id: task.id },
+        },
         user: {
           connect: { id: session.user.id },
         },
@@ -290,14 +293,21 @@ export async function createCaptureTask({
       } as Prisma.CaptureCreateInput,
     });
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        captures: { push: capture.id },
+    const user = await updateUser(session.user.id, {
+      captures: {
+        connect: { id: capture.id },
       },
     });
 
-    return { captureId: capture.id };
+    if (!user) {
+      return { ok: false, message: "Failed to update user.", data: null };
+    }
+
+    return {
+      ok: true,
+      message: "Capture and task created.",
+      data: { captureId: capture.id, taskId: task.id },
+    };
   } catch (error) {
     console.error("Error creating capture/task:", error);
     throw new Error("Failed to create capture and task");

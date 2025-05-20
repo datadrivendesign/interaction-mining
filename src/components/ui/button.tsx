@@ -57,6 +57,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       asChild = false,
+      tooltip,
       tooltipProps = {
         side: "bottom",
         sideOffset: 8,
@@ -67,20 +68,30 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const Comp = asChild ? Slot : "button";
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Comp
-              className={cn(buttonVariants({ variant, size, className }))}
-              ref={ref}
-              {...props}
-            />
-          </TooltipTrigger>
-          <TooltipContent {...tooltipProps}>
-            <div className="text-sm">{props.tooltip}</div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <>
+        {tooltip ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Comp
+                  className={cn(buttonVariants({ variant, size, className }))}
+                  ref={ref}
+                  {...props}
+                />
+              </TooltipTrigger>
+              <TooltipContent {...tooltipProps}>
+                <div className="text-sm">{tooltip}</div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Comp
+            className={cn(buttonVariants({ variant, size, className }))}
+            ref={ref}
+            {...props}
+          />
+        )}
+      </>
     );
   }
 );
