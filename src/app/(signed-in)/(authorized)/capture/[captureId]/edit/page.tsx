@@ -209,7 +209,7 @@ export default function Page() {
             <div className="flex flex-col grow justify-center items-center w-full h-full">
               <Loader2 className="text-muted-foreground size-8 animate-spin" />
               <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                Loading trace...
+                Loading capture...
               </h1>
             </div>
           )}

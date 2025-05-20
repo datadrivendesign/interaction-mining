@@ -123,17 +123,16 @@ model Task {
 }
 
 model Capture {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  appId  String  @map("app") @db.ObjectId
-  app    App     @relation(fields: [appId], references: [id])
-  userId String? @map("user") @db.ObjectId
-  user   User?   @relation(fields: [userId], references: [id])
-  // traceId String @map("trace") @db.ObjectId
-  // trace   Trace  @relation(fields: [traceId], references: [id])
-  taskId String  @map("task") @db.ObjectId
-  task   Task    @relation(fields: [taskId], references: [id])
-  otp    String
-  src    String
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String  @map("app") @db.ObjectId
+  app     App     @relation(fields: [appId], references: [id])
+  userId  String  @map("user") @db.ObjectId
+  user    User    @relation(fields: [userId], references: [id])
+  traceId String? @unique @map("trace") @db.ObjectId
+  taskId  String  @map("task") @db.ObjectId
+  task    Task    @relation(fields: [taskId], references: [id])
+  otp     String
+  src     String
 
   @@map("captures")
 }

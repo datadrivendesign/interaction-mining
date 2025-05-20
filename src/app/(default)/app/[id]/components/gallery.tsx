@@ -41,7 +41,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
+import { GestureOption } from "@/app/(signed-in)/(authorized)/capture/[captureId]/edit/components/types";
 import { Button } from "@/components/ui/button";
 
 const GalleryContext = createContext({
