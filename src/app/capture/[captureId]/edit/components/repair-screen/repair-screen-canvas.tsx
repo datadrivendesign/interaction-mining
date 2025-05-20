@@ -302,7 +302,7 @@ export default function RepairScreenCanvas({
                 />
                 {os === "android" ? (
                   <BoundingBoxOverlay
-                    showRedaction={showBoxes}
+                    showBoxes={showBoxes}
                     mergedRef={
                       mergedRef as MutableRefObject<HTMLImageElement | null>
                     }
@@ -314,12 +314,13 @@ export default function RepairScreenCanvas({
                 ) : (
                   <></>
                 )}
+                {/* TODO: add redactions here */}
               </DroppableArea>
             </div>
             {os === "android" ? (
               <FocusedElementTab
-                showRedaction={showBoxes}
-                setShowElements={setShowBoxes}
+                showBoxes={showBoxes}
+                setShowBoxes={setShowBoxes}
                 focusedBox={focusedBox}
               />
             ) : (
