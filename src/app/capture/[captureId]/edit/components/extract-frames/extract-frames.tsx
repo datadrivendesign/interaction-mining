@@ -6,7 +6,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Camera, ListRestart } from "lucide-react";
 import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
-import { TraceFormData } from "../types";
+import { Redaction, TraceFormData } from "../types";
 
 import {
   ListedFiles,
@@ -50,8 +50,8 @@ export default function ExportFrames({ capture }: { capture: any }) {
 
 const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchVHs, watchGestures] = useWatch({
-    name: ["screens", "vhs", "gestures"],
+  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "vhs", "gestures", "redactions"],
   });
   const originalFrames = useRef<FrameData[]>([]);
   const originalVHs = useRef<{ [key: string]: any }>({});
@@ -59,6 +59,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const currFrames = watchScreens as FrameData[];
   const currVHs = watchVHs as { [key: string]: any };
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
 
   // Fetch file data
   const { data: files = [], isLoading: isFilesLoading } = useSWR(
@@ -208,6 +209,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
               frames={currFrames}
               vhs={currVHs}
               gestures={currGestures}
+              redactions={redactions}
             />
           </div>
         </ResizablePanel>
@@ -218,11 +220,12 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
 
 const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchGestures] = useWatch({
-    name: ["screens", "gestures"],
+  const [watchScreens, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "gestures", "redactions"],
   });
   const frames = watchScreens as FrameData[];
   const gestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -323,6 +326,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
             <FrameGalleryIOS
               frames={frames}
               gestures={gestures}
+              redactions={redactions}
               setTime={handleSetTime}
             />
           </div>

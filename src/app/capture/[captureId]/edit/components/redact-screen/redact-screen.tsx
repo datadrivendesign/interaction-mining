@@ -107,7 +107,7 @@ function Filmstrip({
           isSelected={focusViewIndex === index}
           onClick={() => setFocusViewIndex(index)}
         >
-          <Image
+          {/* <Image
             key={screen.id}
             src={screen.src}
             alt="gallery"
@@ -117,7 +117,7 @@ function Filmstrip({
             height={0}
             sizes="100vw"
             onClick={() => setFocusViewIndex(index)}
-          />
+          /> */}
         </FilmstripItem>
       ))}
     </ul>

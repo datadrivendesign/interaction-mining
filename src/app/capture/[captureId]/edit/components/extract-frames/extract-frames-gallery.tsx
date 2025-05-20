@@ -5,7 +5,7 @@ import React from "react";
 import { prettyNumber } from "@/lib/utils/number";
 import { X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../types";
+import { Redaction, TraceFormData } from "../types";
 import { FrameData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 
@@ -13,10 +13,12 @@ export function FrameGalleryAndroid({
   frames,
   vhs,
   gestures,
+  redactions
 }: {
   frames: FrameData[];
   vhs: { [key: string]: any };
   gestures: { [key: string]: ScreenGesture };
+  redactions: { [key:string]: Redaction[] }
 }) {
   const { setValue } = useFormContext<TraceFormData>();
 
@@ -37,6 +39,7 @@ export function FrameGalleryAndroid({
       Object.entries(gestures).filter(([key]) => key !== frames[index].id)
     );
     setValue("gestures", updatedGestures);
+    // TODO: remove frame from redactions
   };
 
   return (
@@ -65,15 +68,37 @@ export function FrameGalleryAndroid({
               <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
             </button>
           </div>
-          <Image
-            className="z-0 object-cover w-full h-auto rounded-lg"
-            src={frame.src}
-            alt={`Extracted frame at ${frame.timestamp}`}
-            draggable={false}
-            width={0}
-            height={0}
-            sizes="100vw"
-          />
+
+          <div
+            className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
+            key={`${frame.id}`}
+          >
+            <Image
+              className="z-0 object-cover w-full h-auto rounded-lg"
+              src={frame.src}
+              alt={`Extracted frame at ${frame.timestamp}`}
+              draggable={false}
+              width={0}
+              height={0}
+              sizes="100vw"
+            />
+
+            {/* Render redaction overlays using the natural dimensions and scale factors */}
+            {(redactions[frame.id] ?? []).map((rect, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: "absolute",
+                  top: `${rect.y * 100}%`,
+                  left: `${rect.x * 100}%`,
+                  width: `${rect.width * 100}%`,
+                  height: `${rect.height * 100}%`,
+                  backgroundColor: "black",
+                  border: "1px solid black",
+                }}
+              />
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -83,10 +108,12 @@ export function FrameGalleryAndroid({
 export function FrameGalleryIOS({
   frames,
   gestures,
+  redactions,
   setTime,
 }: {
   frames: FrameData[];
   gestures: { [key: string]: ScreenGesture };
+  redactions: { [key: string]: Redaction[]}
   setTime: (_: number) => void;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
@@ -106,6 +133,7 @@ export function FrameGalleryIOS({
       Object.entries(gestures).filter(([key]) => key !== frames[index].id)
     );
     setGestureData(updatedGestures)
+    // TODO: remove frame from redactions
   };
 
   return (
@@ -136,15 +164,36 @@ export function FrameGalleryIOS({
               <X className="size-6 text-neutral-500 dark:text-neutral-400 hover:opacity-75" />
             </button>
           </div>
-          <Image
-            className="z-0 object-cover w-full h-auto rounded-lg"
-            src={frame.src}
-            alt={`Extracted frame at ${frame.timestamp}`}
-            draggable={false}
-            width={0}
-            height={0}
-            sizes="100vw"
-          />
+          <div
+            className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
+            key={`${frame.id}`}
+          >
+            <Image
+              className="z-0 object-cover w-full h-auto rounded-lg"
+              src={frame.src}
+              alt={`Extracted frame at ${frame.timestamp}`}
+              draggable={false}
+              width={0}
+              height={0}
+              sizes="100vw"
+            />
+
+            {/* Render redaction overlays using the natural dimensions and scale factors */}
+            {(redactions[frame.id] ?? []).map((rect, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: "absolute",
+                  top: `${rect.y * 100}%`,
+                  left: `${rect.x * 100}%`,
+                  width: `${rect.width * 100}%`,
+                  height: `${rect.height * 100}%`,
+                  backgroundColor: "black",
+                  border: "1px solid black",
+                }}
+              />
+            ))}
+          </div>
         </div>
       ))}
     </div>

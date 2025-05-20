@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../types";
+import { Redaction, TraceFormData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { gestureOptions } from "../repair-screen";
@@ -36,9 +36,12 @@ export default function Review() {
 }
 
 function SaveTraceGallery() {
-  const { watch } = useFormContext<TraceFormData>();
+  const { watch, getValues } = useFormContext<TraceFormData>();
   const screens = watch("screens");
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
+  const redactions = getValues("redactions") as {
+    [screenId: string]: Redaction[];
+  }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
@@ -56,6 +59,22 @@ function SaveTraceGallery() {
             height={0}
             sizes="100vw" >
           </Image>
+
+          {/* Render redaction overlays using the natural dimensions and scale factors */}
+          {(redactions[screen.id] ?? []).map((rect, idx) => (
+            <div
+              key={idx}
+              style={{
+                position: "absolute",
+                top: `${rect.y * 100}%`,
+                left: `${rect.x * 100}%`,
+                width: `${rect.width * 100}%`,
+                height: `${rect.height * 100}%`,
+                backgroundColor: "black",
+                border: "1px solid black",
+              }}
+            />
+          ))}
 
           <TooltipProvider>
             <Tooltip>

@@ -1,17 +1,17 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@radix-ui/react-switch";
 import { MutableRefObject, useRef, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { FocusedBox } from "./repair-screen-canvas";
+import { Switch } from "@/components/ui/switch";
 
 export function FocusedElementTab({
-  showRedaction,
-  setShowElements,
+  showBoxes,
+  setShowBoxes,
   focusedBox,
 }: {
-  showRedaction: boolean;
-  setShowElements: React.Dispatch<React.SetStateAction<boolean>>;
+  showBoxes: boolean;
+  setShowBoxes: React.Dispatch<React.SetStateAction<boolean>>;
   focusedBox: FocusedBox;
 }) {
   return (
@@ -21,15 +21,15 @@ export function FocusedElementTab({
       </CardHeader>
       <CardContent>
         <div className="space-y-1 mb-5">
-          <Switch
-            checked={showRedaction}
+          <Switch 
+            checked={showBoxes}
             onCheckedChange={(checked) => {
-              setShowElements(checked);
+              setShowBoxes(checked);
             }}
           />
           <span className="pl-3">Show Bounding Boxes</span>
         </div>
-        {showRedaction ? (
+        {showBoxes ? (
           <>
             <div className="space-y-1 flex flex-row mb-5">
               <div className="w-15 flex flex-col justify-center items-center">
@@ -127,14 +127,14 @@ export function FocusedElementTab({
 }
 
 export default function BoundingBoxOverlay({
-    showRedaction,
+    showBoxes,
     mergedRef,
     height,
     width,
     boxes,
     rootBounds,
   }: {
-    showRedaction: boolean;
+    showBoxes: boolean;
     mergedRef: MutableRefObject<HTMLImageElement | null>;
     height: number | null;
     width: number | null;
@@ -166,7 +166,7 @@ export default function BoundingBoxOverlay({
   
     return (
       <div>
-        {showRedaction && (
+        {showBoxes && (
           <svg
             ref={svgRef}
             viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
