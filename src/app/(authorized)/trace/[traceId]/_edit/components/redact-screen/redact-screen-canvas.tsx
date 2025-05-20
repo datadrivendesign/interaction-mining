@@ -43,8 +43,14 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
   const [watchRedactions] = useWatch({
     name: ["redactions"],
   });
-  const redactions = watchRedactions || {};
-  const redaction: Redaction[] = redactions[screen.id] || [];
+  const stableRedactions = useMemo(
+    () => watchRedactions || {},
+    [watchRedactions]
+  )
+  const redaction: Redaction[] = useMemo(
+    () => stableRedactions[screen.id] || [],
+    [stableRedactions, screen.id]
+  )
   const [selected, setSelected] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
@@ -58,7 +64,7 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
     }
 
     setValue("redactions", {
-      ...redactions,
+      ...stableRedactions,
       [screen.id]: newRedactions,
     });
   };
@@ -79,7 +85,7 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
   ) => {
     const newRedactions = [...redaction, newRedaction];
     setValue("redactions", {
-      ...redactions,
+      ...stableRedactions,
       [screen.id]: newRedactions,
     });
     if (option?.select) {
@@ -96,11 +102,11 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
       });
 
       setValue("redactions", {
-        ...redactions,
+        ...stableRedactions,
         [screen.id]: newRedactions,
       });
     },
-    [redactions, setValue, screen.id]
+    [redaction, stableRedactions, setValue, screen.id]
   );
 
   useHotkeys("v", () => setMode("select"));
