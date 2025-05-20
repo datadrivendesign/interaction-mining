@@ -115,7 +115,7 @@ export default function Page() {
 
       handleSave(data, capture!)
         .then(() => {
-          router.push(`/app/${capture!.appId_!}`);
+          router.push(`/app/${capture!.appId!}`);
         })
         .catch((reason: string) => {
           console.error(reason);

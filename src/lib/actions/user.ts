@@ -2,17 +2,49 @@
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { ActionPayload } from "./types";
 
-export async function getUser(userId: string) {
+export type User = Prisma.UserGetPayload<{
+  include: {
+    captures: true;
+    traces: true;
+  };
+}>;
+
+export async function getUser(
+  userId: string,
+  { includes }: { includes?: Prisma.UserInclude } = {}
+): Promise<ActionPayload<User>> {
+  const { captures = false, traces = false } = includes || {};
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        captures,
+        traces,
+      },
     });
 
-    return user;
+    if (!user) {
+      return {
+        ok: false,
+        message: "User not found",
+        data: null,
+      };
+    }
+
+    return {
+      ok: true,
+      message: "User found",
+      data: user,
+    };
   } catch (error) {
     console.error("Failed to fetch user details:", error);
-    return null;
+    return {
+      ok: false,
+      message: "Failed to fetch user details",
+      data: null,
+    };
   }
 }
 

@@ -361,7 +361,7 @@ export function InspectView({ data }: { data: any }) {
                               ...(option.subGestures ?? []),
                             ])
                             .find(
-                              (option) => option.value === screen.gesture.type
+                              (option) => option.value === screen.gesture.type?.toLowerCase()
                             )?.icon
                         }
                       </div>

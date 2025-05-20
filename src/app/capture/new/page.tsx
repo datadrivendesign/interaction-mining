@@ -10,7 +10,7 @@ import {
   getIosApp,
   checkIfAppExists,
   saveApp,
-} from "@/lib/actions/index";
+} from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -128,14 +128,16 @@ export default function CaptureNewPage() {
     if (!session?.user?.id) return;
 
     const result = await createCaptureTask({
-      userId: session.user.id,
-      os: platform,
       appId: app,
+      os: platform,
       description,
     });
 
-    if (result?.captureId) {
-      router.push(`/capture/${result.captureId}/start`);
+    if (result.ok) {
+      toast.success("Capture task created!");
+      router.push(`/capture/${result.data?.captureId}/start`);
+    } else {
+      toast.error("Failed to create capture task.");
     }
   };
 

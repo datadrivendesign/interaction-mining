@@ -7,7 +7,6 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import Image from "next/image";
@@ -44,14 +43,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
 import { FrameData, GestureOption } from "../types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
 
 export const GestureContext = createContext<{
@@ -406,21 +401,13 @@ function GestureSelection() {
   // Update gesture type when value changes
   useEffect(() => {
     if (value !== "") {
-      setGesture((prev) => ({ 
-        ...prev, 
+      setGesture((prev) => ({
+        ...prev,
         type: value,
         scrollDeltaX:
-        value === "Swipe left"
-            ? -0.02
-            : value === "Swipe right"
-              ? 0.02
-              : 0,
-      scrollDeltaY:
-        value === "Swipe down"
-          ? -0.02
-          : value === "Swipe up"
-            ? 0.02
-            : 0,
+          value === "Swipe left" ? -0.02 : value === "Swipe right" ? 0.02 : 0,
+        scrollDeltaY:
+          value === "Swipe down" ? -0.02 : value === "Swipe up" ? 0.02 : 0,
       }));
     } else {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
