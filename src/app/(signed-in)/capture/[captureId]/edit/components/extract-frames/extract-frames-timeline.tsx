@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Play, Pause, Camera } from "lucide-react";
-import { FrameData } from "./extract-frames";
+import { Play, Pause, Camera, Rewind, RotateCcw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FrameData } from "../types";
+import Image from "next/image";
+import mergeRefs from "@/lib/utils/merge-refs";
 
 export type FrameTimelineProps = {
+  ref: React.Ref<HTMLDivElement>;
   thumbnails: FrameData[];
   currentTime: number;
   videoDuration: number;
@@ -16,6 +19,7 @@ export type FrameTimelineProps = {
 };
 
 export default function FrameTimeline({
+  ref,
   thumbnails,
   currentTime,
   videoDuration,
@@ -31,10 +35,7 @@ export default function FrameTimeline({
   const getTimeFromEvent = (e: MouseEvent | React.MouseEvent) => {
     const rect = stripRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const pct = Math.min(
-      Math.max((e.clientX - rect.left) / rect.width, 0),
-      1
-    );
+    const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
     return pct * videoDuration;
   };
 
@@ -60,61 +61,70 @@ export default function FrameTimeline({
     setDragging(false);
   };
 
+  const handleSkipForward = () => {
+    const newTime = Math.min(currentTime + 5, videoDuration);
+    onSetTime(newTime);
+  };
+
+  const handleSkipBackward = () => {
+    const newTime = Math.max(currentTime - 5, 0);
+    onSetTime(newTime);
+  };
+
   return (
-    <div className="flex items-center py-2 pr-4 bg-neutral-100 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700">
+    <div className="flex items-center h-12 bg-neutral-100 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700">
       {/* Play/Pause */}
-      <button
-        onClick={onPlayPause}
-        title={isPlaying ? "Pause" : "Play"}
-        className="mr-2 p-2"
-      >
-        {isPlaying ? <Pause size={28} /> : <Play size={28} />}
-      </button>
+      <div className="flex items-center px-4 gap-4">
+        <button onClick={onPlayPause} title={isPlaying ? "Pause" : "Play"}>
+          {isPlaying ? (
+            <Pause className="size-4 fill-foreground" />
+          ) : (
+            <Play className="size-4 fill-foreground" />
+          )}
+        </button>
+        <button onClick={handleSkipBackward} title="Skip backward 5s">
+          <RotateCcw className="size-4" />
+        </button>
+        <button onClick={handleSkipForward} title="Skip forward 5s">
+          <RotateCw className="size-4" />
+        </button>
+      </div>
 
       <div
-        ref={stripRef}
-        className="relative flex-1 overflow-x-auto whitespace-nowrap cursor-pointer mr-4"
+        ref={mergeRefs(stripRef, ref)}
+        className="relative flex w-full h-full overflow-x-auto whitespace-nowrap cursor-pointer"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
         {thumbnails.map((thumb) => (
-          <img
+          <Image
             key={thumb.id}
-            src={thumb.url}
+            src={thumb.src}
             alt={`${thumb.timestamp.toFixed(2)}s`}
-            className="inline-block rounded-sm"
-            style={{
-              height: '3rem',
-              width: 'auto',
-              marginLeft: '-2px',
-            }}
+            className="w-auto h-full pointer-events-none"
+            width={0}
+            height={0}
+            sizes="100vw"
           />
         ))}
 
-        {/* Red playhead */}
         <div
           className="absolute top-0 bottom-0 w-[2px] bg-yellow-500 pointer-events-none"
           style={{
             left: videoDuration
               ? `${(currentTime / videoDuration) * 100}%`
-              : '0%',
-            transform: 'translateX(-50%)',
+              : "0%",
+            transform: "translateX(-50%)",
           }}
         />
       </div>
 
       {/* Capture */}
-      <Button
-        variant="secondary"
-        onClick={onCapture}
-        title="Capture frame"
-        className="px-4 py-2 text-base"
-      >
+      <button className="inline-flex items-center px-4" onClick={onCapture}>
         <Camera className="mr-1" size={20} />
         Capture
-      </Button>
+      </button>
     </div>
   );
 }
-

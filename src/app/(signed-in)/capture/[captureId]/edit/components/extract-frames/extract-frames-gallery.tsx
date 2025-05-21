@@ -153,7 +153,7 @@ export function FrameGalleryIOS({
       <AnimatePresence mode="popLayout">
         {frames.map((frame, index) => (
           <motion.div
-            className="flex flex-col p-2 bg-neutral-100 dark:bg-neutral-900 rounded-xl cursor-pointer"
+            className="flex flex-col p-2 bg-neutral-100 dark:bg-neutral-900 rounded-xl cursor-pointer transform-gpu"
             variants={card}
             initial="initial"
             animate="animate"

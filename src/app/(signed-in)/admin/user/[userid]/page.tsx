@@ -17,7 +17,7 @@ export default async function AdminUserDetails({
     notFound();
   }
 
-  const [user, captures] = await Promise.all([
+  const [userRes, capturesRes] = await Promise.all([
     getUser(userid),
     getCaptures({
       userId: userid,
@@ -25,12 +25,15 @@ export default async function AdminUserDetails({
         app: true,
         task: true,
       },
-    }),
+    }) ?? [],
   ]);
 
-  if (!user) {
+  if (!userRes.ok) {
     notFound();
   }
+
+  const user = userRes.data;
+  const captures = capturesRes.ok ? capturesRes.data : [];
 
   return (
     <div className="p-32 max-w-7xl mx-auto">
