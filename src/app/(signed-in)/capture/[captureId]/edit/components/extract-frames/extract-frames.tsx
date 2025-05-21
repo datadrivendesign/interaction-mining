@@ -337,7 +337,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
           maxSize={50}
           className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
         >
-          <div className="flex flex-col items-center w-full h-full gap-4 overflow-hidden">
+          <div className="flex flex-col items-center w-full gap-4 overflow-hidden">
             {isCapturesLoading ? (
               <div className="max-w-full h-full max-h-full bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
             ) : (
