@@ -1,12 +1,10 @@
 import { toast } from "sonner";
 import { getCapture } from "../actions";
 import useSWR from "swr";
+import { Prisma } from "@prisma/client";
 
 interface CaptureFetcherOptions {
-  includes?: {
-    app?: boolean;
-    task?: boolean;
-  };
+  includes?: Prisma.CaptureInclude;
 }
 
 export async function captureFetcher([_, captureId, options]: [
@@ -22,7 +20,6 @@ export async function captureFetcher([_, captureId, options]: [
   } else {
     console.error("Failed to fetch capture session:", res.message);
     toast.error("Failed to fetch capture session.");
-    throw new Error("Failed to fetch capture session.");
   }
 }
 

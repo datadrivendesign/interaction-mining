@@ -1,20 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { getApp, getApps } from "@/lib/actions";
+import Link from "next/link";;
+import { getApps } from "@/lib/actions";
 
 import {
   createContext,
   useState,
   useContext,
-  useEffect,
-  useRef,
-  Fragment,
   useCallback,
 } from "react";
 import Image from "next/image";
-import fuzzysort from "fuzzysort";
 import { Search } from "lucide-react";
 import { App } from "@prisma/client";
 

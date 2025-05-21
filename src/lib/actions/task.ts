@@ -1,5 +1,5 @@
 "use server";
-import { Prisma, Task } from "@prisma/client";
+import { Task } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 
 import { prisma } from "@/lib/prisma";

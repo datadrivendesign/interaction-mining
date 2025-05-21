@@ -72,15 +72,15 @@ export default function Page({}: {}) {
         setCaptureState(CaptureState.UPLOADED);
         
       }
-      os = capture?.task?.os;
-      console.log("OS", os);
-      console.log("Capture", capture);
     }
-  }, [capture]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capture, uploadList.length]);
 
   const redirectToFrameExtract = () => {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
   };
+
+  console.log(process.env.NEXT_PUBLIC_DEPLOYMENT_URL)
 
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
@@ -126,7 +126,7 @@ export default function Page({}: {}) {
                 <p className="text-neutral-500 dark:text-neutral-400 mb-4">
                   Go to{" "}
                   <Link className="underline" href="/capture/upload">
-                    {`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/upload`}
+                    {`here`}
                   </Link>{" "}
                   and enter the following capture session code:
                 </p>
@@ -198,7 +198,7 @@ export default function Page({}: {}) {
                     className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
                     value={
                       os === "android"
-                        ? `https:///api/capture/${captureId}`
+                        ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
                         : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
                     }
                   />

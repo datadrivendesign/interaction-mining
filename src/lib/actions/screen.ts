@@ -1,13 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Screen } from "@prisma/client";
+import { Prisma, Screen } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
-import {
-  S3Client,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
@@ -74,6 +71,53 @@ export async function createScreen(data: Screen): Promise<Screen | null> {
   return screen;
 }
 
+export async function updateScreen(
+  id: string,
+  data: Partial<Screen>
+): Promise<ActionPayload<Screen>> {
+  let screen: Screen | null = {} as Screen;
+
+  if (!id || !isObjectIdOrHexString(id)) {
+    return {
+      ok: false,
+      message: "Invalid screen ID",
+      data: null,
+    };
+  }
+
+  const query: Prisma.ScreenWhereUniqueInput = {
+    id,
+  };
+
+  try {
+    screen = await prisma.screen.update({
+      where: query,
+      data,
+    });
+  } catch (err: any) {
+    console.error(err);
+    return {
+      ok: false,
+      message: "Failed to update screen.",
+      data: null,
+    };
+  }
+
+  if (!screen) {
+    return {
+      ok: false,
+      message: "Screen not found.",
+      data: null,
+    };
+  }
+
+  return {
+    ok: true,
+    message: "Screen updated successfully.",
+    data: screen,
+  };
+}
+
 /**
  * Generates a pre-signed URL for direct S3 upload of screen PNG.
  * @param captureId The ID of the capture to upload the file to.
@@ -87,6 +131,7 @@ export async function generatePresignedScreenUpload(
   ActionPayload<{
     uploadUrl: string;
     fileKey: string;
+
     filePrefix: string;
     fileUrl: string;
   }>
@@ -100,10 +145,11 @@ export async function generatePresignedScreenUpload(
   }
 
   try {
-    const fileKey = `uploads/${captureId}/screens/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
+    const extension = fileType.split("/")[fileType.split("/").length - 1];
+    const fileKey = `uploads/${captureId}/screens/${Date.now()}.${extension}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -117,7 +163,7 @@ export async function generatePresignedScreenUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -155,7 +201,7 @@ export async function generatePresignedVHUpload(
     const fileKey = `uploads/${captureId}/vhs/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -169,7 +215,7 @@ export async function generatePresignedVHUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -183,41 +229,39 @@ export async function generatePresignedVHUpload(
  * @param data The data containing screen information.
  * @returns ActionPayload with the screen ID or error message.
  */
-export async function handleAndroidScreenUpload(
-  data: {
-    vh: string;
-    img: string;
-    created: string;
-    gesture: {
-      type?: string;
-      scrollDeltaX?: number;
-      scrollDeltaY?: number;
-      x?: number;
-      y?: number;
-    };
-    captureId: string;
-  }
-): Promise<ActionPayload<{ url: string }>> {
+export async function handleAndroidScreenUpload(data: {
+  vh: string;
+  img: string;
+  created: string;
+  gesture: {
+    type?: string;
+    scrollDeltaX?: number;
+    scrollDeltaY?: number;
+    x?: number;
+    y?: number;
+  };
+  captureId: string;
+}): Promise<ActionPayload<{ url: string }>> {
   try {
-      // Upload files to S3
-      const [res] = await Promise.all([
-        uploadToS3({
-          content: JSON.stringify(data),
-          fileName: `uploads/${data.captureId}/${data.created}.json`,
-          contentType: 'application/json'
-        })
-      ]);
-    return { 
-      ok: true, 
-      message: "Screen uploaded successfully", 
-      data: { url: res} 
+    // Upload files to S3
+    const [res] = await Promise.all([
+      uploadToS3({
+        content: JSON.stringify(data),
+        fileName: `uploads/${data.captureId}/${data.created}.json`,
+        contentType: "application/json",
+      }),
+    ]);
+    return {
+      ok: true,
+      message: "Screen uploaded successfully",
+      data: { url: res },
     };
   } catch (error) {
     console.error("Android screen upload error:", error);
-    return { 
-      ok: false, 
-      message: "Failed to process screen upload", 
-      data: null 
+    return {
+      ok: false,
+      message: "Failed to process screen upload",
+      data: null,
     };
   }
 }
@@ -230,17 +274,21 @@ export async function handleAndroidScreenUpload(
  * @returns The public URL of the uploaded file.
  */
 
-async function uploadToS3({ content, fileName, contentType }: {
+async function uploadToS3({
+  content,
+  fileName,
+  contentType,
+}: {
   content: string;
   fileName: string;
   contentType: string;
 }): Promise<string> {
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+    Bucket: process.env.AWS_UPLOAD_BUCKET!,
     Key: fileName,
     Body: content,
     ContentType: contentType,
   });
   await s3.send(command);
-  return `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+  return `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
 }
