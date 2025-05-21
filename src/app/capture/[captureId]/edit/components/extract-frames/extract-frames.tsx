@@ -2,13 +2,18 @@
 
 import React, { useEffect, useRef } from "react";
 import useSWR from "swr";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Camera, ListRestart } from "lucide-react";
 import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
-import { TraceFormData } from "../../page";
+import { Redaction, TraceFormData } from "../types";
 
-import { CaptureListedFile, CaptureScreenFile, CaptureScreenGesture, getUploadedCaptureFiles } from "@/lib/actions";
+import {
+  ListedFiles,
+  CaptureScreenFile,
+  CaptureScreenGesture,
+  getUploadedCaptureFiles,
+} from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -32,151 +37,195 @@ export async function fileFetcher([_, captureId]: [string, string]) {
 
 export default function ExportFrames({ capture }: { capture: any }) {
   return (
-    <>    
-      {(capture.task.os as string).toLowerCase() === "android" ? 
-        (<ExtractFramesAndroid capture={capture} />) : 
-        (<ExtractFramesIOS capture={capture} />)}
+    <>
+      {(capture.task.os as string).toLowerCase() === "android" ? (
+        <ExtractFramesAndroid capture={capture} />
+      ) : (
+        <ExtractFramesIOS capture={capture} />
+      )}
     </>
-  )
+  );
 }
 
+
 const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
-  const { setValue, watch } = useFormContext<TraceFormData>();
+  const { setValue } = useFormContext<TraceFormData>();
+  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "vhs", "gestures", "redactions"],
+  });
   const originalFrames = useRef<FrameData[]>([]);
-  const originalVHs = useRef<{[key: string]: any}>({});
+  const originalVHs = useRef<{ [key: string]: any }>({});
   const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
-  const frames = watch("screens") as FrameData[];
-  const vhs = watch("vhs") as { [key: string]: any };
-  const gestures = watch("gestures") as { [key: string]: ScreenGesture };
+  const currFrames = watchScreens as FrameData[];
+  const currVHs = watchVHs as { [key: string]: any };
+  const currGestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
 
   // Fetch file data
-  const { data: captures = [], isLoading: isCapturesLoading } = useSWR(
+  const { data: files = [], isLoading: isFilesLoading } = useSWR(
     capture.id ? ["", capture.id] : null,
     fileFetcher
   );
-
-  async function populateFrameData(
-    captures: CaptureListedFile[]
-  ): Promise<{
-    frames: FrameData[], 
-    vhs: { [key: string]: any }, 
-    gestures: { [key: string]: ScreenGesture }
-  }> {
-
-    function createScreenGesture(gesture: CaptureScreenGesture): ScreenGesture {
-      const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture
-      console.log(gesture)
-      const screenGesture: ScreenGesture = {
-        type: null,
-        x,
-        y,
-        scrollDeltaX,
-        scrollDeltaY,
-        description: ""
-      }
-      if (!type) {
-        screenGesture.type = null
-      } else if (type === "TYPE_VIEW_CLICKED") {
-        screenGesture.type = "Tap"
-      } else if (type === "TYPE_VIEW_LONG_CLICKED") {
-        screenGesture.type = "Touch and hold"
-      } else if (type === "TYPE_VIEW_SCROLLED") {
-        // get directionality of scroll/swipe,choose dominant delta direction
-        if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
-          screenGesture.type = "Swipe right"
-        } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
-          screenGesture.type = "Swipe left"
-        } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
-          screenGesture.type = "Swipe up"
-        } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
-          screenGesture.type = "Swipe down"
-        } else { // fall through case, don't know what will reach
-          screenGesture.type = "Swipe"
-        }
-      } else {
-        screenGesture.type = null
-      }      
-      return screenGesture
-    }
-
-    console.log("Capture: ", capture);
-    const frameData: FrameData[] = [];
-    const frameVHs: { [key: string]: any } = {};
-    const frameGestures: { [key: string]: ScreenGesture } = {};
-    for (const c of captures) {
-      try {
-        const frameResponse = await fetch(c.fileUrl);
-        console.log(c)
-        const frameJson: CaptureScreenFile = await frameResponse.json();
-        const b64img = `data:image/png;base64,${frameJson.img}`.trim();
-        const frame: FrameData = { 
-          id: frameJson.created + Math.random().toString(),
-          url: b64img,
-          timestamp: Date.parse(frameJson.created),
-        };
-        frameData.push(frame);
-        if (frameJson.vh) {
-          frameVHs[frame.id] = JSON.parse(frameJson.vh);
-        }
-        if (frameJson.gesture) {
-          frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
-        }
-      } catch(e) {
-        console.error("Error fetching frame data:", e);
-        toast.error("Error fetching frame data");
-      }
-    }
-    return {
-      frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
-      vhs: frameVHs,
-      gestures: frameGestures,
-    }
-  }
-
+  
   useEffect(() => {
-    populateFrameData(captures).then(({ frames, vhs, gestures }) => {
+    const populateFrameData = async (
+      files: ListedFiles[]
+    ): Promise<{
+      frames: FrameData[];
+      vhs: { [key: string]: any };
+      gestures: { [key: string]: ScreenGesture };
+    }> => {
+      function createScreenGesture(
+        gesture: CaptureScreenGesture
+      ): ScreenGesture {
+        const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
+        console.log("gesture")
+        console.log(gesture)
+        const screenGesture: ScreenGesture = {
+          type: null,
+          x,
+          y,
+          scrollDeltaX,
+          scrollDeltaY,
+          description: "",
+        };
+
+        function translateTypeAndroidToODIM(
+          androidType: string,
+          scrollDeltaX: number | null,
+          scrollDeltaY: number | null
+        ): string {
+          console.log(`type: ${type} scrollDeltaX: ${scrollDeltaX} scrollDeltaY: ${scrollDeltaY}`)
+          if (androidType === "TYPE_VIEW_CLICKED" 
+              || androidType == "TYPE_VIEW_SELECTED") {
+            return "tap";
+          } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
+            return "touch and hold";
+          } else if (androidType === "TYPE_VIEW_SCROLLED") {
+            if (scrollDeltaX !== null && scrollDeltaY !== null) {
+              // get direction of scroll/swipe w. dominant delta direction
+              if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+                return "swipe right";
+              } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+                return "swipe left";
+              } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+                return "swipe up";
+              } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+                return "swipe down";
+              } else {
+                return "other";
+              }
+            }
+          }
+          // fall through case, don't know what will reach
+          return "other";
+        }
+
+        if (!type) {
+          screenGesture.type = null;
+        } else {
+          screenGesture.type = translateTypeAndroidToODIM(
+            type, 
+            scrollDeltaX,
+            scrollDeltaY
+          )
+        }
+        return screenGesture;
+      }
+
+      const frameData: FrameData[] = [];
+      const frameVHs: { [key: string]: any } = {};
+      const frameGestures: { [key: string]: ScreenGesture } = {};
+      for (const [i, c] of files.entries()) {
+        try {
+          const frameResponse = await fetch(c.fileUrl);
+          const frameJson: CaptureScreenFile = await frameResponse.json();
+          const b64img = `data:image/png;base64,${frameJson.img}`.trim();
+          const frame: FrameData = {
+            id: frameJson.created + i.toString(),
+            src: b64img,
+            timestamp: Date.parse(frameJson.created),
+          };
+          frameData.push(frame);
+          if (frameJson.vh) {
+            frameVHs[frame.id] = JSON.parse(frameJson.vh);
+          }
+          if (frameJson.gesture) {
+            frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
+          }
+        } catch (e) {
+          console.error("Error fetching frame data:", e);
+          toast.error("Error fetching frame data");
+        }
+      }
+      return {
+        frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
+        vhs: frameVHs,
+        gestures: frameGestures,
+      };
+    };
+    populateFrameData(files).then(({ frames, vhs, gestures }) => {
       originalFrames.current = [...frames];
-      originalVHs.current = {...vhs};
-      originalGestures.current = {...gestures};
-      setValue("screens", frames)
-      setValue("vhs", vhs)
-      setValue("gestures", gestures)
+      originalVHs.current = { ...vhs };
+      originalGestures.current = { ...gestures };
+
+      // Only populate data if the form state is empty
+      if (currFrames.length === 0 &&
+        Object.keys(currVHs).length === 0 &&
+        Object.keys(currGestures).length === 0
+      ) {
+        setValue("screens", frames);
+        setValue("vhs", vhs);
+        setValue("gestures", gestures);
+      }
     });
-  }, [captures])
+  }, [currFrames.length, currVHs, currGestures, files, setValue]); 
 
   return (
-  <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
-    <ResizablePanelGroup direction="horizontal">
-      <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
-        <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
-          {isCapturesLoading ?? (
-            <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
-          )}
-          <Button onClick={() => {
-            if (originalFrames.current.length !== frames.length) {
-              setValue("screens", originalFrames.current)
-              setValue("vhs", originalVHs.current)
-              setValue("gestures", originalGestures.current)
-            }
-          }}>
-            <ListRestart /> Reset Frames
-          </Button>
-        </div>
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={67}>
-        <div className="flex w-full h-full overflow-auto">
-        <FrameGalleryAndroid frames={frames} vhs={vhs} gestures={gestures} />
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  </div>
-);
-}
+    <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
+      <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
+          <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
+            {isFilesLoading ?? (
+              <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
+            )}
+            <Button
+              onClick={() => {
+                if (originalFrames.current.length !== currFrames.length) {
+                  setValue("screens", originalFrames.current);
+                  setValue("vhs", originalVHs.current);
+                  setValue("gestures", originalGestures.current);
+                }
+              }}
+            >
+              <ListRestart /> Reset Frames
+            </Button>
+          </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={67}>
+          <div className="flex w-full h-full overflow-auto">
+            <FrameGalleryAndroid
+              frames={currFrames}
+              vhs={currVHs}
+              gestures={currGestures}
+              redactions={redactions}
+            />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+};
 
 const ExtractFramesIOS = ({ capture }: { capture: any }) => {
-  const { setValue, watch } = useFormContext<TraceFormData>();
-  const frames = watch("screens") as FrameData[];
+  const { setValue } = useFormContext<TraceFormData>();
+  const [watchScreens, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "gestures", "redactions"],
+  });
+  const frames = watchScreens as FrameData[];
+  const gestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -238,7 +287,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
     context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
     resolve({
       id: time.toString() + Math.random().toString(),
-      url: canvas.toDataURL(),
+      src: canvas.toDataURL(),
       timestamp: time,
     });
   };
@@ -274,10 +323,15 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={67}>
           <div className="flex w-full h-full overflow-auto">
-            <FrameGalleryIOS frames={frames} setTime={handleSetTime} />
+            <FrameGalleryIOS
+              frames={frames}
+              gestures={gestures}
+              redactions={redactions}
+              setTime={handleSetTime}
+            />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
   );
-}
+};

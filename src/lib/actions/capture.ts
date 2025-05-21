@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, Capture, App, Task } from "@prisma/client";
 import {
   S3Client,
   PutObjectCommand,
@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
 import { unstable_cache } from "next/cache";
+import { getAppByPackageName } from "./app";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -23,39 +24,49 @@ const s3 = new S3Client({
 });
 
 export type CaptureWithTask = Prisma.CaptureGetPayload<{
-  include: { task: true };
+  include: { task: true, app: true };
 }>;
+
+
+type CaptureWithTaskAndApp = Prisma.CaptureGetPayload<{
+  include: { app: boolean, task: boolean }
+}>
 
 interface GetCaptureProps {
   id?: string;
   taskId?: string;
   otp?: string;
-  includes?: {
-    app?: boolean;
-    task?: boolean;
-  };
+  includes?: Prisma.CaptureInclude;
 }
 
-export type CaptureListedFile = {
+export type ListedFiles = {
   fileKey: string;
   fileName: string;
   fileUrl: string;
-}
+};
 
 export type CaptureScreenGesture = {
-  type?: string,
-  x: number,
-  y: number,
-  scrollDeltaX: number,
-  scrollDeltaY: number,
-  description?: string,
-}
+  type?: string;
+  x: number;
+  y: number;
+  scrollDeltaX: number;
+  scrollDeltaY: number;
+  description?: string;
+};
 
 export type CaptureScreenFile = {
-  vh: string,
-  img: string,
-  created: string,
-  gesture: CaptureScreenGesture
+  vh: string;
+  img: string;
+  created: string;
+  gesture: CaptureScreenGesture;
+};
+
+export type EnrichedCapture = Capture & {
+  app?: App | null;
+  task?: Task & {
+    description: string;
+    os: string;
+  };
 }
 
 /**
@@ -66,9 +77,12 @@ export type CaptureScreenFile = {
  * @returns ActionPayload
  */
 export const getCapture = unstable_cache(
-  async (
-    { id, taskId, otp, includes }: GetCaptureProps,
-  ): Promise<ActionPayload<CaptureWithTask>> => {
+  async ({
+    id,
+    taskId,
+    otp,
+    includes,
+  }: GetCaptureProps): Promise<ActionPayload<CaptureWithTask>> => {
     const { task = false, app = false } = includes || {};
 
     if (!id && !taskId && !otp) {
@@ -164,7 +178,7 @@ export async function generatePresignedCaptureUpload(
     const fileKey = `uploads/${captureId}/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -178,7 +192,7 @@ export async function generatePresignedCaptureUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -216,7 +230,7 @@ export async function generatePresignedCaptureUploadImg(
     const fileKey = `uploads/${captureId}/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -230,7 +244,7 @@ export async function generatePresignedCaptureUploadImg(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {
@@ -247,7 +261,7 @@ export async function generatePresignedCaptureUploadImg(
 export async function deleteUploadedFile(fileKey: string) {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Prefix: fileKey,
     });
 
@@ -258,7 +272,7 @@ export async function deleteUploadedFile(fileKey: string) {
     }
 
     const deleteCommand = new DeleteObjectCommand({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Key: fileKey,
     });
 
@@ -285,7 +299,7 @@ export async function deleteUploadedFile(fileKey: string) {
 export async function getUploadedCaptureFiles(captureId: string) {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_RECORDING_UPLOAD_BUCKET!,
+      Bucket: process.env.AWS_UPLOAD_BUCKET!,
       Prefix: `uploads/${captureId}/`,
     });
 
@@ -296,13 +310,15 @@ export async function getUploadedCaptureFiles(captureId: string) {
     }
 
     // filter to only show shallow keys
-    response.Contents = response.Contents.filter((file) => file.Key!.split("/").length === 3);
+    response.Contents = response.Contents.filter(
+      (file) => file.Key!.split("/").length === 3
+    );
 
     // Map the file URLs from S3 object keys
     const fileUrls = response.Contents.map((file) => ({
       fileKey: file.Key!,
       fileName: file.Key!.split("/")[file.Key!.split("/").length - 1],
-      fileUrl: `https://${process.env.AWS_RECORDING_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.Key!}`,
+      fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.Key!}`,
     }));
 
     return {
@@ -317,5 +333,94 @@ export async function getUploadedCaptureFiles(captureId: string) {
       message: "Failed to fetch uploaded files.",
       data: [],
     };
+  }
+}
+
+/**
+ * Creates a new capture task in the database.
+ * @param data Data to create the capture task with.
+ * @returns ActionPayload
+ */
+export async function createCaptureTask({
+  appId,
+  os,
+  description,
+  userId
+}: {
+  appId: string;
+  os: string;
+  description: string;
+  userId: string;
+}) {
+  try {
+    const task = await prisma.task.create({
+      data: { appId, os, description },
+    });
+
+    const app = await prisma.app.findFirst({
+      where: {packageName: appId}
+    })
+  
+    const capture = await prisma.capture.create({
+      data: {
+        appId_: app!.id,
+        appId,
+        taskId: task.id,
+        userId: userId,
+        otp:"",
+        src: "",
+      }
+    });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        captures: { push: capture.id },
+      },
+    });
+
+    return { captureId: capture.id };
+  } catch (error) {
+    console.error('Error creating capture/task:', error);
+    throw new Error('Failed to create capture and task');
+  }
+}
+
+export async function getUserCaptures(
+  userId: string
+): Promise<CaptureWithTaskAndApp[]> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        captures: true,
+      },
+    });
+
+    if (!user || !user.captures?.length) return [];
+
+    const captures = await prisma.capture.findMany({
+      where: {
+        id: { in: user.captures },
+      },
+      include: {
+        app: true,
+        task: true,
+      },
+    });
+
+    return captures 
+
+    // const enrichedCaptures = await Promise.all(
+    //   captures.map(async (cap) => {
+    //     const app = await getAppByPackageName(cap.appId);
+    //     return { ...cap, app };
+    //   })
+    // );
+
+    // return enrichedCaptures;
+  } catch (error) {
+    console.error("Failed to fetch user captures:", error);
+    return [];
   }
 }

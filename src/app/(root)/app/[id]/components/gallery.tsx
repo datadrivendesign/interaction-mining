@@ -7,15 +7,41 @@ import {
   useEffect,
   useCallback,
   useReducer,
+  useMemo,
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "motion/react";
-import { ArrowLeft, Search } from "lucide-react";
+import {
+  ArrowDownFromLine,
+  ArrowLeft,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  ArrowUpFromLine,
+  Circle,
+  CircleDot,
+  CircleHelp,
+  CircleStop,
+  Expand,
+  Grab,
+  IterationCcw,
+  IterationCw,
+  Search,
+  Shrink,
+  Download,
+} from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
 import { Screen } from "@prisma/client";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+import { GestureOption } from "@/app/capture/[captureId]/edit/components/types";
+import { Button } from "@/components/ui/button";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -33,6 +59,13 @@ export function GalleryRoot({
 }) {
   const [_data, setData] = useState<any[]>(data);
   const [inspectData, setInspectData] = useState<any>(null);
+
+  // set default view to first trace
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setInspectData(data[0]);
+    }
+  }, [data]);
 
   return (
     <GalleryContext.Provider
@@ -82,10 +115,12 @@ export function Gallery({ traceId }: { traceId: string }) {
             onClick={() => setInspectData(data)}
           >
             <h2 className="text-lg md:text-xl font-bold tracking-tight line-clamp-1">
-              {data?.name || "Untitled Trace"}
+              {data?.description}
             </h2>
             <span className="text-sm md:text-base text-neutral-500 dark:text-neutral-400 line-clamp-1">
-              {data?.description}
+              {prettyTime(data?.created, {
+                format: "LLLL dd, yyyy",
+              })}
             </span>
           </div>
         ))}
@@ -144,6 +179,126 @@ export function InspectView({ data }: { data: any }) {
     }
   }, [loading]);
 
+  const gestureOptions = useMemo<GestureOption[]>(
+    () => [
+      {
+        value: "tap",
+        label: "Tap",
+        icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "double tap",
+        label: "Double tap",
+        icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "touch and hold",
+        label: "Touch and hold",
+        icon: (
+          <CircleStop className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+      {
+        value: "swipe",
+        label: "Swipe",
+        subGestures: [
+          {
+            value: "swipe up",
+            label: "Swipe up",
+            icon: (
+              <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "swipe down",
+            label: "Swipe down",
+            icon: (
+              <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "swipe left",
+            label: "Swipe left",
+            icon: (
+              <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "swipe right",
+            label: "Swipe right",
+            icon: (
+              <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+        ],
+      },
+      {
+        value: "drag",
+        label: "Drag",
+        icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
+      },
+      {
+        value: "zoom",
+        label: "Zoom",
+        subGestures: [
+          {
+            value: "zoom in",
+            label: "Zoom in",
+            icon: (
+              <Shrink className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "zoom out",
+            label: "Zoom out",
+            icon: (
+              <Expand className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+        ],
+      },
+      {
+        value: "rotate",
+        label: "Rotate",
+        subGestures: [
+          {
+            value: "rotate cw",
+            label: "Rotate cw",
+            icon: (
+              <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+          {
+            value: "rotate ccw",
+            label: "Rotate ccw",
+            icon: (
+              <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+            ),
+          },
+        ],
+      },
+      {
+        value: "other",
+        label: "Other",
+        icon: (
+          <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
+        ),
+      },
+    ],
+    []
+  );
+
+  const handleDownload = useCallback(() => {
+    const fileData = JSON.stringify(data, null, 2);
+    const blob = new Blob([fileData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `inspectData-${data.id}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [data]);
+
   return (
     <div className="flex flex-col grow w-full h-full p-4 pr-0">
       <button
@@ -155,49 +310,32 @@ export function InspectView({ data }: { data: any }) {
           Back
         </span>
       </button>
-      <div className="flex justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {data?.name || "Untitled Trace"}
-        </h1>
-        {/* <div className="hidden lg:flex gap-2">
-          <Link
-            className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
-            href={`/editor?trace=${data.id}`}
-            target="_blank"
-          >
-            Open in editor...
-          </Link>
-          <button className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-900 text-white font-semibold tracking-tight leading-none">
-            <Download className="size-4" />
-            Download
-          </button>
-        </div> */}
+      <div className="flex justify-between items-start">
+        <section className="mb-4">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {data?.description}
+          </h1>
+          <span className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
+            Created on{" "}
+            {prettyTime(data?.created, {
+              format: "LLLL dd, yyyy",
+            })}
+            {" at "}
+            {prettyTime(data?.created, {
+              format: "hh:mm a",
+            })}
+          </span>
+        </section>
         <div className="hidden lg:flex gap-2">
-          <Link
-            className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-100 text-black font-semibold tracking-tight leading-none"
-            href={`/trace/${data.id}`}
-            target="_blank"
+          <Button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1 px-3 py-0 rounded-xl bg-neutral-900 text-white font-semibold tracking-tight leading-none"
           >
-            Open in Trace Inspector
-          </Link>
+            <Download className="size-4" />
+            Download JSON
+          </Button>
         </div>
       </div>
-      <span className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
-        Created on{" "}
-        {prettyTime(data?.created, {
-          format: "LLLL dd, yyyy",
-        })}
-        {" at "}
-        {prettyTime(data?.created, {
-          format: "hh:mm a",
-        })}
-      </span>
-      <section className="block w-full mb-4">
-        <h2 className="text-xl font-bold tracking-tight">Task</h2>
-        <p className="text-base text-neutral-500 dark:text-neutral-400 mb-2">
-          {data?.description}
-        </p>
-      </section>
       <section className="block w-full mb-4">
         <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
           <div className="flex min-w-full gap-2">
@@ -226,6 +364,33 @@ export function InspectView({ data }: { data: any }) {
                   priority
                   onLoad={handleImageLoad}
                 />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="cursor-pointer aspect-square w-[12%] absolute rounded-full opacity-70 bg-green-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                        style={{
+                          left: `${(screen.gesture.x ?? 0) * 100}%`,
+                          top: `${(screen.gesture.y ?? 0) * 100}%`,
+                        }}
+                      >
+                        {
+                          gestureOptions
+                            .flatMap((option) => [
+                              option,
+                              ...(option.subGestures ?? []),
+                            ])
+                            .find(
+                              (option) => option.value === screen.gesture.type
+                            )?.icon
+                        }
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{screen.gesture.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </figure>
             ))}
           </div>

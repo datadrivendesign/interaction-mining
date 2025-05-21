@@ -1,5 +1,5 @@
 import { getCapture, getIosApp } from "@/lib/actions";
-import type { Metadata, ResolvingMetadata } from "next";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 export async function generateMetadata({
@@ -9,23 +9,34 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { captureId } = await params;
 
-  const { data: capture } = await getCapture({ id: captureId }).then(
-    (capture) => {
-      if (!capture.ok) {
-        notFound();
-      } else {
-        return capture;
-      }
+  const { data: capture } = await getCapture({
+    id: captureId,
+    includes: { app: true, task: true },
+  }).then((capture) => {
+    if (!capture.ok) {
+      notFound();
+    } else {
+      return capture;
     }
-  );
+  });
 
-  let app = await getIosApp({ appId: capture.appId });
+  if (capture.task.os === "ios") {
+    let app = await getIosApp({ appId: capture.appId });
+
+    if (app.ok) {
+      const metadata: Metadata = {
+        title: "Upload Capture",
+        other: {
+          "apple-itunes-app": `app-id=${app.data.id}`,
+        },
+      };
+
+      return metadata;
+    }
+  }
 
   const metadata: Metadata = {
     title: "Upload Capture",
-    other: {
-      "apple-itunes-app": `app-id=${app.data.id}`,
-    },
   };
 
   return metadata;

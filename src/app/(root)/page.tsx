@@ -3,7 +3,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Eye,
-  EyeClosed,
   Hammer,
   Sparkles,
 } from "lucide-react";

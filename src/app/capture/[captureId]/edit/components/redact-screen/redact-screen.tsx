@@ -1,10 +1,9 @@
 "use client";
-
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { CircleAlert } from "lucide-react";
-
-import RepairScreenCanvas from "../repair-screen/repair-screen-canvas";
+import { useHotkeys } from "react-hotkeys-hook";
+import { cn } from "@/lib/utils";
 
 import {
   ResizableHandle,
@@ -12,81 +11,113 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import { Screen } from "@prisma/client";
-import { cn } from "@/lib/utils";
 import RedactScreenCanvas from "./redact-screen-canvas";
+import { Redaction } from "../types";
+import { useFormContext } from "react-hook-form";
+import { TraceFormData } from "../types";
+import { FrameData } from "../types";
 
-type Trace = any;
+export default function RedactScreen() {
+  const { getValues } = useFormContext<TraceFormData>();
+  const screens = getValues("screens") as FrameData[];
+  const redactions = getValues("redactions") as {
+    [screenId: string]: Redaction[];
+  }
+  // TODO: pass vh by watch, then pass by prop in readct-screen-canvas
+  const vhs = getValues("vhs") as { [key: string]: any };
 
-export default function RedactScreen({ data }: { data: Trace }) {
-  const [focusViewValue, setFocusViewValue] = useState<{
-    current: Screen | null;
-    next: Screen | null;
-  }>({
-    current: null,
-    next: null,
-  });
+  const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
-  const handleFocusView = useCallback(
-    (index: number) => {
-      setFocusViewValue({
-        current: data.screens[index],
-        next: data.screens[index + 1] ?? null,
-      });
-    },
-    [data.screens]
-  );
+  const handlePrevious = useCallback(() => {
+    if (focusViewIndex > 0) {
+      setFocusViewIndex(focusViewIndex - 1);
+    }
+  }, [focusViewIndex]);
+
+  const handleNext = useCallback(() => {
+    if (focusViewIndex < screens.length - 1) {
+      setFocusViewIndex(focusViewIndex + 1);
+    }
+  }, [focusViewIndex, screens]);
+
+  useHotkeys("left", handlePrevious);
+  useHotkeys("right", handleNext);
 
   return (
     <div className="w-full h-[calc(100dvh-var(--nav-height))]">
-      <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={25} minSize={10} maxSize={75}>
-          <Filmstrip data={data} handleFocusView={handleFocusView} />
+      <ResizablePanelGroup direction="vertical">
+        <ResizablePanel defaultSize={75}>
+            {focusViewIndex > -1 ? (
+              <FocusView
+                key={focusViewIndex}
+                screen={screens[focusViewIndex]}
+                vh={vhs[screens[focusViewIndex].id]}
+              />
+            ) : (
+              <div className="flex justify-center items-center w-full h-full">
+                <span className="text-3xl lg:text-4xl text-neutral-400 dark:text-neutral-500 font-semibold">
+                  Select a screen from the filmstrip.
+                </span>
+              </div>
+            )}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={75}>
-          {focusViewValue.current ? (
-            <FocusView screen={focusViewValue.current} />
-          ) : (
-            <div className="flex justify-center items-center w-full h-full">
-              <span className="text-3xl lg:text-4xl text-neutral-500 dark:text-neutral-400 font-semibold">
-                Select a screen from the filmstrip.
-              </span>
-            </div>
-          )}
+        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+          <Filmstrip
+            screens={screens}
+            redactions={redactions}
+            focusViewIndex={focusViewIndex}
+            setFocusViewIndex={setFocusViewIndex}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
   );
 }
 
+function FocusView({ screen, vh }: { screen: FrameData, vh: any}) {
+  return (
+    <>
+      <div className="flex justify-center w-full h-full overflow-hidden">
+        <RedactScreenCanvas screen={screen} vh={vh} />
+      </div>
+    </>
+  );
+}
+
 function Filmstrip({
-  data,
-  handleFocusView,
+  screens,
+  redactions,
+  focusViewIndex,
+  setFocusViewIndex,
 }: {
-  data: Trace;
-  handleFocusView: (index: number) => void;
+  screens: FrameData[];
+  redactions: { [screenId: string]: Redaction[] };
+  focusViewIndex: number;
+  setFocusViewIndex: (index: number) => void;
 }) {
   return (
-    <ul className="grid grid-cols-[repeat(auto-fit,minmax(150px,2fr))] gap-4 max-h-[90vh] px-3 pt-4 pb-2 overflow-y-auto">
-      {data.screens?.map((screen: Screen, index: number) => (
+    <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+      {screens?.map((screen: FrameData, index: number) => (
         <FilmstripItem
           key={screen.id}
           index={index}
-          isBroken={screen.gesture === null}
-          onClick={() => handleFocusView(index)}
+          screen={screen}
+          redactions={redactions[screen.id] ?? []}
+          isSelected={focusViewIndex === index}
+          onClick={() => setFocusViewIndex(index)}
         >
-          <Image
+          {/* <Image
             key={screen.id}
             src={screen.src}
             alt="gallery"
             draggable={false}
-            className="w-full h-auto object-contain rounded-md"
+            className="h-full w-auto object-contain"
             width={0}
             height={0}
             sizes="100vw"
-            onClick={() => handleFocusView(index)}
-          />
+            onClick={() => setFocusViewIndex(index)}
+          /> */}
         </FilmstripItem>
       ))}
     </ul>
@@ -94,50 +125,132 @@ function Filmstrip({
 }
 
 function FilmstripItem({
+  screen,
+  redactions,
   index = 0,
-  children,
-  isBroken = false,
+  isSelected = false,
+  hasError = false,
   ...props
 }: {
+  screen: FrameData;
+  redactions: Array<Redaction>;
   index?: number;
-  children?: React.ReactNode;
-  isBroken?: boolean;
+  isSelected?: boolean;
+  hasError?: boolean;
 } & React.HTMLAttributes<HTMLLIElement>) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [imgDimensions, setImgDimensions] = useState<{
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+    scaleX: number;
+    scaleY: number;
+  }>({ width: 0, height: 0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
+
+  const updateSize = () => {
+    if (containerRef.current && imageRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const imageRect = imageRef.current.getBoundingClientRect();
+      const naturalWidth = imageRef.current.naturalWidth;
+      const naturalHeight = imageRef.current.naturalHeight;
+      // Calculate the scale factor between the natural and displayed size:
+      const scaleX = imageRect.width / naturalWidth;
+      const scaleY = imageRect.height / naturalHeight;
+      // Compute offsets in case the image is letterboxed inside its container:
+      const offsetX = (containerRect.width - imageRect.width) / 2;
+      const offsetY = (containerRect.height - imageRect.height) / 2;
+      setImgDimensions({
+        width: imageRect.width,
+        height: imageRect.height,
+        offsetX,
+        offsetY,
+        scaleX,
+        scaleY,
+      });
+    }
+  };
+
+  useEffect(() => {
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
   return (
-    <>
-      <li
-        className="cursor-pointer min-h-fit w-full"
-        data-index={index}
-        {...props}
+    <li
+      className="cursor-pointer min-w-fit h-full relative"
+      data-index={index}
+      {...props}
+    >
+      <div
+        ref={containerRef}
+        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none"
       >
-        <div className="relative min-h-fit w-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
-          {isBroken && (
-            <div className="absolute z-10 flex w-full h-full justify-center items-center rounded-sm ring-2 ring-inset ring-red-400">
-              <CircleAlert className="size-6 text-red-400" />
-            </div>
-          )}
+        {(isSelected || hasError) && (
           <div
             className={cn(
-              "relative min-h-fit w-full transition-all duration-200 ease-in-out select-none",
-              isBroken
-                ? "grayscale brightness-50"
-                : "grayscale-0 brightness-100"
+              "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
+              isSelected
+                ? "ring-2 ring-inset ring-yellow-500"
+                : hasError
+                ? "ring-2 ring-inset ring-red-500"
+                : ""
             )}
           >
-            {children}
+            {hasError && (
+              <CircleAlert
+                className={cn(
+                  "size-6",
+                  isSelected ? "text-yellow-500" : "text-red-500"
+                )}
+              />
+            )}
           </div>
-        </div>
-      </li>
-    </>
-  );
-}
-
-function FocusView({ screen }: { screen: Screen }) {
-  return (
-    <>
-      <div className="flex justify-center w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-900">
-        <RedactScreenCanvas screen={screen} />
+        )}
+        <Image
+          ref={imageRef}
+          src={screen.src}
+          alt="gallery"
+          draggable={false}
+          className="h-full w-auto object-contain"
+          onLoad={updateSize}
+          width={0}
+          height={0}
+          sizes="100vw"
+        />
+        {/* Render redaction overlays using the natural dimensions and scale factors */}
+        {imgDimensions.width > 0 &&
+          redactions.map((rect, idx) => (
+            <div
+              key={idx}
+              style={{
+                position: "absolute",
+                top:
+                  imgDimensions.offsetY +
+                  rect.y *
+                    imageRef.current!.naturalHeight *
+                    imgDimensions.scaleY,
+                left:
+                  imgDimensions.offsetX +
+                  rect.x *
+                    imageRef.current!.naturalWidth *
+                    imgDimensions.scaleX,
+                width:
+                  rect.width *
+                  imageRef.current!.naturalWidth *
+                  imgDimensions.scaleX,
+                height:
+                  rect.height *
+                  imageRef.current!.naturalHeight *
+                  imgDimensions.scaleY,
+                backgroundColor: "black",
+                border: "1px solid black",
+              }}
+            />
+          ))}
       </div>
-    </>
+    </li>
   );
 }

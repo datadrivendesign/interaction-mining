@@ -130,7 +130,7 @@ export default function Page() {
                   )}
                   {!isDataLoading && app ? (
                     <p className="text-sm md:text-base font-medium text-neutral-500 dark:text-neutral-400">
-                      {app.metadata.developer}
+                      {app.metadata.company}
                     </p>
                   ) : (
                     <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
