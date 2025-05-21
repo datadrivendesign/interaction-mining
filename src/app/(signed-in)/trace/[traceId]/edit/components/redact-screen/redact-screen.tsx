@@ -75,7 +75,7 @@ export default function RedactScreen() {
 function FocusView({ screen }: { screen: Screen }) {
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden">
+      <div className="flex justify-center w-full h-full overflow-hidden border border-t border-neutral-200 dark:border-neutral-800">
         <RedactScreenCanvas screen={screen} />
       </div>
     </>

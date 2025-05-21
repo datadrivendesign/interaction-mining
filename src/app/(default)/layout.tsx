@@ -1,4 +1,4 @@
-// import NavigationBar from "./components/navigation-bar";
+import NavigationBar from "./components/navigation-bar";
 
 export default function RootLayout({
   children,
@@ -7,7 +7,7 @@ export default function RootLayout({
 }>) {
   return (
     <>
-      {/* <NavigationBar /> */}
+      <NavigationBar />
       {children}
     </>
   );

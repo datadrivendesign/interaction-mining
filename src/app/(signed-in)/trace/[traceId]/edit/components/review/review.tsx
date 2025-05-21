@@ -14,8 +14,8 @@ export default function Review() {
   const { register } = useFormContext<TraceFormData>();
 
   return (
-    <div className="flex flex-row w-full h-full">
-      <div className="flex w-2/3 h-full overflow-auto border-r border-neutral-200 dark:border-neutral-800">
+    <div className="flex w-full h-full">
+      <div className="flex w-2/3 border-r border-neutral-200 dark:border-neutral-800 overflow-auto">
         <SaveTraceGallery />
       </div>
       <div className="flex flex-col shrink-0 grow-0 justify-center items-center w-1/3 h-full p-8">
@@ -40,7 +40,7 @@ function SaveTraceGallery() {
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 items-start w-full gap-4 overflow-auto p-8">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-start w-full gap-4 p-8">
       {screens.map((screen: Screen) => (
         <div
           className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"

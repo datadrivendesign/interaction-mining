@@ -4,25 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { ActionPayload } from "./types";
 
-export type User = Prisma.UserGetPayload<{
-  include: {
-    captures: true;
-    traces: true;
-  };
-}>;
+export type User = Prisma.UserGetPayload<{}>;
 
 export async function getUser(
   userId: string,
   { includes }: { includes?: Prisma.UserInclude } = {}
 ): Promise<ActionPayload<User>> {
-  const { captures = false, traces = false } = includes || {};
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        captures,
-        traces,
-      },
     });
 
     if (!user) {
