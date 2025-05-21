@@ -23,7 +23,7 @@ export default function SheetComponent({
         <Button
           variant="outline"
           size="sm"
-          className="flex justify-center items-center aspect-square rounded-full"
+          className="md:hidden flex justify-center items-center aspect-square rounded-full"
         >
           ?
         </Button>

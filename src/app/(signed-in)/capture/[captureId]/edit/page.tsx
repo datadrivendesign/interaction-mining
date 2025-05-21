@@ -162,18 +162,18 @@ export default function Page() {
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col w-dvw h-[calc(100dvh-65px)] bg-white dark:bg-black"
+          className="relative flex flex-col w-dvw h-[calc(100dvh-65px)] bg-white dark:bg-black overflow-hidden"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex w-full h-full">
-                <aside className="flex flex-col w-full max-w-sm h-full p-4 md:p-6 overflow-hidden border-r border-neutral-200 dark:border-neutral-800">
-                  <article className="prose prose-neutral dark:prose-invert leading-snug">
+              <div className="relative flex w-full h-[calc(100%-var(--nav-height))]">
+                <aside className="hidden md:flex flex-col w-full max-w-xs h-full border-r border-neutral-200 dark:border-neutral-800">
+                  <article className="prose prose-neutral dark:prose-invert leading-snug p-4 md:p-6 overflow-auto">
                     {docRender()}
                   </article>
                 </aside>
-                <div className="flex flex-col grow h-full items-center">
+                <div className="flex flex-col w-full h-full items-center">
                   {editorRender()}
                 </div>
               </div>
