@@ -76,7 +76,7 @@ Our web interface uses **Next.js**, which requires Node.js (v16 or v18).
 - Check if node exists and what version: `node -v`
 - [Download Node.js](https://nodejs.org/en/download)
 
-#### �� Android Studio + Java (Mobile App)
+#### Android Studio + Java (Mobile App)
 
 To build the Android app:
 
@@ -97,7 +97,9 @@ curl -o- https://dribosc0et3qr.cloudfront.net/install.sh | bash;
 
 The script will step you through the setup of both the web app and Android data collection app.
 
-The script will also prompt you to enter the following environment variables:
+#### ODIM Web Env Variables
+
+The script will prompt you to enter the following environment variables:
 
 ```shell
 DATABASE_URL=$DATABASE_URL
@@ -109,8 +111,30 @@ NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
 ```
-
 📝 _Developer Note: Some variables like `AWS_BUCKET_PREFIX`, `DB_NAME`, or `AWS_BUCKET_NAME` may be unused and can be safely omitted._
+
+#### API URL Prefix (Mobile ↔ Web Connection)
+
+To build and configure the Android app, the script will also prompt you to enter the **URL domain where the app will upload trace data**.
+
+This should be either:
+
+- The domain of your **deployed ODIM web app** (e.g., `https://your-app.amplifyapp.com`)
+- Or the **IP address of the machine running ODIM locally**
+
+If you're testing locally and want your Android device (or emulator) to connect to your local Next.js server, follow these steps:
+
+1. **Find your computer’s local IP address**:
+   - On macOS/Linux: run `ifconfig`
+   - On Windows: run `ipconfig`
+2. Look for an IP address that starts with `192.168.` or `10.` — typically under an interface like `en0`, `eth0`, or `Wi-Fi`.
+   - On macOS/Linux, it's shown next to `inet`
+   - On Windows, look under `IPv4 Address`
+3. Use that IP in the following format (port 3000 is the default for Next.js):
+
+```shell
+API_URL_PREFIX=http://192.168.x.x:3000
+```
 
 ### Optional: Deploying the Web App
 

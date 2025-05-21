@@ -136,6 +136,8 @@ if ! command -v npm &> /dev/null; then
   exit 1
 fi
 echo "Let's set up environment variables (or press enter to skip for now):"
+echo -e "${BLUE}👉 MongoDB database name (DATABASE_NAME):${NC} \c"
+read DATABASE_NAME
 echo -e "${BLUE}👉 MongoDB connection URI (DATABASE_URL):${NC} \c"
 read DATABASE_URL
 
@@ -150,10 +152,10 @@ read AWS_UPLOAD_BUCKET
 
 echo -e "${BLUE}👉 NextAuth secret:${NC} \c"
 read NEXTAUTH_SECRET
-echo -e "${BLUE}👉 Google client ID:${NC} \c
+echo -e "${BLUE}👉 Google client ID:${NC} \c"
 read GOOGLE_CLIENT_ID
-echo -e "${BLUE}👉 Google client secret:${NC} \c
-read GOOGLE_CLIENT_SECRET"
+echo -e "${BLUE}👉 Google client secret:${NC} \c"
+read GOOGLE_CLIENT_SECRET
 
 ENV_FILE=".env.local"
 
@@ -162,6 +164,7 @@ cat <<EOF > .env.local
 NEXT_PUBLIC_DEPLOYMENT_URL="localhost:3000"
 
 # >>>>> Database configuration
+DATABASE_NAME=$DATABASE_NAME
 DATABASE_URL=$DATABASE_URL
 
 # >>>>> AWS configuration
@@ -211,12 +214,21 @@ echo "Repository cloned to $Mobile_REPO_NAME"
 
 cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
 
+echo "Let's set up the URL domain where the Android app will upload to (or press Enter to use the default ODIM URL):"
+echo -e "${BLUE}👉 API URL Prefix:${NC} \c"
+read API_URL_PREFIX
+# If user presses Enter, fall back to default
+if [ -z "$API_URL_PREFIX" ]; then
+  API_URL_PREFIX="https://pre-alpha.odim.app"
+fi
 
 step "Building mobile APK"
 set +e
 echo "Building APK..."
 chmod +x ./gradlew
-./gradlew assembleDebug
+# Quote the variable to handle special characters or spaces
+./gradlew assembleDebug -PAPI_URL_PREFIX="$API_URL_PREFIX"
+
 set -e
 
 cd ..
@@ -230,4 +242,4 @@ trap - EXIT
 # Start the development server
 echo "Starting development server..."
 cd $REPO_NAME
-npm run dev
+npm run dev -- -H 0.0.0.0
