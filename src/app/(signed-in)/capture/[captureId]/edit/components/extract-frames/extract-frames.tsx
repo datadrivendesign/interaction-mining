@@ -156,10 +156,10 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   }, [currFrames.length, files, setValue]);
 
   return (
-    <div className="flex w-full h-full gap-6">
+    <div className="flex w-full h-full gap-4 md:gap-6">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
-          <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
+          <div className="flex flex-col grow justify-center items-center h-full max-h-full gap-4 md:p-6 bg-neutral-50 dark:bg-neutral-950">
             {isFilesLoading ?? (
               <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
             )}
@@ -271,36 +271,57 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   };
 
   return (
-    <div className="flex flex-row w-full h-[calc(100%-var(--nav-height))] gap-6">
+    <div className="flex flex-row w-full h-full gap-4 md:gap-6">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
-          <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
+        <ResizablePanel
+          defaultSize={33}
+          minSize={25}
+          maxSize={50}
+          className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
+        >
+          <div className="flex flex-col items-center w-full h-full gap-4 overflow-hidden">
             {isCapturesLoading ? (
-              <div className="max-w-full max-h-[calc(100%-4rem)] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
+              <div className="w-full h-auto max-h-full bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
             ) : (
               <video
                 crossOrigin="anonymous"
-                className="z-0 max-w-full max-h-[calc(100%-4rem)] mb-4 rounded-lg"
+                className="block box-border max-w-full max-h-full mb-4 rounded-lg object-contain"
                 controls
+                preload="metadata"
                 ref={videoRef}
               >
                 <source src={captures[0].fileUrl} type="video/mp4" />
               </video>
             )}
-            <Button onClick={handleCaptureFrame}>
+            <Button onClick={handleCaptureFrame} className="shrink-0">
               <Camera /> Snapshot
             </Button>
           </div>
+          {/* {isCapturesLoading ? (
+            <div className="w-auto h-full bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-lg aspect-[1/2]"></div>
+          ) : (
+            <video
+              crossOrigin="anonymous"
+              className="w-auto h-full max-h-full mb-4 rounded-lg object-fit"
+              controls
+              preload="metadata"
+              ref={videoRef}
+            >
+              <source src={captures[0].fileUrl} type="video/mp4" />
+            </video>
+
+          )}
+          <Button onClick={handleCaptureFrame}>
+            <Camera /> Snapshot
+          </Button> */}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={67}>
-          <div className="flex w-full h-full overflow-auto">
-            <FrameGalleryIOS
-              frames={frames}
-              gestures={gestures}
-              setTime={handleSetTime}
-            />
-          </div>
+          <FrameGalleryIOS
+            frames={frames}
+            gestures={gestures}
+            setTime={handleSetTime}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
