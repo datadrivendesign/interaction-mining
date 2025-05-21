@@ -54,6 +54,7 @@ model App {
   v           Int           @default(0) @map("__v")
   category    AppsCategory?
   packageName String        @unique
+  os          String
   metadata    AppMetadata
   Capture     Capture[]
   Trace       Trace[]
