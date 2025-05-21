@@ -73,9 +73,6 @@ export const getCapture = unstable_cache(
         },
       });
 
-      console.log("Querying capture with:", query);
-      console.log("capture", capture);
-
       if (!capture) {
         return { ok: false, message: "Capture not found.", data: null };
       }
