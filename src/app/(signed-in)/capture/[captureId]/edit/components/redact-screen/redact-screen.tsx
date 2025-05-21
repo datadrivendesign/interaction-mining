@@ -22,7 +22,7 @@ export default function RedactScreen() {
   const screens = getValues("screens") as FrameData[];
   const redactions = getValues("redactions") as {
     [screenId: string]: Redaction[];
-  }
+  };
   // TODO: pass vh by watch, then pass by prop in readct-screen-canvas
   const vhs = getValues("vhs") as { [key: string]: any };
 
@@ -44,22 +44,22 @@ export default function RedactScreen() {
   useHotkeys("right", handleNext);
 
   return (
-    <div className="w-full h-full">
+    <div className="flex w-full h-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
-            {focusViewIndex > -1 ? (
-              <FocusView
-                key={focusViewIndex}
-                screen={screens[focusViewIndex]}
-                vh={vhs[screens[focusViewIndex].id]}
-              />
-            ) : (
-              <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
-                  Select a screen from the filmstrip.
-                </span>
-              </div>
-            )}
+          {focusViewIndex > -1 ? (
+            <FocusView
+              key={focusViewIndex}
+              screen={screens[focusViewIndex]}
+              vh={vhs[screens[focusViewIndex].id]}
+            />
+          ) : (
+            <div className="flex justify-center items-center w-full h-full">
+              <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+                Select a screen from the filmstrip.
+              </span>
+            </div>
+          )}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
@@ -75,7 +75,7 @@ export default function RedactScreen() {
   );
 }
 
-function FocusView({ screen, vh }: { screen: FrameData, vh: any}) {
+function FocusView({ screen, vh }: { screen: FrameData; vh: any }) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
@@ -195,8 +195,8 @@ function FilmstripItem({
               isSelected
                 ? "ring-2 ring-inset ring-yellow-500"
                 : hasError
-                ? "ring-2 ring-inset ring-red-500"
-                : ""
+                  ? "ring-2 ring-inset ring-red-500"
+                  : ""
             )}
           >
             {hasError && (

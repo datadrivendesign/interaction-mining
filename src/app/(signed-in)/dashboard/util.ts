@@ -7,7 +7,7 @@ export async function handleTest() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    toast.error("You must be logged in to save.");
+    toast.error("You must be signed in to save.");
     return;
   }
 

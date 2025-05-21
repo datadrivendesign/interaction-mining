@@ -82,7 +82,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 export async function requireAuth() {
   const session = await auth();
   if (!session?.user?.id) {
-    throw new Error("You must be logged in to access this resource.");
+    throw new Error("You must be signed in to access this resource.");
   }
   return session;
 }
