@@ -1,6 +1,7 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextIndex"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-1.1.x", "rhel-openssl-1.0.x"]
+  // output        = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -14,68 +15,206 @@ type AppsCategory {
 }
 
 type ScreenGesture {
-  // Multiple data types found: Float: 11.4%, Int: 88.6% out of 1000 sampled entries
-  scrollDeltaX Float
-  // Multiple Float types found: Float: 37.9%, Int: 62.1% out of 1000 sampled entries
-  scrollDeltaY Float
-  // Multiple data types found: Float: 99.8%, Int: 0.2% out of 1000 sampled entries
-  x            Float
-  // Multiple data types found: Float: 99.9%, Int: 0.1% out of 1000 sampled entries
-  y            Float
+  type         String?
+  scrollDeltaX Float?
+  scrollDeltaY Float?
+  x            Float?
+  y            Float?
+  description  String?
+}
+
+type ScreenRedaction {
+  x          Float  @map("startX")
+  y          Float  @map("startY")
+  width      Float  @map("endX")
+  height     Float  @map("endY")
+  annotation String @map("label")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+type AppMetadata {
+  company     String
+  name        String
+  cover       String
+  description String
+  icon        String
+  rating      Float
+  reviews     Float?
+  genre       String[]
+  downloads   String
+  url         String?
 }
 
 model App {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int?         @map("__v")
-  category    AppsCategory
-  company     String
-  cover       String
-  description String
-  downloads   String
-  icon        String
-  name        String
-  packageName String       @unique(map: "packageName_1")
-  rating      String
-  reviews     String?
-  traces      Trace[]
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int           @default(0) @map("__v")
+  category    AppsCategory?
+  packageName String        @unique
+  metadata    AppMetadata
+  Capture     Capture[]
+  Trace       Trace[]
 
-  @@fulltext([name])
+  @@fulltext([metadata.name])
   @@map("apps")
 }
 
 model Redaction {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  v      Int    @map("__v")
-  label  String
-  screen String @db.ObjectId
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  v           Int    @default(0) @map("__v")
+  x           Float  @map("startX")
+  y           Float  @map("startY")
+  deltaX      Float  @map("endX")
+  deltaY      Float  @map("endY")
+  description String @map("label")
+  screenId    String @map("screen") @db.ObjectId
 
   @@map("redactions")
 }
 
 model Screen {
-  id      String         @id @default(auto()) @map("_id") @db.ObjectId
-  v       Int            @map("__v")
-  created DateTime       @db.Date
-  gesture ScreenGesture
-  src     String
-  vh      String
-  traceId String         @map("trace") @db.ObjectId
-  trace   Trace          @relation(fields: [traceId], references: [id])
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  v          Int?              @default(0) @map("__v")
+  created    DateTime          @default(now()) @db.Date
+  gesture    ScreenGesture
+  redactions ScreenRedaction[]
+  src        String
+  vh         String
+  traceId    String            @map("trace") @db.ObjectId
+  trace      Trace             @relation(fields: [traceId], references: [id])
 
   @@map("screens")
 }
 
 model Trace {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int      @map("__v")
+  v           Int?     @default(0) @map("__v")
   appId       String   @map("app") @db.ObjectId
   app         App      @relation(fields: [appId], references: [id])
-  created     DateTime @db.Date
+  captureId   String?  @map("capture") @db.ObjectId
+  created     DateTime @default(now()) @db.Date
   name        String?
   description String
-  screensIds  String[] @map("screens") @db.ObjectId
+  screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
+  taskId      String?  @default("") @map("task") @db.ObjectId
+  task        Task?    @relation(fields: [taskId], references: [id])
   worker      String
 
   @@map("traces")
+}
+
+model Task {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  // appId    String   @map("app") @db.ObjectId
+  // app      App      @relation(fields: [appId], references: [id])
+  appId       String
+  os          String
+  traceIds    String[]  @map("traces") @db.ObjectId
+  traces      Trace[]
+  description String
+  Capture     Capture[]
+
+  @@map("tasks")
+}
+
+model Capture {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  appId_ String  @map("app") @db.ObjectId
+  app    App     @relation(fields: [appId_], references: [id])
+  appId  String // stupid frickin packageName
+  userId String? @map("user") @db.ObjectId
+  // traceId String @map("trace") @db.ObjectId
+  // trace   Trace  @relation(fields: [traceId], references: [id])
+  taskId String  @map("task") @db.ObjectId
+  task   Task    @relation(fields: [taskId], references: [id])
+  otp    String
+  src    String
+
+  @@map("captures")
+}
+
+model User {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role            @default(USER)
+  accounts      Account[]
+  sessions      Session[]
+  captures      String[]        @default([]) @map("captures") @db.ObjectId
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @unique @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @id @map("_id")
+  userId               String  @db.ObjectId
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, credentialID])
+  @@map("authenticators")
 }

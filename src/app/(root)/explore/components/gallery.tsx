@@ -1,20 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { getApp, getApps } from "@/lib/actions";
+import Link from "next/link";;
+import { getApps } from "@/lib/actions";
 
 import {
   createContext,
   useState,
   useContext,
-  useEffect,
-  useRef,
-  Fragment,
   useCallback,
 } from "react";
 import Image from "next/image";
-import fuzzysort from "fuzzysort";
 import { Search } from "lucide-react";
 import { App } from "@prisma/client";
 
@@ -71,10 +66,10 @@ export function GallerySearch() {
 
   return (
     <>
-      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-500 rounded-lg transition-all duration-75 ">
+      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 dark:ring-neutral-800 has-focus:ring-2 has-focus:ring-blue-500 rounded-lg transition-all duration-75 ">
         <Search size={16} className="text-neutral-400 mr-2" />
         <input
-          className="text-base text-neutral-700 placeholder:text-neutral-400 placeholder:tracking-tight focus:outline-none"
+          className="text-base text-neutral-500 dark:text-neutral-400 tracking-tight focus:outline-hidden"
           placeholder="Search"
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
@@ -95,17 +90,17 @@ export function Gallery({ children }: { children?: React.FC<any> }) {
           className="flex w-full"
         >
           <Image
-            src={app.icon}
-            alt={`${app.name} icon`}
+            src={app.metadata.icon}
+            alt={`${app.metadata.name} icon`}
             width={48}
             height={48}
             className="rounded-xl mr-4 drop-shadow-md"
           />
           <div className="flex flex-col justify-center">
             <h2 className="text-base font-semibold line-clamp-1 leading-tight">
-              {app.name}
+              {app.metadata.name}
             </h2>
-            <span className="text-sm text-neutral-500 line-clamp-1 leading-tight">
+            <span className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-1 leading-tight">
               {app.company}
             </span>
           </div>
