@@ -166,7 +166,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
 
   return (
     // @ts-ignore - GlobalHotKeys is not typed
-    <div className="w-full h-[calc(100dvh-var(--nav-height))]">
+    <div className="w-full h-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
           <GlobalHotKeys

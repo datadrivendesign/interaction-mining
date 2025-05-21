@@ -221,12 +221,12 @@ export default function Page() {
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col w-dvw h-dvh bg-white dark:bg-black"
+          className="relative flex flex-col w-dvw grow bg-white dark:bg-black"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex w-full h-full overflow-hidden">
+              <div className="relative flex w-full grow overflow-hidden">
                 <div className="flex flex-col grow w-full justify-center items-center">
                   {editorRender()}
                 </div>

@@ -21,7 +21,7 @@ export async function generateMetadata({
   });
 
   if (capture.task.os === "ios") {
-    let app = await getIosApp({ appId: capture.appId });
+    let app = await getIosApp({ appId: capture.app.packageName });
 
     if (app.ok) {
       const metadata: Metadata = {

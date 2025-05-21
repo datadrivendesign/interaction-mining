@@ -4,13 +4,11 @@ import { toast } from "sonner";
 import { Capture } from "@prisma/client";
 import { DateTime } from "luxon";
 import plimit from "p-limit";
-import { auth } from "@/lib/auth";
 
 import { createTrace, generatePresignedVHUpload } from "@/lib/actions";
 import { uploadToS3 } from "@/lib/aws/s3/client";
 
 import { FrameData, TraceFormData, Redaction } from "../components/types";
-import { connect } from "http2";
 
 export async function handleSave(data: TraceFormData, capture: Capture) {
   // Transpose gestures on to screens

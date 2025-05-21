@@ -11,15 +11,8 @@ import { updateScreen, updateTrace } from "@/lib/actions";
 import { toast } from "sonner";
 import Konva from "konva";
 import { Redaction } from "../components/types";
-import { auth } from "@/lib/auth";
 
 export async function handleSave(data: TraceFormData, trace: Trace) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    toast.error("You must be logged in to save.");
-    return;
-  }
 
   // Transpose gestures on to screens
   let screens = data.screens.map((screen: Screen) => {

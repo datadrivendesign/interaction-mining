@@ -14,7 +14,7 @@ export default function Review() {
   const { register } = useFormContext<TraceFormData>();
 
   return (
-    <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))]">
+    <div className="flex flex-row w-full h-full">
       <div className="flex w-2/3 h-full overflow-auto border-r border-neutral-200 dark:border-neutral-800">
         <SaveTraceGallery />
       </div>
