@@ -7,7 +7,7 @@ import { useFormContext } from "react-hook-form";
 import { ScreenGesture } from "@prisma/client";
 import { AnimatePresence, motion, Variants } from "motion/react";
 import { prettyNumber } from "@/lib/utils/number";
-import { TraceFormData, FrameData } from "../types";
+import { TraceFormData, FrameData, Redaction } from "../types";
 
 const spring = {
   type: "spring",
@@ -49,10 +49,12 @@ export function FrameGalleryAndroid({
   frames,
   vhs,
   gestures,
+  redactions
 }: {
   frames: FrameData[];
   vhs: { [key: string]: any };
   gestures: { [key: string]: ScreenGesture };
+  redactions: { [key:string]: Redaction[] };
 }) {
   const { setValue } = useFormContext<TraceFormData>();
 
@@ -73,6 +75,11 @@ export function FrameGalleryAndroid({
       Object.entries(gestures).filter(([key]) => key !== frames[index].id)
     );
     setValue("gestures", updatedGestures);
+    // remove frame from redactions
+    const updatedRedactions = Object.fromEntries(
+      Object.entries(redactions).filter(([key]) => key !== frames[index].id)
+    )
+    setValue("redactions", updatedRedactions);
   };
 
   return (
@@ -104,15 +111,35 @@ export function FrameGalleryAndroid({
                 <X className="size-6 text-muted-foreground hover:opacity-75" />
               </button>
             </div>
-            <Image
-              className="z-0 object-cover w-full h-auto rounded-lg"
-              src={frame.src}
-              alt={`Extracted frame at ${frame.timestamp}`}
-              draggable={false}
-              width={0}
-              height={0}
-              sizes="100vw"
-            />
+            <div
+              className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
+              key={`${frame.id}`}
+            >
+              <Image
+                className="z-0 object-cover w-full h-auto rounded-lg"
+                src={frame.src}
+                alt={`Extracted frame at ${frame.timestamp}`}
+                draggable={false}
+                width={0}
+                height={0}
+                sizes="100vw"
+              />
+              {/* Render redaction overlays using the natural dimensions and scale factors */}
+              {(redactions[frame.id] ?? []).map((rect, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    position: "absolute",
+                    top: `${rect.y * 100}%`,
+                    left: `${rect.x * 100}%`,
+                    width: `${rect.width * 100}%`,
+                    height: `${rect.height * 100}%`,
+                    backgroundColor: "black",
+                    border: "1px solid black",
+                  }}
+                />
+              ))}
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -123,10 +150,12 @@ export function FrameGalleryAndroid({
 export function FrameGalleryIOS({
   frames,
   gestures,
+  redactions,
   setTime,
 }: {
   frames: FrameData[];
   gestures: { [key: string]: ScreenGesture };
+  redactions: { [key: string]: Redaction[]};
   setTime: (_: number) => void;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
@@ -134,6 +163,9 @@ export function FrameGalleryIOS({
   const setFrameData = (value: FrameData[]) => setValue("screens", value);
   const setGestureData = (value: { [key: string]: ScreenGesture }) => {
     setValue("gestures", value);
+  };
+  const setRedactionData = (value: { [key: string]: Redaction[] }) => {
+    setValue("redactions", value);
   };
 
   const handleDeleteFrame = (index: number) => {
@@ -146,10 +178,15 @@ export function FrameGalleryIOS({
       Object.entries(gestures).filter(([key]) => key !== frames[index].id)
     );
     setGestureData(updatedGestures);
+    // remove frame from redactions
+    const updatedRedactions = Object.fromEntries(
+      Object.entries(redactions).filter(([key]) => key !== frames[index].id)
+    )
+    setRedactionData(updatedRedactions);
   };
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6">
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6 overflow-y-scroll">
       <AnimatePresence mode="popLayout">
         {frames.map((frame, index) => (
           <motion.div
@@ -181,15 +218,35 @@ export function FrameGalleryIOS({
                 <X className="size-6 text-muted-foreground hover:opacity-75" />
               </button>
             </div>
-            <Image
-              className="z-0 object-cover w-full h-auto rounded-lg"
-              src={frame.src}
-              alt={`Extracted frame at ${frame.timestamp}`}
-              draggable={false}
-              width={0}
-              height={0}
-              sizes="100vw"
-            />
+            <div
+              className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
+              key={`${frame.id}`}
+            >
+              <Image
+                className="z-0 object-cover w-full h-auto rounded-lg"
+                src={frame.src}
+                alt={`Extracted frame at ${frame.timestamp}`}
+                draggable={false}
+                width={0}
+                height={0}
+                sizes="100vw"
+              />
+              {/* Render redaction overlays using the natural dimensions and scale factors */}
+              {(redactions[frame.id] ?? []).map((rect, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    position: "absolute",
+                    top: `${rect.y * 100}%`,
+                    left: `${rect.x * 100}%`,
+                    width: `${rect.width * 100}%`,
+                    height: `${rect.height * 100}%`,
+                    backgroundColor: "black",
+                    border: "1px solid black",
+                  }}
+                />
+              ))}
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>

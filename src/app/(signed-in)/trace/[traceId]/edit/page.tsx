@@ -56,36 +56,49 @@ export default function Page() {
   });
 
   useEffect(() => {
-    methods.reset({
-      screens: trace?.screens,
-      gestures: trace?.screens.reduce(
+    const loadFormData = async() => {
+      const screens = trace?.screens;
+      const gestures = trace?.screens.reduce(
         (acc, screen) => {
           acc[screen.id] = screen.gesture;
           return acc;
         },
         {} as { [key: string]: ScreenGesture }
-      ),
-      redactions: trace?.screens.reduce(
+      );
+      const redactions = trace?.screens.reduce(
         (acc, screen) => {
           acc[screen.id] = screen.redactions ?? [];
           return acc;
         },
         {} as { [key: string]: ScreenRedaction[] }
-      ),
-      vhs: trace?.screens.reduce(
-        (acc, screen) => {
-          acc[screen.id] = screen.vh ?? {
-            x: null,
-            y: null,
-            width: null,
-            height: null,
-          };
-          return acc;
-        },
-        {} as { [key: string]: any }
-      ),
-      description: trace?.description ?? "",
-    });
+      );
+      // need to fetch and deserialize JSON file from s3
+      const vhs = await Promise.all(
+        (trace?.screens ?? []).map(async(screen) => {
+          try {
+            if (screen.vh && typeof screen.vh === "string") {
+              const res = await fetch(screen.vh);
+              const data = await res.json()
+              return [screen.id, data];
+            }
+          } catch(err) {
+            console.error(`Failed to fetch VH for screen ${screen.id}`, err);
+          } 
+          return [screen.id, { x: null, y: null, width: null, height: null }];
+        })
+      ).then(Object.fromEntries);
+      const description = trace?.description ?? "";
+
+      methods.reset({
+        screens,
+        gestures,
+        redactions,
+        vhs,
+        description
+      });
+    }
+
+    loadFormData();
   }, [trace, methods]);
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -157,7 +170,8 @@ export default function Page() {
 
   // load values from trace into form
   useEffect(() => {
-    if (trace) {
+    const loadFormData = async() => {
+      if (!trace) { return; }
       const screens = trace.screens;
       const gestures = trace.screens.reduce(
         (acc, screen) => {
@@ -168,7 +182,6 @@ export default function Page() {
         },
         {} as { [key: string]: ScreenGesture }
       );
-
       const redactions = trace.screens.reduce(
         (acc, screen) => {
           acc[screen.id] = screen.redactions ?? [];
@@ -183,20 +196,21 @@ export default function Page() {
         },
         {} as { [key: string]: ScreenRedaction[] }
       );
-
-      const vhs = trace.screens.reduce(
-        (acc, screen) => {
-          acc[screen.id] = screen.vh ?? {
-            x: null,
-            y: null,
-            width: null,
-            height: null,
-          };
-          return acc;
-        },
-        {} as { [key: string]: any }
-      );
-
+      // have to fetch from vh URL
+      const vhs = await Promise.all(
+        (trace?.screens ?? []).map(async(screen) => {
+          try {
+            if (screen.vh && typeof screen.vh === "string") {
+              const res = await fetch(screen.vh);
+              const data = await res.json()
+              return [screen.id, data];
+            }
+          } catch(err) {
+            console.error(`Failed to fetch VH for screen ${screen.id}`, err);
+          } 
+          return [screen.id, { x: null, y: null, width: null, height: null }];
+        })
+      ).then(Object.fromEntries);
       const description = trace.description ?? "";
 
       console.log("Resetting form with trace data", {
@@ -215,6 +229,8 @@ export default function Page() {
         description,
       });
     }
+
+    loadFormData();
   }, [trace, methods]);
 
   return (
