@@ -156,7 +156,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   }, [currFrames.length, files, setValue]);
 
   return (
-    <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
+    <div className="flex w-full h-full gap-6">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
           <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
@@ -271,7 +271,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   };
 
   return (
-    <div className="flex flex-row w-full h-[calc(100dvh-var(--nav-height))] gap-6">
+    <div className="flex flex-row w-full h-[calc(100%-var(--nav-height))] gap-6">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
           <div className="flex flex-col grow justify-center items-center h-full max-h-full p-6 bg-neutral-50 dark:bg-neutral-950">
