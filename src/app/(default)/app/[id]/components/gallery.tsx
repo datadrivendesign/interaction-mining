@@ -41,7 +41,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { GestureOption } from "@/app/(signed-in)/(authorized)/capture/[captureId]/edit/components/types";
+import { GestureOption } from "@/app/(signed-in)/capture/[captureId]/edit/components/types";
 import { Button } from "@/components/ui/button";
 
 const GalleryContext = createContext({
@@ -131,10 +131,7 @@ export function Gallery({ traceId }: { traceId: string }) {
           <InspectView data={inspectData} />
         ) : (
           <div className="flex flex-col items-center justify-center w-full h-full">
-            <Search
-              size={48}
-              className="text-muted-foreground mb-2"
-            />
+            <Search size={48} className="text-muted-foreground mb-2" />
             <span className="text-lg font-semibold text-neutral-400 tracking-tight">
               Select a trace to inspect
             </span>
@@ -361,7 +358,9 @@ export function InspectView({ data }: { data: any }) {
                               ...(option.subGestures ?? []),
                             ])
                             .find(
-                              (option) => option.value === screen.gesture.type?.toLowerCase()
+                              (option) =>
+                                option.value ===
+                                screen.gesture.type?.toLowerCase()
                             )?.icon
                         }
                       </div>
