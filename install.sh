@@ -137,25 +137,25 @@ if ! command -v npm &> /dev/null; then
 fi
 echo "Let's set up environment variables (or press enter to skip for now):"
 echo -e "${BLUE}👉 MongoDB database name (DATABASE_NAME):${NC} \c"
-read DATABASE_NAME
+read DATABASE_NAME < /dev/tty
 echo -e "${BLUE}👉 MongoDB connection URI (DATABASE_URL):${NC} \c"
-read DATABASE_URL
+read DATABASE_URL < /dev/tty
 
 echo -e "${BLUE}👉 AWS region:${NC} \c"
-read AWS_REGION
+read AWS_REGION < /dev/tty
 echo -e "${BLUE}👉 AWS access key ID:${NC} \c"
-read AWS_ACCESS_KEY_ID
+read AWS_ACCESS_KEY_ID < /dev/tty
 echo -e "${BLUE}👉 AWS secret access key:${NC} \c"
-read AWS_SECRET_ACCESS_KEY
+read AWS_SECRET_ACCESS_KEY < /dev/tty
 echo -e "${BLUE}👉 AWS upload bucket:${NC} \c"
-read AWS_UPLOAD_BUCKET
+read AWS_UPLOAD_BUCKET < /dev/tty
 
 echo -e "${BLUE}👉 NextAuth secret:${NC} \c"
-read NEXTAUTH_SECRET
+read NEXTAUTH_SECRET < /dev/tty
 echo -e "${BLUE}👉 Google client ID:${NC} \c"
-read GOOGLE_CLIENT_ID
+read GOOGLE_CLIENT_ID < /dev/tty
 echo -e "${BLUE}👉 Google client secret:${NC} \c"
-read GOOGLE_CLIENT_SECRET
+read GOOGLE_CLIENT_SECRET < /dev/tty
 
 ENV_FILE=".env.local"
 
@@ -216,7 +216,7 @@ cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; 
 
 echo "Let's set up the URL domain where the Android app will upload to (or press Enter to use the default ODIM URL):"
 echo -e "${BLUE}👉 API URL Prefix:${NC} \c"
-read API_URL_PREFIX
+read API_URL_PREFIX < /dev/tty
 # If user presses Enter, fall back to default
 if [ -z "$API_URL_PREFIX" ]; then
   API_URL_PREFIX="https://pre-alpha.odim.app"
