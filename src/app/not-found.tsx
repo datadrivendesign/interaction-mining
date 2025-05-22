@@ -1,4 +1,4 @@
-import NavigationBar from "@/components/navigation-bar";
+import NavigationBar from "@/app/(default)/components/navigation-bar";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 

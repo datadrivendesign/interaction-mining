@@ -1,14 +1,19 @@
 "use client";
 
-import { ActionPayload } from "@/lib/actions/types";
 import { generatePresignedUploadURL } from "./server";
+import { ActionPayload } from "@/lib/actions/types";
 
 export async function uploadToS3(
   file: File,
   prefix: string,
-  key: string
+  key: string,
+  contentType: string
 ): Promise<ActionPayload<any>> {
-  const generatePresignedUpload = await generatePresignedUploadURL(prefix, key, "image/png");
+  const generatePresignedUpload = await generatePresignedUploadURL(
+    prefix,
+    key,
+    contentType
+  );
 
   if (!generatePresignedUpload.ok) {
     return {
@@ -23,8 +28,8 @@ export async function uploadToS3(
   const res = await fetch(uploadData.uploadUrl, {
     method: "PUT",
     body: file,
-    headers: { "Content-Type": "image/png" },
-  })
+    headers: { "Content-Type": contentType },
+  });
 
   if (!res.ok) {
     console.error("S3 upload failed", await res.text());

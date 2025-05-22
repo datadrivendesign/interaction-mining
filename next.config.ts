@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "500mb",
     },
+    viewTransition: true,
     reactCompiler: true,
   },
   webpack: (config) => {

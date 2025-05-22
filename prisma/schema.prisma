@@ -54,6 +54,7 @@ model App {
   v           Int           @default(0) @map("__v")
   category    AppsCategory?
   packageName String        @unique
+  os          String
   metadata    AppMetadata
   Capture     Capture[]
   Trace       Trace[]
@@ -96,13 +97,14 @@ model Trace {
   app         App      @relation(fields: [appId], references: [id])
   captureId   String?  @map("capture") @db.ObjectId
   created     DateTime @default(now()) @db.Date
-  name        String?
+  name        String? // deprecated in favor of description
   description String
-  screenIds   String[] @map("screens") @db.ObjectId
   screens     Screen[]
-  taskId      String?  @default("") @map("task") @db.ObjectId
-  task        Task?    @relation(fields: [taskId], references: [id])
-  worker      String
+  taskId      String   @default("") @map("task") @db.ObjectId
+  task        Task     @relation(fields: [taskId], references: [id])
+  worker      String // deprecated in favor of users
+  userId      String?  @map("user") @db.ObjectId
+  user        User?    @relation(fields: [userId], references: [id])
 
   @@map("traces")
 }
@@ -122,17 +124,16 @@ model Task {
 }
 
 model Capture {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  appId_ String  @map("app") @db.ObjectId
-  app    App     @relation(fields: [appId_], references: [id])
-  appId  String // stupid frickin packageName
-  userId String? @map("user") @db.ObjectId
-  // traceId String @map("trace") @db.ObjectId
-  // trace   Trace  @relation(fields: [traceId], references: [id])
-  taskId String  @map("task") @db.ObjectId
-  task   Task    @relation(fields: [taskId], references: [id])
-  otp    String
-  src    String
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String  @map("app") @db.ObjectId
+  app     App     @relation(fields: [appId], references: [id])
+  userId  String  @map("user") @db.ObjectId
+  user    User    @relation(fields: [userId], references: [id])
+  traceId String? @unique @map("trace") @db.ObjectId
+  taskId  String  @map("task") @db.ObjectId
+  task    Task    @relation(fields: [taskId], references: [id])
+  otp     String
+  src     String
 
   @@map("captures")
 }
@@ -146,7 +147,10 @@ model User {
   role          Role            @default(USER)
   accounts      Account[]
   sessions      Session[]
-  captures      String[]        @default([]) @map("captures") @db.ObjectId
+  captureIds    String[]        @default([]) @map("captures") @db.ObjectId
+  captures      Capture[]
+  traceIds      String[]        @default([]) @map("traces") @db.ObjectId
+  traces        Trace[]
   // Optional for WebAuthn support
   Authenticator Authenticator[]
 

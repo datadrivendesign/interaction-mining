@@ -36,21 +36,21 @@ export default function RootLayout({
 }>) {
   return (
     <Configuration>
-      <html lang="en">
-        <body
-          className={classNames(
-            mona.variable,
-            inter.variable,
-            robotoMono.variable,
-            "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans bg-white text-black dark:bg-black dark:text-white"
-          )}
-        >
-          <SessionProvider>
+      <SessionProvider>
+        <html lang="en">
+          <body
+            className={classNames(
+              mona.variable,
+              inter.variable,
+              robotoMono.variable,
+              "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans text-foreground bg-background "
+            )}
+          >
             <Toaster />
             {children}
-          </SessionProvider>
-        </body>
-      </html>
+          </body>
+        </html>
+      </SessionProvider>
     </Configuration>
   );
 }

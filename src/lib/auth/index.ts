@@ -5,9 +5,6 @@ import { prisma } from "@/lib/prisma";
 import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
 
-// types/next-auth.d.ts
-import { JWT } from "next-auth/jwt"
-
 declare module "next-auth" {
   /**
    * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
@@ -15,19 +12,12 @@ declare module "next-auth" {
   interface Session {
     user: {
       /** The user's role. */
-      role: string
-    } & DefaultSession["user"]
+      role: string;
+      createdAt: Date;
+    } & DefaultSession["user"];
   }
   interface User {
-    role: string
-  }
-}
-
-declare module "next-auth/jwt" {
-  /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
-  interface JWT {
-    /** The user's role */
-    role: string
+    role: string;
   }
 }
 
@@ -49,9 +39,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         params: {
           prompt: "select_account",
         },
-      // authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&response_type=code', 
+        // authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&response_type=code',
       },
-    
     }),
   ],
   pages: {
@@ -61,20 +50,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async session({ session, token, }) {
+    async session({ session, token }) {
       if (session.user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: session.user.email },
         });
         if (dbUser) {
           session.user.role = dbUser.role ?? "USER";
+          session.user.createdAt = dbUser.createdAt;
         }
       }
       return session;
     },
   },
   events: {
-    async signIn({user}) {
+    async signIn({ user }) {
       // Custom logic on sign in
       console.log("User signed in:", user);
     },
@@ -86,5 +76,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         console.log("User session signed out:", message.session);
       }
     },
-  },  
+  },
 });
+
+export async function requireAuth() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("You must be signed in to access this resource.");
+  }
+  return session;
+}

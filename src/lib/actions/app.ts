@@ -13,10 +13,11 @@ interface GetAppParams {
 }
 
 export type AppItemList = {
-  id: string,
-  package: string,
-  name: string
-}
+  id: string;
+  package: string;
+  name: string;
+  os: string;
+};
 
 export async function getApps({
   limit,
@@ -45,7 +46,6 @@ export async function getApps({
         },
       },
     } as Prisma.AppFindManyArgs;
-
 
     // if limit is not provided, return all apps
     if (limit) {
@@ -89,14 +89,15 @@ export async function getApp(id: string): Promise<App | null> {
 export async function getAllApps(): Promise<AppItemList[]> {
   try {
     const apps = await prisma.app.findMany({
-      select: { id: true, metadata: true, packageName: true },
+      select: { id: true, metadata: true, packageName: true, os: true },
       orderBy: { id: "asc" },
     });
 
-    return apps.map(app => ({
+    return apps.map((app) => ({
       id: app.id,
       package: app.packageName,
       name: app.metadata.name,
+      os: app.os
     }));
   } catch (error) {
     console.error("Failed to fetch apps:", error);
@@ -131,15 +132,16 @@ export async function checkIfAppExists(packageName: string): Promise<boolean> {
       where: { packageName },
     });
 
-    return!! app;
+    return !!app;
   } catch (error) {
     console.error("Failed to check if app exists:", error);
     return false;
   }
 }
 
-
-export async function saveApp(appData: App): Promise<{ ok: boolean, data: App | null }> {
+export async function saveApp(
+  appData: App
+): Promise<{ ok: boolean; data: App | null }> {
   if (!appData || !appData.packageName) return { ok: false, data: null };
 
   try {
@@ -170,6 +172,7 @@ export async function saveApp(appData: App): Promise<{ ok: boolean, data: App | 
           downloads: appData.metadata.downloads,
           url: appData.metadata.url,
         },
+        os: appData.os,
         v: appData.v ?? 0,
       },
     });

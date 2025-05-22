@@ -1,12 +1,24 @@
 "use server";
-import { Prisma, Trace } from "@prisma/client";
+import { Prisma, Trace as TracePrimitive } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
+import { requireAuth } from "../auth";
+
+export type Trace = Prisma.TraceGetPayload<{
+  include: {
+    app: boolean;
+    screens: boolean;
+    task: boolean;
+  };
+}>;
+
 interface GetTracesParams {
   id?: string;
+  userId?: string;
   appId?: string;
   taskId?: string;
+  captureId?: string;
   limit?: number;
   page?: number;
   includes?: Prisma.TraceInclude;
@@ -14,19 +26,23 @@ interface GetTracesParams {
 
 export async function getTraces({
   id,
+  userId,
   appId,
   taskId,
+  captureId,
   limit = 10,
   page = 1,
-  includes = {
-    app: false,
-    screens: false,
-  },
-}: GetTracesParams) {
+  includes = {},
+}: GetTracesParams): Promise<ActionPayload<Trace[]>> {
+  const { app = false, screens = false, task = false } = includes;
   let traces = [];
 
   if (id && !isValidObjectId(id)) {
     return { ok: false, message: "Invalid traceId provided.", data: null };
+  }
+
+  if (userId && !isValidObjectId(userId)) {
+    return { ok: false, message: "Invalid userId provided.", data: null };
   }
 
   if (appId && !isValidObjectId(appId)) {
@@ -37,10 +53,28 @@ export async function getTraces({
     return { ok: false, message: "Invalid taskId provided.", data: null };
   }
 
+  if (captureId && !isValidObjectId(captureId)) {
+    return { ok: false, message: "Invalid captureId provided.", data: null };
+  }
+
+  // Check if user is authenticated if userId is provided
+  if (userId) {
+    const session = await requireAuth();
+
+    if (!session) {
+      return { ok: false, message: "User not authenticated.", data: null };
+    }
+    if (session.user.id !== userId) {
+      return { ok: false, message: "User not authorized.", data: null };
+    }
+  }
+
   const query: Prisma.TraceWhereInput = {
     ...(id ? { id } : {}),
+    ...(userId ? { userId } : {}),
     ...(appId ? { appId } : {}),
     ...(taskId ? { taskId } : {}),
+    ...(captureId ? { captureId } : {}),
   };
 
   try {
@@ -49,8 +83,9 @@ export async function getTraces({
       take: limit,
       skip: (page - 1) * limit,
       include: {
-        // app: includes.app,
-        screens: includes.screens,
+        app,
+        screens,
+        task,
       },
     });
 
@@ -77,34 +112,16 @@ export async function getTraces({
   }
 }
 
-type TraceWithIncludes = Prisma.TraceGetPayload<{
-  include: {
-    app: boolean;
-    screens: boolean;
-    task: boolean;
-  };
-}>;
-
-interface GetTraceParams {
-  includes?: Prisma.TraceInclude;
-}
-
-// export type Trace<
-//   Includes extends Prisma.TraceInclude | undefined = undefined,
-// > = Prisma.TraceGetPayload<{
-//   include: Includes;
-// }>;
-
 export async function getTrace(
   id: string,
-  { includes }: GetTraceParams = {}
-): Promise<ActionPayload<TraceWithIncludes>> {
+  { includes }: { includes?: Prisma.TraceInclude } = {}
+): Promise<ActionPayload<Trace>> {
   const { app = false, screens = false, task = false } = includes || {};
 
   if (!id || !isValidObjectId(id)) {
     return {
       ok: false,
-      message: "Invalid trace ID.",
+      message: "Invalid traceId.",
       data: null,
     };
   }
@@ -146,21 +163,42 @@ export async function getTrace(
   }
 }
 
-interface CreateTraceIncludesParams {
-  includes?: {
-    screens?: boolean;
-    task?: boolean;
-  };
-}
-
 export async function createTrace(
-  data: Prisma.TraceCreateInput,
-  { includes }: CreateTraceIncludesParams = {}
-): Promise<ActionPayload<Trace>> {
-  const { screens = false, task = false } = includes || {};
-  let trace: Trace | null = {} as Trace;
+  data: Prisma.TraceCreateWithoutUserInput,
+  { includes }: { includes?: Prisma.TraceInclude } = {}
+): Promise<ActionPayload<TracePrimitive>> {
+  let trace = {} as TracePrimitive;
+
+  let session = await requireAuth();
+
+  if (!session) {
+    return {
+      ok: false,
+      message: "User not authenticated.",
+      data: null,
+    };
+  }
+
   try {
-    trace = await prisma.trace.create({ data, include: { screens, task } });
+    trace = await prisma.trace.create({
+      data: {
+        ...data,
+        user: { connect: { id: session.user.id } },
+      },
+      include: {
+        app: includes?.app || false,
+        screens: includes?.screens || false,
+        task: includes?.task || false,
+      },
+    });
+
+    if (!trace) {
+      return {
+        ok: false,
+        message: "Failed to create trace.",
+        data: null,
+      };
+    }
 
     return {
       ok: true,
@@ -180,8 +218,8 @@ export async function createTrace(
 export async function updateTrace(
   id: string,
   data: Prisma.TraceUpdateInput
-): Promise<ActionPayload<Trace>> {
-  let trace: Trace | null = {} as Trace;
+): Promise<ActionPayload<TracePrimitive>> {
+  let trace = {} as TracePrimitive;
 
   const query: Prisma.TraceWhereUniqueInput = {
     id,
@@ -192,6 +230,14 @@ export async function updateTrace(
       where: query,
       data,
     });
+
+    if (!trace) {
+      return {
+        ok: false,
+        message: "Failed to update trace.",
+        data: null,
+      };
+    }
 
     return {
       ok: true,
