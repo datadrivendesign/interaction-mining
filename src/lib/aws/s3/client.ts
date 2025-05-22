@@ -12,7 +12,7 @@ export async function uploadToS3(
   const generatePresignedUpload = await generatePresignedUploadURL(
     prefix,
     key,
-    "image/png"
+    contentType
   );
 
   if (!generatePresignedUpload.ok) {

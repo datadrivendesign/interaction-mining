@@ -62,6 +62,7 @@ export default function Page({}: {}) {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
   };
 
+  console.log(process.env.NEXT_PUBLIC_DEPLOYMENT_URL)
   return (
     <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
       <Card className="w-full max-w-screen-sm">
@@ -107,7 +108,8 @@ export default function Page({}: {}) {
             <h2 className="font-semibold mb-2">Uploaded files</h2>
             {!isUploadListLoading && uploadList.length > 0 ? (
               <ul className="flex flex-col w-full rounded-xl border border-neutral-200 dark:border-neutral-800">
-                {uploadList.map((file: any, index: number) => (
+                {`${uploadList.length} files uploaded!`}
+                {/* {uploadList.map((file: any, index: number) => (
                   <li
                     key={index}
                     className="flex justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-none"
@@ -132,7 +134,7 @@ export default function Page({}: {}) {
                       </button>
                     </DeleteUploadDialog>
                   </li>
-                ))}
+                ))} */}
               </ul>
             ) : (
               <div className="flex flex-col justify-center items-center w-full p-4 md:p-6 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-muted-foreground transition-colors duration-150 ease-in-out cursor-pointer">

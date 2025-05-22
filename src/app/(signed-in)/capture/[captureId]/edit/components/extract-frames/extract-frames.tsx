@@ -82,28 +82,46 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           scrollDeltaY,
           description: "",
         };
+
+        function translateTypeAndroidToODIM(
+          androidType: string,
+          scrollDeltaX: number | null,
+          scrollDeltaY: number | null
+        ): string {
+          console.log(`type: ${type} scrollDeltaX: ${scrollDeltaX} scrollDeltaY: ${scrollDeltaY}`)
+          if (androidType === "TYPE_VIEW_CLICKED" 
+              || androidType == "TYPE_VIEW_SELECTED") {
+            return "tap";
+          } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
+            return "touch and hold";
+          } else if (androidType === "TYPE_VIEW_SCROLLED") {
+            if (scrollDeltaX !== null && scrollDeltaY !== null) {
+              // get direction of scroll/swipe w. dominant delta direction
+              if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+                return "swipe right";
+              } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+                return "swipe left";
+              } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+                return "swipe up";
+              } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+                return "swipe down";
+              } else {
+                return "other";
+              }
+            }
+          }
+          // fall through case, don't know what will reach
+          return "other";
+        }
+
         if (!type) {
           screenGesture.type = "other";
-        } else if (type === "TYPE_VIEW_CLICKED") {
-          screenGesture.type = "Tap";
-        } else if (type === "TYPE_VIEW_LONG_CLICKED") {
-          screenGesture.type = "Touch and hold";
-        } else if (type === "TYPE_VIEW_SCROLLED") {
-          // get directionality of scroll/swipe,choose dominant delta direction
-          if (scrollDeltaX! > 0 && scrollDeltaX! > scrollDeltaY!) {
-            screenGesture.type = "Swipe right";
-          } else if (scrollDeltaX! < 0 && scrollDeltaX! < scrollDeltaY!) {
-            screenGesture.type = "Swipe left";
-          } else if (scrollDeltaY! > 0 && scrollDeltaY! > scrollDeltaX!) {
-            screenGesture.type = "Swipe up";
-          } else if (scrollDeltaY! < 0 && scrollDeltaY! < scrollDeltaX!) {
-            screenGesture.type = "Swipe down";
-          } else {
-            // fall through case, don't know what will reach
-            screenGesture.type = "Swipe";
-          }
         } else {
-          screenGesture.type = "other";
+          screenGesture.type = translateTypeAndroidToODIM(
+            type, 
+            scrollDeltaX,
+            scrollDeltaY
+          )
         }
         return screenGesture;
       }
@@ -203,6 +221,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   const gestures = watchGestures as { [key: string]: ScreenGesture };
   const redactions = watchRedactions as { [key: string]: Redaction[] }
 
+  const galleryBottomRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [timelineRef, timelineMeasure] = useMeasure();
 
@@ -219,6 +238,10 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
       "screens",
       [...frames, f].sort((a, b) => a.timestamp - b.timestamp)
     );
+    // snap to the bottom of the gallery
+    requestAnimationFrame(() => {
+      galleryBottomRef.current?.scrollIntoView({ behavior: "auto" });
+    });
   };
 
   /**
@@ -365,6 +388,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={67}>
           <FrameGalleryIOS
+            bottomRef={galleryBottomRef}
             frames={frames}
             gestures={gestures}
             redactions={redactions}

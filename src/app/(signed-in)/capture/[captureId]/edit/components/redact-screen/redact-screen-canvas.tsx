@@ -25,6 +25,8 @@ export type vhBox = {
   y: number;
   width: number;
   height: number;
+  content_desc: string;
+  text_field: string;
   class: string;
   id: string;
 };
@@ -158,6 +160,8 @@ export default function RedactScreenCanvas({
         const height = bottom - top;
         const x: number = left;
         const y: number = top;
+        const content_desc = "content-desc" in node ? node["content-desc"] : "";
+        const text_field = "text_field" in node ? node["text_field"] : "";
         // If rootBounds is not set, this is the root node
         if (!rootBounds) {
           rootBounds = { x, y, width, height };
@@ -171,6 +175,8 @@ export default function RedactScreenCanvas({
           y,
           width,
           height,
+          content_desc,
+          text_field,
           class: node.class_name,
           id: node.id || `null_id_${Math.random().toString()}`,
         });

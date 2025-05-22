@@ -148,11 +148,13 @@ export function FrameGalleryAndroid({
 }
 
 export function FrameGalleryIOS({
+  bottomRef,
   frames,
   gestures,
   redactions,
   setTime,
 }: {
+  bottomRef: React.Ref<HTMLDivElement>;
   frames: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [key: string]: Redaction[]};
@@ -250,6 +252,7 @@ export function FrameGalleryIOS({
           </motion.div>
         ))}
       </AnimatePresence>
+      <div ref={bottomRef} />
     </div>
   );
 }
