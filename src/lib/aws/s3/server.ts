@@ -119,3 +119,56 @@ export async function deleteFromS3(fileKey: string) {
     return { ok: false, message: "Failed to delete file.", data: null };
   }
 }
+
+/**
+ * A server version of uploadToS3. This is needed because Android 
+ * upload API route is running on a server component.
+ * @param file Android screen JSON data formed into a File
+ * @param prefix S3 bucket prefix
+ * @param key S3 bucket key
+ * @param contentType MIME type of uploaded content (should be JSON normally)
+ * @returns 
+ */
+export async function uploadAndroidAPIDataToS3(
+  file: File,
+  prefix: string,
+  key: string,
+  contentType: string
+): Promise<ActionPayload<any>> {
+  const generatePresignedUpload = await generatePresignedUploadURL(
+    prefix,
+    key,
+    contentType
+  );
+
+  if (!generatePresignedUpload.ok) {
+    return {
+      ok: false,
+      message: "Failed to generate presigned URL",
+      data: null,
+    };
+  }
+
+  const uploadData = generatePresignedUpload.data;
+
+  const res = await fetch(uploadData.uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": contentType },
+  });
+
+  if (!res.ok) {
+    console.error("S3 upload failed", await res.text());
+    return {
+      ok: false,
+      message: "Failed to upload file",
+      data: null,
+    };
+  }
+
+  return {
+    ok: true,
+    message: "File uploaded successfully",
+    data: uploadData,
+  };
+}

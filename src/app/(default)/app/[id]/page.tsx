@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getApp, getTraces } from "@/lib/actions";
 import { GalleryRoot, Gallery } from "./components/gallery";
+import { prettyOS } from "@/lib/utils";
 
 export default async function AppPage({
   params,
@@ -44,7 +45,7 @@ export default async function AppPage({
               className="rounded-xl drop-shadow-md mr-4"
             />
             <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-normal truncate">
-              {app?.metadata.name}
+              {app?.metadata.name} {`(${prettyOS(app.os)})`}
             </h1>
           </div>
           <div className="w-full h-0.5 bg-neutral-100 dark:bg-neutral-900 rounded-full mb-0 lg:mb-4" />

@@ -6,7 +6,7 @@ import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { uploadToS3 } from "../aws";
+import { uploadAndroidAPIDataToS3 } from "../aws";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
@@ -192,11 +192,11 @@ export async function handleAndroidScreenUpload(data: {
   try {
     // Upload files to S3
     // create s3 json
-    const file = new File([JSON.stringify(data.vh)], `${data.created}.json`, {
+    const file = new File([JSON.stringify(data)], `${data.created}.json`, {
       type: "application/json",
     });
     const [res] = await Promise.all([
-      uploadToS3(
+      uploadAndroidAPIDataToS3(
         file,
         `uploads/${data.captureId}`,
         `${data.created}.json`,

@@ -16,6 +16,7 @@ export type AppItemList = {
   id: string;
   package: string;
   name: string;
+  os: string;
 };
 
 export async function getApps({
@@ -88,7 +89,7 @@ export async function getApp(id: string): Promise<App | null> {
 export async function getAllApps(): Promise<AppItemList[]> {
   try {
     const apps = await prisma.app.findMany({
-      select: { id: true, metadata: true, packageName: true },
+      select: { id: true, metadata: true, packageName: true, os: true },
       orderBy: { id: "asc" },
     });
 
@@ -96,6 +97,7 @@ export async function getAllApps(): Promise<AppItemList[]> {
       id: app.id,
       package: app.packageName,
       name: app.metadata.name,
+      os: app.os
     }));
   } catch (error) {
     console.error("Failed to fetch apps:", error);
@@ -170,6 +172,7 @@ export async function saveApp(
           downloads: appData.metadata.downloads,
           url: appData.metadata.url,
         },
+        os: appData.os,
         v: appData.v ?? 0,
       },
     });

@@ -41,15 +41,17 @@ export default function FrameTimeline({
 
   // Start scrub on pointer down
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
     stripRef.current?.setPointerCapture(e.pointerId);
     setDragging(true);
     const t = getTimeFromEvent(e);
     if (t !== undefined) onSetTime(t);
-    if (!isPlaying) onPlayPause();
+    if (isPlaying) onPlayPause();
   };
 
   // Scrub on pointer move when dragging
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
     if (!dragging) return;
     const t = getTimeFromEvent(e);
     if (t !== undefined) onSetTime(t);
@@ -62,12 +64,12 @@ export default function FrameTimeline({
   };
 
   const handleSkipForward = () => {
-    const newTime = Math.min(currentTime + 5, videoDuration);
+    const newTime = Math.min(currentTime + 2, videoDuration);
     onSetTime(newTime);
   };
 
   const handleSkipBackward = () => {
-    const newTime = Math.max(currentTime - 5, 0);
+    const newTime = Math.max(currentTime - 2, 0);
     onSetTime(newTime);
   };
 
@@ -121,7 +123,10 @@ export default function FrameTimeline({
       </div>
 
       {/* Capture */}
-      <button className="inline-flex items-center px-4" onClick={onCapture}>
+      <button 
+        className="inline-flex items-center px-4 cursor-pointer" 
+        onClick={onCapture}
+      >
         <Camera className="mr-1" size={20} />
         Capture
       </button>
