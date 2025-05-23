@@ -20,7 +20,13 @@ ODIM uses AWS S3 to store trace data.
       {
         "AllowedHeaders": ["*"],
         "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
-        "AllowedOrigins": ["http://localhost:3000", "..."],
+        // local testing requires local ip addresses, if deployed
+        "AllowedOrigins": [
+            "http://localhost:3000", 
+            "http://192.168.x.x:3000", 
+            "https://your-deployed-app.amplifyapp.com",
+            "..."
+        ],
         "ExposeHeaders": []
       }
     ]
@@ -82,14 +88,20 @@ To build the Android app:
 
 1. Install [Android Studio](https://developer.android.com/studio)
 2. Install **SDK 34** via `Tools > SDK Manager`
+   - *Take note of the **Android SDK path** shown in the SDK Manager — you'll need to provide this when running the build script.*
 3. Install **Java JDK 18**:
     - Go to `Settings > Build, Execution, Deployment > Build Tools > Gradle`
     - Set your JDK to version 18
     - [JDK install guide](https://developer.android.com/build/jdks)
 
+**The script will prompt you for the variable `NEXT_PUBLIC_DEPLOYMENT_URL`, which the web app uses to tell your Android app where to send data.**
+- If you’re deploying your ODIM web app, use your deployed domain (e.g., https://your-app.amplifyapp.com)
+- If you’re testing locally, enter your computer’s local IP address with port 3000 (e.g., http://192.168.0.100:3000)
+- For help finding your local IP address, see the section: [API URL Prefix (Mobile - Web Connection)](#api-url-prefix-mobile---web-connection)
+
 ### Running the Setup Script
 
-Run the script:
+Download and run our script:
 
 ```shell
 curl -o- https://dribosc0et3qr.cloudfront.net/install.sh | bash;
@@ -102,6 +114,7 @@ The script will step you through the setup of both the web app and Android data 
 The script will prompt you to enter the following environment variables:
 
 ```shell
+NEXT_PUBLIC_DEPLOYMENT_URL=$NEXT_PUBLIC_DEPLOYMENT_URL
 DATABASE_URL=$DATABASE_URL
 AWS_REGION=$AWS_REGION
 AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
@@ -111,9 +124,8 @@ NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
 ```
-📝 _Developer Note: Some variables like `AWS_BUCKET_PREFIX`, `DB_NAME`, or `AWS_BUCKET_NAME` may be unused and can be safely omitted._
 
-#### API URL Prefix (Mobile ↔ Web Connection)
+#### API URL Prefix (Mobile - Web Connection)
 
 To build and configure the Android app, the script will also prompt you to enter the **URL domain where the app will upload trace data**.
 
@@ -138,10 +150,13 @@ API_URL_PREFIX=http://192.168.x.x:3000
 
 ### Optional: Deploying the Web App
 
-After setup, you can deploy the web interface. We currently use **AWS Amplify**. See:
-
+After setup, you can deploy the web interface. We currently use **AWS Amplify**. See these deploy guides:
 - [Next.js Deployment Guide](https://nextjs.org/docs/app/getting-started/deploying)
 - [AWS Amplify Guide for Next.js](https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components)
+
+### Optional: Deploying the Mobile App
+
+*Security Note*: Use `./gradlew assembleDebug` only for local development. Debug builds allow cleartext (HTTP) traffic, which poses a security risk in production. Use `./gradlew assembleRelease` for production APKs, which block insecure HTTP calls by default.
 
 ### ✅ Final Notes
 
