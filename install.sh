@@ -150,6 +150,8 @@ read AWS_SECRET_ACCESS_KEY < /dev/tty
 echo -e "${BLUE}👉 AWS upload bucket:${NC} \c"
 read AWS_UPLOAD_BUCKET < /dev/tty
 
+echo -e "${BLUE}👉 Enter the Web Deployment URL (e.g., http://192.168.x.x:3000 for local dev or https://your-domain.com):${NC} \c"
+read NEXT_PUBLIC_DEPLOYMENT_URL < /dev/tty
 echo -e "${BLUE}👉 NextAuth secret:${NC} \c"
 read NEXTAUTH_SECRET < /dev/tty
 echo -e "${BLUE}👉 Google client ID:${NC} \c"
@@ -161,7 +163,7 @@ ENV_FILE=".env.local"
 
 cat <<EOF > .env.local
 # >>>>> Localhost configuration
-NEXT_PUBLIC_DEPLOYMENT_URL="localhost:3000"
+NEXT_PUBLIC_DEPLOYMENT_URL=$NEXT_PUBLIC_DEPLOYMENT_URL
 
 # >>>>> Database configuration
 DATABASE_NAME=$DATABASE_NAME
@@ -213,6 +215,27 @@ git clone "$Mobile_REPO_URL"
 echo "Repository cloned to $Mobile_REPO_NAME"
 
 cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
+
+# Ask user for SDK path if ANDROID_HOME is not already set
+if [ -z "$ANDROID_HOME" ]; then
+  echo -e "${BLUE}👉 Enter your Android SDK path (e.g., /home/yourname/Android/Sdk):${NC} \c"
+  read SDK_PATH < /dev/tty
+
+  # Fallback to default if empty
+  if [ -z "$SDK_PATH" ]; then
+    SDK_PATH="$HOME/Android/Sdk"
+  fi
+
+  export ANDROID_HOME="$SDK_PATH"
+else
+  SDK_PATH="$ANDROID_HOME"
+fi
+
+# Optional: add Android SDK tools to PATH
+export PATH="$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH"
+
+# Generate local.properties
+echo "sdk.dir=$SDK_PATH" > local.properties
 
 echo "Let's set up the URL domain where the Android app will upload to (or press Enter to use the default ODIM URL):"
 echo -e "${BLUE}👉 API URL Prefix:${NC} \c"

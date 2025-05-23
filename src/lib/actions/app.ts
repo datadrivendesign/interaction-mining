@@ -124,13 +124,19 @@ export async function getAppByPackageName(
   }
 }
 
-export async function checkIfAppExists(packageName: string): Promise<boolean> {
+export async function checkIfAppExists(
+  packageName: string, 
+  os: string
+): Promise<boolean> {
   if (!packageName) return false;
 
   try {
     const app = await prisma.app.findUnique({
-      where: { packageName },
+      where: {
+        packageName_os: { packageName, os }
+      },
     });
+    console.log(app)
 
     return !!app;
   } catch (error) {
@@ -148,6 +154,7 @@ export async function saveApp(
     const existingApp = await prisma.app.findFirst({
       where: {
         packageName: appData.packageName,
+        os: appData.os
       },
     });
 

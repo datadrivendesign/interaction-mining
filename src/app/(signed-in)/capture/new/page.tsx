@@ -30,7 +30,7 @@ export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  enum OS {
+  const enum OS {
     IOS = "ios",
     ANDROID = "android",
   }
@@ -81,7 +81,7 @@ export default function CaptureNewPage() {
     if (!newAppId) return;
 
     console.log("Check if app exists:", newAppId);
-    const existing = await checkIfAppExists(newAppId);
+    const existing = await checkIfAppExists(newAppId, platform);
     if (existing) {
       toast.success("App already exists!");
       setApp(newAppId);
@@ -145,13 +145,13 @@ export default function CaptureNewPage() {
   : 3;
 
   return (
-    <div className="p-8 max-w-2xl mt-10 mx-auto space-y-8 bg-neutral-900 rounded-lg hover:shadow-2xl transition-shadow duration-300">
+    <div className="p-8 max-w-2xl mt-10 mx-auto space-y-8 bg-neutral-150 dark:bg-neutral-900 rounded-lg hover:shadow-2xl transition-shadow duration-300">
       <ul className="flex justify-between text-center text-sm text-muted-foreground font-medium mb-4">
         {["Platform", "Select App", "Describe Task"].map((label, index) => (
         <li
           key={label}
           className={`flex-1 transition-all duration-300 rounded-lg px-2 py-2
-            ${step > index ? "bg-neutral-800 text-foreground shadow-lg mr-2" : ""}
+            ${step > index ? "bg-neutral-200 dark:bg-neutral-800 text-foreground shadow-lg mr-2 dark:text-white" : ""}
           `}
         >
           <div className="text-lg font-bold">
@@ -163,14 +163,14 @@ export default function CaptureNewPage() {
       </ul>
 
       <div>
-        <h1 className="text-4xl font-extrabold tracking-tight">
+        <h1 className="text-4xl font-extrabold tracking-tight dark:text-white">
           Start Capture Session
         </h1>
         <p className = "mt-4">
         
         </p>
-        <div className = "p-1 rounded-lg mx-auto space-y-8 bg-neutral-800">
-          <p className="text-muted-foreground ml-4 mt-2 mb-2">
+        <div className = "p-1 rounded-lg mx-auto space-y-8 bg-neutral-100 dark:bg-neutral-800">
+          <p className="text-muted-foreground ml-4 mt-2 mb-2 dark:text-white">
             Add your own tasks and contribute to ODIM. Follow the steps below to get started.
           </p>
         </div> 
@@ -180,7 +180,7 @@ export default function CaptureNewPage() {
       <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
 
        
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-white">
           <Label>Platform</Label>
           <ToggleGroup
             type="single"
@@ -192,19 +192,19 @@ export default function CaptureNewPage() {
             }}
             className="w-full"
           >
-            <ToggleGroupItem value={OS.ANDROID} className="w-full">
+            <ToggleGroupItem value={OS.ANDROID} className="w-full dark:text-neutral-200 cursor-pointer">
               Android
             </ToggleGroupItem>
-            <ToggleGroupItem value={OS.IOS} className="w-full">
+            <ToggleGroupItem value={OS.IOS} className="w-full dark:text-neutral-200 cursor-pointer">
               iOS
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-white">
           <Label htmlFor="app">1. Search or Select App</Label>
           <Select value={app} onValueChange={setApp} required>
-            <SelectTrigger id="app">
+            <SelectTrigger id="app" className="cursor-pointer">
               <SelectValue placeholder="Select an app" />
             </SelectTrigger>
             <SelectContent>
@@ -222,7 +222,7 @@ export default function CaptureNewPage() {
 
         <Button
           variant="link"
-          className="text-sm p-0 mt-1"
+          className="text-sm p-0 mt-1 dark:text-white"
           onClick={(e) => {
             e.preventDefault();
             setShowAddApp(true);
@@ -250,7 +250,7 @@ export default function CaptureNewPage() {
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 dark:text-white">
           <Label htmlFor="description">
             2. Describe what task you'll perform in the app
           </Label>
@@ -262,7 +262,7 @@ export default function CaptureNewPage() {
             required
           />
         </div>
-          <Button type="submit">Start Capture</Button>
+          <Button className="dark:bg-neutral-50 dark:text-black" type="submit">Start Capture</Button>
       
       </form>
   </div>
