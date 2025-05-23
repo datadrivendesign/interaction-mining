@@ -240,7 +240,7 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
     );
     // snap to the bottom of the gallery
     requestAnimationFrame(() => {
-      galleryBottomRef.current?.scrollIntoView({ behavior: "auto" });
+      galleryBottomRef.current?.scrollIntoView({ behavior: "smooth", block: 'start' });
     });
   };
 
@@ -309,12 +309,22 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
       thumbVideo.crossOrigin = "anonymous";
       thumbVideo.preload = "metadata";
       thumbVideo.src = captures[0].fileUrl;
+      // need to load or video will not play to extract frame
+      thumbVideo.load();
       // Wait for metadata to load on the offscreen video
       await new Promise<void>((res) =>
         thumbVideo.addEventListener("loadedmetadata", () => res(), {
           once: true,
         })
       );
+      console.log("canplay")
+      // addition check since call happens before video loads on Safari
+      await new Promise<void>((res) =>
+        thumbVideo.addEventListener("canplay", () => res(), { 
+          once: true 
+        })
+      );
+      console.log("done")
       const videoWidth = thumbVideo.videoWidth;
       const videoHeight = thumbVideo.videoHeight;
 
