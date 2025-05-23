@@ -136,7 +136,6 @@ export async function checkIfAppExists(
         packageName_os: { packageName, os }
       },
     });
-    console.log(app)
 
     return !!app;
   } catch (error) {

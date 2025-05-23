@@ -317,14 +317,12 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
           once: true,
         })
       );
-      console.log("canplay")
       // addition check since call happens before video loads on Safari
       await new Promise<void>((res) =>
         thumbVideo.addEventListener("canplay", () => res(), { 
           once: true 
         })
       );
-      console.log("done")
       const videoWidth = thumbVideo.videoWidth;
       const videoHeight = thumbVideo.videoHeight;
 
