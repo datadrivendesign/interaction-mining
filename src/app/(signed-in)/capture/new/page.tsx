@@ -252,7 +252,7 @@ export default function CaptureNewPage() {
 
         <div className="space-y-2 dark:text-white">
           <Label htmlFor="description">
-            2. Describe what task you'll perform in the app
+            2. Describe what task you&apos;ll perform in the app
           </Label>
           <Textarea
             id="description"
