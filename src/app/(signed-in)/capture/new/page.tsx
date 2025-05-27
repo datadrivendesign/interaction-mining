@@ -10,7 +10,8 @@ import {
   getIosApp,
   checkIfAppExists,
   saveApp,
-  AppItemList
+  AppItemList,
+  AppInput
 } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -50,12 +51,14 @@ export default function CaptureNewPage() {
     fetchApps();
   }, []);
 
-  function convertToPrismaApp(data: any): App {
+  function convertToPrismaApp(data: any): AppInput {
     const app = {
       packageName: data.appId,
       category: {
-        id: platform == OS.ANDROID ? data.genre : `${data.primaryGenreId}`,
-        name: platform == OS.ANDROID ? data.genreId : data.primaryGenre,
+        id: platform == OS.ANDROID ? `${data.genre}` : `${data.primaryGenreId}`,
+        name: platform == OS.ANDROID 
+          ? `${data.genreId}`
+          : `${data.primaryGenre}`,
       },
       metadata: {
         company: data.developer ?? "unknown",
@@ -65,15 +68,14 @@ export default function CaptureNewPage() {
         icon: data.icon ?? "unknown",
         rating: data.score ?? -1,
         reviews: data.reviews ?? -1,
-        genre:
-          platform == OS.ANDROID
-            ? (data.categories.map((c: any) => c.name) ?? [])
-            : (data.genres ?? []),
+        genre: platform == OS.ANDROID
+          ? (data.categories.map((c: any) => c.name) ?? [])
+          : (data.genres ?? []),
         downloads: platform == OS.ANDROID ? data.installs : "-1",
         url: data.url ?? "unknown",
       },
       os: platform
-    } as App;
+    } as AppInput;
     return app;
   }
 
@@ -188,6 +190,7 @@ export default function CaptureNewPage() {
             onValueChange={(selectPlatform) => {
               if (selectPlatform) {
                 setPlatform(selectPlatform as OS);
+                setApp("");
               }
             }}
             className="w-full"
