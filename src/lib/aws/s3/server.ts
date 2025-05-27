@@ -4,10 +4,13 @@ import {
   PutObjectCommand,
   ListObjectsV2Command,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { s3 } from "..";
+import { lambda, s3 } from "..";
 import { ActionPayload } from "@/lib/actions/types";
+import { InvokeCommand } from "@aws-sdk/client-lambda";
+import { ListedFiles } from "@/lib/actions";
 
 /**
  * Generates a presigned URL for uploading a file to S3.
@@ -21,7 +24,7 @@ export async function generatePresignedUploadURL(
   contentType: string
 ): Promise<ActionPayload<any>> {
   const command = new PutObjectCommand({
-  Bucket: process.env.AWS_UPLOAD_BUCKET!,
+    Bucket: process.env.AWS_UPLOAD_BUCKET!,
     Key: `${prefix}/${fileName}`,
     ContentType: contentType,
   });
@@ -35,7 +38,7 @@ export async function generatePresignedUploadURL(
         uploadUrl: url,
         filePrefix: prefix,
         fileKey: `${prefix}/${fileName}`,
-        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${prefix}/${fileName}`,
+        fileUrl: `https://${process.env.AWS_CLOUDFRONT_URL}/${prefix}/${fileName}`,
       },
     };
   } catch (err) {
@@ -53,7 +56,9 @@ export async function generatePresignedUploadURL(
  * @param key The S3 object key to fetch.
  * @returns
  */
-export async function getFromS3(key: string): Promise<ActionPayload<any>> {
+export async function listFromS3(
+  key: string
+): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const command = new ListObjectsV2Command({
       Bucket: process.env.AWS_UPLOAD_BUCKET!,
@@ -69,10 +74,16 @@ export async function getFromS3(key: string): Promise<ActionPayload<any>> {
       };
     }
 
+    const filePayload = files.Contents.map((file: any) => ({
+      fileKey: file.Key,
+      fileName: file.Key.split("/").pop() || "",
+      fileUrl: `${process.env._AWS_CLOUDFRONT_URL}/${file.Key}`,
+    }));
+
     return {
       ok: true,
       message: "File(s) found",
-      data: files.Contents,
+      data: filePayload,
     };
   } catch (err) {
     console.error("Error fetching file from S3:", err);
