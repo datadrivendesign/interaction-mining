@@ -1,25 +1,27 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import throttle from "lodash/throttle";
 import useSWR from "swr";
 import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
-import { Camera, ListRestart } from "lucide-react";
+import { ListRestart } from "lucide-react";
 import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
 import { TraceFormData } from "../types";
 
+import { ScreenGesture } from "@prisma/client";
 import { ListedFiles, CaptureScreenFile, getCaptureFiles } from "@/lib/actions";
+import { FrameData } from "../types";
+import FrameTimeline from "./extract-frames-timeline";
+import { extractVideoFrame } from "./utils";
+
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { FrameData } from "../types";
-import { ScreenGesture } from "@prisma/client";
-import FrameTimeline from "./extract-frames-timeline";
-import { useMeasure } from "@uidotdev/usehooks";
-import { set } from "mongoose";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export async function fileFetcher([_, captureId]: [string, string]) {
   let res = await getCaptureFiles(captureId);
@@ -200,8 +202,10 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   const frames = watchScreens as FrameData[];
   const gestures = watchGestures as { [key: string]: ScreenGesture };
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [timelineRef, timelineMeasure] = useMeasure();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const rafRef = useRef<number>(0);
+
+  // Removed useMeasure import and timelineRef from here, as timeline handles it now
 
   // Fetch file data
   const { data: captures = [], isLoading: isCapturesLoading } = useSWR(
@@ -218,115 +222,74 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
     );
   };
 
-  /**
-   * Extracts frame from the video at current timestamp using WebCodecs API
-   * @param video HTML object of video element to extract from
-   */
-  async function extractVideoFrame(
-    video: HTMLVideoElement,
-    t: number,
-    scale: number = 1
-  ): Promise<FrameData> {
-    // Seek to desired time without affecting UI playback
-    const originalTime = video.currentTime;
-    const seeking = new Promise<void>((res) => {
-      const onSeeked = () => {
-        video.removeEventListener("seeked", onSeeked);
-        res();
-      };
-      video.addEventListener("seeked", onSeeked);
-      video.currentTime = t;
-    });
-    await seeking;
-    // Create a VideoFrame from the video element
-    const vf = new VideoFrame(video);
-    // Create an ImageBitmap with resizing
-    const bitmap = await createImageBitmap(vf, {
-      resizeWidth: Math.floor(vf.codedWidth * scale),
-      resizeHeight: Math.floor(vf.codedHeight * scale),
-    });
-    // Draw onto canvas
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas context error");
-    ctx.drawImage(bitmap, 0, 0);
-    // Cleanup
-    vf.close();
-    bitmap.close();
-    // Restore original time (optional, UI unaffected by offscreen usage)
-    // Return frame data
-    return {
-      id: `${t}-${Math.random()}`,
-      src: canvas.toDataURL(),
-      timestamp: t,
-    };
-  }
-
-  const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [thumbnails, setThumbnails] = useState<FrameData[]>([]);
 
-  // Load thumbnails
-  const onLoadedMetadata = useCallback(
-    async (e: React.SyntheticEvent<HTMLVideoElement>) => {
-      const video = e.currentTarget;
-      if (!videoRef.current) return;
+  useEffect(() => {
+    // Start a loop to update currentTime on each animation frame while playing
+    if (isPlaying) {
+      const loop = () => {
+        if (videoRef.current) {
+          setCurrentTime(videoRef.current.currentTime);
+        }
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      rafRef.current = requestAnimationFrame(loop);
+      return () => {
+        cancelAnimationFrame(rafRef.current);
+      };
+    }
+  }, [isPlaying]);
 
-      setIsVideoLoading(false);
+  // Imperative seek with fastSeek support, throttled to ~120fps
+  const seek = (t: number) => {
+    // Sanity check
+    if (!Number.isFinite(t)) return;
 
-      // Create an offscreen video element to avoid disrupting the UI player
-      const thumbVideo = document.createElement("video");
-      thumbVideo.crossOrigin = "anonymous";
-      thumbVideo.preload = "metadata";
-      thumbVideo.src = captures[0].fileUrl;
-      // Wait for metadata to load on the offscreen video
-      await new Promise<void>((res) =>
-        thumbVideo.addEventListener("loadedmetadata", () => res(), {
-          once: true,
-        })
-      );
-      const videoWidth = thumbVideo.videoWidth;
-      const videoHeight = thumbVideo.videoHeight;
+    // Clamp to video duration
+    if (t < 0) {
+      t = 0;
+    } else if (t > videoDuration) {
+      t = videoDuration;
+    }
 
-      const timelineWidth = timelineMeasure.width ?? 0;
-      const timelineHeight = timelineMeasure.height ?? 0;
+    t = Math.max(0, Math.min(t, videoDuration));
 
-      const thumbnailHeight = timelineHeight;
-      const thumbnailWidth = (videoWidth / videoHeight) * thumbnailHeight;
+    const video = videoRef.current;
+    if (!video) return;
+    video.pause();
 
-      const numSteps = Math.ceil(timelineWidth / thumbnailWidth);
-
-      const thumbs = Array.from({ length: numSteps }, (_, i) => {
-        const t = (thumbVideo.duration / numSteps) * i;
-        return extractVideoFrame(thumbVideo, t, thumbnailWidth / videoWidth);
-      });
-      const thumbsRes = await Promise.all(thumbs);
-
-      console.log("Thumbnails loaded", thumbsRes);
-
-      setThumbnails(thumbsRes);
-      setVideoDuration(thumbVideo.duration);
-    },
-    [timelineMeasure, captures]
-  );
-
-  const handleSetTime = (t: number) => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = t;
-    if (videoRef.current.ended || t === videoDuration) videoRef.current.pause();
+    video.fastSeek(t);
     setCurrentTime(t);
   };
 
+  const handleSetTime = useMemo(
+    () => throttle((t: number) => seek(t), 1000 / 120),
+    [videoRef, seek]
+  );
+
   // Play/Pause toggle
-  const handlePlayPause = () => {
-    const vid = videoRef.current;
-    if (!vid) return;
-    vid.paused ? vid.play() : vid.pause();
+  const handlePlayPause = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.paused ? await video.play() : video.pause();
   };
+
+  useHotkeys("space", async (e) => {
+    e.preventDefault();
+    await handlePlayPause();
+  });
+
+  useHotkeys("left", (e) => {
+    e.preventDefault();
+    handleSetTime(currentTime - 5);
+  });
+
+  useHotkeys("right", (e) => {
+    e.preventDefault();
+    handleSetTime(currentTime + 5);
+  });
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -343,18 +306,18 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
             ) : (
               <video
                 crossOrigin="anonymous"
+                preload="metadata"
                 className="max-w-full max-h-full rounded-lg object-contain"
                 controls={false}
                 ref={videoRef}
-                onTimeUpdate={(e) =>
-                  setCurrentTime(e.currentTarget.currentTime)
-                }
-                onLoadedMetadata={onLoadedMetadata}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
-                typeof="video/mp4"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  setVideoDuration(video.duration);
+                }}
               >
-                <source src={captures[0].fileUrl} type="video/mp4" />
+                <source src={captures[0].fileUrl} />
               </video>
             )}
           </div>
@@ -369,14 +332,13 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
         </ResizablePanel>
       </ResizablePanelGroup>
       <FrameTimeline
-        ref={timelineRef}
-        thumbnails={thumbnails}
+        src={captures[0] ? captures[0].fileUrl : ""}
         currentTime={currentTime}
         videoDuration={videoDuration}
         isPlaying={isPlaying}
-        onSetTime={handleSetTime}
-        onPlayPause={handlePlayPause}
-        onCapture={handleCaptureFrame}
+        handleSetTime={handleSetTime}
+        handlePlayPause={handlePlayPause}
+        handleCapture={handleCaptureFrame}
       />
     </div>
   );

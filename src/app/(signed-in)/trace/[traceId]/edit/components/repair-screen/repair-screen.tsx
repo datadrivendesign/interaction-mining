@@ -130,11 +130,7 @@ export const gestureOptions = [
   },
 ];
 
-export default function RepairScreen({
-  trace,
-}: {
-  trace: any;
-}) {
+export default function RepairScreen({ trace }: { trace: any }) {
   const [watchScreens, watchVHs, watchGestures] = useWatch({
     name: ["screens", "vhs", "gestures"],
   });
@@ -290,7 +286,7 @@ function Filmstrip({
           <Image
             key={screen.id}
             src={screen.src}
-            alt="gallery"
+            alt="Gallery image"
             draggable={false}
             className="h-full w-auto object-contain"
             width={0}

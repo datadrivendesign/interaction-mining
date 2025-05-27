@@ -149,7 +149,7 @@ export function FrameGalleryIOS({
   };
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6">
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6 overflow-auto">
       <AnimatePresence mode="popLayout">
         {frames.map((frame, index) => (
           <motion.div

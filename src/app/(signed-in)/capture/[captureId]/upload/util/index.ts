@@ -1,12 +1,9 @@
-import {
-  getCapture,
-  getIosApp,
-  getCaptureFiles,
-} from "@/lib/actions";
+import { getCapture, getIosApp, getCaptureFiles } from "@/lib/actions";
 
 import { mutate } from "swr";
 import { toast } from "sonner";
-import { deleteFromS3, uploadToS3 } from "@/lib/aws";
+import { deleteFromS3, listFromS3, uploadToS3 } from "@/lib/aws";
+import { extname } from "path";
 
 export enum CaptureSWROperations {
   CAPTURE = "capture",
@@ -14,7 +11,7 @@ export enum CaptureSWROperations {
 }
 
 export async function handleUploadFile(captureId: string, formData: FormData) {
-  const file = formData.get("file") as File;
+  let file = formData.get("file") as File;
 
   if (!captureId) {
     toast.error("Unexpected error. Please try again.");
@@ -34,8 +31,12 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
 
   try {
     const prefix = `uploads/${captureId}`;
-    const fileName = `${Date.now()}.${file.name.split("/")[file.name.split("/").length - 1]}`;
-    const res = await uploadToS3(file, prefix, fileName, file.type);
+    const res = await uploadToS3(
+      file,
+      prefix,
+      Date.now().toString() + extname(file.name),
+      file.type
+    );
 
     if (!res.ok) {
       toast.error(`Upload failed: ${res.message}`);
@@ -44,7 +45,7 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
       };
     }
 
-    toast.success("Upload successful");
+    toast.success("File uploaded");
 
     // Optimistically update file list
     mutate(
@@ -96,28 +97,8 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
   }
 }
 
-export async function captureFetcher([_, captureId]: [string, string]) {
-  let res = await getCapture({ id: captureId });
-
-  if (res.ok) {
-    // Fetch app data
-    let appRes = await getIosApp({ appId: res.data.appId });
-
-    if (!appRes.ok) {
-      console.error("Failed to fetch app data:", appRes.message);
-      toast.error("Failed to fetch app data.");
-      return null;
-    }
-    return { capture: res.data, app: appRes.data };
-  } else {
-    console.error("Failed to fetch capture session:", res.message);
-    toast.error("Failed to fetch capture session.");
-    return null;
-  }
-}
-
 export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getCaptureFiles(captureId);
+  let res = await listFromS3(`uploads/${captureId}`);
 
   if (res.ok) {
     return res.data;

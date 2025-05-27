@@ -13,7 +13,7 @@ const robotoMono = Roboto_Mono({
 });
 
 const inter = Inter({
-  subsets: ["latin"],
+  subsets: ["latin-ext"],
   variable: "--font-inter",
 });
 

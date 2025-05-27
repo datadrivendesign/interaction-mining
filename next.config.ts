@@ -18,12 +18,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.mzstatic.com",
       },
+      {
+        protocol: "https",
+        hostname: "d1nrlpeg5tvzyr.cloudfront.net",
+      },
     ],
   },
   experimental: {
     serverActions: {
       bodySizeLimit: "500mb",
     },
+    nodeMiddleware: true,
     viewTransition: true,
     reactCompiler: true,
   },

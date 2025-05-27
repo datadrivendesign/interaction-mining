@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getCapture, getCaptureFiles } from "@/lib/actions";
+import { getCaptureFiles } from "@/lib/actions";
 import {
   Card,
   CardHeader,
@@ -20,18 +20,18 @@ export default async function Layout({
 
   // Check if the capture has any uploaded files
   const render = await getCaptureFiles(captureId).then((res) => {
-    if (res.ok) {
-      if (res.data.length < 1) {
-        return (
-          <>
-            <Error captureId={captureId} />
-          </>
-        );
-      } else {
-        return <>{children}</>;
-      }
-    } else {
+    if (!res.ok) {
       notFound();
+    }
+
+    if (res.data.length === 0) {
+      return (
+        <>
+          <Error captureId={captureId} />
+        </>
+      );
+    } else {
+      return <>{children}</>;
     }
   });
 
@@ -40,7 +40,7 @@ export default async function Layout({
 
 function Error({ captureId }: { captureId: string }) {
   return (
-    <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">
+    <div className="flex w-dvw min-h-[calc(100dvh-64px)] justify-center items-start md:items-center p-8 md:p-16">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>Waiting for files...</CardTitle>

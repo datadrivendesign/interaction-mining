@@ -1,5 +1,9 @@
-import { getCapture, getCaptureFiles } from "@/lib/actions";
-import { deleteFromS3 } from "@/lib/aws";
+import {
+  getCapture,
+  getCaptureFiles,
+  processCaptureFiles,
+} from "@/lib/actions";
+import { deleteFromS3, listFromS3 } from "@/lib/aws";
 
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -7,6 +11,11 @@ import { mutate } from "swr";
 export enum CaptureSWROperations {
   CAPTURE = "capture",
   UPLOAD_LIST = "upload-list",
+  TRANSCODE_LIST = "transcode-list",
+}
+
+export async function handleProcessFiles(captureId: string) {
+  let res = await processCaptureFiles(captureId);
 }
 
 export async function handleDeleteFile(captureId: string, fileKey: string) {
@@ -31,21 +40,8 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
   }
 }
 
-export async function captureFetcher([_, captureId]: [string, string]) {
-  let res = await getCapture({ id: captureId });
-
-  if (res.ok) {
-    return res.data;
-  } else {
-    toast.error("Failed to fetch capture. Try again.");
-    return null;
-  }
-}
-
-export async function fileFetcher([_, captureId]: [string, string]) {
-  let res = await getCaptureFiles(captureId);
-
-  console.log("fileFetcher", res);
+export async function fileFetcher([_, fileKey]: [string, string]) {
+  let res = await listFromS3(fileKey);
 
   if (res.ok) {
     return res.data;
