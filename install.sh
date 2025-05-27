@@ -112,7 +112,7 @@ if [[ -z "$USE_HTTP" ]]; then
   USE_HTTP="y"
 fi
 if [[ "$USE_HTTP" == "y" ]]; then
-  REPO_URL="https://github.com/datadrivendesign/odim-frontend-next"
+  REPO_URL="https://github.com/datadrivendesign/odim-frontend-next.git"
 else
   REPO_URL="git@github.com:datadrivendesign/odim-frontend-next.git"
 fi
