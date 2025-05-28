@@ -19,6 +19,28 @@ export type AppItemList = {
   os: string;
 };
 
+export type AppInput = {
+  packageName: string,
+  category: {
+    id: string,
+    name: string,
+  } | null,
+  metadata: {
+    company: string,
+    name: string,
+    cover: string,
+    description: string,
+    icon: string,
+    rating: number,
+    reviews: number,
+    genre: string[],
+    downloads: string,
+    url: string,
+  },
+  os: "android" | "ios"
+}
+    
+
 export async function getApps({
   limit,
   page = 1,
@@ -145,7 +167,7 @@ export async function checkIfAppExists(
 }
 
 export async function saveApp(
-  appData: App
+  appData: AppInput
 ): Promise<{ ok: boolean; data: App | null }> {
   if (!appData || !appData.packageName) return { ok: false, data: null };
 
@@ -179,7 +201,6 @@ export async function saveApp(
           url: appData.metadata.url,
         },
         os: appData.os,
-        v: appData.v ?? 0,
       },
     });
 
