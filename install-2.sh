@@ -72,7 +72,6 @@ else
   INSTALL_NODE=true
 fi
 
-
 if [[ "$INSTALL_NODE" = true ]]; then
   if command -v brew &>/dev/null; then
     echo "Installing Node.js using brew..."
@@ -167,8 +166,6 @@ fi
 
 # Generate docker-compose.yml for MinIO
 cat <<EOF > docker-compose.yml
-version: '3.7'
-
 volumes:
   minio_data:
 
@@ -209,6 +206,12 @@ if ! command -v mc &>/dev/null; then
   fi
 fi
 echo -e "${GREEN}✔ MinIO Client (mc) detected.${NC}"
+# wait loop to check when MinIO server is ready
+echo -e "${BLUE}Waiting for MinIO to become responsive...${NC}"
+until curl -s "http://localhost:9000/minio/health/ready" > /dev/null; do
+  sleep 1
+done
+echo -e "${GREEN}✔ MinIO is ready.${NC}"
 # Configure mc alias for local MinIO
 mc alias set localminio "http://localhost:9000" "$USERNAME" "$PASSWORD"
 
@@ -219,7 +222,6 @@ if [[ -z "$BUCKET" ]]; then
   BUCKET="odim-bucket"
 fi
 
-# Create bucket and set anonymous read+write policy
 # Create bucket if it doesn't exist
 if mc ls localminio/"$BUCKET" &>/dev/null; then
   echo -e "${YELLOW}Bucket '$BUCKET' already exists. Skipping creation.${NC}"
@@ -233,11 +235,8 @@ else
 fi
 
 # Set anonymous read and write policies
-mc anonymous set download localminio/"$BUCKET"
-mc anonymous set upload localminio/"$BUCKET"
+mc anonymous set public localminio/"$BUCKET"
 echo -e "${GREEN}✔ Bucket '$BUCKET' created with anonymous read/write access.${NC}"
-
-
 
 # Check if mongo is installed locally
 step "MongoDB Setup"
@@ -331,7 +330,7 @@ echo "Installing dependencies..."
 npm install
 
 step "Let's set up environment variables:"
-DATABASE_URL="mongodb://$IP_ADDRESS:27017/$DATABASE_NAME"
+DATABASE_URL="mongodb://127.0.0.1:27017/$DATABASE_NAME"
 echo -e "${GREEN}👉 MongoDB connection URI set:${NC} $DATABASE_URL"
 _AWS_REGION="us-east-1"
 echo -e "${GREEN}👉 AWS region set:${NC} $_AWS_REGION"
@@ -353,7 +352,7 @@ echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
 echo "See further details in INSTRUCTIONS.md"
 echo "Visit https://console.cloud.google.com/apis/credentials"
 echo "1. Create an OAuth Client ID"
-echo "2. Add your redirect URI: $NEXT_PUBLIC_DEPLOYMENT_URL/api/auth/callback/google"
+echo "2. Add your redirect URI: http://localhost:3000/api/auth/callback/google"
 echo "3. Add the credentials to your .env or Amplify environment settings"
 echo -e "${BLUE}👉 Google client ID:${NC} \c"
 read AUTH_GOOGLE_CLIENT_ID < /dev/tty
@@ -372,6 +371,8 @@ _AWS_REGION=$_AWS_REGION
 _AWS_ACCESS_KEY_ID=$_AWS_ACCESS_KEY_ID
 _AWS_SECRET_ACCESS_KEY=$_AWS_SECRET_ACCESS_KEY
 _AWS_UPLOAD_BUCKET=$_AWS_UPLOAD_BUCKET
+USE_MINIO_STORE=$USE_MINIO_STORE
+MINIO_ENDPOINT=$MINIO_ENDPOINT
 # >>>>> NextAuth configuration
 AUTH_GOOGLE_CLIENT_ID=$AUTH_GOOGLE_CLIENT_ID
 AUTH_GOOGLE_CLIENT_SECRET=$AUTH_GOOGLE_CLIENT_SECRET
