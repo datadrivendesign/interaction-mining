@@ -99,209 +99,300 @@ fi
 print_section "Starting ODIM Setup"
 # --- Frontend Setup ---
 
-# grep the IP address of the computer
-IP_ADDRESS=$(ifconfig | grep -Eo 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' | awk '{ print $2 }')
-
-if [[ -z $IP_ADDRESS ]]; then
-  echo -e "${YELLOW}Local IP Address not found. Please enter it manually.${NC}"
-  echo -e "${BLUE}👉 IP address (IP_ADDRESS):${NC} \c"
-  read IP_ADDRESS < /dev/tty
-else
-  echo -e "${BLUE}👉 IP address found:${NC} $IP_ADDRESS"
-fi
-
-# try to install MinIO via Docker
-step "Set Up Docker and MinIO"
-# Check if Docker is installed
-if ! command -v docker &>/dev/null; then
-  echo -e "${YELLOW}Docker is not installed. Attempting to install Docker...${NC}"
-  
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS: install Docker via Homebrew
-    if ! command -v brew &>/dev/null; then
-      echo -e "${RED}Homebrew is not installed. Please install Homebrew first: https://brew.sh${NC}"
+# TODO: try to ask for secretsmanager here
+echo -e "${BLUE}If you have aws access, this script can set up a remote dev environment for you."
+echo -e "${BLUE}👉 Would you like to set up a remote dev environment? (y/n):${NC} \c"
+read USE_DEV_ENV < /dev/tty
+if [[ "$USE_DEV_ENV" == "y" ]]; then
+  # Check if AWS CLI is installed
+  if ! command -v aws &> /dev/null; then
+    echo -e "${YELLOW}⚠️  AWS CLI not found. Installing...${NC}"
+    # download aws cli
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+      sudo installer -pkg AWSCLIV2.pkg -target /
+      rm -f AWSCLIV2.pkg
+    else
+      echo -e "${RED}❌ Unsupported OS for auto AWS CLI install. Please install it manually.${NC}"
       exit 1
     fi
-
-    brew install --cask docker
-    echo -e "${YELLOW}Docker installed. Opening Docker...${NC}"
-    open -a Docker
+    echo -e "${GREEN}✅ AWS CLI installed successfully.${NC}"
   else
-    echo -e "${RED}Please install Docker manually for your platform: https://docs.docker.com/get-docker/${NC}"
+    echo -e "${GREEN}✅ AWS CLI is already installed.${NC}"
+  fi
+  # input credentials
+  echo -e "${BLUE}Enter AWS credentials to retrieve from secretsmanager.${NC}"
+  echo -e "${BLUE}👉 Enter your AWS Access Key ID:${NC} \c"
+  read DEV_ACCESS_KEY_ID < /dev/tty
+  echo -e "${BLUE}👉 Enter your AWS Secret Access Key:${NC} \c"
+  read DEV_SECRET_ACCESS_KEY < /dev/tty
+  AWS_REGION="us-east-2"
+  # configure credentials
+  aws configure set aws_access_key_id "$DEV_ACCESS_KEY_ID"
+  aws configure set aws_secret_access_key "$DEV_SECRET_ACCESS_KEY"
+  aws configure set region "$AWS_REGION"
+  # retrieve secret env variables
+  SECRET_JSON=$(aws secretsmanager get-secret-value \
+  --secret-id "dev/odim" \
+  --query SecretString \
+  --output text)
+
+  NEXT_PUBLIC_DEPLOYMENT_URL=$(echo "$SECRET_JSON" | jq -r '.NEXT_PUBLIC_DEPLOYMENT_URL')
+  if [[ -z "$NEXT_PUBLIC_DEPLOYMENT_URL" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
     exit 1
   fi
-fi
-
-# Wait for Docker daemon to start
-echo -e "${BLUE}Waiting for Docker to start...${NC}"
-SPINNER='|/-\'
-i=0
-MAX_WAIT=60
-SECONDS_WAITED=0
-
-while ! docker info &>/dev/null; do
-  i=$(( (i+1) % 4 ))
-  printf "\b${SPINNER:$i:1}"
-  sleep 1
-  SECONDS_WAITED=$((SECONDS_WAITED+1))
-  if (( SECONDS_WAITED >= MAX_WAIT )); then
-    echo -e "\n${RED}Docker did not start within $MAX_WAIT seconds. Please make sure Docker is running.${NC}"
+  DATABASE_URL=$(echo "$SECRET_JSON" | jq -r '.DEV_DATABASE_URL')
+  if [[ -z "$DATABASE_URL" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
     exit 1
   fi
-done
-echo -e "${GREEN}✔ Docker is running.${NC}"
-
-# set up MinIO username and password
-echo "Let's set up your minio username and password (or press enter to set user and pwd as default 'admin' and 'password'):"
-echo -e "${BLUE}👉 MinIO root username (USERNAME):${NC} \c"
-read USERNAME < /dev/tty
-if [[ -z $USERNAME ]]; then
-  USERNAME="admin"
+  _AWS_REGION=$(echo "$SECRET_JSON" | jq -r '._AWS_REGION')
+  if [[ -z "$_AWS_REGION" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  _AWS_ACCESS_KEY_ID=$(echo "$SECRET_JSON" | jq -r '._AWS_ACCESS_KEY_ID')
+  if [[ -z "$_AWS_ACCESS_KEY_ID" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  _AWS_SECRET_ACCESS_KEY=$(echo "$SECRET_JSON" | jq -r '._AWS_SECRET_ACCESS_KEY')
+  if [[ -z "$_AWS_SECRET_ACCESS_KEY" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  _AWS_UPLOAD_BUCKET=$(echo "$SECRET_JSON" | jq -r '._AWS_UPLOAD_BUCKET')
+  if [[ -z "$_AWS_UPLOAD_BUCKET" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  NEXTAUTH_SECRET=$(echo "$SECRET_JSON" | jq -r '.NEXTAUTH_SECRET')
+  if [[ -z "$NEXTAUTH_SECRET" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  AUTH_GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.AUTH_GOOGLE_CLIENT_ID')
+  if [[ -z "$AUTH_GOOGLE_CLIENT_ID" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  AUTH_GOOGLE_CLIENT_SECRET=$(echo "$SECRET_JSON" | jq -r '.AUTH_GOOGLE_CLIENT_SECRET')
+  if [[ -z "$AUTH_GOOGLE_CLIENT_SECRET" ]]; then
+    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+    exit 1
+  fi
+  USE_MINIO_STORE="false"
+  MINIO_ENDPOINT=""
+    echo -e "${GREEN}✔ Secrets have been loaded.${NC}"
 fi
-echo -e "${BLUE}👉 MongoDB root password (PASSWORD):${NC} \c"
-read PASSWORD < /dev/tty
-if [[ -z $PASSWORD ]]; then
-  PASSWORD="password"
-fi
 
-# Generate docker-compose.yml for MinIO
-cat <<EOF > docker-compose.yml
-volumes:
-  minio_data:
+# Run this code for local deployment, not dev env
+if [[ "$USE_DEV_ENV" != "y" ]]; then
+  # grep the IP address of the computer
+  IP_ADDRESS=$(ifconfig | grep -Eo 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' | awk '{ print $2 }')
 
-services:
-  minio:
-    image: quay.io/minio/minio:latest
-    container_name: minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: $USERNAME
-      MINIO_ROOT_PASSWORD: $PASSWORD
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+  if [[ -z $IP_ADDRESS ]]; then
+    echo -e "${YELLOW}Local IP Address not found. Please enter it manually.${NC}"
+    echo -e "${BLUE}👉 IP address (IP_ADDRESS):${NC} \c"
+    read IP_ADDRESS < /dev/tty
+  else
+    echo -e "${BLUE}👉 IP address found:${NC} $IP_ADDRESS"
+  fi
+
+  # try to install MinIO via Docker
+  step "Set Up Docker and MinIO"
+  # Check if Docker is installed
+  if ! command -v docker &>/dev/null; then
+    echo -e "${YELLOW}Docker is not installed. Attempting to install Docker...${NC}"
+    
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      # macOS: install Docker via Homebrew
+      if ! command -v brew &>/dev/null; then
+        echo -e "${RED}Homebrew is not installed. Please install Homebrew first: https://brew.sh${NC}"
+        exit 1
+      fi
+
+      brew install --cask docker
+      echo -e "${YELLOW}Docker installed. Opening Docker...${NC}"
+      open -a Docker
+    else
+      echo -e "${RED}Please install Docker manually for your platform: https://docs.docker.com/get-docker/${NC}"
+      exit 1
+    fi
+  fi
+
+  # Wait for Docker daemon to start
+  echo -e "${BLUE}Waiting for Docker to start...${NC}"
+  SPINNER='|/-\'
+  i=0
+  MAX_WAIT=60
+  SECONDS_WAITED=0
+
+  while ! docker info &>/dev/null; do
+    i=$(( (i+1) % 4 ))
+    printf "\b${SPINNER:$i:1}"
+    sleep 1
+    SECONDS_WAITED=$((SECONDS_WAITED+1))
+    if (( SECONDS_WAITED >= MAX_WAIT )); then
+      echo -e "\n${RED}Docker did not start within $MAX_WAIT seconds. Please make sure Docker is running.${NC}"
+      exit 1
+    fi
+  done
+  echo -e "${GREEN}✔ Docker is running.${NC}"
+
+  # set up MinIO username and password
+  echo "Let's set up your minio username and password (or press enter to set user and pwd as default 'admin' and 'password'):"
+  echo -e "${BLUE}👉 MinIO root username (USERNAME):${NC} \c"
+  read USERNAME < /dev/tty
+  if [[ -z $USERNAME ]]; then
+    USERNAME="admin"
+  fi
+  echo -e "${BLUE}👉 MongoDB root password (PASSWORD):${NC} \c"
+  read PASSWORD < /dev/tty
+  if [[ -z $PASSWORD ]]; then
+    PASSWORD="password"
+  fi
+
+  # Generate docker-compose.yml for MinIO
+  cat <<EOF > docker-compose.yml
+  volumes:
+    minio_data:
+
+  services:
+    minio:
+      image: quay.io/minio/minio:latest
+      container_name: minio
+      ports:
+        - "9000:9000"
+        - "9001:9001"
+      environment:
+        MINIO_ROOT_USER: $USERNAME
+        MINIO_ROOT_PASSWORD: $PASSWORD
+      volumes:
+        - minio_data:/data
+      command: server /data --console-address ":9001"
 EOF
-echo -e "${GREEN}✔ docker-compose.yml for MinIO created.${NC}"
-CLEANUP_DIRS+=("docker-compose.yml")
+  echo -e "${GREEN}✔ docker-compose.yml for MinIO created.${NC}"
+  CLEANUP_DIRS+=("docker-compose.yml")
 
-echo -e "${BLUE}Starting Docker container with MinIO${NC}"
-docker compose up -d
-docker compose logs minio
-echo -e "${GREEN}MinIO is now running. You can access the console at: http://$IP_ADDRESS:9001${NC}"
+  echo -e "${BLUE}Starting Docker container with MinIO${NC}"
+  docker compose up -d
+  docker compose logs minio
+  echo -e "${GREEN}MinIO is now running. You can access the console at: http://$IP_ADDRESS:9001${NC}"
 
-# Check if mc (MinIO Client) is installed
-if ! command -v mc &>/dev/null; then
-  echo -e "${YELLOW}MinIO Client (mc) is not installed. Attempting to install...${NC}"
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    if ! command -v brew &>/dev/null; then
-      echo -e "${RED}Homebrew is not installed. Please install Homebrew to continue.${NC}"
+  # Check if mc (MinIO Client) is installed
+  if ! command -v mc &>/dev/null; then
+    echo -e "${YELLOW}MinIO Client (mc) is not installed. Attempting to install...${NC}"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      if ! command -v brew &>/dev/null; then
+        echo -e "${RED}Homebrew is not installed. Please install Homebrew to continue.${NC}"
+        exit 1
+      fi
+      brew install minio/stable/mc
+    else
+      echo -e "${RED}Please install MinIO Client (mc) manually: https://min.io/docs/minio/linux/reference/minio-mc.html${NC}"
       exit 1
     fi
-    brew install minio/stable/mc
-  else
-    echo -e "${RED}Please install MinIO Client (mc) manually: https://min.io/docs/minio/linux/reference/minio-mc.html${NC}"
-    exit 1
   fi
-fi
-echo -e "${GREEN}✔ MinIO Client (mc) detected.${NC}"
-# wait loop to check when MinIO server is ready
-echo -e "${BLUE}Waiting for MinIO to become responsive...${NC}"
-until curl -s "http://localhost:9000/minio/health/ready" > /dev/null; do
-  sleep 1
-done
-echo -e "${GREEN}✔ MinIO is ready.${NC}"
-# Configure mc alias for local MinIO
-mc alias set localminio "http://localhost:9000" "$USERNAME" "$PASSWORD"
+  echo -e "${GREEN}✔ MinIO Client (mc) detected.${NC}"
+  # wait loop to check when MinIO server is ready
+  echo -e "${BLUE}Waiting for MinIO to become responsive...${NC}"
+  until curl -s "http://localhost:9000/minio/health/ready" > /dev/null; do
+    sleep 1
+  done
+  echo -e "${GREEN}✔ MinIO is ready.${NC}"
+  # Configure mc alias for local MinIO
+  mc alias set localminio "http://localhost:9000" "$USERNAME" "$PASSWORD"
 
-# Prompt user for bucket name
-echo -e "${BLUE}👉 Enter bucket name to create in MinIO (default 'odim-bucket'):${NC} \c"
-read BUCKET < /dev/tty
-if [[ -z "$BUCKET" ]]; then
-  BUCKET="odim-bucket"
-fi
-
-# Create bucket if it doesn't exist
-if mc ls localminio/"$BUCKET" &>/dev/null; then
-  echo -e "${YELLOW}Bucket '$BUCKET' already exists. Skipping creation.${NC}"
-else
-  if mc mb localminio/"$BUCKET"; then
-    echo -e "${GREEN}✔ Bucket '$BUCKET' created successfully.${NC}"
-  else
-    echo -e "${RED}✖ Failed to create bucket '$BUCKET'. Check MinIO configuration.${NC}"
-    exit 1
+  # Prompt user for bucket name
+  echo -e "${BLUE}👉 Enter bucket name to create in MinIO (default 'odim-bucket'):${NC} \c"
+  read BUCKET < /dev/tty
+  if [[ -z "$BUCKET" ]]; then
+    BUCKET="odim-bucket"
   fi
-fi
 
-# Set anonymous read and write policies
-mc anonymous set public localminio/"$BUCKET"
-echo -e "${GREEN}✔ Bucket '$BUCKET' created with anonymous read/write access.${NC}"
-
-# Check if mongo is installed locally
-step "MongoDB Setup"
-if ! command -v mongosh &>/dev/null; then
-  echo -e "${YELLOW}Mongo Community Edition is not installed. Attempting to install...${NC}"
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    if ! command -v brew &>/dev/null; then
-      echo -e "${RED}Homebrew is not installed. Please install Homebrew to continue.${NC}"
+  # Create bucket if it doesn't exist
+  if mc ls localminio/"$BUCKET" &>/dev/null; then
+    echo -e "${YELLOW}Bucket '$BUCKET' already exists. Skipping creation.${NC}"
+  else
+    if mc mb localminio/"$BUCKET"; then
+      echo -e "${GREEN}✔ Bucket '$BUCKET' created successfully.${NC}"
+    else
+      echo -e "${RED}✖ Failed to create bucket '$BUCKET'. Check MinIO configuration.${NC}"
       exit 1
     fi
-    brew tap mongodb/brew
-    brew install mongodb-community@8.0
-  else
-    echo -e "${RED}Please install MongoDB Client manually: https://www.mongodb.com/docs/manual/administration/install-on-linux/${NC}"
-    exit 1
   fi
-else
-  echo -e "${GREEN}✔ MongoDB is already installed.${NC}"
-fi
 
-# create a mongo.conf file
-echo -e "${BLUE}👉 Name your MongoDB directory (default 'db'):${NC} \c"
-read MONGO_DIR < /dev/tty
-if [[ -z $MONGO_DIR ]]; then
-  MONGO_DIR="db"
-fi
-mkdir "$MONGO_DIR"
-CLEANUP_DIRS+=("$MONGO_DIR")
-DIR=$(pwd)
+  # Set anonymous read and write policies
+  mc anonymous set public localminio/"$BUCKET"
+  echo -e "${GREEN}✔ Bucket '$BUCKET' created with anonymous read/write access.${NC}"
 
-cat <<EOF > mongo.conf
-storage:
-  dbPath: '$DIR/$MONGO_DIR'
-net:
-  bindIp: 127.0.0.1
-  port: 27017
+  # Check if mongo is installed locally
+  step "MongoDB Setup"
+  if ! command -v mongosh &>/dev/null; then
+    echo -e "${YELLOW}Mongo Community Edition is not installed. Attempting to install...${NC}"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      if ! command -v brew &>/dev/null; then
+        echo -e "${RED}Homebrew is not installed. Please install Homebrew to continue.${NC}"
+        exit 1
+      fi
+      brew tap mongodb/brew
+      brew install mongodb-community@8.0
+    else
+      echo -e "${RED}Please install MongoDB Client manually: https://www.mongodb.com/docs/manual/administration/install-on-linux/${NC}"
+      exit 1
+    fi
+  else
+    echo -e "${GREEN}✔ MongoDB is already installed.${NC}"
+  fi
+
+  # create a mongo.conf file
+  echo -e "${BLUE}👉 Name your MongoDB directory (default 'db'):${NC} \c"
+  read MONGO_DIR < /dev/tty
+  if [[ -z $MONGO_DIR ]]; then
+    MONGO_DIR="db"
+  fi
+  mkdir "$MONGO_DIR"
+  CLEANUP_DIRS+=("$MONGO_DIR")
+  DIR=$(pwd)
+
+  cat <<EOF > mongo.conf
+  storage:
+    dbPath: '$DIR/$MONGO_DIR'
+  net:
+    bindIp: 127.0.0.1
+    port: 27017
 EOF
-CLEANUP_DIRS+=("mongo.conf")
+  CLEANUP_DIRS+=("mongo.conf")
 
-# Start mongod in the background with replica set
-mongod --config mongo.conf --replSet rs0 --fork --logpath "mongo.log"
-CLEANUP_DIRS+=("mongo.log")
-# Wait for MongoDB to be ready
-until mongosh --eval "db.adminCommand('ping')" &>/dev/null; do
-  echo -n "."
-  sleep 1
-done
-echo -e "\n${GREEN}✔ MongoDB is up.${NC}"
-# Check if replica set is already initiated
-IS_INITIATED=$(mongosh --quiet --eval "try { rs.status().ok } catch (e) { 0 }")
+  # Start mongod in the background with replica set
+  mongod --config mongo.conf --replSet rs0 --fork --logpath "mongo.log"
+  CLEANUP_DIRS+=("mongo.log")
+  # Wait for MongoDB to be ready
+  until mongosh --eval "db.adminCommand('ping')" &>/dev/null; do
+    echo -n "."
+    sleep 1
+  done
+  echo -e "\n${GREEN}✔ MongoDB is up.${NC}"
+  # Check if replica set is already initiated
+  IS_INITIATED=$(mongosh --quiet --eval "try { rs.status().ok } catch (e) { 0 }")
 
-if [[ "$IS_INITIATED" != "1" ]]; then
-  echo -e "${BLUE}Replica set not initialized. Initiating...${NC}"
-  mongosh --eval "rs.initiate()"
-  echo -e "${GREEN}✔ Replica set initialized.${NC}"
-else
-  echo -e "${GREEN}✔ Replica set already initialized.${NC}"
+  if [[ "$IS_INITIATED" != "1" ]]; then
+    echo -e "${BLUE}Replica set not initialized. Initiating...${NC}"
+    mongosh --eval "rs.initiate()"
+    echo -e "${GREEN}✔ Replica set initialized.${NC}"
+  else
+    echo -e "${GREEN}✔ Replica set already initialized.${NC}"
+  fi
+  # Prompt for database name and create db
+  echo -e "${BLUE}👉 Create a MongoDB database name (default: 'odim'):${NC} \c"
+  read DATABASE_NAME < /dev/tty
+  if [[ -z "$DATABASE_NAME" ]]; then
+    DATABASE_NAME="odim"
+  fi
+  mongosh --eval "use $DATABASE_NAME"
 fi
-# Prompt for database name and create db
-echo -e "${BLUE}👉 Create a MongoDB database name (default: 'odim'):${NC} \c"
-read DATABASE_NAME < /dev/tty
-if [[ -z "$DATABASE_NAME" ]]; then
-  DATABASE_NAME="odim"
-fi
-mongosh --eval "use $DATABASE_NAME"
 
 # Clone web app repository
 step "Cloning web app repository"
@@ -329,35 +420,38 @@ step "Installing frontend dependencies"
 echo "Installing dependencies..."
 npm install
 
-step "Let's set up environment variables:"
-DATABASE_URL="mongodb://127.0.0.1:27017/$DATABASE_NAME"
-echo -e "${GREEN}👉 MongoDB connection URI set:${NC} $DATABASE_URL"
-_AWS_REGION="us-east-1"
-echo -e "${GREEN}👉 AWS region set:${NC} $_AWS_REGION"
-_AWS_ACCESS_KEY_ID="$USERNAME"
-echo -e "${GREEN}👉 AWS Access Key set:${NC} $_AWS_ACCESS_KEY_ID"
-_AWS_SECRET_ACCESS_KEY="$PASSWORD"
-echo -e "${GREEN}👉 AWS Access Key set:${NC} $_AWS_SECRET_ACCESS_KEY"
-_AWS_UPLOAD_BUCKET="$BUCKET"
-echo -e "${GREEN}👉 AWS Upload Bucket set:${NC} $_AWS_UPLOAD_BUCKET"
-USE_MINIO_STORE="true"
+if [[ "$USE_DEV_ENV" != "y" ]]; then
+  DATABASE_URL="mongodb://127.0.0.1:27017/$DATABASE_NAME"
+  _AWS_REGION="us-east-1"
+  _AWS_ACCESS_KEY_ID="$USERNAME"
+  _AWS_SECRET_ACCESS_KEY="$PASSWORD"
+  _AWS_UPLOAD_BUCKET="$BUCKET"
+  USE_MINIO_STORE="true"
+  MINIO_ENDPOINT="http://$IP_ADDRESS:9000"
+  NEXT_PUBLIC_DEPLOYMENT_URL="http://$IP_ADDRESS:3000"
+  echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
+  echo "See further details in INSTRUCTIONS.md"
+  echo "Visit https://console.cloud.google.com/apis/credentials"
+  echo "1. Create an OAuth Client ID"
+  echo "2. Add your redirect URI: http://localhost:3000/api/auth/callback/google"
+  echo "3. Add the credentials to your .env or Amplify environment settings"
+  echo -e "${BLUE}👉 Google client ID:${NC} \c"
+  read AUTH_GOOGLE_CLIENT_ID < /dev/tty
+  echo -e "${BLUE}👉 Google client secret:${NC} \c"
+  read AUTH_GOOGLE_CLIENT_SECRET < /dev/tty
+fi
+
+step "Environment variables are all set!"
+echo -e "${GREEN}👉 MongoDB connection URI:${NC} $DATABASE_URL"
+echo -e "${GREEN}👉 AWS region:${NC} $_AWS_REGION"
+echo -e "${GREEN}👉 AWS Access Key:${NC} $_AWS_ACCESS_KEY_ID"
+echo -e "${GREEN}👉 AWS Access Key:${NC} $_AWS_SECRET_ACCESS_KEY"
+echo -e "${GREEN}👉 AWS Upload Bucket:${NC} $_AWS_UPLOAD_BUCKET"
 echo -e "${GREEN}👉 Use MinIO Object Store:${NC} $USE_MINIO_STORE"
-MINIO_ENDPOINT="http://$IP_ADDRESS:9000"
 echo -e "${GREEN}👉 MinIO API Endpoint:${NC} $MINIO_ENDPOINT"
-
-NEXT_PUBLIC_DEPLOYMENT_URL="http://$IP_ADDRESS:3000"
-echo -e "${GREEN}👉 Web Deploy URL set:${NC} $NEXT_PUBLIC_DEPLOYMENT_URL"
-
-echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
-echo "See further details in INSTRUCTIONS.md"
-echo "Visit https://console.cloud.google.com/apis/credentials"
-echo "1. Create an OAuth Client ID"
-echo "2. Add your redirect URI: http://localhost:3000/api/auth/callback/google"
-echo "3. Add the credentials to your .env or Amplify environment settings"
-echo -e "${BLUE}👉 Google client ID:${NC} \c"
-read AUTH_GOOGLE_CLIENT_ID < /dev/tty
-echo -e "${BLUE}👉 Google client secret:${NC} \c"
-read AUTH_GOOGLE_CLIENT_SECRET < /dev/tty
+echo -e "${GREEN}👉 Google OAuth Client ID set:${NC} $AUTH_GOOGLE_CLIENT_ID"
+echo -e "${GREEN}👉 Google OAuth Client Secret:${NC} $AUTH_GOOGLE_CLIENT_SECRET"
+echo -e "${GREEN}👉 Web Deploy URL:${NC} $NEXT_PUBLIC_DEPLOYMENT_URL"
 
 ENV_FILE=".env.local"
 
@@ -530,8 +624,17 @@ if [[ "$USE_ANDROID" == "y" ]]; then
   echo "sdk.dir=$DEFAULT_SDK_PATH" > local.properties
 
   echo "Let's set up the URL domain where the Android app will upload to:"
-  API_URL_PREFIX="http://$IP_ADDRESS:3000"
-  echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
+  # Run this code for local deployment, not dev env
+  if [[ "$USE_DEV_ENV" == "y" ]]; then
+    API_URL_PREFIX=$(echo "$SECRET_JSON" | jq -r '.API_URL_PREFIX')
+    if [[ -z "$API_URL_PREFIX" ]]; then
+      echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
+      exit 1
+    fi
+  else
+    API_URL_PREFIX="http://$IP_ADDRESS:3000"
+    echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
+  fi
 
 
   step "Building mobile APK"

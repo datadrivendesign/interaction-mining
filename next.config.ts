@@ -15,6 +15,10 @@ const remotePatterns: RemotePattern[] = [
     protocol: "https",
     hostname: "*.mzstatic.com",
   },
+  {
+    protocol: "https",
+    hostname: "d1nrlpeg5tvzyr.cloudfront.net"
+  },
 ];
 // Conditionally add MinIO endpoint if set
 if (process.env.MINIO_ENDPOINT) {
