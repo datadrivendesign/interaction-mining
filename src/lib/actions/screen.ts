@@ -9,15 +9,15 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { uploadAndroidAPIDataToS3 } from "../aws";
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION!,
+  region: process.env._AWS_REGION!,
   forcePathStyle: process.env.USE_MINIO_STORE === "true" ? true : false,
   // conditional: only define endpoint if using minio store, otherwise ignore 
   ...(process.env.USE_MINIO_STORE === "true" && {
     endpoint: process.env.MINIO_ENDPOINT,
   }),
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env._AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env._AWS_SECRET_ACCESS_KEY!,
   },
 });
 
@@ -153,7 +153,7 @@ export async function generatePresignedVHUpload(
     const fileKey = `uploads/${captureId}/vhs/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_UPLOAD_BUCKET!,
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -168,8 +168,8 @@ export async function generatePresignedVHUpload(
         filePrefix: `uploads/${captureId}/`,
         fileKey,
         fileUrl: process.env.USE_MINIO_STORE === "true" 
-          ? `${process.env.MINIO_ENDPOINT}/${process.env.AWS_UPLOAD_BUCKET}/${fileKey}`
-          : `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+          ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}`
+          : `https://${process.env._AWS_UPLOAD_BUCKET}.s3.${process.env._AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {

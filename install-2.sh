@@ -33,7 +33,7 @@ cleanup_on_exit() {
   if [[ $EXIT_CODE ]]; then
     echo "An error occurred. Cleaning up..."
     for DIR in "${CLEANUP_DIRS[@]}"; do
-      if [ -d "$DIR" ]; then
+      if [ -e "$DIR" ]; then
         echo "Removing $DIR"
         rm -rf "$DIR"
       fi
@@ -101,12 +101,14 @@ print_section "Starting ODIM Setup"
 # --- Frontend Setup ---
 
 # grep the IP address of the computer
-IP_ADDRESS=ifconfig | grep -Eo 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' | awk '{ print $2 }'
+IP_ADDRESS=$(ifconfig | grep -Eo 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' | awk '{ print $2 }')
 
 if [[ -z $IP_ADDRESS ]]; then
   echo -e "${YELLOW}Local IP Address not found. Please enter it manually.${NC}"
   echo -e "${BLUE}👉 IP address (IP_ADDRESS):${NC} \c"
   read IP_ADDRESS < /dev/tty
+else
+  echo -e "${BLUE}👉 IP address found:${NC} $IP_ADDRESS"
 fi
 
 # try to install MinIO via Docker
@@ -151,13 +153,12 @@ done
 echo -e "${GREEN}✔ Docker is running.${NC}"
 
 # set up MinIO username and password
-echo "Let's set up your minio username and password (or press enter to set user and pwd as default \'admin\' and \'password\'):"
+echo "Let's set up your minio username and password (or press enter to set user and pwd as default 'admin' and 'password'):"
 echo -e "${BLUE}👉 MinIO root username (USERNAME):${NC} \c"
 read USERNAME < /dev/tty
 if [[ -z $USERNAME ]]; then
   USERNAME="admin"
 fi
-
 echo -e "${BLUE}👉 MongoDB root password (PASSWORD):${NC} \c"
 read PASSWORD < /dev/tty
 if [[ -z $PASSWORD ]]; then
@@ -186,6 +187,7 @@ services:
     command: server /data --console-address ":9001"
 EOF
 echo -e "${GREEN}✔ docker-compose.yml for MinIO created.${NC}"
+CLEANUP_DIRS+=("docker-compose.yml")
 
 echo -e "${BLUE}Starting Docker container with MinIO${NC}"
 docker compose up -d
@@ -211,14 +213,26 @@ echo -e "${GREEN}✔ MinIO Client (mc) detected.${NC}"
 mc alias set localminio "http://localhost:9000" "$USERNAME" "$PASSWORD"
 
 # Prompt user for bucket name
-echo -e "${BLUE}👉 Enter bucket name to create in MinIO:${NC} \c"
+echo -e "${BLUE}👉 Enter bucket name to create in MinIO (default 'odim-bucket'):${NC} \c"
 read BUCKET < /dev/tty
 if [[ -z "$BUCKET" ]]; then
   BUCKET="odim-bucket"
 fi
 
 # Create bucket and set anonymous read+write policy
-mc mb localminio/"$BUCKET"
+# Create bucket if it doesn't exist
+if mc ls localminio/"$BUCKET" &>/dev/null; then
+  echo -e "${YELLOW}Bucket '$BUCKET' already exists. Skipping creation.${NC}"
+else
+  if mc mb localminio/"$BUCKET"; then
+    echo -e "${GREEN}✔ Bucket '$BUCKET' created successfully.${NC}"
+  else
+    echo -e "${RED}✖ Failed to create bucket '$BUCKET'. Check MinIO configuration.${NC}"
+    exit 1
+  fi
+fi
+
+# Set anonymous read and write policies
 mc anonymous set download localminio/"$BUCKET"
 mc anonymous set upload localminio/"$BUCKET"
 echo -e "${GREEN}✔ Bucket '$BUCKET' created with anonymous read/write access.${NC}"
@@ -227,7 +241,7 @@ echo -e "${GREEN}✔ Bucket '$BUCKET' created with anonymous read/write access.$
 
 # Check if mongo is installed locally
 step "MongoDB Setup"
-if ! command -v mongsh &>/dev/null; then
+if ! command -v mongosh &>/dev/null; then
   echo -e "${YELLOW}Mongo Community Edition is not installed. Attempting to install...${NC}"
   if [[ "$OSTYPE" == "darwin"* ]]; then
     if ! command -v brew &>/dev/null; then
@@ -245,17 +259,27 @@ else
 fi
 
 # create a mongo.conf file
+echo -e "${BLUE}👉 Name your MongoDB directory (default 'db'):${NC} \c"
+read MONGO_DIR < /dev/tty
+if [[ -z $MONGO_DIR ]]; then
+  MONGO_DIR="db"
+fi
+mkdir "$MONGO_DIR"
+CLEANUP_DIRS+=("$MONGO_DIR")
 DIR=$(pwd)
+
 cat <<EOF > mongo.conf
 storage:
-  dbPath: "$DIR"/db
+  dbPath: '$DIR/$MONGO_DIR'
 net:
   bindIp: 127.0.0.1
   port: 27017
 EOF
+CLEANUP_DIRS+=("mongo.conf")
 
 # Start mongod in the background with replica set
 mongod --config mongo.conf --replSet rs0 --fork --logpath "mongo.log"
+CLEANUP_DIRS+=("mongo.log")
 # Wait for MongoDB to be ready
 until mongosh --eval "db.adminCommand('ping')" &>/dev/null; do
   echo -n "."
@@ -273,10 +297,12 @@ else
   echo -e "${GREEN}✔ Replica set already initialized.${NC}"
 fi
 # Prompt for database name and create db
-echo -e "${BLUE}👉 Create a MongoDB database name (DATABASE_NAME):${NC} \c"
+echo -e "${BLUE}👉 Create a MongoDB database name (default: 'odim'):${NC} \c"
 read DATABASE_NAME < /dev/tty
+if [[ -z "$DATABASE_NAME" ]]; then
+  DATABASE_NAME="odim"
+fi
 mongosh --eval "use $DATABASE_NAME"
-CLEANUP_DIRS+=("db")
 
 # Clone web app repository
 step "Cloning web app repository"
@@ -304,26 +330,24 @@ step "Installing frontend dependencies"
 echo "Installing dependencies..."
 npm install
 
-step "Let\'s set up environment variables:"
+step "Let's set up environment variables:"
 DATABASE_URL="mongodb://$IP_ADDRESS:27017/$DATABASE_NAME"
-echo -e "${GREEN}👉 MongoDB connection URI set:${NC} $DATABASE_URL \c"
-AWS_REGION="us-east-1"
-echo -e "${GREEN}👉 AWS region set:${NC} $AWS_REGION \c"
-AWS_ACCESS_KEY_ID="$USERNAME"
-echo -e "${GREEN}👉 AWS Access Key set:${NC} $AWS_ACCESS_KEY_ID \c"
-AWS_SECRET_ACCESS_KEY="$PASSWORD"
-echo -e "${GREEN}👉 AWS Access Key set:${NC} $AWS_ACCESS_KEY_ID \c"
-AWS_UPLOAD_BUCKET="$BUCKET"
-echo -e "${GREEN}👉 AWS Upload Bucket set:${NC} $AWS_UPLOAD_BUCKET \c"
+echo -e "${GREEN}👉 MongoDB connection URI set:${NC} $DATABASE_URL"
+_AWS_REGION="us-east-1"
+echo -e "${GREEN}👉 AWS region set:${NC} $_AWS_REGION"
+_AWS_ACCESS_KEY_ID="$USERNAME"
+echo -e "${GREEN}👉 AWS Access Key set:${NC} $_AWS_ACCESS_KEY_ID"
+_AWS_SECRET_ACCESS_KEY="$PASSWORD"
+echo -e "${GREEN}👉 AWS Access Key set:${NC} $_AWS_SECRET_ACCESS_KEY"
+_AWS_UPLOAD_BUCKET="$BUCKET"
+echo -e "${GREEN}👉 AWS Upload Bucket set:${NC} $_AWS_UPLOAD_BUCKET"
+USE_MINIO_STORE="true"
+echo -e "${GREEN}👉 Use MinIO Object Store:${NC} $USE_MINIO_STORE"
+MINIO_ENDPOINT="http://$IP_ADDRESS:9000"
+echo -e "${GREEN}👉 MinIO API Endpoint:${NC} $MINIO_ENDPOINT"
 
 NEXT_PUBLIC_DEPLOYMENT_URL="http://$IP_ADDRESS:3000"
-echo -e "${GREEN}👉 Web Deployment URL set:${NC} \c"
-if ! NEXTAUTH_SECRET=$(npx auth secret 2>/dev/null); then
-  echo -e "${RED}Failed to generate NextAuth secret. Please check if next-auth is installed.${NC}"
-  exit 1
-else 
-  echo -e "${GREEN}👉 NextAuth secret set:${NC} $NEXTAUTH_SECRET \c"
-fi
+echo -e "${GREEN}👉 Web Deploy URL set:${NC} $NEXT_PUBLIC_DEPLOYMENT_URL"
 
 echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
 echo "See further details in INSTRUCTIONS.md"
@@ -332,30 +356,28 @@ echo "1. Create an OAuth Client ID"
 echo "2. Add your redirect URI: $NEXT_PUBLIC_DEPLOYMENT_URL/api/auth/callback/google"
 echo "3. Add the credentials to your .env or Amplify environment settings"
 echo -e "${BLUE}👉 Google client ID:${NC} \c"
-read GOOGLE_CLIENT_ID < /dev/tty
+read AUTH_GOOGLE_CLIENT_ID < /dev/tty
 echo -e "${BLUE}👉 Google client secret:${NC} \c"
-read GOOGLE_CLIENT_SECRET < /dev/tty
+read AUTH_GOOGLE_CLIENT_SECRET < /dev/tty
 
 ENV_FILE=".env.local"
 
 cat <<EOF > .env.local
 # >>>>> Localhost configuration
 NEXT_PUBLIC_DEPLOYMENT_URL=$NEXT_PUBLIC_DEPLOYMENT_URL
-
 # >>>>> Database configuration
 DATABASE_URL=$DATABASE_URL
-
 # >>>>> AWS configuration
-AWS_REGION=$AWS_REGION
-AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-AWS_UPLOAD_BUCKET=$AWS_UPLOAD_BUCKET
-
+_AWS_REGION=$_AWS_REGION
+_AWS_ACCESS_KEY_ID=$_AWS_ACCESS_KEY_ID
+_AWS_SECRET_ACCESS_KEY=$_AWS_SECRET_ACCESS_KEY
+_AWS_UPLOAD_BUCKET=$_AWS_UPLOAD_BUCKET
 # >>>>> NextAuth configuration
-NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+AUTH_GOOGLE_CLIENT_ID=$AUTH_GOOGLE_CLIENT_ID
+AUTH_GOOGLE_CLIENT_SECRET=$AUTH_GOOGLE_CLIENT_SECRET
 EOF
+# set auth secret directly into .env.local
+npx auth secret
 
 echo "Environment variables have been set in $ENV_FILE"
 
@@ -508,7 +530,7 @@ if [[ "$USE_ANDROID" == "y" ]]; then
 
   echo "Let's set up the URL domain where the Android app will upload to:"
   API_URL_PREFIX="http://$IP_ADDRESS:3000"
-  echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX  \c"
+  echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
 
 
   step "Building mobile APK"
