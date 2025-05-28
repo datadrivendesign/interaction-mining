@@ -21,7 +21,7 @@ export async function generatePresignedUploadURL(
   contentType: string
 ): Promise<ActionPayload<any>> {
   const command = new PutObjectCommand({
-  Bucket: process.env.AWS_UPLOAD_BUCKET!,
+  Bucket: process.env._AWS_UPLOAD_BUCKET!,
     Key: `${prefix}/${fileName}`,
     ContentType: contentType,
   });
@@ -36,8 +36,8 @@ export async function generatePresignedUploadURL(
         filePrefix: prefix,
         fileKey: `${prefix}/${fileName}`,
         fileUrl: process.env.USE_MINIO_STORE === "true" 
-          ? `${process.env.MINIO_ENDPOINT}/${process.env.AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
-          : `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${prefix}/${fileName}`,
+          ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
+          : `https://${process.env._AWS_UPLOAD_BUCKET}.s3.${process.env._AWS_REGION}.amazonaws.com/${prefix}/${fileName}`,
       },
     };
   } catch (err) {
@@ -58,7 +58,7 @@ export async function generatePresignedUploadURL(
 export async function getFromS3(key: string): Promise<ActionPayload<any>> {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_UPLOAD_BUCKET!,
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
       Prefix: key,
     });
     const files = await s3.send(command);
@@ -94,7 +94,7 @@ export async function getFromS3(key: string): Promise<ActionPayload<any>> {
 export async function deleteFromS3(fileKey: string) {
   try {
     const command = new ListObjectsV2Command({
-      Bucket: process.env.AWS_UPLOAD_BUCKET!,
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
       Prefix: fileKey,
     });
 
@@ -105,7 +105,7 @@ export async function deleteFromS3(fileKey: string) {
     }
 
     const deleteCommand = new DeleteObjectCommand({
-      Bucket: process.env.AWS_UPLOAD_BUCKET!,
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
       Key: fileKey,
     });
 

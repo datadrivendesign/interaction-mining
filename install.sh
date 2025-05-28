@@ -142,22 +142,22 @@ echo -e "${BLUE}👉 MongoDB connection URI (DATABASE_URL):${NC} \c"
 read DATABASE_URL < /dev/tty
 
 echo -e "${BLUE}👉 AWS region:${NC} \c"
-read AWS_REGION < /dev/tty
+read _AWS_REGION < /dev/tty
 echo -e "${BLUE}👉 AWS access key ID:${NC} \c"
-read AWS_ACCESS_KEY_ID < /dev/tty
+read _AWS_ACCESS_KEY_ID < /dev/tty
 echo -e "${BLUE}👉 AWS secret access key:${NC} \c"
-read AWS_SECRET_ACCESS_KEY < /dev/tty
+read _AWS_SECRET_ACCESS_KEY < /dev/tty
 echo -e "${BLUE}👉 AWS upload bucket:${NC} \c"
-read AWS_UPLOAD_BUCKET < /dev/tty
+read _AWS_UPLOAD_BUCKET < /dev/tty
 
 echo -e "${BLUE}👉 Enter the Web Deployment URL (e.g., http://192.168.x.x:3000 for local dev or https://your-domain.com):${NC} \c"
 read NEXT_PUBLIC_DEPLOYMENT_URL < /dev/tty
 echo -e "${BLUE}👉 NextAuth secret:${NC} \c"
-read NEXTAUTH_SECRET < /dev/tty
+read AUTH_SECRET < /dev/tty
 echo -e "${BLUE}👉 Google client ID:${NC} \c"
-read GOOGLE_CLIENT_ID < /dev/tty
+read AUTH_GOOGLE_CLIENT_ID < /dev/tty
 echo -e "${BLUE}👉 Google client secret:${NC} \c"
-read GOOGLE_CLIENT_SECRET < /dev/tty
+read AUTH_GOOGLE_CLIENT_SECRET < /dev/tty
 
 ENV_FILE=".env.local"
 
@@ -170,15 +170,15 @@ DATABASE_NAME=$DATABASE_NAME
 DATABASE_URL=$DATABASE_URL
 
 # >>>>> AWS configuration
-AWS_REGION=$AWS_REGION
-AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-AWS_UPLOAD_BUCKET=$AWS_UPLOAD_BUCKET
+_AWS_REGION=$_AWS_REGION
+_AWS_ACCESS_KEY_ID=$_AWS_ACCESS_KEY_ID
+_AWS_SECRET_ACCESS_KEY=$_AWS_SECRET_ACCESS_KEY
+_AWS_UPLOAD_BUCKET=$_AWS_UPLOAD_BUCKET
 
 # >>>>> NextAuth configuration
-NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+AUTH_SECRET=$AUTH_SECRET
+AUTH_GOOGLE_CLIENT_ID=$AUTH_GOOGLE_CLIENT_ID
+AUTH_GOOGLE_CLIENT_SECRET=$AUTH_GOOGLE_CLIENT_SECRET
 EOF
 
 echo "Environment variables have been set in $ENV_FILE"
