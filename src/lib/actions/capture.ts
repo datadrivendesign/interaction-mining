@@ -193,8 +193,8 @@ export async function getCaptureFiles(captureId: string) {
       fileKey: file.Key,
       fileName: file.Key.split("/").pop() || "",
       fileUrl: process.env.USE_MINIO_STORE === "true" 
-        ? `${process.env.MINIO_ENDPOINT}/${process.env.AWS_UPLOAD_BUCKET}/${file.Key}`
-        : `https://${process.env.AWS_UPLOAD_BUCKET}.s3.amazonaws.com/${file.Key}`,
+        ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
+        : `https://${process.env._AWS_UPLOAD_BUCKET}.s3.amazonaws.com/${file.Key}`,
     }));
 
     return {

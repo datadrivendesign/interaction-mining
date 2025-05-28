@@ -70,16 +70,16 @@ You can confirm MinIO is running in docker with `docker compose logs minio`
 
 **Map Environment Variables**:
 
-| Script Env Var         |  MinIO Setting        |
-|------------------------|-----------------------|
-| `AWS_ACCESS_KEY_ID`    | `MINIO_ROOT_USER`     |
-| `AWS_SECRET_ACCESS_KEY`| `MINIO_ROOT_PASSWORD` |
-| `AWS_UPLOAD_BUCKET`    | Custom bucket name    |
+| Script Env Var          |  MinIO Setting        |
+|-------------------------|-----------------------|
+| `_AWS_ACCESS_KEY_ID`    | `MINIO_ROOT_USER`     |
+| `_AWS_SECRET_ACCESS_KEY`| `MINIO_ROOT_PASSWORD` |
+| `_AWS_UPLOAD_BUCKET`    | Custom bucket name    |
 
 **Set Up Your Bucket**
 
 1. Open the MinIO GUI console and navigate to **Buckets**.
-2. Click **Create Bucket** and enter a name. This will be the value of `AWS_UPLOAD_BUCKET` prompted by the script. 
+2. Click **Create Bucket** and enter a name. This will be the value of `_AWS_UPLOAD_BUCKET` prompted by the script. 
 3. Set bucket read and write permission so the objects are viewable publicly: 
     a. On the left side tab click on `Buckets` and click bucket name.
     c. Click on the **Anonymous** tab. 
@@ -99,12 +99,12 @@ The ODIM web repository `odim-frontend-next` should be cloned once the script ha
 
     ```javascript
     export const s3 = new S3Client({
-        region: process.env.AWS_REGION!,
+        region: process.env._AWS_REGION!,
         endpoint: "http://192.168.X.X:9000",
         forcePathStyle: true,
         credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+            accessKeyId: process.env._AWS_ACCESS_KEY_ID!,
+            secretAccessKey: process.env._AWS_SECRET_ACCESS_KEY!,
         },
     });
     ```
@@ -113,18 +113,18 @@ The ODIM web repository `odim-frontend-next` should be cloned once the script ha
     - This function generates a url from MinIO to upload the object to the bucket.
     - Update the returned `fileUrl` field to follow MinIO path style.
     ```javascript
-        fileUrl: `http://192.168.X.X:9000/${process.env.AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
+        fileUrl: `http://192.168.X.X:9000/${process.env._AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
     ```
 3. `src/lib/actions/screens.ts` : `s3Client`, `generatePresignedVHUpload()`
     - Make the same adjustments to `s3Client` as in (1)
     - Adjust `fileUrl` to follow path style url in `generatePresignedVHUpload()`
     ```javascript
-        fileUrl: `http://192.168.X.X:9000/${process.env.AWS_UPLOAD_BUCKET}/${fileKey}
+        fileUrl: `http://192.168.X.X:9000/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}
     ```
 4. `src/lib/actions/capture.ts` : `getCaptureFiles()`
     - Again, update `fileUrl` to follow path style url:
     ```javascript
-        fileUrl: `http://192.168.X.X:9000/${process.env.AWS_UPLOAD_BUCKET}/${file.Key}`
+        fileUrl: `http://192.168.X.X:9000/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
     ```
 
 
@@ -200,13 +200,10 @@ You will need to run the MongoDB instance in replica set mode. Use the following
 
 We use [Auth.js](https://authjs.dev/) with Google OAuth to handle authentication.
 
-1. Generate a `NEXTAUTH_SECRET` by running:
-
+1. Generate a `AUTH_SECRET` directly and save to `.env.local` by running:
     ```bash
     npx next-auth secret
     ```
-
-    Save the generated secret.
 2. Set up a Google OAuth app:
     - Go to [Google Cloud Console](https://console.cloud.google.com/).
     - Create a new project.
@@ -268,13 +265,13 @@ The script will prompt you to enter the following env variables:
 ```env
 NEXT_PUBLIC_DEPLOYMENT_URL=
 DATABASE_URL=
-AWS_REGION=
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_UPLOAD_BUCKET=
-NEXTAUTH_SECRET=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+_AWS_REGION=
+_AWS_ACCESS_KEY_ID=
+_AWS_SECRET_ACCESS_KEY=
+_AWS_UPLOAD_BUCKET=
+AUTH_SECRET=
+AUTH_GOOGLE_CLIENT_ID=
+AUTH_GOOGLE_CLIENT_SECRET=
 ```
 
 These environment variables will be saved to `.env.local`, you can always manually modify them later on.
