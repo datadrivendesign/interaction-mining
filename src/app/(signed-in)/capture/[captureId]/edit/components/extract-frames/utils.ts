@@ -52,52 +52,6 @@ export async function extractVideoFrame(
   t: number,
   scale: number = 1
 ): Promise<FrameData> {
-  // Seek to desired time without affecting UI playback
-  await new Promise<void>((res, rej) => {
-    const onSeeked = () => {
-      cleanup();
-      res();
-    };
-    const onError = (e: any) => {
-      cleanup();
-      rej(e);
-    };
-    const cleanup = () => {
-      video.removeEventListener("seeked", onSeeked);
-      video.removeEventListener("error", onError);
-    };
-
-    try {
-      video.crossOrigin = "anonymous";
-      video.addEventListener("seeked", onSeeked);
-      video.currentTime = t;
-    } catch (err) {
-      console.warn("Frame extraction skipped (Safari canvas taint):", err);
-      // Clean up listener and resolve a placeholder so nothing rejects
-      video.removeEventListener("seeked", onSeeked);
-      res();
-    }
-    video.currentTime = t;
-  });
-
-  try {
-    const vf = new VideoFrame(video);
-    const bitmap = await createImageBitmap(vf, {
-      resizeWidth: Math.floor(vf.codedWidth * scale),
-      resizeHeight: Math.floor(vf.codedHeight * scale),
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas context error");
-    ctx.drawImage(bitmap, 0, 0);
-    const src = canvas.toDataURL();
-    vf.close();
-    bitmap.close();
-    return { id: `${t}-${Math.random()}`, src, timestamp: t };
-  } catch (err) {
-    console.warn("WebCodecs failed, falling back to Canvas2D:", err);
-    return grabFrameViaCanvas(video, t, scale);
-  }
+  // Always use Canvas2D fallback for frame extraction
+  return grabFrameViaCanvas(video, t, scale);
 }
