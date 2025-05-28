@@ -168,11 +168,11 @@ export default function Page() {
           {!isTraceLoading ? (
             <>
               <div className="relative flex w-full h-[calc(100%-var(--nav-height))]">
-                <aside className="hidden md:flex flex-col w-full max-w-xs h-full border-r border-neutral-200 dark:border-neutral-800">
+                {/* <aside className="hidden md:flex flex-col w-full max-w-xs h-full border-r border-neutral-200 dark:border-neutral-800">
                   <article className="prose prose-neutral dark:prose-invert leading-snug p-4 md:p-6 overflow-auto">
                     {docRender()}
                   </article>
-                </aside>
+                </aside> */}
                 <div className="flex flex-col w-full h-full items-center">
                   {editorRender()}
                 </div>

@@ -30,6 +30,7 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
       },
       {
         optimisticData: (prevData: any) => {
+          if (!prevData) return [];
           return prevData.filter((file: any) => file.fileKey !== fileKey);
         },
       }

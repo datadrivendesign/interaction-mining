@@ -64,8 +64,7 @@ function TraceCreatedRedirect({ redirectTo }: { redirectTo: string }) {
         <CardHeader>
           <CardTitle>Trace already exists</CardTitle>
           <CardDescription>
-            You&rsquo;ve already created a trace for this capture. You can continue
-            create a new capture.
+            You&rsquo;ve already created a trace for this capture.
           </CardDescription>
         </CardHeader>
         <CardContent>

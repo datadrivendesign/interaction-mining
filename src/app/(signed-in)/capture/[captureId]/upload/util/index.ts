@@ -1,4 +1,9 @@
-import { getCapture, getIosApp, getCaptureFiles } from "@/lib/actions";
+import {
+  getCapture,
+  getIosApp,
+  getCaptureFiles,
+  ListedFiles,
+} from "@/lib/actions";
 
 import { mutate } from "swr";
 import { toast } from "sonner";
@@ -47,27 +52,19 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
 
     toast.success("File uploaded");
 
+    console.log("File uploaded successfully", res.data);
+
     // Optimistically update file list
     mutate(
       [CaptureSWROperations.UPLOAD_LIST, captureId],
-      (prev: any) => [
+      (prev: ListedFiles[] | undefined) => [
         ...(prev || []),
         {
           fileKey: res.data.fileKey,
           fileName: res.data.fileName,
           fileUrl: res.data.fileUrl,
         },
-      ],
-      {
-        optimisticData: (prev: any) => [
-          ...(prev || []),
-          {
-            fileKey: res.data.fileKey,
-            fileName: res.data.fileName,
-            fileUrl: res.data.fileUrl,
-          },
-        ],
-      }
+      ]
     );
   } catch (error: any) {
     console.error("Upload failed", error);
@@ -82,11 +79,13 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
     toast.success("File deleted");
     mutate(
       [CaptureSWROperations.UPLOAD_LIST, captureId],
-      (prevData: any) => {
+      (prevData: ListedFiles[] | undefined) => {
+        if (!prevData) return [];
         return prevData.filter((file: any) => file.fileKey !== fileKey);
       },
       {
-        optimisticData: (prevData: any) => {
+        optimisticData: (prevData: ListedFiles[] | undefined) => {
+          if (!prevData) return [];
           return prevData.filter((file: any) => file.fileKey !== fileKey);
         },
       }

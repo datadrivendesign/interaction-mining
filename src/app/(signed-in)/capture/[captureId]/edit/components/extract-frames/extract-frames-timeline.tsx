@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Play,
   Pause,
@@ -10,15 +10,23 @@ import {
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
-import { FrameData } from "../types";
 import Image from "next/image";
-import { extractVideoFrame } from "./utils";
-import useMeasure from "@/lib/hooks/useMeasure";
+import { motion } from "motion/react";
+
 import { Button } from "@/components/ui/button";
 import Kbd from "@/components/ui/kbd";
+import useMeasure from "@/lib/hooks/useMeasure";
+import { spring } from "@/lib/motion";
+import { DateTime } from "luxon";
 
 export type FrameTimelineProps = {
   src: string;
+  thumbnails: {
+    src: string;
+    timestamp: number;
+    width: number;
+    height: number;
+  }[];
   currentTime: number;
   videoDuration: number;
   isPlaying: boolean;
@@ -28,7 +36,7 @@ export type FrameTimelineProps = {
 };
 
 export default function FrameTimeline({
-  src,
+  thumbnails,
   currentTime,
   videoDuration,
   isPlaying,
@@ -38,7 +46,6 @@ export default function FrameTimeline({
 }: FrameTimelineProps) {
   const [timelineRef, timelineMeasure] = useMeasure<HTMLDivElement>();
   const [dragging, setDragging] = useState(false);
-  const [thumbnailsState, setThumbnails] = useState<FrameData[]>([]);
 
   // Map pointer X -> video time
   const getTimeFromEvent = (e: MouseEvent | React.MouseEvent) => {
@@ -66,6 +73,10 @@ export default function FrameTimeline({
   // End scrub on pointer up
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     timelineRef.current?.releasePointerCapture(e.pointerId);
+    if (dragging) {
+      const t = getTimeFromEvent(e);
+      if (t !== undefined) handleSetTime(t);
+    }
     setDragging(false);
   };
 
@@ -79,60 +90,46 @@ export default function FrameTimeline({
     handleSetTime(newTime);
   };
 
-  // Load thumbnails
-  const onLoadedMetadata = useCallback(
-    async (videoUrl: string) => {
-      const thumbVideo = document.createElement("video");
-      thumbVideo.crossOrigin = "anonymous";
-      thumbVideo.preload = "metadata";
-      thumbVideo.src = videoUrl;
+  const displayedThumbnails = useMemo(() => {
+    if (!thumbnails || thumbnails.length === 0) return [];
+    const { width: timelineWidth, height: timelineHeight } =
+      timelineMeasure ?? { width: 0, height: 0 };
 
-      await new Promise<void>((res) =>
-        thumbVideo.addEventListener("loadedmetadata", () => res(), {
-          once: true,
-        })
+    const { width: videoWidth, height: videoHeight } = thumbnails[0];
+
+    const displayHeight = timelineHeight;
+    const thumbnailWidth =
+      timelineHeight > 0 ? (videoWidth / videoHeight) * displayHeight : 0;
+    const slotCount =
+      timelineWidth > 0 ? Math.ceil(timelineWidth / thumbnailWidth) + 1 : 0;
+
+    // Build quantized thumbnails list
+    const res = Array.from({ length: slotCount }, (_, i) => {
+      // Compute target time for this slot
+      const targetTime =
+        slotCount === 1 ? 0 : (i / (slotCount - 1)) * videoDuration;
+      // Select the thumbnail closest to the target time
+      return thumbnails.reduce((prev, curr) =>
+        Math.abs(curr.timestamp - targetTime) <
+        Math.abs(prev.timestamp - targetTime)
+          ? curr
+          : prev
       );
+    });
 
-      const videoWidth = thumbVideo.videoWidth;
-      const videoHeight = thumbVideo.videoHeight;
-      const { width: timelineWidth, height: timelineHeight } =
-        timelineMeasure ?? {
-          width: 0,
-          height: 0,
-        };
-
-      console.log(
-        `Video dimensions: ${videoWidth}x${videoHeight}, Timeline dimensions: ${timelineWidth}x${timelineHeight}`
-      );
-      const thumbnailHeight = timelineHeight;
-      const thumbnailWidth =
-        timelineHeight > 0 ? (videoWidth / videoHeight) * thumbnailHeight : 0;
-      const numSteps =
-        timelineWidth > 0 ? Math.ceil(timelineWidth / thumbnailWidth) + 1 : 0;
-      const thumbs = Array.from({ length: numSteps }, (_, i) => {
-        const t = (thumbVideo.duration / numSteps) * i;
-        return extractVideoFrame(thumbVideo, t, thumbnailWidth / videoWidth);
-      });
-      console.log("Number of thumbnails to extract:", numSteps);
-      console.log("Extracting thumbnails:", thumbs);
-      const thumbsRes: FrameData[] = await Promise.all(thumbs);
-      console.log("Extracted thumbnails:", thumbsRes);
-      setThumbnails(thumbsRes);
-    },
-    [timelineMeasure]
-  );
-
-  // Trigger thumbnail loading when captureFiles change
-  useEffect(() => {
-    if (src) {
-      onLoadedMetadata(src);
-    }
-  }, [src]);
+    return res;
+  }, [thumbnails, timelineMeasure, videoDuration]);
 
   return (
     <div className="flex items-center h-12 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
       {/* Play/Pause */}
       <div className="flex items-center gap-1 p-1">
+        <span className="inline-flex gap-1 tabular-nums text-xs text-muted-foreground font-medium px-2">
+          {DateTime.fromSeconds(currentTime).toFormat("mm:ss")}/
+          {videoDuration
+            ? DateTime.fromSeconds(videoDuration).toFormat("mm:ss")
+            : "--:--"}
+        </span>
         <Button
           variant={"ghost"}
           size={"sm"}
@@ -192,34 +189,36 @@ export default function FrameTimeline({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        {thumbnailsState.map((thumb) => (
+        {displayedThumbnails.map((thumb, index) => (
           <Image
-            key={thumb.id}
+            key={thumb.src + index}
             src={thumb.src}
             alt={`${thumb.timestamp.toFixed(2)}s`}
             className="w-auto h-full pointer-events-none select-none"
             width={0}
             height={0}
             sizes="100vw"
-            style={{ imageRendering: "pixelated" }}
+            draggable={false}
+            style={{ imageRendering: "crisp-edges" }}
           />
         ))}
 
-        <div
-          className="absolute top-0 bottom-0 w-[2px] bg-yellow-500 pointer-events-none"
-          style={{
-            left: videoDuration
-              ? `${(currentTime / videoDuration) * 100}%`
-              : "0%",
-            transform: "translateX(-50%)",
+        <motion.div
+          className="absolute top-0 bottom-0 w-full h-full pointer-events-none"
+          animate={{
+            opacity: dragging ? 0.5 : 1,
+            x: `${(currentTime / videoDuration) * 100}%`,
           }}
-        />
+          transition={dragging ? { duration: 0 } : spring({ duration: 0.125 })}
+        >
+          <div className="w-[2px] h-full bg-yellow-500 rounded" />
+        </motion.div>
       </div>
 
       {/* Capture */}
       <div className="flex items-center w-auto h-full p-2 gap-4">
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           className="hover:bg-yellow-400! hover:text-background!"
           onClick={handleCapture}
