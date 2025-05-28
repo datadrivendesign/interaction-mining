@@ -8,6 +8,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 import Image from "next/image";
 import {
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   CircleDashed,
+  Dot,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
@@ -294,6 +296,9 @@ export default function RepairScreenCanvas({
                   onMouseMove={() => {
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
+                  onMouseLeave={() => {
+                    setTooltip({ x: null, y: null });
+                  }}
                 />
                 {os === "android" ? (
                   <BoundingBoxOverlay
@@ -347,7 +352,7 @@ function DraggableMarker({
       id: "gestureMarker",
     });
 
-  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
+  const { gesture, gestureOptions } = useContext(GestureContext);
 
   return (
     <>
@@ -398,6 +403,8 @@ function GestureSelection() {
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   // Update gesture type when value changes
   useEffect(() => {
     if (value !== "") {
@@ -414,6 +421,13 @@ function GestureSelection() {
       setGesture((prev) => ({ ...prev, type: null }));
     }
   }, [value, setGesture]);
+
+  useEffect(() => {
+    if (value) {
+      // Focus the description box when a gesture is selected
+      textareaRef.current?.focus();
+    }
+  }, [value]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -451,23 +465,26 @@ function GestureSelection() {
                     }
                   }}
                 >
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
-
-                  {option.subGestures && (
+                  {option.subGestures ? (
                     <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={null}
-                          className="relative w-full h-full"
-                        >
-                          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4" />
-                        </Button>
+                      <PopoverTrigger className="flex justify-between items-center w-full">
+                        <span className="inline-flex items-center gap-2">
+                          {value === option.value ? (
+                            <Check className="size-4" />
+                          ) : option.subGestures.some(
+                              (gesture: GestureOption) =>
+                                gesture.value === value
+                            ) ? (
+                            <div className="inline-flex justify-center items-center size-4 text-lg">
+                              •
+                            </div>
+                          ) : (
+                            <div className="size-4"></div>
+                          )}
+
+                          {option.label}
+                        </span>
+                        <ChevronRight className="size-4" />
                       </PopoverTrigger>
                       <PopoverContent
                         className="w-50 p-0"
@@ -504,6 +521,16 @@ function GestureSelection() {
                         </Command>
                       </PopoverContent>
                     </Popover>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <Check
+                        className={cn(
+                          "h-4 w-4",
+                          value === option.value ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {option.label}
+                    </span>
                   )}
                 </CommandItem>
               ))}
@@ -513,6 +540,7 @@ function GestureSelection() {
       </PopoverContent>
       <div className="flex flex-col bg-white dark:bg-black mt-1">
         <Textarea
+          ref={textareaRef}
           className="text-sm w-full h-full opacity-100"
           placeholder="How did you interact with this element?"
           value={gesture.description ? gesture.description : ""}
