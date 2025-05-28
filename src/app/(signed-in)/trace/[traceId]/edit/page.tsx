@@ -5,13 +5,11 @@ import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Prisma, ScreenGesture, ScreenRedaction } from "@prisma/client";
+import { ScreenGesture, ScreenRedaction } from "@prisma/client";
 
 import { toast } from "sonner";
 
 import {
-  RedactionSchema,
-  ScreenGestureSchema,
   ScreenSchema,
   TraceFormData,
   TraceFormSchema,
@@ -28,10 +26,6 @@ import { useTrace } from "@/lib/hooks";
 import { handleSave } from "./util/export";
 
 enum TraceSteps {
-  // Extract = 0,
-  // Repair = 1,
-  // Redact = 2,
-  // Review = 3,
   Repair = 0,
   Review = 1,
 }

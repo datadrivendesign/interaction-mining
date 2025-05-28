@@ -36,8 +36,9 @@ export async function generatePresignedUploadURL(
       message: "Pre-signed upload URL generated.",
       data: {
         uploadUrl: url,
-        filePrefix: prefix,
         fileKey: `${prefix}/${fileName}`,
+        fileName: fileName,
+        filePrefix: prefix,
         fileUrl: `https://${process.env.AWS_CLOUDFRONT_URL}/${prefix}/${fileName}`,
       },
     };
