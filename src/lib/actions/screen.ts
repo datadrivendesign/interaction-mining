@@ -10,6 +10,11 @@ import { uploadAndroidAPIDataToS3 } from "../aws";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION!,
+  forcePathStyle: process.env.USE_MINIO_STORE === "true" ? true : false,
+  // conditional: only define endpoint if using minio store, otherwise ignore 
+  ...(process.env.USE_MINIO_STORE === "true" && {
+    endpoint: process.env.MINIO_ENDPOINT,
+  }),
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
@@ -162,7 +167,9 @@ export async function generatePresignedVHUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: process.env.USE_MINIO_STORE === "true" 
+          ? `${process.env.MINIO_ENDPOINT}/${process.env.AWS_UPLOAD_BUCKET}/${fileKey}`
+          : `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
       },
     };
   } catch (err) {

@@ -266,7 +266,7 @@ You will be prompted to choose cloning by HTTP or SSH. The script will then clon
 The script will prompt you to enter the following env variables:
 
 ```env
-NEXT_PUBLIC_DEPLOYMENT_URL
+NEXT_PUBLIC_DEPLOYMENT_URL=
 DATABASE_URL=
 AWS_REGION=
 AWS_ACCESS_KEY_ID=
