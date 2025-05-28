@@ -192,7 +192,9 @@ export async function getCaptureFiles(captureId: string) {
     const files = objects.data?.map((file: any) => ({
       fileKey: file.Key,
       fileName: file.Key.split("/").pop() || "",
-      fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.amazonaws.com/${file.Key}`,
+      fileUrl: process.env.USE_MINIO_STORE === "true" 
+        ? `${process.env.MINIO_ENDPOINT}/${process.env.AWS_UPLOAD_BUCKET}/${file.Key}`
+        : `https://${process.env.AWS_UPLOAD_BUCKET}.s3.amazonaws.com/${file.Key}`,
     }));
 
     return {

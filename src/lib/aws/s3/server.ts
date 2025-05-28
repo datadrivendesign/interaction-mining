@@ -35,7 +35,9 @@ export async function generatePresignedUploadURL(
         uploadUrl: url,
         filePrefix: prefix,
         fileKey: `${prefix}/${fileName}`,
-        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${prefix}/${fileName}`,
+        fileUrl: process.env.USE_MINIO_STORE === "true" 
+          ? `${process.env.MINIO_ENDPOINT}/${process.env.AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
+          : `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${prefix}/${fileName}`,
       },
     };
   } catch (err) {
