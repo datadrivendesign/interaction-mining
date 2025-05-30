@@ -513,6 +513,7 @@ if [[ "$USE_ANDROID" == "y" ]]; then
         echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> "$PROFILE_FILE"
       fi
       source "$PROFILE_FILE"
+      echo -e "${YELLOW}Please run 'source $PROFILE_FILE' or restart your terminal to apply SDK changes.${NC}"
     else
       echo -e "${RED}Please install Java JDK 17 manually for your platform.${NC}"
       exit 1
@@ -521,7 +522,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
 
   JAVA_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
   echo -e "${GREEN}✔ Java version $JAVA_VERSION detected.${NC}"
-
   JAVA_MAJOR=$(echo "$JAVA_VERSION" | cut -d. -f1)
   if (( JAVA_MAJOR < 17 )); then
     echo -e "${RED}Java JDK 17 or later is required. Found $JAVA_VERSION.${NC}"
@@ -530,8 +530,9 @@ if [[ "$USE_ANDROID" == "y" ]]; then
   echo -e "${GREEN}✔ Java JDK meets minimum version requirement.${NC}"
 
   # set up Android SDK
+  DEFAULT_SDK_PATH="$HOME/Library/Android/sdk"
+  INSTALL_SDK=false
   if [ -z "$ANDROID_HOME" ]; then
-    DEFAULT_SDK_PATH="$HOME/Library/Android/sdk"
     if [ -d "$DEFAULT_SDK_PATH" ]; then
       ANDROID_HOME="$DEFAULT_SDK_PATH"
     else
@@ -545,10 +546,13 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     if ! command -v sdkmanager &>/dev/null; then
       echo -e "${YELLOW}sdkmanager not found. Attempting to install cmdline-tools...${NC}"
       brew install --cask android-commandlinetools
+      if ! command -v sdkmanager &>/dev/null; then
+        echo -e "${RED}sdkmanager still not found after installing cmdline-tools. Exiting.${NC}"
+        exit 1
+      fi
       
       # Set up expected directory structure for sdkmanager
       mkdir -p "$DEFAULT_SDK_PATH/cmdline-tools/latest"
-
       # Move the downloaded tools into 'latest' (may vary based on brew version)
       # Attempt to find the installed folder automatically
       CMDLINE_TOOLS_SRC=$(find "$DEFAULT_SDK_PATH/cmdline-tools" -maxdepth 1 -type d ! -name "latest" ! -name "." | head -n 1)
@@ -565,33 +569,24 @@ if [[ "$USE_ANDROID" == "y" ]]; then
         echo -e "${RED}You must accept the licenses to continue.${NC}"
         exit 1
       fi
-      echo -e "${BLUE}👉 Do you want to install required Android SDK packages now? (y/n):${NC} \c"
-      read INSTALL_SDK_COMPONENTS < /dev/tty
-      if [[ "$INSTALL_SDK_COMPONENTS" == "y" ]]; then
-        # Install necessary SDK components
-        sdkmanager --sdk_root="$DEFAULT_SDK_PATH" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-      else
-        echo -e "${RED}Required SDK components not installed. Exiting.${NC}"
-        exit 1
-      fi
-      if ! grep -q 'ANDROID_HOME' "$PROFILE_FILE"; then
-        echo 'export ANDROID_HOME="'"$DEFAULT_SDK_PATH"'"' >> "$PROFILE_FILE"
-      fi
-      if ! grep -q 'cmdline-tools/latest/bin' "$PROFILE_FILE"; then
-        echo 'export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> "$PROFILE_FILE"
-      fi
-      source "$PROFILE_FILE"
-    else
-      mkdir -p "$DEFAULT_SDK_PATH/cmdline-tools/latest"
-      yes | sdkmanager --sdk_root="$DEFAULT_SDK_PATH" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-      if ! grep -q 'ANDROID_HOME' "$PROFILE_FILE"; then
-        echo 'export ANDROID_HOME="'"$DEFAULT_SDK_PATH"'"' >> "$PROFILE_FILE"
-      fi
-      if ! grep -q 'cmdline-tools/latest/bin' "$PROFILE_FILE"; then
-        echo 'export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> "$PROFILE_FILE"
-      fi
-      source "$PROFILE_FILE"
     fi
+    echo -e "${BLUE}👉 Do you want to install required Android SDK packages now? (y/n):${NC} \c"
+    read INSTALL_SDK_COMPONENTS < /dev/tty
+    if [[ "$INSTALL_SDK_COMPONENTS" == "y" ]]; then
+      # Install necessary SDK components
+      sdkmanager --sdk_root="$DEFAULT_SDK_PATH" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    else
+      echo -e "${RED}Required SDK components not installed. Exiting.${NC}"
+      exit 1
+    fi
+    if ! grep -q 'ANDROID_HOME' "$PROFILE_FILE"; then
+      echo 'export ANDROID_HOME="'"$DEFAULT_SDK_PATH"'"' >> "$PROFILE_FILE"
+    fi
+    if ! grep -q 'cmdline-tools/latest/bin' "$PROFILE_FILE"; then
+      echo 'export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> "$PROFILE_FILE"
+    fi
+    source "$PROFILE_FILE"
+    echo -e "${YELLOW}Please run 'source $PROFILE_FILE' or restart your terminal to apply SDK changes.${NC}"
   fi
 
   step "Cloning mobile app repository"
@@ -606,7 +601,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     Mobile_REPO_URL="git@github.com:datadrivendesign/mobile-odim.git"
   fi
   Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
-
   # Clone the mobile app repo
   CLEANUP_DIRS+=("$Mobile_REPO_NAME")
   echo "Cloning mobile app repository $Mobile_REPO_URL..."
@@ -635,8 +629,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     API_URL_PREFIX="http://$IP_ADDRESS:3000"
     echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
   fi
-
-
   step "Building mobile APK"
   set +e
   echo "Building APK..."
@@ -645,7 +637,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
   ./gradlew assembleDebug -PAPI_URL_PREFIX="$API_URL_PREFIX"
 
   set -e
-
   cd ..
 
   print_section "Setup Complete"
