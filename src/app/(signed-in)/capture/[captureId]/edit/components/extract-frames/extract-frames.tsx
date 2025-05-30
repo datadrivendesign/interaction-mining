@@ -242,6 +242,23 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
     return files.filter((f) => /\.(webm)$/.test(f.fileKey));
   }, [files]);
 
+  useEffect(() => {
+    const loadVideoBlob = async () => {
+      if (videoFiles.length > 0 && videoRef.current) {
+        try {
+          const response = await fetch(videoFiles[0].fileUrl);
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          videoRef.current.src = objectUrl;
+        } catch (e) {
+          console.error("Error loading video blob:", e);
+          toast.error("Error loading video for frame extraction");
+        }
+      }
+    };
+    loadVideoBlob();
+  }, [videoFiles]);
+
   const handleSetTime = useCallback(
     (t: number) => {
       // Sanity check
@@ -390,7 +407,6 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
                   const video = e.currentTarget;
                   setVideoDuration(video.duration);
                 }}
-                src={videoFiles[0].fileUrl}
               />
             )}
           </div>

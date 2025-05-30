@@ -124,7 +124,7 @@ export default function FrameTimeline({
     <div className="flex items-center h-12 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
       {/* Play/Pause */}
       <div className="flex items-center gap-1 p-1">
-        <span className="inline-flex gap-1 tabular-nums text-xs text-muted-foreground font-medium px-2">
+        <span className="hidden md:inline-flex gap-1 tabular-nums text-xs text-muted-foreground font-medium px-2">
           {DateTime.fromSeconds(currentTime).toFormat("mm:ss")}/
           {videoDuration
             ? DateTime.fromSeconds(videoDuration).toFormat("mm:ss")
@@ -151,7 +151,7 @@ export default function FrameTimeline({
         <Button
           variant={"ghost"}
           size={"sm"}
-          className="aspect-square"
+          className="hidden md:inline-flex aspect-square"
           onClick={handleSkipBackward}
           tooltip={
             <div className="flex w-full justify-between items-center gap-4 text-sm">
@@ -167,10 +167,10 @@ export default function FrameTimeline({
         <Button
           variant={"ghost"}
           size={"sm"}
-          className="aspect-square"
+          className="hidden md:inline-flex aspect-square"
           onClick={handleSkipForward}
           tooltip={
-            <div className="flex w-full justify-between items-center gap-4 text-sm">
+            <div className="w-full justify-between items-center gap-4 text-sm">
               <span>Skip forward 5s</span>
               <Kbd>
                 <ArrowRight className="size-4" />
@@ -220,7 +220,7 @@ export default function FrameTimeline({
         <Button
           variant="secondary"
           size="sm"
-          className="hover:bg-yellow-400! hover:text-background!"
+          className="hover:bg-yellow-400! hover:text-black!"
           onClick={handleCapture}
         >
           <Camera className="size-4" />
