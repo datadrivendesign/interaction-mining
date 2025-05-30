@@ -16,7 +16,6 @@ import {
   ChevronRight,
   ChevronsUpDown,
   CircleDashed,
-  Dot,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMeasure, useMouse } from "@uidotdev/usehooks";
@@ -538,10 +537,10 @@ function GestureSelection() {
           </CommandList>
         </Command>
       </PopoverContent>
-      <div className="flex flex-col bg-white dark:bg-black mt-1">
+      <div className="flex flex-col mt-1">
         <Textarea
           ref={textareaRef}
-          className="text-sm w-full h-full opacity-100"
+          className="text-sm w-full h-full bg-background!"
           placeholder="How did you interact with this element?"
           value={gesture.description ? gesture.description : ""}
           onChange={(e) =>
