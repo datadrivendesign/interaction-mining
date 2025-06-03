@@ -89,13 +89,6 @@ if ! command -v npm &>/dev/null; then
 fi
 echo -e "${GREEN}✔ npm detected.${NC}"
 
-echo -e "${BLUE}👉 Do you want to continue with setup? (y/n):${NC} \c"
-read CONTINUE < /dev/tty
-if [[ "$CONTINUE" != "y" ]]; then
-  echo "Exiting setup. Please install required dependencies first."
-  exit 1
-fi
-
 print_section "Starting ODIM Setup"
 # --- Frontend Setup ---
 
@@ -212,14 +205,19 @@ if [[ "$USE_DEV_ENV" != "y" ]]; then
         echo -e "${RED}Homebrew is not installed. Please install Homebrew first: https://brew.sh${NC}"
         exit 1
       fi
-
       brew install --cask docker
-      echo -e "${YELLOW}Docker installed. Opening Docker...${NC}"
-      open -a Docker
+      echo -e "${YELLOW}Docker installed.${NC}"
+      echo -e "${YELLOW}⚠️ Please manually open Docker Desktop from your Applications folder.${NC}"
+      echo -e "${YELLOW}Complete the setup (grant permissions, finish onboarding, etc).${NC}"
+      echo -e "${YELLOW}Once the Docker whale icon appears in your macOS top bar without a loading animation, press Enter to continue.${NC}"
+      read -r
     else
       echo -e "${RED}Please install Docker manually for your platform: https://docs.docker.com/get-docker/${NC}"
       exit 1
     fi
+  else
+      echo -e "${GREEN}Docker is installed. Opening Docker...${NC}"
+      open -a Docker
   fi
 
   # Wait for Docker daemon to start
@@ -277,6 +275,11 @@ EOF
   CLEANUP_DIRS+=("docker-compose.yml")
 
   echo -e "${BLUE}Starting Docker container with MinIO${NC}"
+  # Stop and remove existing container if it exists
+  if docker ps -a --format '{{.Names}}' | grep -q '^minio$'; then
+    echo -e "${YELLOW}⚠️ A Docker container named 'minio' already exists. Removing it...${NC}"
+    docker rm -f minio
+  fi
   docker compose up -d
   docker compose logs minio
   echo -e "${GREEN}MinIO is now running. You can access the console at: http://$IP_ADDRESS:9001${NC}"
@@ -330,7 +333,19 @@ EOF
 
   # Check if mongo is installed locally
   step "MongoDB Setup"
-  if ! command -v mongosh &>/dev/null; then
+  echo -e "${BLUE}Checking MongoDB tools...${NC}"
+  if command -v mongosh &>/dev/null; then
+    echo -e "${GREEN}✔ mongosh detected${NC}"
+  else
+    echo -e "${RED}✖ mongosh not found${NC}"
+  fi
+  if command -v mongod &>/dev/null; then
+    echo -e "${GREEN}✔ mongod detected${NC}"
+  else
+    echo -e "${RED}✖ mongod not found${NC}"
+  fi
+
+  if ! command -v mongosh &>/dev/null || ! command -v mongod &>/dev/null; then
     echo -e "${YELLOW}Mongo Community Edition is not installed. Attempting to install...${NC}"
     if [[ "$OSTYPE" == "darwin"* ]]; then
       if ! command -v brew &>/dev/null; then
@@ -408,7 +423,12 @@ else
 fi
 # Clone the repo
 echo "Cloning repository $REPO_URL..."
-git clone "$REPO_URL" 
+if ! git clone "$REPO_URL"; then
+  echo -e "${RED}❌ Failed to clone repository. You may not have the correct permissions or access rights.${NC}"
+  echo -e "${YELLOW}If you are using SSH, make sure your GitHub SSH keys are set up properly.${NC}"
+  echo -e "${YELLOW}If using HTTPS, make sure the repository is public or you have access.${NC}"
+  exit 1
+fi
 REPO_NAME=$(basename "${REPO_URL%.git}")
 CLEANUP_DIRS+=("$REPO_NAME")
 echo "Repository cloned to $REPO_NAME"
@@ -604,7 +624,12 @@ if [[ "$USE_ANDROID" == "y" ]]; then
   # Clone the mobile app repo
   CLEANUP_DIRS+=("$Mobile_REPO_NAME")
   echo "Cloning mobile app repository $Mobile_REPO_URL..."
-  git clone "$Mobile_REPO_URL"
+  if ! git clone "$Mobile_REPO_URL"; then
+    echo -e "${RED}❌ Failed to clone repository. You may not have the correct permissions or access rights.${NC}"
+    echo -e "${YELLOW}If you are using SSH, make sure your GitHub SSH keys are set up properly.${NC}"
+    echo -e "${YELLOW}If using HTTPS, make sure the repository is public or you have access.${NC}"
+    exit 1
+  fi
   echo "Repository cloned to $Mobile_REPO_NAME"
   cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
 

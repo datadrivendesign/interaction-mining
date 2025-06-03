@@ -43,6 +43,8 @@ This is a walkthrough guide on how the script sets up a locally hosted ODIM inst
 
 The script installs MinIO through Docker. It will first check if you have Docker installed on your machine. If you do not have Docker installed, the script will install Docker for you through `homebrew`. If you have Docker installed, it will use your Docker installation.
 
+:warning: **If Docker was downloaded for the first time, you need to manually start Docker to complete set up first. The script will prompt you to do that.**
+
 The script will prompt you for **username** and **password** credentials to set up the MinIO object store. These credentials will be needed to access the object store bucket. The script then creates a Docker compose file to set up MinIO with these credentials. Docker will create a container with MinIO installed using the settings in the `docker-compose.yml` file.
 
 The script then asks you to provide a **bucket name** and creates the bucket to store your trace data. The script will use [MinIO Client CLI](https://min.io/docs/minio/linux/reference/minio-mc.html) to create the bucket. If you do not have the CLI installed, the script will install it for you. The script will use this CLI to automate bucket creation and set permissions to make bucket objects publicly available.
