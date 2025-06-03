@@ -89,13 +89,6 @@ if ! command -v npm &>/dev/null; then
 fi
 echo -e "${GREEN}✔ npm detected.${NC}"
 
-echo -e "${BLUE}👉 Do you want to continue with setup? (y/n):${NC} \c"
-read CONTINUE < /dev/tty
-if [[ "$CONTINUE" != "y" ]]; then
-  echo "Exiting setup. Please install required dependencies first."
-  exit 1
-fi
-
 print_section "Starting ODIM Setup"
 # --- Frontend Setup ---
 
@@ -212,14 +205,19 @@ if [[ "$USE_DEV_ENV" != "y" ]]; then
         echo -e "${RED}Homebrew is not installed. Please install Homebrew first: https://brew.sh${NC}"
         exit 1
       fi
-
       brew install --cask docker
-      echo -e "${YELLOW}Docker installed. Opening Docker...${NC}"
-      open -a Docker
+      echo -e "${YELLOW}Docker installed.${NC}"
+      echo -e "${YELLOW}⚠️ Please manually open Docker Desktop from your Applications folder.${NC}"
+      echo -e "${YELLOW}Complete the setup (grant permissions, finish onboarding, etc).${NC}"
+      echo -e "${YELLOW}Once the Docker whale icon appears in your macOS top bar without a loading animation, press Enter to continue.${NC}"
+      read -r
     else
       echo -e "${RED}Please install Docker manually for your platform: https://docs.docker.com/get-docker/${NC}"
       exit 1
     fi
+  else
+      echo -e "${GREEN}Docker is installed. Opening Docker...${NC}"
+      open -a Docker
   fi
 
   # Wait for Docker daemon to start
@@ -277,6 +275,11 @@ EOF
   CLEANUP_DIRS+=("docker-compose.yml")
 
   echo -e "${BLUE}Starting Docker container with MinIO${NC}"
+  # Stop and remove existing container if it exists
+  if docker ps -a --format '{{.Names}}' | grep -q '^minio$'; then
+    echo -e "${YELLOW}⚠️ A Docker container named 'minio' already exists. Removing it...${NC}"
+    docker rm -f minio
+  fi
   docker compose up -d
   docker compose logs minio
   echo -e "${GREEN}MinIO is now running. You can access the console at: http://$IP_ADDRESS:9001${NC}"
@@ -330,7 +333,19 @@ EOF
 
   # Check if mongo is installed locally
   step "MongoDB Setup"
-  if ! command -v mongosh &>/dev/null; then
+  echo -e "${BLUE}Checking MongoDB tools...${NC}"
+  if command -v mongosh &>/dev/null; then
+    echo -e "${GREEN}✔ mongosh detected${NC}"
+  else
+    echo -e "${RED}✖ mongosh not found${NC}"
+  fi
+  if command -v mongod &>/dev/null; then
+    echo -e "${GREEN}✔ mongod detected${NC}"
+  else
+    echo -e "${RED}✖ mongod not found${NC}"
+  fi
+
+  if ! command -v mongosh &>/dev/null || ! command -v mongod &>/dev/null; then
     echo -e "${YELLOW}Mongo Community Edition is not installed. Attempting to install...${NC}"
     if [[ "$OSTYPE" == "darwin"* ]]; then
       if ! command -v brew &>/dev/null; then
@@ -408,7 +423,12 @@ else
 fi
 # Clone the repo
 echo "Cloning repository $REPO_URL..."
-git clone "$REPO_URL" 
+if ! git clone "$REPO_URL"; then
+  echo -e "${RED}❌ Failed to clone repository. You may not have the correct permissions or access rights.${NC}"
+  echo -e "${YELLOW}If you are using SSH, make sure your GitHub SSH keys are set up properly.${NC}"
+  echo -e "${YELLOW}If using HTTPS, make sure the repository is public or you have access.${NC}"
+  exit 1
+fi
 REPO_NAME=$(basename "${REPO_URL%.git}")
 CLEANUP_DIRS+=("$REPO_NAME")
 echo "Repository cloned to $REPO_NAME"
@@ -513,6 +533,7 @@ if [[ "$USE_ANDROID" == "y" ]]; then
         echo 'export PATH="$JAVA_HOME/bin:$PATH"' >> "$PROFILE_FILE"
       fi
       source "$PROFILE_FILE"
+      echo -e "${YELLOW}Please run 'source $PROFILE_FILE' or restart your terminal to apply SDK changes.${NC}"
     else
       echo -e "${RED}Please install Java JDK 17 manually for your platform.${NC}"
       exit 1
@@ -521,7 +542,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
 
   JAVA_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
   echo -e "${GREEN}✔ Java version $JAVA_VERSION detected.${NC}"
-
   JAVA_MAJOR=$(echo "$JAVA_VERSION" | cut -d. -f1)
   if (( JAVA_MAJOR < 17 )); then
     echo -e "${RED}Java JDK 17 or later is required. Found $JAVA_VERSION.${NC}"
@@ -530,8 +550,9 @@ if [[ "$USE_ANDROID" == "y" ]]; then
   echo -e "${GREEN}✔ Java JDK meets minimum version requirement.${NC}"
 
   # set up Android SDK
+  DEFAULT_SDK_PATH="$HOME/Library/Android/sdk"
+  INSTALL_SDK=false
   if [ -z "$ANDROID_HOME" ]; then
-    DEFAULT_SDK_PATH="$HOME/Library/Android/sdk"
     if [ -d "$DEFAULT_SDK_PATH" ]; then
       ANDROID_HOME="$DEFAULT_SDK_PATH"
     else
@@ -545,10 +566,13 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     if ! command -v sdkmanager &>/dev/null; then
       echo -e "${YELLOW}sdkmanager not found. Attempting to install cmdline-tools...${NC}"
       brew install --cask android-commandlinetools
+      if ! command -v sdkmanager &>/dev/null; then
+        echo -e "${RED}sdkmanager still not found after installing cmdline-tools. Exiting.${NC}"
+        exit 1
+      fi
       
       # Set up expected directory structure for sdkmanager
       mkdir -p "$DEFAULT_SDK_PATH/cmdline-tools/latest"
-
       # Move the downloaded tools into 'latest' (may vary based on brew version)
       # Attempt to find the installed folder automatically
       CMDLINE_TOOLS_SRC=$(find "$DEFAULT_SDK_PATH/cmdline-tools" -maxdepth 1 -type d ! -name "latest" ! -name "." | head -n 1)
@@ -565,33 +589,24 @@ if [[ "$USE_ANDROID" == "y" ]]; then
         echo -e "${RED}You must accept the licenses to continue.${NC}"
         exit 1
       fi
-      echo -e "${BLUE}👉 Do you want to install required Android SDK packages now? (y/n):${NC} \c"
-      read INSTALL_SDK_COMPONENTS < /dev/tty
-      if [[ "$INSTALL_SDK_COMPONENTS" == "y" ]]; then
-        # Install necessary SDK components
-        sdkmanager --sdk_root="$DEFAULT_SDK_PATH" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-      else
-        echo -e "${RED}Required SDK components not installed. Exiting.${NC}"
-        exit 1
-      fi
-      if ! grep -q 'ANDROID_HOME' "$PROFILE_FILE"; then
-        echo 'export ANDROID_HOME="'"$DEFAULT_SDK_PATH"'"' >> "$PROFILE_FILE"
-      fi
-      if ! grep -q 'cmdline-tools/latest/bin' "$PROFILE_FILE"; then
-        echo 'export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> "$PROFILE_FILE"
-      fi
-      source "$PROFILE_FILE"
-    else
-      mkdir -p "$DEFAULT_SDK_PATH/cmdline-tools/latest"
-      yes | sdkmanager --sdk_root="$DEFAULT_SDK_PATH" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-      if ! grep -q 'ANDROID_HOME' "$PROFILE_FILE"; then
-        echo 'export ANDROID_HOME="'"$DEFAULT_SDK_PATH"'"' >> "$PROFILE_FILE"
-      fi
-      if ! grep -q 'cmdline-tools/latest/bin' "$PROFILE_FILE"; then
-        echo 'export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> "$PROFILE_FILE"
-      fi
-      source "$PROFILE_FILE"
     fi
+    echo -e "${BLUE}👉 Do you want to install required Android SDK packages now? (y/n):${NC} \c"
+    read INSTALL_SDK_COMPONENTS < /dev/tty
+    if [[ "$INSTALL_SDK_COMPONENTS" == "y" ]]; then
+      # Install necessary SDK components
+      sdkmanager --sdk_root="$DEFAULT_SDK_PATH" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    else
+      echo -e "${RED}Required SDK components not installed. Exiting.${NC}"
+      exit 1
+    fi
+    if ! grep -q 'ANDROID_HOME' "$PROFILE_FILE"; then
+      echo 'export ANDROID_HOME="'"$DEFAULT_SDK_PATH"'"' >> "$PROFILE_FILE"
+    fi
+    if ! grep -q 'cmdline-tools/latest/bin' "$PROFILE_FILE"; then
+      echo 'export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"' >> "$PROFILE_FILE"
+    fi
+    source "$PROFILE_FILE"
+    echo -e "${YELLOW}Please run 'source $PROFILE_FILE' or restart your terminal to apply SDK changes.${NC}"
   fi
 
   step "Cloning mobile app repository"
@@ -606,11 +621,15 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     Mobile_REPO_URL="git@github.com:datadrivendesign/mobile-odim.git"
   fi
   Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
-
   # Clone the mobile app repo
   CLEANUP_DIRS+=("$Mobile_REPO_NAME")
   echo "Cloning mobile app repository $Mobile_REPO_URL..."
-  git clone "$Mobile_REPO_URL"
+  if ! git clone "$Mobile_REPO_URL"; then
+    echo -e "${RED}❌ Failed to clone repository. You may not have the correct permissions or access rights.${NC}"
+    echo -e "${YELLOW}If you are using SSH, make sure your GitHub SSH keys are set up properly.${NC}"
+    echo -e "${YELLOW}If using HTTPS, make sure the repository is public or you have access.${NC}"
+    exit 1
+  fi
   echo "Repository cloned to $Mobile_REPO_NAME"
   cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
 
@@ -635,8 +654,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     API_URL_PREFIX="http://$IP_ADDRESS:3000"
     echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
   fi
-
-
   step "Building mobile APK"
   set +e
   echo "Building APK..."
@@ -645,7 +662,6 @@ if [[ "$USE_ANDROID" == "y" ]]; then
   ./gradlew assembleDebug -PAPI_URL_PREFIX="$API_URL_PREFIX"
 
   set -e
-
   cd ..
 
   print_section "Setup Complete"
