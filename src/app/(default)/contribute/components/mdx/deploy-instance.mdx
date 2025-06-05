@@ -1,0 +1,79 @@
+## ❗ This Section is Still Under Development
+
+We use AWS S3 and MongoDB Atlas to deploy ODIM. These are instructions on how to set up these dependencies. 
+
+### Deploying an AWS S3 Bucket 
+
+ODIM uses AWS S3 to store trace data. To deploy your own version you will need to do some setup:
+
+1. Create an [AWS account](https://aws.amazon.com/free).
+2. Generate an **Access Key ID** and **Secret Access Key** — save these securely.
+3. Create a new **S3 bucket** and **note the bucket name**.
+4. To make your traces public:
+    - Go to your bucket → `Permissions` → turn **off** "Block all public access".
+    - Configure **CORS** under `Permissions` with:
+
+    ```json
+    [
+      {
+        "AllowedHeaders": ["*"],
+        "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+        // local testing requires local ip addresses, if deployed
+        "AllowedOrigins": [
+            "http://localhost:3000", 
+            "http://192.168.x.x:3000", 
+            "https://your-deployed-app.amplifyapp.com",
+            "..."
+        ],
+        "ExposeHeaders": []
+      }
+    ]
+    ```
+Once set up is done you will need to set up these env variables with the credentials you saved:
+
+<table>
+  <thead>
+    <tr>
+      <th>Script Env Var</th>
+      <th>MinIO Setting</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>_AWS_ACCESS_KEY_ID</code></td>
+      <td>AWS Access Key ID</td>
+    </tr>
+    <tr>
+      <td><code>_AWS_SECRET_ACCESS_KEY</code></td>
+      <td>AWS Secret Access Key</td>
+    </tr>
+    <tr>
+      <td><code>_AWS_UPLOAD_BUCKET</code></td>
+      <td>Name of AWS S3 Bucket</td>
+    </tr>
+  </tbody>
+</table>
+
+### MongoDB Atlas Set Up
+
+Trace metadata is stored in a MongoDB database. To deploy a MongoDB cloud instance:
+
+1. Create a [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) account.
+2. Create a database cluster.
+3. Set up a **database user** under `Database Access` → "Add New Database User".
+4. Get your **connection string**:
+    - Go to your cluster → `Connect` → choose **Drivers**.
+    - Copy the connection string and replace `<username>` and `<password>`.
+    - Come up with a name for your database and append to your connection string (i.e. `mongodb+srv://<username>:<password>@cluster.mongodb.net/<dbname>`)
+    - Save the full string securely.
+    - Follow the [connection string guide](https://www.mongodb.com/resources/products/fundamentals/mongodb-connection-string) for more details
+
+Once you have set up your database instance, **save your connection string as env variable** `DATABASE_URL`
+
+### Deploying the Web App
+
+After setup and development, you can deploy the web interface. Our current implementation uses **AWS Amplify**. See these deploy guides:
+- [Next.js Deployment Guide](https://nextjs.org/docs/app/getting-started/deploying)
+- [AWS Amplify Guide for Next.js](https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components)
+
+The deployed url should be saved as env variable `NEXT_PUBLIC_DEPLOYMENT_URL`. You will also need to set env variable `AUTH_TRUST_HOST` as `true`.

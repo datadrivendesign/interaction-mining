@@ -1,41 +1,44 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowUpRight, DownloadIcon } from "lucide-react";
-
-import InstallInstructions from "./components/install-instructions.mdx";
-import { Button } from "@/components/ui/button";
-import InstallationVideo from "./components/installation-video.mdx";
+import SetUpInstructions from "./components/mdx/set-up-instructions.mdx";
+import DeployInstance from "./components/mdx/deploy-instance.mdx";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import RecordTrace from "./components/record-trace";
 
 export default function Page() {
   return (
     <>
       <main className="relative flex flex-col grow min-h-dvh items-center justify-between">
-        <section className="relative flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) p-8 md:p-16 gap-8 md:gap-16">
-          <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
-            <InstallInstructions />
-          </article>
-          <aside className="sticky top-12 flex flex-col w-full gap-2 max-w-xs">
-            <Link
-              href="https://mobileodimbucket155740-dev.s3.us-east-2.amazonaws.com/apk/odim-3.0.apk"
-              target="_blank"
-            >
-              <Button className="w-full">
-                <DownloadIcon size={20} className="mr-1" />
-                Download Latest (v3.0)
-              </Button>
-            </Link>
-            <Button variant="secondary" className="w-full" disabled>
-              <ArrowUpRight size={20} className="mr-1" />
-              Source release pending
-            </Button>
-            <div className="flex justify-between items-center gap-8 mt-8">
-              <div className="  w-full max-w-xs mx-auto text-center">
-                <InstallationVideo />
-              </div>
-            </div>
-          </aside>
-        </section>
+        <Tabs defaultValue="setup-instructions" className="w-full max-w-(--breakpoint-xl) p-4">
+          <TabsList className="sticky left-10">
+            <TabsTrigger value="setup-instructions">
+              Setup Instructions
+            </TabsTrigger>
+            <TabsTrigger value="record-trace">
+              Recording a Trace
+            </TabsTrigger>
+            <TabsTrigger value="deploy-instance">
+              Deploy Own Instance
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="setup-instructions">
+            <section className="relative flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) p-4 md:p-8 gap-8 md:gap-16">
+              <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
+                <SetUpInstructions />
+              </article>
+            </section>
+          </TabsContent>
+          <TabsContent value="record-trace">
+            <RecordTrace />
+          </TabsContent>
+          <TabsContent value="deploy-instance">
+            <section className="relative flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) p-4 md:p-8 gap-8 md:gap-16">
+              <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
+                <DeployInstance />
+              </article>
+            </section>
+          </TabsContent>
+        </Tabs>
       </main>
     </>
   );

@@ -1,23 +1,18 @@
-# ODIM Install Script Explanation Guide
+# ODIM Script Setup Guide
 
-<!-- This guide walks you through setting up your own instance of the ODIM system, including external services and required tools. -->
-
-This guide is made to explain what our ODIM (On-Device Interaction Mining) installation script does when it is run. Some set up instruactions are included as well.
+This guide explains what our ODIM (On-Device Interaction Mining) installation script does when it is run. Some set up instruactions are included as well.
 
 ### Running the Setup Script
 
 Run the following command to download and run our script:
 
 ```bash
-bash install-2.sh
+bash install.sh
 ```
-<!-- ```bash
-curl -o- https://dribosc0et3qr.cloudfront.net/install-2.sh | bash;
-``` -->
 
 The script will step you through the setup and build for both the web and mobile apps. We will explain below the different steps the script takes to set up all dependencies.
 
-:heavy_exclamation_mark: **Important Note**: Our script uses `homebrew` to install needed dependencies. Please make sure you have it installed first before running our script. The script is currently targeted for OSX devices, but it may work on Linux with `homebrew` installed.
+❗ **Important Note**: Our script uses `homebrew` to install needed dependencies. Please make sure you have it installed first before running our script. The script is currently targeted for OSX devices, but it may work on Linux with `homebrew` installed.
 
 ### ⚙️ Check Dependencies to Run ODIM Web
 
@@ -33,7 +28,7 @@ The script will give you a choice on how to set up the ODIM system:
 - If you want a [locally hosted version](#computer-locally-hosted-odim) of ODIM to develop, test, or use.
 - If you are a collaborator and have access to our [remote dev environment](#remove-dev-environment-set-up).
 
-### :computer: Locally Hosted ODIM
+### 💻 Locally Hosted ODIM
 
 This is a walkthrough guide on how the script sets up a locally hosted ODIM instance of ODIM. There will be some manual set up required later in the script, so please pay attention.
 
@@ -43,7 +38,7 @@ This is a walkthrough guide on how the script sets up a locally hosted ODIM inst
 
 The script installs MinIO through Docker. It will first check if you have Docker installed on your machine. If you do not have Docker installed, the script will install Docker for you through `homebrew`. If you have Docker installed, it will use your Docker installation.
 
-:warning: **If Docker was downloaded for the first time, you need to manually start Docker to complete set up first. The script will prompt you to do that.**
+⚠️ **If Docker was downloaded for the first time, you need to manually start Docker to complete set up first. The script will prompt you to do that.**
 
 The script will prompt you for **username** and **password** credentials to set up the MinIO object store. These credentials will be needed to access the object store bucket. The script then creates a Docker compose file to set up MinIO with these credentials. Docker will create a container with MinIO installed using the settings in the `docker-compose.yml` file.
 
@@ -61,7 +56,7 @@ The script then starts up the MongoDB process and sets up the database with the 
 
 #### Auth.js with Google OAuth
 
-:heavy_exclamation_mark: If you are setting up a local ODIM instance, **you will need to manually set up Google Authentication**.
+❗ If you are setting up a local ODIM instance, **you will need to manually set up Google Authentication**.
 
 We use [Auth.js](https://authjs.dev/) with Google OAuth to handle authentication. To enable Google Authentication:
 
@@ -116,7 +111,7 @@ AUTH_GOOGLE_CLIENT_SECRET=
 NEXT_PUBLIC_DEPLOYMENT_URL=
 ```
 
-### ⚙️ ODIM Mobile Set Up
+### ⚙️ ODIM Mobile (Android) Set Up
 
 Next, the script will ask whether you want to set up the ODIM Android mobile app. If not, the script will [skip the set up in this section](#running-odim-on-localhost). 
 
@@ -132,7 +127,7 @@ If the SDK is not installed, the script uses `homebrew` to install `android-comm
 
 The script will attempt to install the SDK through the command line. You will need to agree to license agreements and wait for the install to finish.
 
-:warning: **To make sure your system can find Java and Android SDK outside the script**, make sure to run `source` on your terminal profile after the script is finished.
+⚠️ **To make sure your system can find Java and Android SDK outside the script**, make sure to run `source` on your terminal profile after the script is finished.
 
 ```bash
 # After script finishes, run:
@@ -156,7 +151,7 @@ The APK is built using a Gradle script in the mobile repo:
 
 Once the build is done, the script will print the path to where the APK was built. You can install this file on an Android phone or add it to an emulator to run the app.
 
-:warning: **Security Note**: Use `./gradlew assembleDebug` only for local development. Debug builds allow cleartext (HTTP) traffic, which poses a security risk in production. Using `./gradlew assembleRelease` for production APKs, will block insecure HTTP calls by default.
+⚠️ **Security Note**: Use `./gradlew assembleDebug` only for local development. Debug builds allow cleartext (HTTP) traffic, which poses a security risk in production. Using `./gradlew assembleRelease` for production APKs, will block insecure HTTP calls by default.
 
 ### Running ODIM on Localhost
 
@@ -166,29 +161,7 @@ npm run dev -- -H 0.0.0.0
 ```
 The parameters `-- -H 0.0.0.0` makes the site accessible from external devices on your network. Specifically, it binds the development server to all IPs, allowing other devices on your network to access your local server.
 
-----
-
-### Related Topics 
-
-These sections are not part of the script but serve as FAQs for users who want to use the system or deploy their own version.
-
-#### Creating a New Capture
-
-Now that you have ODIM set up, here are the steps to create a new capture:
-
-1. Log in to ODIM through your Google account.
-2. Click on your profile and go to "Dashboard".
-3. Click the "Create New Capture" button.
-4. Fill out the New Capture form.
-    - You can add a new app by providing the Android app package name on Google Play Store or iOS app bundle ID on the App Store.
-    - You can find the package name of an app from its [Google Play Store URL](https://support.google.com/admob/answer/9972781)
-    - You can find the iOS bundle ID of an app from the [App Store URL](https://www.nutrient.io/guides/ios/faq/finding-the-app-bundle-id/)
-5. The web app will redirect you to a page with a QR code.
-    - **If iOS**: scan the QR code with your phone to reach a new page with a file upload option. Screen record your task and upload the mp4 file.      
-        - (:warning: Warning: Firefox does not support HEVC video files, which are used by iOS devices to screen record.)
-    - If Android: Open the ODIM app and scan the QR code. Follow the instructions in the Contribute page (navigation bar right side) on how to record and upload traces.
-
-#### Cleaning Up Local Dependencies
+### Cleaning Up Local Dependencies
 
 These are instructions on how to remove local dependencies.
 - To shut down local Docker containers:
@@ -197,69 +170,3 @@ These are instructions on how to remove local dependencies.
     ```
 - To remove storage bucket, delete the `minio_data` specified in the docker compose file.
 - To remove mongo data, delete the mongo directory specified in `mongo.conf`.
-
-
-#### Deploying an AWS S3 Bucket 
-
-ODIM uses AWS S3 to store trace data. To deploy your own version you will need to do some setup:
-
-1. Create an [AWS account](https://aws.amazon.com/free).
-2. Generate an **Access Key ID** and **Secret Access Key** — save these securely.
-3. Create a new **S3 bucket** and **note the bucket name**.
-4. To make your traces public:
-    - Go to your bucket → `Permissions` → turn **off** "Block all public access".
-    - Configure **CORS** under `Permissions` with:
-
-    ```json
-    [
-      {
-        "AllowedHeaders": ["*"],
-        "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
-        // local testing requires local ip addresses, if deployed
-        "AllowedOrigins": [
-            "http://localhost:3000", 
-            "http://192.168.x.x:3000", 
-            "https://your-deployed-app.amplifyapp.com",
-            "..."
-        ],
-        "ExposeHeaders": []
-      }
-    ]
-    ```
-Once set up is done you will need to set up these env variables with the credentials you saved:
-
-| Script Env Var          |  MinIO Setting        |
-|-------------------------|-----------------------|
-| `_AWS_ACCESS_KEY_ID`    | AWS Access Key ID     |
-| `_AWS_SECRET_ACCESS_KEY`| AWS Secret Access Key |
-| `_AWS_UPLOAD_BUCKET`    | Name of AWS S3 Bucket |
-
-#### MongoDB Atlas Set Up
-
-Trace metadata is stored in a MongoDB database. To deploy a MongoDB cloud instance:
-
-1. Create a [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) account.
-2. Create a database cluster.
-3. Set up a **database user** under `Database Access` → "Add New Database User".
-4. Get your **connection string**:
-    - Go to your cluster → `Connect` → choose **Drivers**.
-    - Copy the connection string and replace `<username>` and `<password>`.
-    - Come up with a name for your database and append to your connection string (i.e. `mongodb+srv://<username>:<password>@cluster.mongodb.net/<dbname>`)
-    - Save the full string securely.
-    - Follow the [connection string guide](https://www.mongodb.com/resources/products/fundamentals/mongodb-connection-string) for more details
-
-Once you have set up your database instance, **save your connection string as env variable** `DATABASE_URL`
-
-#### Deploying the Web App
-
-After setup and development, you can deploy the web interface. Our current implementation uses **AWS Amplify**. See these deploy guides:
-- [Next.js Deployment Guide](https://nextjs.org/docs/app/getting-started/deploying)
-- [AWS Amplify Guide for Next.js](https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components)
-
-The deployed url should be saved as env variable `NEXT_PUBLIC_DEPLOYMENT_URL`.
-
-
-### ✅ Final Notes
-
-- Double-check credentials and (if applicable) CORS configurations
-- Reach out via Issues or Discussions if you encounter any problems
