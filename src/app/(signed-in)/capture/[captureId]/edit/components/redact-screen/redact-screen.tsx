@@ -23,7 +23,6 @@ export default function RedactScreen() {
   const redactions = getValues("redactions") as {
     [screenId: string]: Redaction[];
   };
-  // TODO: pass vh by watch, then pass by prop in readct-screen-canvas
   const vhs = getValues("vhs") as { [key: string]: any };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);

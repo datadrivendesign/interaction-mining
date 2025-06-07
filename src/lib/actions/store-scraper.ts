@@ -22,7 +22,6 @@ export async function getIosApp({ appId }: { appId: string }) {
       data: res,
     };
   } catch (error) {
-    console.error("Error fetching iOS app data:", error);
     return {
       ok: false,
       message: "Error fetching iOS app data",
@@ -49,7 +48,6 @@ export async function getAndroidApp({ appId }: { appId: string }) {
       data: res,
     };
   } catch (error) {
-    console.error("Error fetching Android app data:", error);
     return {
       ok: false,
       message: "Error fetching Android app data",

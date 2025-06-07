@@ -10,10 +10,18 @@
 
 @layer base {
   :root {
+    font-feature-settings: "liga" 1, "calt" 1; /* fix for Chrome */
+
     --foreground: var(--color-black);
     --background: var(--color-white);
     --muted-foreground: var(--color-neutral-500);
     --muted-background: var(--color-neutral-100);
+  }
+
+  @supports (font-variation-settings: normal) {
+    :root {
+      font-family: InterVariable, sans-serif;
+    }
   }
 
   @media (prefers-color-scheme: dark) {

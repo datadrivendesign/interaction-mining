@@ -1,39 +1,55 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { Play, Pause, Camera, Rewind, RotateCcw, RotateCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { FrameData } from "../types";
+import React, { useState, useMemo } from "react";
+import {
+  Play,
+  Pause,
+  Camera,
+  RotateCcw,
+  RotateCw,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import Image from "next/image";
-import mergeRefs from "@/lib/utils/merge-refs";
+import { motion } from "motion/react";
+
+import { Button } from "@/components/ui/button";
+import Kbd from "@/components/ui/kbd";
+import useMeasure from "@/lib/hooks/useMeasure";
+import { spring } from "@/lib/motion";
+import { DateTime } from "luxon";
 
 export type FrameTimelineProps = {
-  ref: React.Ref<HTMLDivElement>;
-  thumbnails: FrameData[];
+  src: string;
+  thumbnails: {
+    src: string;
+    timestamp: number;
+    width: number;
+    height: number;
+  }[];
   currentTime: number;
   videoDuration: number;
   isPlaying: boolean;
-  onSetTime: (t: number) => void;
-  onPlayPause: () => void;
-  onCapture: () => void;
+  handleSetTime: (t: number) => void;
+  handlePlayPause: () => void;
+  handleCapture: () => void;
 };
 
 export default function FrameTimeline({
-  ref,
   thumbnails,
   currentTime,
   videoDuration,
   isPlaying,
-  onSetTime,
-  onPlayPause,
-  onCapture,
+  handleSetTime,
+  handlePlayPause,
+  handleCapture,
 }: FrameTimelineProps) {
-  const stripRef = useRef<HTMLDivElement>(null);
+  const [timelineRef, timelineMeasure] = useMeasure<HTMLDivElement>();
   const [dragging, setDragging] = useState(false);
 
   // Map pointer X -> video time
   const getTimeFromEvent = (e: MouseEvent | React.MouseEvent) => {
-    const rect = stripRef.current?.getBoundingClientRect();
+    const rect = timelineRef.current?.getBoundingClientRect();
     if (!rect) return;
     const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
     return pct * videoDuration;
@@ -41,12 +57,10 @@ export default function FrameTimeline({
 
   // Start scrub on pointer down
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    stripRef.current?.setPointerCapture(e.pointerId);
+    timelineRef.current?.setPointerCapture(e.pointerId);
     setDragging(true);
     const t = getTimeFromEvent(e);
-    if (t !== undefined) onSetTime(t);
-    if (isPlaying) onPlayPause();
+    if (t !== undefined) handleSetTime(t);
   };
 
   // Scrub on pointer move when dragging
@@ -54,82 +68,166 @@ export default function FrameTimeline({
     e.preventDefault();
     if (!dragging) return;
     const t = getTimeFromEvent(e);
-    if (t !== undefined) onSetTime(t);
+    if (t !== undefined) handleSetTime(t);
   };
 
   // End scrub on pointer up
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    stripRef.current?.releasePointerCapture(e.pointerId);
+    timelineRef.current?.releasePointerCapture(e.pointerId);
+    if (dragging) {
+      const t = getTimeFromEvent(e);
+      if (t !== undefined) handleSetTime(t);
+    }
     setDragging(false);
   };
 
   const handleSkipForward = () => {
-    const newTime = Math.min(currentTime + 2, videoDuration);
-    onSetTime(newTime);
+    const newTime = Math.min(currentTime + 5, videoDuration);
+    handleSetTime(newTime);
   };
 
   const handleSkipBackward = () => {
-    const newTime = Math.max(currentTime - 2, 0);
-    onSetTime(newTime);
+    const newTime = Math.max(currentTime - 5, 0);
+    handleSetTime(newTime);
   };
 
+  const displayedThumbnails = useMemo(() => {
+    if (!thumbnails || thumbnails.length === 0) return [];
+    const { width: timelineWidth, height: timelineHeight } =
+      timelineMeasure ?? { width: 0, height: 0 };
+
+    const { width: videoWidth, height: videoHeight } = thumbnails[0];
+
+    const displayHeight = timelineHeight;
+    const thumbnailWidth =
+      timelineHeight > 0 ? (videoWidth / videoHeight) * displayHeight : 0;
+    const slotCount =
+      timelineWidth > 0 ? Math.ceil(timelineWidth / thumbnailWidth) + 1 : 0;
+
+    // Build quantized thumbnails list
+    const res = Array.from({ length: slotCount }, (_, i) => {
+      // Compute target time for this slot
+      const targetTime =
+        slotCount === 1 ? 0 : (i / (slotCount - 1)) * videoDuration;
+      // Select the thumbnail closest to the target time
+      return thumbnails.reduce((prev, curr) =>
+        Math.abs(curr.timestamp - targetTime) <
+        Math.abs(prev.timestamp - targetTime)
+          ? curr
+          : prev
+      );
+    });
+
+    return res;
+  }, [thumbnails, timelineMeasure, videoDuration]);
+
   return (
-    <div className="flex items-center h-12 bg-neutral-100 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700">
+    <div className="flex items-center h-12 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
       {/* Play/Pause */}
-      <div className="flex items-center px-4 gap-4">
-        <button onClick={onPlayPause} title={isPlaying ? "Pause" : "Play"}>
+      <div className="flex items-center gap-1 p-1">
+        <span className="hidden md:inline-flex gap-1 tabular-nums text-xs text-muted-foreground font-medium px-2">
+          {DateTime.fromSeconds(currentTime).toFormat("mm:ss")}/
+          {videoDuration
+            ? DateTime.fromSeconds(videoDuration).toFormat("mm:ss")
+            : "--:--"}
+        </span>
+        <Button
+          variant={"ghost"}
+          size={"sm"}
+          className="aspect-square"
+          onClick={handlePlayPause}
+          tooltip={
+            <div className="flex w-full justify-between items-center gap-4 text-sm">
+              <span>Play/pause</span>
+              <Kbd>Space</Kbd>
+            </div>
+          }
+        >
           {isPlaying ? (
             <Pause className="size-4 fill-foreground" />
           ) : (
             <Play className="size-4 fill-foreground" />
           )}
-        </button>
-        <button onClick={handleSkipBackward} title="Skip backward 5s">
+        </Button>
+        <Button
+          variant={"ghost"}
+          size={"sm"}
+          className="hidden md:inline-flex aspect-square"
+          onClick={handleSkipBackward}
+          tooltip={
+            <div className="flex w-full justify-between items-center gap-4 text-sm">
+              <span>Skip backward 5s</span>
+              <Kbd>
+                <ArrowLeft className="size-4" />
+              </Kbd>
+            </div>
+          }
+        >
           <RotateCcw className="size-4" />
-        </button>
-        <button onClick={handleSkipForward} title="Skip forward 5s">
+        </Button>
+        <Button
+          variant={"ghost"}
+          size={"sm"}
+          className="hidden md:inline-flex aspect-square"
+          onClick={handleSkipForward}
+          tooltip={
+            <div className="w-full justify-between items-center gap-4 text-sm">
+              <span>Skip forward 5s</span>
+              <Kbd>
+                <ArrowRight className="size-4" />
+              </Kbd>
+            </div>
+          }
+        >
           <RotateCw className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <div
-        ref={mergeRefs(stripRef, ref)}
-        className="relative flex w-full h-full overflow-x-auto whitespace-nowrap cursor-pointer"
+        ref={timelineRef}
+        className="relative flex w-full h-full bg-muted-background overflow-clip whitespace-nowrap cursor-pointer"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        {thumbnails.map((thumb) => (
+        {displayedThumbnails.map((thumb, index) => (
           <Image
-            key={thumb.id}
+            key={thumb.src + index}
             src={thumb.src}
             alt={`${thumb.timestamp.toFixed(2)}s`}
-            className="w-auto h-full pointer-events-none"
+            className="w-auto h-full pointer-events-none select-none"
             width={0}
             height={0}
             sizes="100vw"
+            draggable={false}
+            style={{ imageRendering: "crisp-edges" }}
           />
         ))}
 
-        <div
-          className="absolute top-0 bottom-0 w-[2px] bg-yellow-500 pointer-events-none"
-          style={{
-            left: videoDuration
-              ? `${(currentTime / videoDuration) * 100}%`
-              : "0%",
-            transform: "translateX(-50%)",
+        <motion.div
+          className="absolute top-0 bottom-0 w-full h-full pointer-events-none"
+          animate={{
+            opacity: dragging ? 0.5 : 1,
+            x: `${(currentTime / videoDuration) * 100}%`,
           }}
-        />
+          transition={dragging ? { duration: 0 } : spring({ duration: 0.125 })}
+        >
+          <div className="w-[2px] h-full bg-yellow-500 rounded" />
+        </motion.div>
       </div>
 
       {/* Capture */}
-      <button 
-        className="inline-flex items-center px-4 cursor-pointer" 
-        onClick={onCapture}
-      >
-        <Camera className="mr-1" size={20} />
-        Capture
-      </button>
+      <div className="flex items-center w-auto h-full p-2 gap-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="hover:bg-yellow-400! hover:text-black!"
+          onClick={handleCapture}
+        >
+          <Camera className="size-4" />
+          Capture
+        </Button>
+      </div>
     </div>
   );
 }

@@ -62,6 +62,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
+
+    async authorized({ auth }) {
+      return !!auth;
+    },
   },
   events: {
     async signIn({ user }) {
@@ -79,10 +83,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
-export async function requireAuth() {
-  const session = await auth();
+/**
+ * Verifies if a user is signed in and optionally checks a signed in user has certain roles
+ * @returns session
+ */
+export async function requireAuth(): Promise<Session> {
+  let session: Session | null;
+  try {
+    session = await auth();
+  } catch (err) {
+    // If parsing or auth fails, treat as unauthenticated
+    session = null;
+    throw new AuthenticationError();
+  }
   if (!session?.user?.id) {
-    throw new Error("You must be signed in to access this resource.");
+    throw new AuthenticationError();
   }
   return session;
+}
+
+class AuthenticationError extends Error {
+  constructor(message = "You must be signed in to access this resource.") {
+    super(message);
+    this.name = "NotAuthenticatedError";
+  }
 }
