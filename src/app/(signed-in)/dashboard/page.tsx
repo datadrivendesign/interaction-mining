@@ -23,7 +23,6 @@ export default async function ProfilePage() {
 
   const user = session?.user as User;
 
-  console.log("session", session);
   console.log("user", user.id);
 
   // const captures = await getCaptures({

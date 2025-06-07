@@ -132,8 +132,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     // Load the image from the screen URL and calculate scaling
     const [image] = useImage(screen.src);
     // Calculate common layout dimensions and offsets only when dependencies change.
-    // TODO: displayWidth and displayHeight calculate absolute width + height
-    // TODO: offsetX and offsetY calculate absolute x + y from top left corner
     const { displayWidth, displayHeight, offsetX, offsetY } = useMemo(() => {
       const vPadding =
         typeof window !== "undefined"
@@ -376,7 +374,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             onMouseUp={handleStageMouseUp}
             onWheel={(e) => {}}
             draggable={mode === "select"}
-            scaleX={stageScale} // TODO: defines x and y scaling
+            scaleX={stageScale}
             scaleY={stageScale}
           >
             <Layer>

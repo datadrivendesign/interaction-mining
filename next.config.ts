@@ -43,6 +43,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "500mb",
     },
+    nodeMiddleware: true,
     viewTransition: true,
     reactCompiler: true,
   },
