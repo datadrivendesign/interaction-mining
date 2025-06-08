@@ -248,7 +248,7 @@ export default function RepairScreenCanvas({
         >
           <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
             <div
-              className="relative w-auto h-full"
+              className="relative w-fit inline-flex h-full"
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
             >
               <DroppableArea>

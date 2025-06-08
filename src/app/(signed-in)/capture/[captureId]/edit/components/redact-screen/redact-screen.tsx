@@ -168,7 +168,7 @@ function FilmstripItem({
 
   return (
     <li
-      className="cursor-pointer min-w-fit h-full relative"
+      className="relative w-fit h-full cursor-pointer"
       data-index={index}
       {...props}
     >
