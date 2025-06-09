@@ -1,5 +1,11 @@
 "use client";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import { CircleAlert } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -13,7 +19,7 @@ import {
 
 import RedactScreenCanvas from "./redact-screen-canvas";
 import { Redaction } from "../types";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { TraceFormData } from "../types";
 import { FrameData } from "../types";
 
@@ -62,7 +68,7 @@ export default function RedactScreen() {
           )}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+        <ResizablePanel defaultSize={20} minSize={20} maxSize={50}>
           <Filmstrip
             screens={screens}
             redactions={redactions}
@@ -103,7 +109,6 @@ function Filmstrip({
           key={screen.id}
           index={index}
           screen={screen}
-          redactions={redactions[screen.id] ?? []}
           isSelected={focusViewIndex === index}
           onClick={() => setFocusViewIndex(index)}
         >
@@ -126,67 +131,28 @@ function Filmstrip({
 
 function FilmstripItem({
   screen,
-  redactions,
   index = 0,
   isSelected = false,
   hasError = false,
+  children,
   ...props
 }: {
   screen: FrameData;
-  redactions: Array<Redaction>;
   index?: number;
   isSelected?: boolean;
   hasError?: boolean;
 } & React.HTMLAttributes<HTMLLIElement>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const [imgDimensions, setImgDimensions] = useState<{
-    width: number;
-    height: number;
-    offsetX: number;
-    offsetY: number;
-    scaleX: number;
-    scaleY: number;
-  }>({ width: 0, height: 0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
-
-  const updateSize = () => {
-    if (containerRef.current && imageRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const imageRect = imageRef.current.getBoundingClientRect();
-      const naturalWidth = imageRef.current.naturalWidth;
-      const naturalHeight = imageRef.current.naturalHeight;
-      // Calculate the scale factor between the natural and displayed size:
-      const scaleX = imageRect.width / naturalWidth;
-      const scaleY = imageRect.height / naturalHeight;
-      // Compute offsets in case the image is letterboxed inside its container:
-      const offsetX = (containerRect.width - imageRect.width) / 2;
-      const offsetY = (containerRect.height - imageRect.height) / 2;
-      setImgDimensions({
-        width: imageRect.width,
-        height: imageRect.height,
-        offsetX,
-        offsetY,
-        scaleX,
-        scaleY,
-      });
-    }
-  };
-
-  useEffect(() => {
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
 
   return (
     <li
-      className="cursor-pointer min-w-fit h-full relative"
+      className="cursor-pointer min-w-fit h-full"
       data-index={index}
       {...props}
     >
       <div
         ref={containerRef}
-        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none"
+        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
       >
         {(isSelected || hasError) && (
           <div
@@ -209,47 +175,14 @@ function FilmstripItem({
             )}
           </div>
         )}
-        <Image
-          ref={imageRef}
-          src={screen.src}
-          alt="gallery"
-          draggable={false}
-          className="h-full w-auto object-contain"
-          onLoad={updateSize}
-          width={0}
-          height={0}
-          sizes="100vw"
-        />
-        {/* Render redaction overlays using the natural dimensions and scale factors */}
-        {imgDimensions.width > 0 &&
-          redactions.map((rect, idx) => (
-            <div
-              key={idx}
-              style={{
-                position: "absolute",
-                top:
-                  imgDimensions.offsetY +
-                  rect.y *
-                    imageRef.current!.naturalHeight *
-                    imgDimensions.scaleY,
-                left:
-                  imgDimensions.offsetX +
-                  rect.x *
-                    imageRef.current!.naturalWidth *
-                    imgDimensions.scaleX,
-                width:
-                  rect.width *
-                  imageRef.current!.naturalWidth *
-                  imgDimensions.scaleX,
-                height:
-                  rect.height *
-                  imageRef.current!.naturalHeight *
-                  imgDimensions.scaleY,
-                backgroundColor: "black",
-                border: "1px solid black",
-              }}
-            />
-          ))}
+        <div
+          className={cn(
+            "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
+            hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100"
+          )}
+        >
+          {children}
+        </div>
       </div>
     </li>
   );

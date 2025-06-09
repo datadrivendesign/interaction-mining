@@ -287,7 +287,7 @@ export default function RepairScreenCanvas({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className="w-auto h-full rounded-lg cursor-crosshair"
+                  className="w-auto h-full rounded-lg cursor-crosshair select-none"
                   width={0}
                   height={0}
                   sizes="100vw"

@@ -12,6 +12,7 @@ export default function RedactRectangle({
   offsetX,
   offsetY,
   mode,
+  selectRedaction,
   handleRectClick,
   handleTransform,
 }: {
@@ -22,6 +23,7 @@ export default function RedactRectangle({
   offsetX: number;
   offsetY: number;
   mode: string;
+  selectRedaction: (_: string) => void;
   handleRectClick: (e: any, id: string) => void;
   handleTransform: (e: any, id: string) => void;
 }) {
@@ -50,6 +52,8 @@ export default function RedactRectangle({
     if (node) {
       node.opacity(0.75);
     }
+
+    selectRedaction(redaction.id);
     handleTransform(e, redaction.id);
   };
 

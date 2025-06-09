@@ -14,10 +14,10 @@ import { useHotkeys } from "react-hotkeys-hook";
 type RedactCanvasMode = "pencil" | "eraser" | "select";
 
 export type vhRootBounds = {
-  x:number, 
-  y:number, 
-  width: number, 
-  height: number
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 } | null;
 
 export type vhBox = {
@@ -54,15 +54,15 @@ export const RedactCanvasContext = createContext<{
   updateRedaction: () => {},
 });
 
-export default function RedactScreenCanvas({ 
-  screen, 
-  vh 
-}: { 
-  screen: FrameData, 
-  vh: any 
+export default function RedactScreenCanvas({
+  screen,
+  vh,
+}: {
+  screen: FrameData;
+  vh: any;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const [ watchRedactions ] = useWatch({
+  const [watchRedactions] = useWatch({
     name: ["redactions"],
   });
   const redactions = watchRedactions || {};
@@ -132,10 +132,92 @@ export default function RedactScreenCanvas({
   useHotkeys("p", () => setMode("pencil"));
   useHotkeys("e", () => setMode("eraser"));
 
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 4;
+  const ZOOM_STEP = 2;
+
+  // Add these two hotkeys to zoom in/out
+  useHotkeys("ctrl+equal, meta+equal", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canvasRef.current) return;
+    const stage = canvasRef.current.getStage();
+    if (!stage) return;
+
+    // Get mouse pointer relative to stage
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    const oldScale = stage.scaleX();
+    // calculate new scale, clamped to min/max
+    const newScale = Math.min(oldScale * ZOOM_STEP, MAX_ZOOM);
+
+    // Compute how pointer's position in stage coordinates shifts
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    // Compute new stage position so that pointer stays at same content coords
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+
+    stage.scale({ x: newScale, y: newScale });
+    stage.position(newPos);
+    stage.batchDraw();
+  });
+
+  useHotkeys("ctrl+minus, meta+minus", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canvasRef.current) return;
+    const stage = canvasRef.current.getStage();
+    if (!stage) return;
+
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    const oldScale = stage.scaleX();
+    const newScale = Math.max(oldScale / ZOOM_STEP, MIN_ZOOM);
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+
+    stage.scale({ x: newScale, y: newScale });
+    stage.position(newPos);
+    stage.batchDraw();
+  });
+
+  useHotkeys("ctrl+0, meta+0", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canvasRef.current) return;
+    const stage = canvasRef.current.getStage();
+    if (!stage) return;
+
+    // Reset scale to 1×
+    stage.scale({ x: 1, y: 1 });
+
+    // Reset pan back to the origin (no offset)
+    stage.position({ x: 0, y: 0 });
+
+    stage.batchDraw();
+  });
+  
   useHotkeys("esc", () => {
     setMode("select");
     setSelected(null);
   });
+
   useHotkeys("backspace", () => {
     if (mode === "select") {
       deleteRedaction(selected?.id || "");
@@ -203,7 +285,7 @@ export default function RedactScreenCanvas({
           ref={canvasRef}
           screen={screen}
           redactions={redaction}
-          vh={{vhBoxes, rootBounds}}
+          vh={{ vhBoxes, rootBounds }}
           mode={mode}
         />
       </div>
