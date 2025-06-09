@@ -149,11 +149,11 @@ export function FrameGalleryIOS({
   };
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 items-start w-full h-full gap-6 p-6 overflow-auto">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-start w-full h-full gap-6 p-6 overflow-auto">
       <AnimatePresence mode="popLayout">
         {frames.map((frame, index) => (
           <motion.div
-            className="flex flex-col p-2 bg-neutral-100 dark:bg-neutral-900 rounded-xl cursor-pointer transform-gpu"
+            className="group flex flex-col p-2 bg-muted-background hover:bg-muted-background/80 rounded-xl cursor-pointer transform-gpu transition-colors duration-300 ease-in-out"
             variants={card}
             initial="initial"
             animate="animate"
@@ -165,7 +165,7 @@ export function FrameGalleryIOS({
           >
             {/* Toolbar */}
             <div className="flex flex-row w-full items-center justify-between mb-2">
-              <div className="flex p-1 justify-center items-center bg-neutral-800 rounded-lg">
+              <div className="flex p-1 justify-center items-center bg-background rounded-lg">
                 <span
                   className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
                   title={`Jump to timestamp: ${prettyNumber(frame.timestamp)}s`}

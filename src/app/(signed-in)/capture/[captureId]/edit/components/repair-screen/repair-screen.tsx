@@ -191,7 +191,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
           </GlobalHotKeys>
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+        <ResizablePanel defaultSize={20} minSize={20} maxSize={50}>
           <Filmstrip
             screens={screens}
             gestures={gestures}
@@ -328,8 +328,8 @@ function FilmstripItem({
                 isSelected
                   ? "ring-2 ring-inset ring-yellow-500"
                   : hasError
-                  ? "ring-2 ring-inset ring-red-500"
-                  : ""
+                    ? "ring-2 ring-inset ring-red-500"
+                    : ""
               )}
             >
               {hasError && (

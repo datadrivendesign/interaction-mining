@@ -382,6 +382,15 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
     [currentTime, handleSetTime]
   );
 
+  useHotkeys(
+    "c",
+    (e) => {
+      e.preventDefault();
+      handleCaptureFrame();
+    },
+    [handleCaptureFrame]
+  );
+
   return (
     <div className="flex flex-col w-full h-full">
       <ResizablePanelGroup direction="horizontal">

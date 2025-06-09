@@ -30,6 +30,7 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleSave } from "./util";
+import { usePreventTwoFingerBack } from "@/lib/hooks/usePreventTwoFingerBack";
 
 enum TraceSteps {
   Extract = 0,
@@ -158,11 +159,13 @@ export default function Page() {
     }
   };
 
+  // usePreventTwoFingerBack();
+
   return (
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col w-dvw h-[calc(100dvh-65px)] bg-white dark:bg-black overflow-hidden"
+          className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (

@@ -20,7 +20,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   onChange,
 }) => {
   return (
-    <div className="absolute pointer-events-auto">
+    <div className="absolute">
       <Card className="flex flex-col items-start p-4 shadow-lg">
         <Label className="text-sm font-semibold mb-2">Redact type</Label>
         <TabSelect className="mb-4" defaultValue="black">

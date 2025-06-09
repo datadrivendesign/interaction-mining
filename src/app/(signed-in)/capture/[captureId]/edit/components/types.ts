@@ -48,7 +48,7 @@ export const GestureSchema = z.record(
     scrollDeltaX: z.number() || z.null(),
     scrollDeltaY: z.number() || z.null(),
     description: z.string({
-      message: "Description is required",
+      message: "Gesture description is required",
     }),
   })
 );
