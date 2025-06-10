@@ -1,7 +1,6 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -20,10 +19,9 @@ export default function NavigationBar() {
         <div className="flex basis-1/2 h-full">
           <Link
             href={"/"}
-            className="text-2xl font-title tracking-tighter"
-            style={{ fontWeight: 900, fontStretch: "ultra-expanded" }}
+            className="text-2xl font-semibold tracking-tighter"
           >
-            ODIM
+            Interaction Mining
           </Link>
         </div>
         <div className="flex basis-1/2 h-full gap-6 justify-end items-center">

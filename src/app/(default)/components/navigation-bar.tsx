@@ -17,26 +17,25 @@ export default function NavigationBar() {
   return (
     <nav className="sticky z-40 top-0 flex w-full justify-center bg-white dark:bg-black">
       <div className="flex w-full max-w-screen-2xl px-4 py-4 justify-between">
-        <div className="flex basis-1/2 h-full">
+        <div className="flex items-center basis-1/2 h-full gap-8">
           <Link
             href={"/"}
-            className="text-2xl font-title tracking-tighter"
-            style={{ fontWeight: 900, fontStretch: "ultra-expanded" }}
+            className="text-2xl font-semibold tracking-tighter"
           >
-            ODIM
+            Interaction Mining
           </Link>
-        </div>
-        <div className="flex basis-1/2 h-full gap-6 justify-end items-center">
           <Link href="/explore">
-            <span className="inline-flex items-center text-sm font-medium">
+            <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
               Explore
             </span>
           </Link>
           <Link href="/contribute">
-            <span className="inline-flex items-center text-sm font-medium">
+            <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
               Contribute
             </span>
           </Link>
+        </div>
+        <div className="flex basis-1/2 h-full justify-end items-center">
           <SessionContent />
         </div>
       </div>
