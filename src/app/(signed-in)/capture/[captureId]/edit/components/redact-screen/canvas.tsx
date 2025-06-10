@@ -29,6 +29,7 @@ import { RedactCanvasContext, vhBox, vhRootBounds } from "./redact-screen-canvas
 import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
 import { clamp } from "motion/react";
+import { KonvaEventObject } from "konva/lib/Node";
 
 export interface CanvasComponentProps {
   screen: FrameData;
@@ -67,6 +68,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
 
     const stageRef = useRef<any>(null);
     const transformerRef = useRef<any>(null);
+    const annotateTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // useGesture handles pinch (for zoom) and drag (for pan).
     useGesture(
@@ -179,12 +181,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const clamp = (val: number) => Math.max(0, Math.min(val, 1));
         const normX = clamp((pointerPos.x - offsetX) / displayWidth);
         const normY = clamp((pointerPos.y - offsetY) / displayHeight);
-        if (e.target === stage) { // click detect on stage, non rect part
-          if (mode === "select") {
-            // deselect redaction and clear annotation card overlay
-            selectRedaction(null);
-          }
-        }
         if (mode === "pencil") {
           setNewRect({
             id: `${Date.now()}`, // unique enough id for redaction
@@ -238,7 +234,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           setNewRect(null);
         }
       },
-      [newRect, createRedaction, mode, setMode]
+      [newRect, createRedaction, mode, setMode, annotateTextareaRef]
     );
 
     // function to update the rectangle properties
@@ -250,6 +246,15 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       },
       [selectedRedaction, updateRedaction]
     );
+
+    const handleBackgroundClick = (e: KonvaEventObject<MouseEvent>) => {
+      if (e.target === e.target.getStage()) {
+        if (mode === "select") {
+          // deselect redaction and clear annotation card overlay
+          selectRedaction(null);
+        }
+      }
+    }
 
     // handler for when user clicks a rectangle
     const handleRectClick = (_: any, id: string) => {
@@ -344,6 +349,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                 <AnnotationCard
                   key={`annotation-${selectedRedaction.id}`}
                   annotation={selectedRedaction.annotation}
+                  annotateTextareaRef={annotateTextareaRef}
                   onChange={(value) => {
                     updateRect(selectedRedaction.id, {
                       annotation: value,
@@ -353,6 +359,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               ),
             },
           ]);
+          annotateTextareaRef.current?.focus();
         } else {
           console.warn(
             `No node found for selected redaction with id: ${selectedRedaction.id}`
@@ -394,6 +401,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             onMouseDown={handleStageMouseDown}
             onMouseMove={handleStageMouseMove}
             onMouseUp={handleStageMouseUp}
+            onClick={handleBackgroundClick}
             onWheel={(e) => {}}
             draggable={mode === "select"}
             scaleX={stageScale}
