@@ -1,0 +1,66 @@
+import Image from "next/image";
+import Link from "next/link";
+import { Download } from "lucide-react";
+
+import Logo from "@/public/zipt/zipt.svg";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+export const metadata = {
+  title: "RICO — Interaction Mining",
+};
+
+<h1 className="text-center text-8xl font-black tracking-tight mb-8">ERICA</h1>
+
+<iframe className="w-full h-auto aspect-video mb-8" src="https://www.youtube.com/embed/aC0NEXaS610" title="Rico: A Mobile App Dataset for Building Data-Driven Design Applications" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+
+<div className="not-prose">
+  <Card>
+    <CardContent className="flex flex-wrap justify-between items-center">
+      <span className="text-2xl font-semibold">Download Rico</span>
+      <Link href="http://www.interactionmining.org/rico.html#quick-downloads" target="_blank" rel="noopener noreferrer">
+        <Button>
+          Download
+        </Button>
+      </Link>
+    </CardContent>
+  </Card>
+</div>
+
+
+Design plays an important role in adoption of apps. App design, however, is a complex process with multiple design activities. **To enable data-driven app design applications, we present interaction mining – capturing both static (UI layouts, visual details) and dynamic (user flows, motion details) components of an app&rsquo;s design. We present ERICA, a system that takes a scalable, human-computer approach to interaction mining existing Android apps without the need to modify them in any way.** As users interact with apps through ERICA, it detects UI changes, seamlessly records multiple data-streams in the background, and unifies them into a user interaction trace. Using ERICA we collected interaction traces from over a thousand popular Android apps. Leveraging this trace data, we built machine learning classifiers to detect elements and layouts indicative of 23 common user flows. User flows are an important component of UX design and consists of a sequence of UI states that represent semantically meaningful tasks such as searching or composing. With these classifiers, we identified and indexed more than 3000 flow examples, and released the largest online search engine of user flows in Android apps. 
+
+<div className="grid grid-cols-3 w-full not-prose mt-8 gap-6">
+  <div className="flex flex-col col-span-1">
+    <Image
+      src="/archive/erica/erica_thumbnail.png"
+      alt="ERICA paper"
+      className="w-full mb-2 rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+    <Link href="http://ranjithakumar.net/resources/deka-uist2016-erica.pdf" className="underline">
+      Download (45MB) ↓
+    </Link>
+  </div>
+  <div className="flex flex-col grow col-span-2">
+    <Card className="h-full">
+      <CardContent className="text-base grow">
+        Biplab Deka, Zifeng Huang, and Ranjitha Kumar. 2016. <span className="font-bold">ERICA: Interaction Mining Mobile Apps</span>. In Proceedings of the 29th <span className="italic">Annual Symposium on User Interface Software and Technology (UIST &rsquo;2016)</span>.
+
+        <a href="/archive/erica/erica.txt" className="underline">
+          Bibtex
+        </a>
+      </CardContent>
+    </Card>
+  </div>
+</div>
