@@ -31,7 +31,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
         </TabSelect>
         <Label className="text-sm font-semibold mb-2">Note</Label>
         <Textarea
-          placeholder="Describe your interaction..."
+          placeholder="Describe what you redacted in one to two words..."
           defaultValue={annotation}
           onChange={(e) => onChange(e.target.value)}
           className="w-64"

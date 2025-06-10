@@ -130,9 +130,22 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     }, []);
 
     // Load the image from the screen URL and calculate scaling
-    const [image] = useImage(screen.src);
-    // Calculate common layout dimensions and offsets only when dependencies change.
+    const [image, imageStatus] = useImage(screen.src);
+    // Calculate layout dimensions and offsets only when dependencies change.
     const { displayWidth, displayHeight, offsetX, offsetY } = useMemo(() => {
+      // Return default values if image is not ready
+      if (imageStatus !== 'loaded' || !image || !width || !height) {
+        return {
+          image: null,
+          imageScale: 1,
+          verticalPadding: 16,
+          displayWidth: 0,
+          displayHeight: 0,
+          offsetX: 0,
+          offsetY: 0,
+        };
+      }
+
       const vPadding =
         typeof window !== "undefined"
           ? parseFloat(getComputedStyle(document.documentElement).fontSize)
@@ -155,7 +168,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         offsetX: offX,
         offsetY: offY,
       };
-    }, [width, height, image]);
+    }, [width, height, image, imageStatus]);
 
     // handler for mouse down event
     const handleStageMouseDown = useCallback(
@@ -166,7 +179,11 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const clamp = (val: number) => Math.max(0, Math.min(val, 1));
         const normX = clamp((pointerPos.x - offsetX) / displayWidth);
         const normY = clamp((pointerPos.y - offsetY) / displayHeight);
-        if (e.target === stage) {
+        if (e.target === stage) { // click detect on stage, non rect part
+          if (mode === "select") {
+            // deselect redaction and clear annotation card overlay
+            selectRedaction(null);
+          }
         }
         if (mode === "pencil") {
           setNewRect({
@@ -243,7 +260,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       }
     };
 
-    // const handleTransform = () => {};
     const handleTransform = useCallback(
       (e: any, id: string) => {
         const node = e.target;
@@ -288,7 +304,13 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       [offsetX, offsetY, displayWidth, displayHeight, updateRect]
     );
 
+    const handleRectDelete = (e: any, id: string) => {
+      deleteRedaction(id);
+    }
+
     useEffect(() => {
+      if (!stageRef.current) { return; }
+
       const stage = stageRef.current;
       const transformer = transformerRef.current;
       if (!stage || !transformer) return;
@@ -378,7 +400,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             scaleY={stageScale}
           >
             <Layer>
-              {image && (
+              {imageStatus === 'loaded' && image && image.complete && (
                 <KonvaImage
                   image={image}
                   x={offsetX}
@@ -401,7 +423,9 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                   />
                 ))
               }
-              {(redactions || []).map((redaction) => (
+              {imageStatus === "loaded" 
+                && image?.complete 
+                && (redactions || []).map((redaction) => (
                 <RedactRectangle  // redaction rectanges
                   key={redaction.id}
                   redaction={redaction}
@@ -412,6 +436,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                   mode={mode}
                   handleRectClick={handleRectClick}
                   handleTransform={handleTransform}
+                  handleRectDelete={handleRectDelete}
                 />
               ))}
               {newRect && image && (  // draws rectangle while drawing

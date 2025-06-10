@@ -10,6 +10,7 @@ import Layers from "./layers";
 
 import { Redaction } from "../types";
 import { useHotkeys } from "react-hotkeys-hook";
+import { toast } from "sonner";
 
 type RedactCanvasMode = "pencil" | "eraser" | "select";
 
@@ -58,28 +59,33 @@ export const RedactCanvasContext = createContext<{
 
 export default function RedactScreenCanvas({ 
   screen, 
-  vh 
+  vh,
+  copied,
+  setCopied 
 }: { 
   screen: FrameData, 
-  vh: any 
+  vh: any,
+  copied: Redaction | null, 
+  setCopied: React.Dispatch<React.SetStateAction<Redaction | null>> 
 }) {
   const { setValue } = useFormContext<TraceFormData>();
   const [ watchRedactions ] = useWatch({
     name: ["redactions"],
   });
   const redactions = watchRedactions || {};
-  const redaction: Redaction[] = useMemo(
+  const redactionsOnScreen: Redaction[] = useMemo(
     () => redactions[screen.id] || [],
     [redactions, screen.id]
   );
 
   const [selected, setSelected] = useState<Redaction | null>(null);
+  // const [copied, setCopied] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
   const canvasRef = useRef<CanvasRef>(null);
 
   const deleteRedaction = (id: string) => {
-    const newRedactions = redaction.filter((r) => r.id !== id);
+    const newRedactions = redactionsOnScreen.filter((r) => r.id !== id);
 
     if (selected?.id === id) {
       setSelected(null);
@@ -96,8 +102,29 @@ export default function RedactScreenCanvas({
       setSelected(null);
       return;
     }
-    setSelected(redaction.find((r) => r.id === id) || null);
+    setSelected(redactionsOnScreen.find((r) => r.id === id) || null);
   };
+
+  const checkCanCopyRedaction = (): {status:boolean, message:string} => {
+    if (!copied) { return { status:false, message: "No redaction to copy" }; }
+    // if no redactions exist yet, paste is possible
+    if (redactionsOnScreen.length === 0) {
+      return { status: true, message: "Redaction can be pasted" };
+    }
+    // if redactions exist, check if the copied redaction is a duplicate
+    const isDuplicateExist = redactionsOnScreen.every((r) => 
+      copied.x === r.x &&
+      copied.y === r.y &&
+      copied.width === r.width &&
+      copied.height === r.height
+    );
+    return {  // if duplicate, unable to paste
+      status: !isDuplicateExist,
+      message: isDuplicateExist ? 
+        "Redaction already exists" : 
+        "Redaction can be pasted"
+    }
+  }
 
   const createRedaction = (
     newRedaction: Redaction,
@@ -105,7 +132,7 @@ export default function RedactScreenCanvas({
       select?: boolean;
     }
   ) => {
-    const newRedactions = [...redaction, newRedaction];
+    const newRedactions = [...redactionsOnScreen, newRedaction];
     setValue("redactions", {
       ...redactions,
       [screen.id]: newRedactions,
@@ -117,7 +144,7 @@ export default function RedactScreenCanvas({
 
   const updateRedaction = useCallback(
     (id: string, updatedRedaction: Partial<Redaction>) => {
-      const newRedactions = redaction.map((redaction) => {
+      const newRedactions = redactionsOnScreen.map((redaction) => {
         return redaction.id === id
           ? { ...redaction, ...updatedRedaction }
           : redaction;
@@ -127,7 +154,7 @@ export default function RedactScreenCanvas({
         [screen.id]: newRedactions,
       });
     },
-    [redaction, redactions, setValue, screen.id]
+    [redactionsOnScreen, redactions, setValue, screen.id]
   );
 
   useHotkeys("v", () => setMode("select"));
@@ -141,6 +168,39 @@ export default function RedactScreenCanvas({
   useHotkeys("backspace", () => {
     if (mode === "select") {
       deleteRedaction(selected?.id || "");
+    }
+  });
+
+  // copy redaction
+  useHotkeys("mod+c", (e) => {
+    if (mode === "select") {
+      e.preventDefault()
+      if (selected) {
+        setCopied(selected);
+        toast.success("Redaction copied to clipboard");
+      } else {
+        toast.error("Select a redaction to copy");
+      }
+    }
+  });
+  // paste redaction to another screen
+  useHotkeys("mod+v", (e) => {
+    if (mode === "select") {
+      e.preventDefault()
+      const result = checkCanCopyRedaction();
+      if (!result.status) { // cannot copy
+        toast.error(result.message); 
+      } else { // add copied redaction to screen
+        createRedaction({
+          id: `${Date.now()}`, // unique enough id for redaction
+          x: copied!.x,
+          y: copied!.y,
+          width: copied!.width,
+          height: copied!.height,
+          annotation: copied!.annotation,
+        }), 
+        toast.success("Redaction pasted to screen");
+      }
     }
   });
 
@@ -194,7 +254,7 @@ export default function RedactScreenCanvas({
       value={{
         mode,
         setMode,
-        redactions: redaction,
+        redactions: redactionsOnScreen,
         selected,
         deleteRedaction,
         selectRedaction,
@@ -204,11 +264,11 @@ export default function RedactScreenCanvas({
     >
       <div className="relative flex items-center w-full h-full bg-neutral-50 dark:bg-neutral-950">
         <Toolbar mode={mode} setMode={setMode} />
-        <Layers redactions={redaction} deleteRedaction={deleteRedaction} />
+        <Layers redactions={redactionsOnScreen} deleteRedaction={deleteRedaction} />
         <CanvasComponent
           ref={canvasRef}
           screen={screen}
-          redactions={redaction}
+          redactions={redactionsOnScreen}
           vh={{vhBoxes, rootBounds}}
           mode={mode}
         />
