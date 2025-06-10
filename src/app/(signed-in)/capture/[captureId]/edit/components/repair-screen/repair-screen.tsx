@@ -276,10 +276,13 @@ function Filmstrip({
 }) {
   return (
     <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
-      {screens?.map((screen: FrameData, index: number) => (
+      {screens?.map((screen: FrameData, index: number) => {
+        const isLast = screens.length - 1 === index;
+        return (
         <FilmstripItem
           key={screen.id}
           index={index}
+          isLast={isLast}
           screen={screen}
           redactions={redactions[screen.id] ?? []}
           isSelected={focusViewIndex === index}
@@ -292,7 +295,8 @@ function Filmstrip({
           onClick={() => setFocusViewIndex(index)}
         >
         </FilmstripItem>
-      ))}
+        )
+      })}
     </ul>
   );
 }
@@ -301,6 +305,7 @@ function FilmstripItem({
   screen,
   redactions,
   index = 0,
+  isLast = false,
   isSelected,
   hasError = false,
   // children,
@@ -309,6 +314,7 @@ function FilmstripItem({
   screen: FrameData;
   redactions: Array<Redaction>;
   index?: number;
+  isLast: boolean;
   isSelected?: boolean;
   hasError?: boolean;
   // children?: React.ReactNode;
@@ -364,7 +370,7 @@ function FilmstripItem({
           ref={containerRef}
           className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
         >
-          {(isSelected || hasError) && (
+          {(isSelected || hasError) && !isLast && (
             <div
               className={cn(
                 "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
@@ -388,7 +394,7 @@ function FilmstripItem({
           <div
             className={cn(
               "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
-              hasError
+              hasError && !isLast
                 ? "grayscale brightness-50"
                 : "grayscale-0 brightness-100"
             )}
