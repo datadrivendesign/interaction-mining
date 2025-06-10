@@ -68,7 +68,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
 
     const stageRef = useRef<any>(null);
     const transformerRef = useRef<any>(null);
-    const annotateTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // useGesture handles pinch (for zoom) and drag (for pan).
     useGesture(
@@ -234,7 +233,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           setNewRect(null);
         }
       },
-      [newRect, createRedaction, mode, setMode, annotateTextareaRef]
+      [newRect, createRedaction, mode, setMode]
     );
 
     // function to update the rectangle properties
@@ -349,7 +348,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                 <AnnotationCard
                   key={`annotation-${selectedRedaction.id}`}
                   annotation={selectedRedaction.annotation}
-                  annotateTextareaRef={annotateTextareaRef}
                   onChange={(value) => {
                     updateRect(selectedRedaction.id, {
                       annotation: value,
@@ -359,7 +357,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               ),
             },
           ]);
-          annotateTextareaRef.current?.focus();
         } else {
           console.warn(
             `No node found for selected redaction with id: ${selectedRedaction.id}`
