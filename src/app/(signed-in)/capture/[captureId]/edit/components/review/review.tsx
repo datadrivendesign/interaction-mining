@@ -27,7 +27,7 @@ export default function Review() {
           <Textarea
             {...register("description")}
             id="description"
-            placeholder="Describe the task in the screens in one to two sentences"
+            placeholder="Describe the screen activity using your own words in 1-2 sentences."
           />
         </div>
       </div>
