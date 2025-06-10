@@ -200,7 +200,7 @@ export default function RepairScreenCanvas({
           width,
           height,
           class: node.class_name,
-          id: node.id || `null_id_${Math.random().toString()}`,
+          id: node.id || "null_id",
         });
       }
       if (node.children && node.children.length > 0) {
