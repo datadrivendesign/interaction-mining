@@ -115,7 +115,20 @@ export default function Page() {
       setStepIndex(stepIndex + 1);
     } else {
       // Validate the "description" field
-      const validation = TraceFormSchema.safeParse(methods.getValues());
+      // validate all screen gestures except the last one
+      const allButLastScreenIds = methods.getValues()
+        .screens.slice(0, -1)
+        .map((s)=> s.id);
+      const allButLastScreenGestures = Object.fromEntries(
+        Object.entries(methods.getValues().gestures).filter(
+          ([id, _]) => allButLastScreenIds.includes(id)
+        )
+      );
+      // Validate the "gestures"
+      const validation = TraceFormSchema.safeParse({
+        ...methods.getValues(),
+        gestures: allButLastScreenGestures,
+      });
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -202,7 +215,12 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {TraceSteps[stepIndex]}
+                      {stepIndex === 1 ? (
+                        capture?.app.os === "ios" ?
+                          "Annotate" : 
+                          TraceSteps[stepIndex]
+                      ) : 
+                      TraceSteps[stepIndex]}
                     </span>
                   </h1>
                   <span className="block">

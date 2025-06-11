@@ -132,7 +132,7 @@ export default function CaptureNewPage() {
     });
 
     if (result.ok) {
-      toast.success("Capture task created!");
+      toast.success("Capture task created! Redirecting...");
       router.push(`/capture/${result.data?.captureId}/start`);
     } else {
       toast.error("Failed to create capture task.");

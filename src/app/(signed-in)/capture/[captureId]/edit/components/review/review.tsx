@@ -47,8 +47,7 @@ function SaveTraceGallery() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-start w-full gap-4 overflow-auto p-8">
-      {/* // TODO: disable gesture tagging for the last screen */}
-      {screens.map((screen: FrameData) => (
+      {screens.map((screen: FrameData, index: number) => (
         <div
           className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"
           key={`${screen.id}`}
@@ -64,31 +63,33 @@ function SaveTraceGallery() {
               sizes="100vw"
             />
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className="cursor-pointer aspect-square w-[12%] absolute z-10 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
-                  style={{
-                    left: `${(gestures[screen.id].x ?? 0) * 100}%`,
-                    top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
-                  }}
-                >
-                  {
-                    gestureOptions
-                      .flatMap((option) => [
-                        option,
-                        ...(option.subGestures ?? []),
-                      ])
-                      .find(
-                        (option) => option.value === gestures[screen.id].type
-                      )?.icon
-                  }
-                </div >
-              </TooltipTrigger >
-              <TooltipContent side="bottom">
-                <p>{gestures[screen.id].description}</p>
-              </TooltipContent>
-            </Tooltip >
+            {(index < screens.length - 1) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="cursor-pointer aspect-square w-[12%] absolute z-10 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                    style={{
+                      left: `${(gestures[screen.id].x ?? 0) * 100}%`,
+                      top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
+                    }}
+                  >
+                    {
+                      gestureOptions
+                        .flatMap((option) => [
+                          option,
+                          ...(option.subGestures ?? []),
+                        ])
+                        .find(
+                          (option) => option.value === gestures[screen.id].type
+                        )?.icon
+                    }
+                  </div >
+                </TooltipTrigger >
+                <TooltipContent side="bottom">
+                  <p>{gestures[screen.id].description}</p>
+                </TooltipContent>
+              </Tooltip >
+            )}
 
             {(redactions[screen.id] || []).map((redaction) => (
               <Tooltip key={redaction.id}>

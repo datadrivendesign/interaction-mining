@@ -27,6 +27,9 @@ if (process.env.MINIO_ENDPOINT) {
     remotePatterns.push({
       protocol: "http",
       hostname: minioHost,
+    }, {
+      protocol: "http",
+      hostname: "localhost"
     });
   } catch (err) {
     console.warn("Invalid MINIO_ENDPOINT format in .env:", err);
