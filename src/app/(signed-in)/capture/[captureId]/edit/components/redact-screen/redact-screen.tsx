@@ -48,8 +48,14 @@ export default function RedactScreen() {
     }
   }, [focusViewIndex, screens]);
 
+  const handleTab = useCallback(() => {
+    const wrappedIndex = (focusViewIndex + 1) % screens.length;
+    setFocusViewIndex(wrappedIndex);
+  }, [focusViewIndex, screens]);
+
   useHotkeys("left", handlePrevious);
   useHotkeys("right", handleNext);
+  useHotkeys("tab", handleTab);
 
   return (
     <div className="flex w-full h-full">

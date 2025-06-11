@@ -144,9 +144,12 @@ export default function RepairScreen({ capture }: { capture: any }) {
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
+  
+
   const keymap = {
     LEFT: "left",
     RIGHT: "right",
+    TAB: "tab",
   };
 
   const handlePrevious = useCallback(() => {
@@ -161,9 +164,15 @@ export default function RepairScreen({ capture }: { capture: any }) {
     }
   }, [focusViewIndex, screens]);
 
+  const handleTab = useCallback(() => {
+    const wrappedIndex = (focusViewIndex + 1) % screens.length;
+    setFocusViewIndex(wrappedIndex);
+  }, [focusViewIndex, screens]);
+
   const handlers = {
     LEFT: handlePrevious,
     RIGHT: handleNext,
+    TAB: handleTab,
   };
 
   return (
@@ -181,6 +190,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
                 key={focusViewIndex}
                 vh={vhs[screens[focusViewIndex].id]}
                 screen={screens[focusViewIndex]}
+                isLastScreen={focusViewIndex === screens.length - 1}
                 os={os}
               />
             ) : (
@@ -211,10 +221,12 @@ function FocusView({
   screen,
   vh,
   os,
+  isLastScreen
 }: {
   screen: FrameData;
   vh: any;
   os: string;
+  isLastScreen: boolean
 }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
@@ -255,6 +267,7 @@ function FocusView({
           setGesture={setGesture}
           gestureOptions={gestureOptions}
           os={os}
+          isLastScreen={isLastScreen}
         />
       </div>
     </>

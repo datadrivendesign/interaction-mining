@@ -310,7 +310,7 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     return Promise.reject("Failed to create trace.");
   }
 
-  toast.success("Trace created successfully.");
+  toast.success("Trace created successfully. Redirecting...");
 }
 
 export async function exportRedactedImage(

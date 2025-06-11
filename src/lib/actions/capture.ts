@@ -305,7 +305,6 @@ export async function createCaptureTask({
 }
 
 /**
- * TODO: call this function in Android api route too
  * @param fileKey
  * @returns
  */

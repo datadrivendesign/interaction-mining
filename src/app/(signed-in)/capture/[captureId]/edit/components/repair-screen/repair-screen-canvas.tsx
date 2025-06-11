@@ -85,6 +85,7 @@ export default function RepairScreenCanvas({
   setGesture,
   gestureOptions,
   os,
+  isLastScreen
 }: {
   screen: FrameData;
   vh: any;
@@ -92,6 +93,7 @@ export default function RepairScreenCanvas({
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
   os: string;
+  isLastScreen: boolean
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
@@ -122,6 +124,8 @@ export default function RepairScreenCanvas({
 
   // Set initial marker position on image
   const handleImageClick = () => {
+    // if last screen, disable gesture setting
+    if (isLastScreen) { return; }
     if (width && height) {
       const relativeX = mouse.elementX / width;
       const relativeY = mouse.elementY / height;
@@ -256,29 +260,36 @@ export default function RepairScreenCanvas({
               <DroppableArea>
                 <AnimatePresence>
                   {/* Only show floating tooltip when no marker is placed  */}
-                  {tooltip!.x && tooltip!.y && !gesture.x && !gesture.y ? (
-                    <motion.div
-                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
-                      initial={{
-                        x: 8 + tooltip!.x,
-                        y: 8 + tooltip!.y,
-                        opacity: 0,
-                      }}
-                      animate={{
-                        x: 8 + tooltip!.x,
-                        y: 8 + tooltip!.y,
-                        opacity: 1,
-                      }}
-                      exit={{
-                        x: 8 + tooltip!.x,
-                        y: 8 + tooltip!.y,
-                        opacity: 0,
-                      }}
-                      transition={{ duration: 0.05 }}
-                    >
-                      <span className="text-xs font-medium">Add a gesture</span>
-                    </motion.div>
-                  ) : null}
+                  {tooltip!.x && 
+                    tooltip!.y && 
+                    !gesture.x && 
+                    !gesture.y && 
+                    !isLastScreen ? (
+                      <motion.div
+                        className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                        initial={{
+                          x: 8 + tooltip!.x,
+                          y: 8 + tooltip!.y,
+                          opacity: 0,
+                        }}
+                        animate={{
+                          x: 8 + tooltip!.x,
+                          y: 8 + tooltip!.y,
+                          opacity: 1,
+                        }}
+                        exit={{
+                          x: 8 + tooltip!.x,
+                          y: 8 + tooltip!.y,
+                          opacity: 0,
+                        }}
+                        transition={{ duration: 0.05 }}
+                      >
+                        <span className="text-xs font-medium">
+                          Add a gesture
+                        </span>
+                    </motion.div>) : 
+                    null
+                  }
                 </AnimatePresence>
                 {markerPixelPosition.x !== null &&
                 markerPixelPosition.y !== null ? (
@@ -289,7 +300,7 @@ export default function RepairScreenCanvas({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className="w-auto h-full rounded-lg cursor-crosshair select-none"
+                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair "} w-auto h-full rounded-lg select-none`}
                   width={0}
                   height={0}
                   sizes="100vw"
