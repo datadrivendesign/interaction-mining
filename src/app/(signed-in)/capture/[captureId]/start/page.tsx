@@ -34,9 +34,9 @@ function captureStateReducer(
   state: CaptureState,
   action:
     | {
-        type: "UPDATE_PROCESS";
-        nextProcessingState: "idle" | "pending" | "finished" | "error";
-      }
+      type: "UPDATE_PROCESS";
+      nextProcessingState: "idle" | "pending" | "finished" | "error";
+    }
     | { type: "UPDATE"; uploadList: any[]; processList: any[] }
 ): CaptureState {
   switch (action.type) {
@@ -89,7 +89,6 @@ function captureStateReducer(
 
           // determine if file copying is needed, if not just display transcoding status
           hasCopied = false;
-          console.log("Non-video uploads:", nonVideoUploads);
           if (nonVideoUploads.length === 0) {
             hasCopied = hasTranscoded;
           } else {
@@ -213,8 +212,7 @@ export default function Page() {
                       Loading...
                     </>
                   ) : (
-                    `${uploadList.length} file${
-                      uploadList.length !== 1 ? "s" : ""
+                    `${uploadList.length} file${uploadList.length !== 1 ? "s" : ""
                     } uploaded`
                   )}
                 </span>

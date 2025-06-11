@@ -23,8 +23,6 @@ export async function AuthorizedRoute({
   const ownershipEnforcedRoles = new Set(allowedRoles ?? ["USER", "ADMIN"]);
   let session = await auth();
 
-  console.log("AuthorizedRoute session:", session);
-
   if (!session || !session.user) {
     // If not authenticated, redirect to sign-in page
     redirect(`/sign-in?callbackUrl=${callbackUrl ?? "/dashboard"}`);

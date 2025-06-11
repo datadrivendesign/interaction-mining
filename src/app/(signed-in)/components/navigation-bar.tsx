@@ -38,7 +38,7 @@ function SessionContent() {
   if (status === "loading") {
     return (
       <>
-        <Avatar>
+      <Avatar>
           <AvatarFallback className="animate-pulse" />
         </Avatar>
       </>
