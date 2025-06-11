@@ -23,16 +23,17 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { TraceFormData } from "../types";
 import { FrameData } from "../types";
 
+
 export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();
   const screens = getValues("screens") as FrameData[];
   const redactions = getValues("redactions") as {
     [screenId: string]: Redaction[];
   };
-  // TODO: pass vh by watch, then pass by prop in readct-screen-canvas
   const vhs = getValues("vhs") as { [key: string]: any };
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
+  const [copied, setCopied] = useState<Redaction | null>(null);
 
   const handlePrevious = useCallback(() => {
     if (focusViewIndex > 0) {
@@ -58,6 +59,8 @@ export default function RedactScreen() {
               key={focusViewIndex}
               screen={screens[focusViewIndex]}
               vh={vhs[screens[focusViewIndex].id]}
+              copied={copied}
+              setCopied={setCopied}
             />
           ) : (
             <div className="flex justify-center items-center w-full h-full">
@@ -81,11 +84,21 @@ export default function RedactScreen() {
   );
 }
 
-function FocusView({ screen, vh }: { screen: FrameData; vh: any }) {
+function FocusView(
+  { screen, vh, copied, setCopied }:
+    {
+      screen: FrameData;
+      vh: any,
+      copied: Redaction | null,
+      setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>
+    }
+) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
-        <RedactScreenCanvas screen={screen} vh={vh} />
+        <RedactScreenCanvas
+          screen={screen} vh={vh} copied={copied} setCopied={setCopied}
+        />
       </div>
     </>
   );
@@ -112,17 +125,6 @@ function Filmstrip({
           isSelected={focusViewIndex === index}
           onClick={() => setFocusViewIndex(index)}
         >
-          <Image
-            key={screen.id}
-            src={screen.src}
-            alt="gallery"
-            draggable={false}
-            className="h-full w-auto object-contain"
-            width={0}
-            height={0}
-            sizes="100vw"
-            onClick={() => setFocusViewIndex(index)}
-          />
         </FilmstripItem>
       ))}
     </ul>

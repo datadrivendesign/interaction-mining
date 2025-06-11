@@ -1,7 +1,4 @@
 import {
-  getCapture,
-  getIosApp,
-  getCaptureFiles,
   ListedFiles,
 } from "@/lib/actions";
 

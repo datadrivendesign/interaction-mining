@@ -32,7 +32,8 @@ export async function GET(
     return NextResponse.json({
       capture: {
         id: result.data.id,
-        appId: result.data.appId,
+        // need appId to be package name on Android app
+        appId: taskDetails?.appId ? taskDetails.appId : "Invalid App Found",
         otp: result.data.otp,
         src: result.data.src,
       },

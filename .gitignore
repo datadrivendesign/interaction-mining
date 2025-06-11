@@ -28,10 +28,15 @@ yarn-error.log*
 
 # local env files
 .env*.local
+_.env*.local
 
 # vercel
 .vercel
+.vscode/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+mongo.conf
+mongo_db/*

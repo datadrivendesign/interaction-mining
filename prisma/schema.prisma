@@ -53,11 +53,13 @@ model App {
   id          String        @id @default(auto()) @map("_id") @db.ObjectId
   v           Int           @default(0) @map("__v")
   category    AppsCategory?
-  packageName String        @unique
+  packageName String
+  os          String
   metadata    AppMetadata
   Capture     Capture[]
   Trace       Trace[]
 
+  @@unique([packageName, os])
   @@fulltext([metadata.name])
   @@map("apps")
 }
@@ -128,7 +130,7 @@ model Capture {
   app     App     @relation(fields: [appId], references: [id])
   userId  String  @map("user") @db.ObjectId
   user    User    @relation(fields: [userId], references: [id])
-  traceId String? @unique @map("trace") @db.ObjectId
+  traceId String? @map("trace") @db.ObjectId
   taskId  String  @map("task") @db.ObjectId
   task    Task    @relation(fields: [taskId], references: [id])
   otp     String

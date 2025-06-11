@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer } from "react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
-import { motion } from "motion/react";
 import useSWR from "swr";
 import { ArrowRight, CircleCheck, FileVideo, Loader2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -62,21 +61,15 @@ function captureStateReducer(
       let hasCopied = false;
       let hasTranscoded = false;
 
+      console.log("Upload list:", uploadList);
+      console.log("Process list:", processList);
+
       if (hasUploads) {
         if (state.processingState !== "pending") {
-          // determine if all non-video files have been copied
-          const nonVideoUploads = uploadList.filter(
-            (upload) =>
-              !/\.(mp4|mov)$/.test(upload.fileKey) &&
-              !upload.fileKey.includes("thumbnails")
-          );
-
-          const nonVideoProcessed = processList.filter(
-            (t) => !/\.(mp4|mov)$/.test(t.fileKey)
-          );
-
           // determine if all video files have been transcoded
-          hasTranscoded =
+          const isTranscodeDisabled =
+            process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+          hasTranscoded = isTranscodeDisabled || (
             hasUploads &&
             uploadList.every((upload) => {
               const segments = upload.fileKey.split("/");
@@ -85,12 +78,19 @@ function captureStateReducer(
               return processList.some((t) =>
                 t.fileKey.includes(`${baseName}.webm`)
               );
-            });
-
+            })
+          );
+          
+          // determine if all non-video files or thumbnails have been copied
+          const nonVideoUploads = uploadList.filter(
+            (upload) =>
+              !/\.(mp4|mov)$/.test(upload.fileKey) &&
+              !upload.fileKey.includes("thumbnails")
+          );
           // determine if file copying is needed, if not just display transcoding status
           hasCopied = false;
           console.log("Non-video uploads:", nonVideoUploads);
-          if (nonVideoUploads.length === 0) {
+          if (nonVideoUploads.length === 0 && !isTranscodeDisabled) {
             hasCopied = hasTranscoded;
           } else {
             hasCopied = nonVideoUploads.every((upload) => {
@@ -98,6 +98,9 @@ function captureStateReducer(
               const fileName = segments.pop() || "";
               return processList.some((t) => t.fileKey.includes(fileName));
             });
+            if (processList.length === 0) {
+              hasCopied = false;
+            }
           }
         }
       }
@@ -138,7 +141,7 @@ export default function Page() {
   );
 
   const handleProcessFiles = async () => {
-    if (uploadList.length === 0) return;
+    if (uploadList.length === 0) { return; }
     dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "pending" });
     const res = await processCaptureFiles(uploadList[0].fileKey);
     if (!res.ok) {
@@ -335,7 +338,8 @@ export default function Page() {
                       <Loader2 className="size-5 text-blue-500 animate-spin" />
                     ))}
                 </li>
-                <li className="flex justify-between items-center px-4 py-2 border-b border-muted-background last:border-none">
+                {process.env.NEXT_PUBLIC_ENABLE_TRANSCODE === "true" &&
+                 <li className="flex justify-between items-center px-4 py-2 border-b border-muted-background last:border-none">
                   <span className="text-sm font-medium">
                     {captureState.processingState === "idle" &&
                       (captureState.hasTranscoded
@@ -370,7 +374,7 @@ export default function Page() {
                     ) : (
                       <Loader2 className="size-5 text-blue-500 animate-spin" />
                     ))}
-                </li>
+                </li>}
               </ul>
             </CardContent>
           </Card>

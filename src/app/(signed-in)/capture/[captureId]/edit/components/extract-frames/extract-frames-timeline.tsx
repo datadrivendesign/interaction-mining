@@ -65,6 +65,7 @@ export default function FrameTimeline({
 
   // Scrub on pointer move when dragging
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
     if (!dragging) return;
     const t = getTimeFromEvent(e);
     if (t !== undefined) handleSetTime(t);
