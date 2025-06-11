@@ -52,6 +52,7 @@ type AppMetadata {
 model App {
   id          String        @id @default(auto()) @map("_id") @db.ObjectId
   v           Int           @default(0) @map("__v")
+  os          String
   category    AppsCategory?
   packageName String        @unique
   metadata    AppMetadata

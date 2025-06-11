@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { googleImageAdapter } from "../lib/image";
 import { prettyOS, prettyTime } from "@/lib/utils";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import { getCaptures, getTraces } from "@/lib/actions";
 
 export default async function ProfilePage() {

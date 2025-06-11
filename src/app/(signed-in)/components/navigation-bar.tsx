@@ -15,16 +15,16 @@ import { Role } from "@prisma/client";
 export default function NavigationBar() {
   return (
     <nav className="sticky z-40 top-0 flex w-full h-16 justify-center bg-white dark:bg-black border-b border-neutral-200 dark:border-neutral-800">
-      <div className="flex w-full max-w-screen-2xl px-4 py-4 justify-between">
+      <div className="flex w-full max-w-screen-2xl p-4 md:p-6 justify-between">
         <div className="flex basis-1/2 h-full">
           <Link
             href={"/"}
-            className="text-2xl font-semibold tracking-tighter"
+            className="text-2xl font-semibold leading-none tracking-tighter"
           >
             Interaction Mining
           </Link>
         </div>
-        <div className="flex basis-1/2 h-full gap-6 justify-end items-center">
+        <div className="flex basis-1/2 h-full gap-4 md:gap-6 justify-end items-center">
           <SessionContent />
         </div>
       </div>

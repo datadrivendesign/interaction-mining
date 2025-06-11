@@ -14,7 +14,7 @@ import { Search } from "lucide-react";
 import { App } from "@prisma/client";
 
 const GalleryContext = createContext({
-  data: [] as any[],
+  data: [] as App[],
   setData: (_: any) => {},
   filteredData: [] as any[],
   setFilteredData: (_: any) => {},
@@ -27,9 +27,8 @@ export function GalleryRoot({
   data: App[];
   children: React.ReactNode;
 }) {
-  const [_data, setData] = useState<any[]>(data);
+  const [_data, setData] = useState<App[]>(data);
   const [filteredData, setFilteredData] = useState<any[]>(data);
-  const [search, setSearch] = useState("");
 
   return (
     <GalleryContext.Provider

@@ -164,15 +164,6 @@ export default function Page() {
     dispatch({ type: "UPDATE", uploadList, processList });
   }, [uploadList, processList]);
 
-  useEffect(() => {
-    console.log("Capture state updated:", {
-      hasUploads: captureState.hasUploads,
-      processingState: captureState.processingState,
-      hasCopied: captureState.hasCopied,
-      hasTranscoded: captureState.hasTranscoded,
-    });
-  });
-
   return (
     <main className="relative z-0 flex flex-col w-dvw min-h-dvh items-center justify-start">
       <div className="relative z-0 flex flex-col w-full h-full items-center justify-start p-4 md:p-16 gap-4">

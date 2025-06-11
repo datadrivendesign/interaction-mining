@@ -6,7 +6,7 @@ import { isValidObjectId } from "mongoose";
 import { prisma } from "@/lib/prisma";
 import { listFromS3, lambda } from "../aws";
 import { ActionPayload } from "./types";
-import { requireAuth } from "../auth";
+import { requireAuth } from "../auth/auth";
 import { updateUser } from "./user";
 import { InvokeCommand } from "@aws-sdk/client-lambda";
 

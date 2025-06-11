@@ -6,7 +6,9 @@ export default async function Explore() {
   let apps: App[] = [];
 
   try {
-    apps = await getApps();
+    apps = await getApps({
+      limit: 50,
+    });
   } catch (error) {
     console.error("Failed to fetch apps:", error);
   }
