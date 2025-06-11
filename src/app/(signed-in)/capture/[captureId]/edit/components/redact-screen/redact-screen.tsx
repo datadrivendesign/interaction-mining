@@ -79,19 +79,19 @@ export default function RedactScreen() {
 }
 
 function FocusView(
-  { screen, vh, copied, setCopied }: 
-  { 
-    screen: FrameData; 
-    vh: any,
-    copied: Redaction | null, 
-    setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>
-  }
+  { screen, vh, copied, setCopied }:
+    {
+      screen: FrameData;
+      vh: any,
+      copied: Redaction | null,
+      setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>
+    }
 ) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
-        <RedactScreenCanvas 
-          screen={screen} vh={vh} copied={copied} setCopied={setCopied} 
+        <RedactScreenCanvas
+          screen={screen} vh={vh} copied={copied} setCopied={setCopied}
         />
       </div>
     </>
@@ -182,7 +182,7 @@ function FilmstripItem({
 
   return (
     <li
-      className="h-full cursor-pointer relative" 
+      className="h-full cursor-pointer relative"
       data-index={index}
       {...props}
     >
@@ -211,17 +211,24 @@ function FilmstripItem({
             )}
           </div>
         )}
-        <Image
-          ref={imageRef}
-          src={screen.src}
-          alt="gallery"
-          draggable={false}
-          className="h-full w-auto object-contain"
-          onLoad={updateSize}
-          width={0}
-          height={0}
-          sizes="100vw"
-        />
+        <div
+          className={cn(
+            "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
+            hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100"
+          )}
+        >
+          <Image
+            ref={imageRef}
+            src={screen.src}
+            alt="gallery"
+            draggable={false}
+            className="h-full w-auto object-contain"
+            onLoad={updateSize}
+            width={0}
+            height={0}
+            sizes="100vw"
+          />
+        </div>
         {/* Render redaction overlays using the natural dimensions and scale factors */}
         {imgDimensions.width > 0 &&
           redactions.map((rect, idx) => (
@@ -232,13 +239,13 @@ function FilmstripItem({
                 top:
                   imgDimensions.offsetY +
                   rect.y *
-                    imageRef.current!.naturalHeight *
-                    imgDimensions.scaleY,
+                  imageRef.current!.naturalHeight *
+                  imgDimensions.scaleY,
                 left:
                   imgDimensions.offsetX +
                   rect.x *
-                    imageRef.current!.naturalWidth *
-                    imgDimensions.scaleX,
+                  imageRef.current!.naturalWidth *
+                  imgDimensions.scaleX,
                 width:
                   rect.width *
                   imageRef.current!.naturalWidth *
