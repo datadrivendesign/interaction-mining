@@ -9,6 +9,7 @@ import { createTrace, generatePresignedVHUpload } from "@/lib/actions";
 import { uploadToS3 } from "@/lib/aws/s3/client";
 
 import { FrameData, TraceFormData, Redaction } from "../components/types";
+import { computeIoU } from "./iou";
 
 export async function handleSave(data: TraceFormData, capture: Capture) {
   // Transpose gestures on to screens
@@ -158,41 +159,52 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       );
     }
 
-    // // recurse until you find element that matches redaction coordinates
-    // function redactVH(
-    //   node: any,
-    //   r: Redaction,
-    //   imgWidth: number,
-    //   imgHeight: number
-    // ) {
-    //   if (node.bounds_in_screen) {
-    //     const [left, top, right, bottom] = node.bounds_in_screen
-    //       .split(" ")
-    //       .map(Number);
-    //     const width = right - left;
-    //     const height = bottom - top;
-    //     const x = left;
-    //     const y = top;
-    //     if (
-    //       width === r.width * imgWidth &&
-    //       height === r.height * imgHeight &&
-    //       x === r.x * imgWidth &&
-    //       y === r.y * imgHeight
-    //     ) {
-    //       if ("content-desc" in node) {
-    //         node["content-desc"] = "REDACTED"
-    //       }
-    //       if ("text_field" in node) {
-    //         node.text_field = "REDACTED"
-    //       }
-    //     }
-    //   }
-    //   if (node.children && node.children.length > 0) {
-    //     node.children.forEach((child: any) =>
-    //       redactVH(child, r, imgWidth, imgHeight)
-    //     );
-    //   }
-    // }
+    // recurse through tree and check IoU with all redactions
+    function redactVH(
+      node: any,
+      redactions: Redaction[],
+      imgWidth: number,
+      imgHeight: number
+    ) {
+      // check 
+      if (node.bounds_in_screen) {
+        const [left, top, right, bottom] = node.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        const width = right - left;
+        const height = bottom - top;
+        const x = left;
+        const y = top;
+
+        for (const r of redactions) {
+          const redactionRect = {
+            x: r.x * imgWidth,
+            y: r.y * imgHeight,
+            width: r.width * imgWidth,
+            height: r.height * imgHeight,
+          };
+
+          const nodeRect = { x, y, width, height };
+
+          const iou = computeIoU(redactionRect, nodeRect);
+          if (iou > 0.1) {
+            if ("content-desc" in node && node["content=desc"] !== "none") {
+              node["content-desc"] = "REDACTED";
+            }
+            if ("text_field" in node) {
+              node["text_field"] = "REDACTED";
+            }
+            break; // only redact once
+          }
+        }
+      }
+      // recursive case
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) =>
+          redactVH(child, redactions, imgWidth, imgHeight)
+        );
+      }
+    }
 
     const vhUploadRes = await Promise.all(
       data.screens.map((screen: FrameData, index: number) =>
@@ -223,11 +235,10 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
             imgHeight = image.height;
           }
 
-          // TODO: Uncomment and apply redactions if needed
-          // const redactions = data.redactions[screen.id]
-          // for (const r of redactions) {
-          //   redactVH(vh, r, imgWidth, imgHeight);
-          // }
+          const redactions = data.redactions[screen.id]
+          if (redactions) {
+            redactVH(vh, redactions, imgWidth, imgHeight);
+          }
 
           if (!vh) {
             return { ok: false, message: "Failed to find view hierarchies." };

@@ -16,7 +16,30 @@ export type AppItemList = {
   id: string;
   package: string;
   name: string;
+  os: string;
 };
+
+export type AppInput = {
+  packageName: string,
+  category: {
+    id: string,
+    name: string,
+  } | null,
+  metadata: {
+    company: string,
+    name: string,
+    cover: string,
+    description: string,
+    icon: string,
+    rating: number,
+    reviews: number,
+    genre: string[],
+    downloads: string,
+    url: string,
+  },
+  os: "android" | "ios"
+}
+    
 
 export async function getApps({
   limit,
@@ -88,7 +111,7 @@ export async function getApp(id: string): Promise<App | null> {
 export async function getAllApps(): Promise<AppItemList[]> {
   try {
     const apps = await prisma.app.findMany({
-      select: { id: true, metadata: true, packageName: true },
+      select: { id: true, metadata: true, packageName: true, os: true },
       orderBy: { id: "asc" },
     });
 
@@ -96,6 +119,7 @@ export async function getAllApps(): Promise<AppItemList[]> {
       id: app.id,
       package: app.packageName,
       name: app.metadata.name,
+      os: app.os
     }));
   } catch (error) {
     console.error("Failed to fetch apps:", error);
@@ -122,12 +146,17 @@ export async function getAppByPackageName(
   }
 }
 
-export async function checkIfAppExists(packageName: string): Promise<boolean> {
+export async function checkIfAppExists(
+  packageName: string, 
+  os: string
+): Promise<boolean> {
   if (!packageName) return false;
 
   try {
     const app = await prisma.app.findUnique({
-      where: { packageName },
+      where: {
+        packageName_os: { packageName, os }
+      },
     });
 
     return !!app;
@@ -138,7 +167,7 @@ export async function checkIfAppExists(packageName: string): Promise<boolean> {
 }
 
 export async function saveApp(
-  appData: App
+  appData: AppInput
 ): Promise<{ ok: boolean; data: App | null }> {
   if (!appData || !appData.packageName) return { ok: false, data: null };
 
@@ -146,6 +175,7 @@ export async function saveApp(
     const existingApp = await prisma.app.findFirst({
       where: {
         packageName: appData.packageName,
+        os: appData.os
       },
     });
 
@@ -170,7 +200,7 @@ export async function saveApp(
           downloads: appData.metadata.downloads,
           url: appData.metadata.url,
         },
-        v: appData.v ?? 0,
+        os: appData.os,
       },
     });
 

@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { prisma } from "@/lib/prisma";
-import { listFromS3, lambda } from "../aws";
+import { listFromS3, lambda, copyFromS3 } from "../aws";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth";
 import { updateUser } from "./user";
@@ -191,7 +191,6 @@ export async function getCaptureFiles(
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`processed/${captureId}`);
-
     return files
   } catch (err) {
     console.error("Error fetching uploaded files:", err);
@@ -306,12 +305,28 @@ export async function createCaptureTask({
 }
 
 /**
- *
+ * TODO: call this function in Android api route too
  * @param fileKey
  * @returns
  */
 export async function processCaptureFiles(fileKey: string) {
   console.log("Transcoding video for file key:", fileKey);
+  if (process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true") {
+    console.log("Lambda transcoding is disabled via env config.");
+    const captureId = fileKey.split("/")[1];
+    const destPathIndex = fileKey.indexOf(captureId);
+    const destPath = fileKey.substring(destPathIndex);
+    const res = await copyFromS3(fileKey, `processed/${destPath}`);
+    if (!res.ok) {
+      console.error("Failed to copy file to processed folder:", res.message);
+      return { ok: false, message: res.message, data: null };
+    }
+    return { 
+      ok: true, 
+      message: "Processing successfuly, disabled transcode.", 
+      data: null 
+  };
+  }
 
   const cmd = new InvokeCommand({
     FunctionName: "odim-transcode-mp4-webm",

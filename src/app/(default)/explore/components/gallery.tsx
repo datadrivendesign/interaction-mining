@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { Search } from "lucide-react";
 import { App } from "@prisma/client";
+import { prettyOS } from "@/lib/utils";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -101,7 +102,7 @@ export function Gallery({ children }: { children?: React.FC<any> }) {
               {app.metadata.name}
             </h2>
             <span className="text-sm text-muted-foreground line-clamp-1 leading-tight">
-              {app.company}
+              {prettyOS(app.os)}
             </span>
           </div>
         </Link>

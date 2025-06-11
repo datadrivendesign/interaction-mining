@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
-import { TraceFormData } from "../types";
+import { FrameData, Redaction, TraceFormData } from "../types";
 import { ScreenGesture } from "@prisma/client";
 import {
   Tooltip,
@@ -14,8 +14,6 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { gestureOptions } from "../repair-screen";
-import { FrameData } from "../types";
-import { Redaction } from "../types";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
@@ -33,7 +31,7 @@ export default function Review() {
           <Textarea
             {...register("description")}
             id="description"
-            placeholder="Describe how you completed your task"
+            placeholder="Describe the screen activity using your own words in 1-2 sentences."
           />
         </div>
       </div>
@@ -84,12 +82,12 @@ function SaveTraceGallery() {
                         (option) => option.value === gestures[screen.id].type
                       )?.icon
                   }
-                </div>
-              </TooltipTrigger>
+                </div >
+              </TooltipTrigger >
               <TooltipContent side="bottom">
                 <p>{gestures[screen.id].description}</p>
               </TooltipContent>
-            </Tooltip>
+            </Tooltip >
 
             {(redactions[screen.id] || []).map((redaction) => (
               <Tooltip key={redaction.id}>
@@ -106,10 +104,11 @@ function SaveTraceGallery() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{redaction.annotation}</TooltipContent>
               </Tooltip>
-            ))}
-          </TooltipProvider>
-        </div>
+            ))
+            }
+          </TooltipProvider >
+        </div >
       ))}
-    </div>
+    </div >
   );
 }

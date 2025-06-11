@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,12 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   annotation,
   onChange,
 }) => {
+  const annotateTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    annotateTextareaRef.current?.focus();
+  }, []);
+
   return (
     <div className="absolute">
       <Card className="flex flex-col items-start p-4 shadow-lg">
@@ -31,8 +37,9 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
         </TabSelect>
         <Label className="text-sm font-semibold mb-2">Note</Label>
         <Textarea
-          placeholder="Describe your interaction..."
+          placeholder="Describe what you redacted in one to two words..."
           defaultValue={annotation}
+          ref={annotateTextareaRef}
           onChange={(e) => onChange(e.target.value)}
           className="w-64"
         />

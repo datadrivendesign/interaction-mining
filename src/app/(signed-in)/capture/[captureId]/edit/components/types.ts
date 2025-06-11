@@ -78,9 +78,12 @@ export const ScreenGestureSchema = z
   })
   .refine(
     (data) => {
-      return data.screens.every((screen) => data.gestures[screen.id]);
+      // Check all screens except the last one have gestures
+      return data.screens.slice(0, -1).every((screen) => {
+        return data.gestures[screen.id];;
+      });
     },
-    { message: "Each screen must have a gesture" }
+    { message: "Each screen except the last one must have a gesture" }
   );
 
 export const RedactionSchema = z
@@ -124,7 +127,7 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
   .refine(
     (data) => {
       // Validate that each screen has a gesture
-      for (let screen of data.screens) {
+      for (let screen of data.screens.slice(0, -1)) {
         if (!data.gestures[screen.id]) {
           return false;
         }

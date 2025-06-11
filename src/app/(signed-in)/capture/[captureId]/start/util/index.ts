@@ -1,8 +1,3 @@
-import {
-  getCapture,
-  getCaptureFiles,
-  processCaptureFiles,
-} from "@/lib/actions";
 import { deleteFromS3, listFromS3 } from "@/lib/aws";
 
 import { toast } from "sonner";
@@ -14,10 +9,6 @@ export enum CaptureSWROperations {
   TRANSCODE_LIST = "transcode-list",
 }
 
-export async function handleProcessFiles(captureId: string) {
-  let res = await processCaptureFiles(captureId);
-}
-
 export async function handleDeleteFile(captureId: string, fileKey: string) {
   let res = await deleteFromS3(fileKey);
 
@@ -26,11 +17,12 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
     mutate(
       [CaptureSWROperations.UPLOAD_LIST, captureId],
       (prevData: any) => {
+        if (!prevData) { return []; }
         return prevData.filter((file: any) => file.fileKey !== fileKey);
       },
       {
         optimisticData: (prevData: any) => {
-          if (!prevData) return [];
+          if (!prevData) { return []; }
           return prevData.filter((file: any) => file.fileKey !== fileKey);
         },
       }

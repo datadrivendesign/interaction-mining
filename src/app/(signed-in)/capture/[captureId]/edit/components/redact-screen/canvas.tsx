@@ -33,6 +33,7 @@ import {
 import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
 import { useInvertedScroll } from "@/lib/hooks/useInvertedScroll";
+import { KonvaEventObject } from "konva/lib/Node";
 
 const MIN_PIXEL_SIZE = 8;
 
@@ -152,9 +153,22 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     }, []);
 
     // Load the image from the screen URL and calculate scaling
-    const [image] = useImage(screen.src);
-    // Calculate common layout dimensions and offsets only when dependencies change.
+    const [image, imageStatus] = useImage(screen.src);
+    // Calculate layout dimensions and offsets only when dependencies change.
     const { displayWidth, displayHeight, offsetX, offsetY } = useMemo(() => {
+      // Return default values if image is not ready
+      if (imageStatus !== 'loaded' || !image || !width || !height) {
+        return {
+          image: null,
+          imageScale: 1,
+          verticalPadding: 16,
+          displayWidth: 0,
+          displayHeight: 0,
+          offsetX: 0,
+          offsetY: 0,
+        };
+      }
+
       const vPadding =
         typeof window !== "undefined"
           ? parseFloat(getComputedStyle(document.documentElement).fontSize)
@@ -276,6 +290,15 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       [selectedRedaction, updateRedaction]
     );
 
+    const handleBackgroundClick = (e: KonvaEventObject<MouseEvent>) => {
+      if (e.target === e.target.getStage()) {
+        if (mode === "select") {
+          // deselect redaction and clear annotation card overlay
+          selectRedaction(null);
+        }
+      }
+    }
+
     // handler for when user clicks a rectangle
     const handleRectClick = (_: any, id: string) => {
       if (mode === "eraser") {
@@ -336,7 +359,13 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       return { ...oldBox, x, y, width: w, height: h };
     };
 
+    const handleRectDelete = (e: any, id: string) => {
+      deleteRedaction(id);
+    }
+
     useEffect(() => {
+      if (!stageRef.current) { return; }
+
       const stage = stageRef.current;
       const transformer = transformerRef.current;
       if (!stage || !transformer) return;
@@ -428,7 +457,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             scaleY={stageScale}
           >
             <Layer>
-              {image && (
+              {imageStatus === 'loaded' && image && image.complete && (
                 <KonvaImage
                   image={image}
                   x={offsetX}
@@ -440,33 +469,36 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               {
                 // add vh bouding boxes here
                 rootBounds &&
-                  vhBoxes.map((box: vhBox, index: number) => (
-                    <Rect
-                      key={box.id + index}
-                      x={(box.x / rootBounds.width) * displayWidth + offsetX}
-                      y={(box.y / rootBounds.height) * displayHeight + offsetY}
-                      width={(box.width / rootBounds.width) * displayWidth}
-                      height={(box.height / rootBounds.height) * displayHeight}
-                      stroke="red"
-                      strokeWidth={1}
-                    />
-                  ))
-              }
-              {(redactions || []).map((redaction) => (
-                <React.Fragment key={redaction.id}>
-                  <RedactRectangle // redaction rectanges
-                    redaction={redaction}
-                    displayWidth={displayWidth}
-                    displayHeight={displayHeight}
-                    offsetX={offsetX}
-                    offsetY={offsetY}
-                    mode={mode}
-                    selectRedaction={selectRedaction}
-                    handleRectClick={handleRectClick}
-                    handleTransform={handleTransform}
+                vhBoxes.map((box: vhBox, index: number) => (
+                  <Rect
+                    key={box.id + index}
+                    x={(box.x / rootBounds.width) * displayWidth + offsetX}
+                    y={(box.y / rootBounds.height) * displayHeight + offsetY}
+                    width={(box.width / rootBounds.width) * displayWidth}
+                    height={(box.height / rootBounds.height) * displayHeight}
+                    stroke="red"
+                    strokeWidth={1}
                   />
-                </React.Fragment>
-              ))}
+                ))
+              }
+              {imageStatus === "loaded"
+                && image?.complete
+                && (redactions || []).map((redaction) => (
+                  <React.Fragment key={redaction.id}>
+                    <RedactRectangle // redaction rectanges
+                      redaction={redaction}
+                      displayWidth={displayWidth}
+                      displayHeight={displayHeight}
+                      offsetX={offsetX}
+                      offsetY={offsetY}
+                      mode={mode}
+                      selectRedaction={selectRedaction}
+                      handleRectClick={handleRectClick}
+                      handleTransform={handleTransform}
+                      handleRectDelete={handleRectDelete}
+                    />
+                  </React.Fragment>
+                ))}
               {newRect &&
                 image && ( // draws rectangle while drawing
                   <Rect

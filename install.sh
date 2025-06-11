@@ -112,7 +112,7 @@ if [[ -z "$USE_HTTP" ]]; then
   USE_HTTP="y"
 fi
 if [[ "$USE_HTTP" == "y" ]]; then
-  REPO_URL="https://github.com/datadrivendesign/odim-frontend-next"
+  REPO_URL="https://github.com/datadrivendesign/odim-frontend-next.git"
 else
   REPO_URL="git@github.com:datadrivendesign/odim-frontend-next.git"
 fi
@@ -137,46 +137,48 @@ if ! command -v npm &> /dev/null; then
 fi
 echo "Let's set up environment variables (or press enter to skip for now):"
 echo -e "${BLUE}👉 MongoDB database name (DATABASE_NAME):${NC} \c"
-read DATABASE_NAME
+read DATABASE_NAME < /dev/tty
 echo -e "${BLUE}👉 MongoDB connection URI (DATABASE_URL):${NC} \c"
-read DATABASE_URL
+read DATABASE_URL < /dev/tty
 
 echo -e "${BLUE}👉 AWS region:${NC} \c"
-read AWS_REGION
+read _AWS_REGION < /dev/tty
 echo -e "${BLUE}👉 AWS access key ID:${NC} \c"
-read AWS_ACCESS_KEY_ID
+read _AWS_ACCESS_KEY_ID < /dev/tty
 echo -e "${BLUE}👉 AWS secret access key:${NC} \c"
-read AWS_SECRET_ACCESS_KEY
+read _AWS_SECRET_ACCESS_KEY < /dev/tty
 echo -e "${BLUE}👉 AWS upload bucket:${NC} \c"
-read AWS_UPLOAD_BUCKET
+read _AWS_UPLOAD_BUCKET < /dev/tty
 
+echo -e "${BLUE}👉 Enter the Web Deployment URL (e.g., http://192.168.x.x:3000 for local dev or https://your-domain.com):${NC} \c"
+read NEXT_PUBLIC_DEPLOYMENT_URL < /dev/tty
 echo -e "${BLUE}👉 NextAuth secret:${NC} \c"
-read NEXTAUTH_SECRET
+read AUTH_SECRET < /dev/tty
 echo -e "${BLUE}👉 Google client ID:${NC} \c"
-read GOOGLE_CLIENT_ID
+read AUTH_GOOGLE_CLIENT_ID < /dev/tty
 echo -e "${BLUE}👉 Google client secret:${NC} \c"
-read GOOGLE_CLIENT_SECRET
+read AUTH_GOOGLE_CLIENT_SECRET < /dev/tty
 
 ENV_FILE=".env.local"
 
 cat <<EOF > .env.local
 # >>>>> Localhost configuration
-NEXT_PUBLIC_DEPLOYMENT_URL="localhost:3000"
+NEXT_PUBLIC_DEPLOYMENT_URL=$NEXT_PUBLIC_DEPLOYMENT_URL
 
 # >>>>> Database configuration
 DATABASE_NAME=$DATABASE_NAME
 DATABASE_URL=$DATABASE_URL
 
 # >>>>> AWS configuration
-AWS_REGION=$AWS_REGION
-AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-AWS_UPLOAD_BUCKET=$AWS_UPLOAD_BUCKET
+_AWS_REGION=$_AWS_REGION
+_AWS_ACCESS_KEY_ID=$_AWS_ACCESS_KEY_ID
+_AWS_SECRET_ACCESS_KEY=$_AWS_SECRET_ACCESS_KEY
+_AWS_UPLOAD_BUCKET=$_AWS_UPLOAD_BUCKET
 
 # >>>>> NextAuth configuration
-NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+AUTH_SECRET=$AUTH_SECRET
+AUTH_GOOGLE_CLIENT_ID=$AUTH_GOOGLE_CLIENT_ID
+AUTH_GOOGLE_CLIENT_SECRET=$AUTH_GOOGLE_CLIENT_SECRET
 EOF
 
 echo "Environment variables have been set in $ENV_FILE"
@@ -214,9 +216,30 @@ echo "Repository cloned to $Mobile_REPO_NAME"
 
 cd "$Mobile_REPO_NAME" || { echo "Failed to enter directory $Mobile_REPO_NAME"; exit 1; }
 
+# Ask user for SDK path if ANDROID_HOME is not already set
+if [ -z "$ANDROID_HOME" ]; then
+  echo -e "${BLUE}👉 Enter your Android SDK path (e.g., /home/yourname/Android/Sdk):${NC} \c"
+  read SDK_PATH < /dev/tty
+
+  # Fallback to default if empty
+  if [ -z "$SDK_PATH" ]; then
+    SDK_PATH="$HOME/Android/Sdk"
+  fi
+
+  export ANDROID_HOME="$SDK_PATH"
+else
+  SDK_PATH="$ANDROID_HOME"
+fi
+
+# Optional: add Android SDK tools to PATH
+export PATH="$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH"
+
+# Generate local.properties
+echo "sdk.dir=$SDK_PATH" > local.properties
+
 echo "Let's set up the URL domain where the Android app will upload to (or press Enter to use the default ODIM URL):"
 echo -e "${BLUE}👉 API URL Prefix:${NC} \c"
-read API_URL_PREFIX
+read API_URL_PREFIX < /dev/tty
 # If user presses Enter, fall back to default
 if [ -z "$API_URL_PREFIX" ]; then
   API_URL_PREFIX="https://pre-alpha.odim.app"

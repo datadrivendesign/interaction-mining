@@ -7,13 +7,12 @@ import React, {
   useRef,
   useState,
 } from "react";
-import throttle from "lodash/throttle";
 import useSWR from "swr";
 import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { ListRestart } from "lucide-react";
 import { FrameGalleryAndroid, FrameGalleryIOS } from "./extract-frames-gallery";
-import { TraceFormData } from "../types";
+import { Redaction, TraceFormData } from "../types";
 
 import { ScreenGesture } from "@prisma/client";
 import { ListedFiles, CaptureScreenFile } from "@/lib/actions";
@@ -56,8 +55,8 @@ export default function ExportFrames({ capture }: { capture: any }) {
 
 const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchVHs, watchGestures] = useWatch({
-    name: ["screens", "vhs", "gestures"],
+  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "vhs", "gestures", "redactions"],
   });
   const originalFrames = useRef<FrameData[]>([]);
   const originalVHs = useRef<{ [key: string]: any }>({});
@@ -65,6 +64,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
   const currFrames = watchScreens as FrameData[];
   const currVHs = watchVHs as { [key: string]: any };
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
 
   // Fetch file data
   const { data: files = [], isLoading: isFilesLoading } = useSWR(
@@ -90,28 +90,46 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           scrollDeltaY,
           description: "",
         };
+
+        function translateTypeAndroidToODIM(
+          androidType: string,
+          scrollDeltaX: number | null,
+          scrollDeltaY: number | null
+        ): string {
+          console.log(`type: ${type} scrollDeltaX: ${scrollDeltaX} scrollDeltaY: ${scrollDeltaY}`)
+          if (androidType === "TYPE_VIEW_CLICKED" 
+              || androidType == "TYPE_VIEW_SELECTED") {
+            return "tap";
+          } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
+            return "touch and hold";
+          } else if (androidType === "TYPE_VIEW_SCROLLED") {
+            if (scrollDeltaX !== null && scrollDeltaY !== null) {
+              // get direction of scroll/swipe w. dominant delta direction
+              if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+                return "swipe right";
+              } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+                return "swipe left";
+              } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+                return "swipe up";
+              } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+                return "swipe down";
+              } else {
+                return "other";
+              }
+            }
+          }
+          // fall through case, don't know what will reach
+          return "other";
+        }
+
         if (!type) {
           screenGesture.type = "other";
-        } else if (type === "TYPE_VIEW_CLICKED") {
-          screenGesture.type = "Tap";
-        } else if (type === "TYPE_VIEW_LONG_CLICKED") {
-          screenGesture.type = "Touch and hold";
-        } else if (type === "TYPE_VIEW_SCROLLED") {
-          // get directionality of scroll/swipe,choose dominant delta direction
-          if (scrollDeltaX! > 0 && scrollDeltaX! > scrollDeltaY!) {
-            screenGesture.type = "Swipe right";
-          } else if (scrollDeltaX! < 0 && scrollDeltaX! < scrollDeltaY!) {
-            screenGesture.type = "Swipe left";
-          } else if (scrollDeltaY! > 0 && scrollDeltaY! > scrollDeltaX!) {
-            screenGesture.type = "Swipe up";
-          } else if (scrollDeltaY! < 0 && scrollDeltaY! < scrollDeltaX!) {
-            screenGesture.type = "Swipe down";
-          } else {
-            // fall through case, don't know what will reach
-            screenGesture.type = "Swipe";
-          }
         } else {
-          screenGesture.type = "other";
+          screenGesture.type = translateTypeAndroidToODIM(
+            type, 
+            scrollDeltaX,
+            scrollDeltaY
+          )
         }
         return screenGesture;
       }
@@ -125,7 +143,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
           const frameJson: CaptureScreenFile = await frameResponse.json();
           const b64img = `data:image/png;base64,${frameJson.img}`.trim();
           const frame: FrameData = {
-            id: frameJson.created + i.toString(), // + Math.random().toString(), why do this?
+            id: frameJson.created + i.toString(),
             src: b64img,
             timestamp: Date.parse(frameJson.created),
           };
@@ -193,6 +211,7 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
               frames={currFrames}
               vhs={currVHs}
               gestures={currGestures}
+              redactions={redactions}
             />
           </div>
         </ResizablePanel>
@@ -203,19 +222,28 @@ const ExtractFramesAndroid = ({ capture }: { capture: any }) => {
 
 const ExtractFramesIOS = ({ capture }: { capture: any }) => {
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchGestures] = useWatch({
-    name: ["screens", "gestures"],
+  const [watchScreens, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "gestures", "redactions"],
   });
   const frames = watchScreens as FrameData[];
   const gestures = watchGestures as { [key: string]: ScreenGesture };
-
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
+  
+  const galleryBottomRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
-
+        
+  const MAX_THUMBS = 30;
   const [currentTime, setCurrentTime] = useState(0);
-  const [frameStep, setFrameStep] = useState(1 / 60);
+  const [frameStep, setFrameStep] = useState(1 / MAX_THUMBS);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [thumbnails, setThumbnails] = useState<{
+    src: string;
+    timestamp: number;
+    width: number;
+    height: number;
+  }[]>([]);
 
   // Fetch file data
   const { data: files = [], isLoading: isFilesLoading } = useSWR(
@@ -223,23 +251,95 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
     fileFetcher
   );
 
-  // Thumbnails are from `thumbnails` folder in captureFiles
-  const thumbnails = useMemo(() => {
-    const video = videoRef.current;
-    if (!video || videoDuration === 0) return [];
-    const thumbnailFiles = files.filter((f) =>
-      f.fileKey.includes("thumbnails/")
-    );
-    return thumbnailFiles.map((f, index) => ({
-      src: f.fileUrl,
-      timestamp: (videoDuration / thumbnailFiles.length) * index,
-      width: video.videoWidth,
-      height: video.videoHeight,
-    }));
-  }, [files, videoRef, videoDuration]);
+  // Load thumbnails
+  const extractVideoThumbnails = useCallback(
+    async (
+      video: HTMLVideoElement, 
+      videoDuration: number
+    ): Promise<ListedFiles[]> => {
+      const thumbVideo = document.createElement("video");
+      thumbVideo.crossOrigin = "anonymous";
+      thumbVideo.preload = "metadata";
+      thumbVideo.src = video.src;
+      console.log("thumbVideo.src:", thumbVideo.src);
+      await new Promise<void>((res) =>
+        thumbVideo.addEventListener("loadedmetadata", () => res(), {
+          once: true,
+        })
+      );
+      // determine how many thumbnails to extract
+      const duration = videoDuration;
+      const fps = 60;
+      // extract MAX_THUMBS thumbnails or every two frames, whichever is smaller
+      const thumbnailCount = Math.min(
+        Math.floor(duration * fps) / 2,
+        MAX_THUMBS
+      );
+      const THUMB_HEIGHT = 128;
+      const scale = THUMB_HEIGHT / thumbVideo.videoHeight;
+      // need to do sequentially, parallel messes up seeking
+      const thumbsRes: FrameData[] = [];
+      for (let i = 0; i < thumbnailCount; i++) {
+        const t = (videoDuration / thumbnailCount) * i;
+        const frame = await extractVideoFrame(thumbVideo, t, scale);
+        thumbsRes.push(frame);
+      }
+      return thumbsRes.map((f, index) => ({
+        fileKey: "thumbs/",
+        fileName: `frame-${index}.png`,
+        fileUrl: f.src
+      }))
+    }, []);
+
+    // useEffect to manually load thumbnails if video transcoding is disabled
+    useEffect(() => {
+      const extractThumbnails = async () => {
+        const video = videoRef.current;
+        const isTranscodeDisabled = 
+          process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+        if (!isTranscodeDisabled || !video || videoDuration === 0) { 
+          return; 
+        }   
+        const thumbnailFiles = await extractVideoThumbnails(
+          video, 
+          videoDuration
+        );
+        const thumbs = thumbnailFiles.map((f, index) => ({
+          src: f.fileUrl,
+          timestamp: (videoDuration / thumbnailFiles.length) * index,
+          width: video.videoWidth,
+          height: video.videoHeight,
+        }));
+        setThumbnails(thumbs);
+      }
+      extractThumbnails();
+    }, [videoRef, videoDuration])
+
+    // useEffect to load thumbnails if video transcoding is enabled
+    useEffect(() => {
+      const video = videoRef.current;
+      const isTranscodeDisabled = 
+        process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+      if (isTranscodeDisabled || !video || videoDuration === 0) {
+        return;
+      }      
+      const thumbnailFiles = files.filter((f) =>
+        f.fileKey.includes("thumbnails/")
+      );
+      const thumbs = thumbnailFiles.map((f, index) => ({
+        src: f.fileUrl,
+        timestamp: (videoDuration / thumbnailFiles.length) * index,
+        width: video.videoWidth,
+        height: video.videoHeight,
+      }));
+      setThumbnails(thumbs);
+    }, [files, videoRef, videoDuration]);
 
   const videoFiles = useMemo(() => {
-    return files.filter((f) => /\.(webm)$/.test(f.fileKey));
+    const isTranscodeDisabled = 
+      process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+    const regexRule = isTranscodeDisabled ? /\.(mp4|mov)$/ : /\.(webm)$/
+    return files.filter((f) => regexRule.test(f.fileKey));
   }, [files]);
 
   useEffect(() => {
@@ -277,7 +377,8 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
       if (!video) return;
       video.pause();
 
-      video.fastSeek(t);
+      // video.fastSeek(t);
+      video.currentTime = t;
       setCurrentTime(t);
     },
     [videoRef, videoDuration]
@@ -290,6 +391,10 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
       "screens",
       [...frames, f].sort((a, b) => a.timestamp - b.timestamp)
     );
+    // snap to the bottom of the gallery
+    requestAnimationFrame(() => {
+      galleryBottomRef.current?.scrollIntoView({ behavior: "smooth", block: 'start' });
+    });
   };
 
   // Play/Pause toggle
@@ -423,8 +528,10 @@ const ExtractFramesIOS = ({ capture }: { capture: any }) => {
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={67}>
           <FrameGalleryIOS
+            bottomRef={galleryBottomRef}
             frames={frames}
             gestures={gestures}
+            redactions={redactions}
             setTime={handleSetTime}
           />
         </ResizablePanel>

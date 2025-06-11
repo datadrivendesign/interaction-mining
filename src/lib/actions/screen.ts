@@ -6,13 +6,18 @@ import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { uploadToS3 } from "../aws";
+import { uploadAndroidAPIDataToS3 } from "../aws";
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION!,
+  region: process.env._AWS_REGION!,
+  forcePathStyle: process.env.USE_MINIO_STORE === "true" ? true : false,
+  // conditional: only define endpoint if using minio store, otherwise ignore 
+  ...(process.env.USE_MINIO_STORE === "true" && {
+    endpoint: process.env.MINIO_ENDPOINT,
+  }),
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env._AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env._AWS_SECRET_ACCESS_KEY!,
   },
 });
 
@@ -148,7 +153,7 @@ export async function generatePresignedVHUpload(
     const fileKey = `uploads/${captureId}/vhs/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_UPLOAD_BUCKET!,
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
       Key: fileKey,
       ContentType: fileType,
     });
@@ -162,7 +167,9 @@ export async function generatePresignedVHUpload(
         uploadUrl,
         filePrefix: `uploads/${captureId}/`,
         fileKey,
-        fileUrl: `https://${process.env.AWS_UPLOAD_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`,
+        fileUrl: process.env.USE_MINIO_STORE === "true" 
+          ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}`
+          : `${process.env._AWS_CLOUDFRONT_URL}/${fileKey}`,
       },
     };
   } catch (err) {
@@ -188,15 +195,15 @@ export async function handleAndroidScreenUpload(data: {
     y?: number;
   };
   captureId: string;
-}): Promise<ActionPayload<{ url: string }>> {
+}): Promise<ActionPayload<{ url: string, fileKey: string }>> {
   try {
     // Upload files to S3
     // create s3 json
-    const file = new File([JSON.stringify(data.vh)], `${data.created}.json`, {
+    const file = new File([JSON.stringify(data)], `${data.created}.json`, {
       type: "application/json",
     });
     const [res] = await Promise.all([
-      uploadToS3(
+      uploadAndroidAPIDataToS3(
         file,
         `uploads/${data.captureId}`,
         `${data.created}.json`,
@@ -215,7 +222,7 @@ export async function handleAndroidScreenUpload(data: {
     return {
       ok: true,
       message: "Screen uploaded successfully",
-      data: { url: res.data.fileUrl },
+      data: { url: res.data.fileUrl, fileKey: res.data.fileKey },
     };
   } catch (error) {
     console.error("Android screen upload error:", error);
