@@ -74,8 +74,20 @@ export default function Page() {
         return;
       }
     } else if (stepIndex === TraceSteps.Repair) {
+      // validate all screen gestures except the last one
+      const allButLastScreenIds = methods.getValues()
+        .screens.slice(0, -1)
+        .map((s)=> s.id);
+      const allButLastScreenGestures = Object.fromEntries(
+        Object.entries(methods.getValues().gestures).filter(
+          ([id, _]) => allButLastScreenIds.includes(id)
+        )
+      );
       // Validate the "gestures"
-      const validation = ScreenGestureSchema.safeParse(methods.getValues());
+      const validation = ScreenGestureSchema.safeParse({
+        ...methods.getValues(),
+        gestures: allButLastScreenGestures,
+      });
       if (!validation.success) {
         console.log(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";

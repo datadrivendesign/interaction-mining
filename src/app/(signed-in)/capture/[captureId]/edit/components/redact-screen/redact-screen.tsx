@@ -27,10 +27,11 @@ import { FrameData } from "../types";
 export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();
   const screens = getValues("screens") as FrameData[];
-  const redactions = getValues("redactions") as {
-    [screenId: string]: Redaction[];
-  };
   const vhs = getValues("vhs") as { [key: string]: any };
+  const [watchRedactions] = useWatch({
+    name: ["redactions"],
+  });
+  const redactions = watchRedactions || {};
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
   const [copied, setCopied] = useState<Redaction | null>(null);
@@ -122,6 +123,7 @@ function Filmstrip({
           key={screen.id}
           index={index}
           screen={screen}
+          redactions={redactions[screen.id] ?? []}
           isSelected={focusViewIndex === index}
           onClick={() => setFocusViewIndex(index)}
         >
@@ -133,6 +135,7 @@ function Filmstrip({
 
 function FilmstripItem({
   screen,
+  redactions,
   index = 0,
   isSelected = false,
   hasError = false,
@@ -140,12 +143,50 @@ function FilmstripItem({
   ...props
 }: {
   screen: FrameData;
+  redactions: Array<Redaction>;
   index?: number;
   isSelected?: boolean;
   hasError?: boolean;
 } & React.HTMLAttributes<HTMLLIElement>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [imgDimensions, setImgDimensions] = useState<{
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+    scaleX: number;
+    scaleY: number;
+  }>({ width: 0, height: 0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
 
+  const updateSize = () => {
+    if (containerRef.current && imageRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const imageRect = imageRef.current.getBoundingClientRect();
+      const naturalWidth = imageRef.current.naturalWidth;
+      const naturalHeight = imageRef.current.naturalHeight;
+      // Calculate the scale factor between the natural and displayed size:
+      const scaleX = imageRect.width / naturalWidth;
+      const scaleY = imageRect.height / naturalHeight;
+      // Compute offsets in case the image is letterboxed inside its container:
+      const offsetX = (containerRect.width - imageRect.width) / 2;
+      const offsetY = (containerRect.height - imageRect.height) / 2;
+      setImgDimensions({
+        width: imageRect.width,
+        height: imageRect.height,
+        offsetX,
+        offsetY,
+        scaleX,
+        scaleY,
+      });
+    }
+  };
+
+  useEffect(() => {
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, [redactions]);
   return (
     <li
       className="cursor-pointer min-w-fit h-full"
@@ -183,7 +224,47 @@ function FilmstripItem({
             hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100"
           )}
         >
-          {children}
+          <Image
+            ref={imageRef}
+            key={screen.id}
+            src={screen.src}
+            alt="gallery"
+            draggable={false}
+            className="h-full w-auto object-contain"
+            width={0}
+            height={0}
+            sizes="100vw"
+          />
+          {/* Render redaction overlays using the natural dimensions and scale factors */}
+          {imgDimensions.width > 0 &&
+            redactions.map((rect, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: "absolute",
+                  top:
+                    imgDimensions.offsetY +
+                    rect.y *
+                      imageRef.current!.naturalHeight *
+                      imgDimensions.scaleY,
+                  left:
+                    imgDimensions.offsetX +
+                    rect.x *
+                      imageRef.current!.naturalWidth *
+                      imgDimensions.scaleX,
+                  width:
+                    rect.width *
+                    imageRef.current!.naturalWidth *
+                    imgDimensions.scaleX,
+                  height:
+                    rect.height *
+                    imageRef.current!.naturalHeight *
+                    imgDimensions.scaleY,
+                  backgroundColor: "black",
+                  border: "1px solid black",
+                }}
+              />
+            ))}
         </div>
       </div>
     </li>
