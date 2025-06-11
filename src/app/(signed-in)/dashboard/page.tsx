@@ -23,22 +23,6 @@ export default async function ProfilePage() {
 
   const user = session?.user as User;
 
-  console.log("user", user.id);
-
-  // const captures = await getCaptures({
-  //   userId: session.user.id,
-  //   includes: { app: true, task: true },
-  // });
-
-  // if (!captures.ok) {
-    
-  // }
-
-  // const traces = await getTraces({
-  //   userId: session.user.id,
-  //   includes: { app: true, task: true },
-  // });
-
   const [capturesData, tracesData] = await Promise.all([
     getCaptures({
       userId: session.user.id,
@@ -57,9 +41,6 @@ export default async function ProfilePage() {
   const captures = capturesData.data;
   const traces = tracesData.data;
 
-  console.log("captures", captures);  
-  console.log("traces", traces);
-
   return (
     <>
       <main className="flex flex-col grow justify-start items-center min-w-dvw min-h-dvh">
@@ -72,7 +53,7 @@ export default async function ProfilePage() {
                   alt="User avatar"
                 />
                 <AvatarFallback>
-                  {user?.name?.[0]?.toUpperCase() ?? ""}
+                  <div className="w-full h-full bg-muted-background"></div>
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">

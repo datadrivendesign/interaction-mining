@@ -15,11 +15,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "play-lh.googleusercontent.com",
-      },
-      {
-        protocol: "https",
-        hostname: "*.amazonaws.com",
+        hostname: "*.googleusercontent.com",
+        pathname: "**",
       },
       {
         protocol: "https",
@@ -27,9 +24,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "*.amazonaws.com",
+      },
+      {
+        protocol: "https",
         hostname: "d1nrlpeg5tvzyr.cloudfront.net",
       },
     ],
+    minimumCacheTTL: 60,
   },
   experimental: {
     serverActions: {
