@@ -47,6 +47,7 @@ function SaveTraceGallery() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-start w-full gap-4 overflow-auto p-8">
+      {/* // TODO: disable gesture tagging for the last screen */}
       {screens.map((screen: FrameData) => (
         <div
           className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 rounded-xl"

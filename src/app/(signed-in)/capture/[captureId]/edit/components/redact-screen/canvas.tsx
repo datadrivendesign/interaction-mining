@@ -195,10 +195,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const clamp = (val: number) => Math.max(0, Math.min(val, 1));
         const normX = clamp((pointerPos.x - offsetX) / displayWidth);
         const normY = clamp((pointerPos.y - offsetY) / displayHeight);
-        if (e.target === stage) {
-          // Deselect any selected redaction when clicking on empty canvas
-          selectRedaction(null);
-        }
         if (mode === "pencil") {
           setNewRect({
             id: `${Date.now()}`, // unique enough id for redaction
@@ -449,6 +445,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             onMouseDown={handleStageMouseDown}
             onMouseMove={handleStageMouseMove}
             onMouseUp={handleStageMouseUp}
+            onClick={handleBackgroundClick}
             draggable={mode === "select"}
             onWheel={() => setIsPanning(true)}
             onDragStart={() => setIsPanning(true)}

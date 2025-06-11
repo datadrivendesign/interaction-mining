@@ -132,8 +132,7 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
           return false;
         }
       }
-
       return true;
     },
-    { message: "Each screen must have a gesture" }
+    { message: "Each screen except the last one must have a gesture" }
   );
