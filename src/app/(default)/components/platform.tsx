@@ -17,7 +17,7 @@ export default function Platform() {
               Contributers collect, clean, and annotate their own interaction data before sharing it.
             </p>
             <p className="inline-flex items-center w-full max-w-md text-2xl text-muted-foreground font-medium tracking-tight">
-              Let's try{" "}<span className="px-3 py-1 mx-2 rounded-full ring ring-neutral-200 dark:ring-neutral-800 text-foreground cursor-pointer">repairing</span>{" "}your trace.
+              Let&lsquo;s try{" "}<span className="px-3 py-1 mx-2 rounded-full ring ring-neutral-200 dark:ring-neutral-800 text-foreground cursor-pointer">repairing</span>{" "}your trace.
             </p>
           </div>
           <div className="flex justify-center items-center basis-2/5 aspect-video p-6 bg-muted-background rounded-2xl">

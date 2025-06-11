@@ -1,7 +1,7 @@
 // src/app/components/project-gallery/index.tsx
 "use client";
 
-import ProjectCard from "@/app/components/project-card";
+import ProjectCard from "@/app/(default)/components/project-card";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import works from "@/data/works";
