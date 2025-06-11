@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"NODE_OPTIONS='--inspect' next dev --turbopack\" \"prisma generate --watch\"",
-    "build": "npx prisma generate && next build --turbopack",
+    "build": "npx prisma generate && next build",
     "build:analyze": "ANALYZE=true npx prisma generate && next build",
     "start": "next start",
     "db:push": "dotenvx run --env-file=.env.local -- npx prisma db push",
