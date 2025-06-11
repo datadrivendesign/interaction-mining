@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "concurrently \"NODE_OPTIONS='--inspect' next dev --turbopack\" \"prisma generate --watch\"",
     "build": "npx prisma generate && next build --turbopack",
+    "build:analyze": "ANALYZE=true npx prisma generate && next build",
     "start": "next start",
     "db:push": "dotenvx run --env-file=.env.local -- npx prisma db push",
     "db:backfill-users": "dotenvx run --env-file=.env.local -- npx ts-node --esm prisma/scripts/backfill-users.mjs",
@@ -29,6 +30,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@mdx-js/loader": "^3.1.0",
     "@mdx-js/react": "^3.1.0",
+    "@next/bundle-analyzer": "^15.3.3",
     "@next/mdx": "^15.1.3",
     "@prisma/client": "^6.8.2",
     "@radix-ui/react-accordion": "^1.2.3",
