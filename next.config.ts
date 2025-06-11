@@ -17,20 +17,23 @@ const remotePatterns: RemotePattern[] = [
   },
   {
     protocol: "https",
-    hostname: "d1nrlpeg5tvzyr.cloudfront.net"
+    hostname: "d1nrlpeg5tvzyr.cloudfront.net",
   },
 ];
 // Conditionally add MinIO endpoint if set
 if (process.env.MINIO_ENDPOINT) {
   try {
     const minioHost = new URL(process.env.MINIO_ENDPOINT).hostname;
-    remotePatterns.push({
-      protocol: "http",
-      hostname: minioHost,
-    }, {
-      protocol: "http",
-      hostname: "localhost"
-    });
+    remotePatterns.push(
+      {
+        protocol: "http",
+        hostname: minioHost,
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+      }
+    );
   } catch (err) {
     console.warn("Invalid MINIO_ENDPOINT format in .env:", err);
   }
@@ -40,7 +43,7 @@ const nextConfig: NextConfig = {
   turbopack: {},
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   images: {
-    remotePatterns
+    remotePatterns,
   },
   experimental: {
     serverActions: {
@@ -57,9 +60,13 @@ const nextConfig: NextConfig = {
   },
 };
 
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
+
 const withMDX = createMDX({
   // Add markdown plugins here, as desired
 });
 
 // Merge MDX config with Next.js config
-export default withMDX(nextConfig);
+export default withBundleAnalyzer(withMDX(nextConfig));
