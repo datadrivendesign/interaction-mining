@@ -89,7 +89,6 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.54.2",
-    "react-hotkeys": "^2.0.0",
     "react-hotkeys-hook": "^5.0.1",
     "react-konva": "^19.0.3",
     "react-resizable-panels": "^2.1.7",

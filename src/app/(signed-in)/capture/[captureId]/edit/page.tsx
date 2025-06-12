@@ -30,7 +30,6 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleSave } from "./util";
-import { usePreventTwoFingerBack } from "@/lib/hooks/usePreventTwoFingerBack";
 
 enum TraceSteps {
   // Extract = 0,
@@ -216,7 +215,7 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {stepIndex === 1 ? (
+                      {stepIndex === 0 ? (
                         capture?.app.os === "ios" ?
                           "Annotate" : 
                           TraceSteps[stepIndex]
