@@ -253,10 +253,11 @@ export default function RedactScreenCanvas({
     }
   });
 
-  // copy redaction
-  useHotkeys("mod+c", (e) => {
+  // copy and paste redaction to other screens
+  useHotkeys("ctrl+c,mod+c", (e) => {
+    e.preventDefault()
+    if (e.repeat) { return; }
     if (mode === "select") {
-      e.preventDefault()
       if (selected) {
         setCopied(selected);
         toast.success("Redaction copied to clipboard");
@@ -265,10 +266,11 @@ export default function RedactScreenCanvas({
       }
     }
   });
-  // paste redaction to another screen
-  useHotkeys("mod+v", (e) => {
+
+  useHotkeys("ctrl+v,mod+v", (e) => {
+    e.preventDefault()
+    if (e.repeat) { return; }
     if (mode === "select") {
-      e.preventDefault()
       const result = checkCanCopyRedaction();
       if (!result.status) { // cannot copy
         toast.error(result.message);

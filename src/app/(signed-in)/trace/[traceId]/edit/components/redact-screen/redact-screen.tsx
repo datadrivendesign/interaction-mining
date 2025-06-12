@@ -38,8 +38,25 @@ export default function RedactScreen() {
     }
   }, [focusViewIndex, screens]);
 
-  useHotkeys("left", handlePrevious);
-  useHotkeys("right", handleNext);
+  const handleTab = useCallback(() => {
+    const wrappedIndex = (focusViewIndex + 1) % screens.length;
+    setFocusViewIndex(wrappedIndex);
+  }, [focusViewIndex, screens]);
+
+  useHotkeys("left", (e) => {
+    e.preventDefault();
+    handlePrevious();
+  })
+
+  useHotkeys("right", (e) => {
+    e.preventDefault();
+    handleNext();
+  })
+
+  useHotkeys("tab", (e) => {
+    e.preventDefault();
+    handleTab();
+  })
 
   return (
     <div className="w-full h-full">

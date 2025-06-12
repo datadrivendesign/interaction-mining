@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { GlobalHotKeys } from "react-hotkeys";
 import {
   ArrowDownFromLine,
   ArrowLeftFromLine,
@@ -39,10 +38,9 @@ import { listFromS3 } from "@/lib/aws";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { ListedFiles } from "@/lib/actions";
-import { extractVideoFrame } from "../extract-frames/utils";
 import { useHotkeys } from "react-hotkeys-hook";
-import { AnimatePresence, motion, spring } from "motion/react";
-import { card } from "../extract-frames/extract-frames-gallery";
+import { AnimatePresence, motion, spring, Variants } from "motion/react";
+import { extractVideoFrame } from "./utils";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const gestureOptions = [
@@ -143,6 +141,36 @@ export const gestureOptions = [
   },
 ];
 
+export const card = {
+  initial: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      type: "spring",
+      bounce: 0.125,
+      duration: 0.5,
+    },
+  },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      type: "spring",
+      bounce: 0.125,
+      duration: 0.5,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      type: "spring",
+      bounce: 0.125,
+      duration: 0.5,
+    },
+  },
+} as Variants;
+
 export async function fileFetcher([_, fileKey]: [string, string]) {
   let res = await listFromS3(fileKey);
 
@@ -168,12 +196,6 @@ export default function RepairScreen({ capture }: { capture: any }) {
   const os = capture?.task ? capture.task.os : "none";
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
-  const keymap = {
-    LEFT: "left",
-    RIGHT: "right",
-    TAB: "tab",
-  };
-
   const handlePrevious = useCallback(() => {
     if (focusViewIndex > 0) {
       setFocusViewIndex(focusViewIndex - 1);
@@ -191,15 +213,23 @@ export default function RepairScreen({ capture }: { capture: any }) {
     setFocusViewIndex(wrappedIndex);
   }, [focusViewIndex, screens]);
 
-  const handlers = {
-    LEFT: handlePrevious,
-    RIGHT: handleNext,
-    TAB: handleTab,
-  };
+  useHotkeys("left", (e) => {
+    e.preventDefault();
+    handlePrevious();
+  })
+
+  useHotkeys("right", (e) => {
+    e.preventDefault();
+    handleNext();
+  })
+
+  useHotkeys("tab", (e) => {
+    e.preventDefault();
+    handleTab();
+  })
 
 
   // video controls
-  const galleryBottomRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
         
@@ -231,7 +261,6 @@ export default function RepairScreen({ capture }: { capture: any }) {
       thumbVideo.crossOrigin = "anonymous";
       thumbVideo.preload = "metadata";
       thumbVideo.src = video.src;
-      console.log("thumbVideo.src:", thumbVideo.src);
       await new Promise<void>((res) =>
         thumbVideo.addEventListener("loadedmetadata", () => res(), {
           once: true,
@@ -361,10 +390,6 @@ export default function RepairScreen({ capture }: { capture: any }) {
       "screens",
       [...screens, f].sort((a, b) => a.timestamp - b.timestamp)
     );
-    // snap to the bottom of the gallery
-    requestAnimationFrame(() => {
-      galleryBottomRef.current?.scrollIntoView({ behavior: "smooth", block: 'start' });
-    });
   };
 
   // Play/Pause toggle
@@ -402,36 +427,28 @@ export default function RepairScreen({ capture }: { capture: any }) {
     await handlePlayPause();
   });
 
-  useHotkeys(
-    "left",
-    (e) => {
+  useHotkeys("left", (e) => {
       e.preventDefault();
       handleSetTime(currentTime - 5);
     },
     [currentTime, handleSetTime]
   );
 
-  useHotkeys(
-    "j",
-    (e) => {
+  useHotkeys("j", (e) => {
       e.preventDefault();
       handleSetTime(currentTime - 5);
     },
     [currentTime, handleSetTime]
   );
 
-  useHotkeys(
-    "right",
-    (e) => {
+  useHotkeys("right", (e) => {
       e.preventDefault();
       handleSetTime(currentTime + 5);
     },
     [currentTime, handleSetTime]
   );
 
-  useHotkeys(
-    "l",
-    (e) => {
+  useHotkeys("l", (e) => {
       e.preventDefault();
       handleSetTime(currentTime + 5);
     },
@@ -439,35 +456,29 @@ export default function RepairScreen({ capture }: { capture: any }) {
   );
 
   // Seek backward/forward by one frame
-  useHotkeys(
-    "comma",
-    (e) => {
+  useHotkeys("comma", (e) => {
       e.preventDefault();
       handleSetTime(currentTime - frameStep);
     },
     [currentTime, handleSetTime]
   );
 
-  useHotkeys(
-    "period",
-    (e) => {
+  useHotkeys("period", (e) => {
       e.preventDefault(); 
       handleSetTime(currentTime + frameStep);
     },
     [currentTime, handleSetTime]
   );
 
-  useHotkeys(
-    "c",
-    (e) => {
+  useHotkeys("c", (e) => {
       e.preventDefault();
       handleCaptureFrame();
     },
+    { keyup: true },
     [handleCaptureFrame]
   );
 
   return (
-    // @ts-ignore - GlobalHotKeys is not typed
     <div className="w-full h-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75} minSize={50} maxSize={75}>
@@ -491,37 +502,31 @@ export default function RepairScreen({ capture }: { capture: any }) {
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={75}>
-              <GlobalHotKeys
-                key={focusViewIndex}
-                keyMap={keymap}
-                handlers={handlers}
-              >
-                <Card
-                  key="task"
-                  className="absolute top-4 right-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
-                  >
-                  <CardHeader className="flex flex-col items-center p-2">
-                    <CardTitle className="font-medium">Task</CardTitle>
-                    <CardDescription>
-                      {capture.task?.description ?? "No description"}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>                {(focusViewIndex > -1 && focusViewIndex < screens.length) ? (
-                  <FocusView
-                    key={focusViewIndex}
-                    vh={vhs[screens[focusViewIndex].id]}
-                    screen={screens[focusViewIndex]}
-                    isLastScreen={focusViewIndex === screens.length - 1}
-                    os={os}
-                  />
-                ) : (
-                  <div className="flex justify-center items-center w-full h-full">
-                    <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
-                      Select a screen from the filmstrip.
-                    </span>
-                  </div>
-                )}
-              </GlobalHotKeys>
+              <Card
+                key="task"
+                className="absolute top-4 right-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
+                >
+                <CardHeader className="flex flex-col items-center p-2">
+                  <CardTitle className="font-medium">Task</CardTitle>
+                  <CardDescription>
+                    {capture.task?.description ?? "No description"}
+                  </CardDescription>
+                </CardHeader>
+              </Card>                {(focusViewIndex > -1 && focusViewIndex < screens.length) ? (
+                <FocusView
+                  key={focusViewIndex}
+                  vh={vhs[screens[focusViewIndex].id]}
+                  screen={screens[focusViewIndex]}
+                  isLastScreen={focusViewIndex === screens.length - 1}
+                  os={os}
+                />
+              ) : (
+                <div className="flex justify-center items-center w-full h-full">
+                  <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+                    Select a screen from the filmstrip.
+                  </span>
+                </div>
+              )}
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
@@ -636,6 +641,7 @@ function Filmstrip({
   };
 
   const handleDeleteFrame = (index: number) => {
+    console.log("delete:", index)
     // reset focus view index
     setFocusViewIndex(-1);
     // remove frame from view
@@ -766,11 +772,29 @@ function FilmstripItem({
         data-index={index}
         {...props}
       >
+        {/* Toolbar */}
+        <div className="flex flex-row w-full items-center justify-between">
+          <div className="flex p-1 justify-center items-center bg-background rounded-lg">
+            <span
+              className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
+              title={`Jump to time: ${prettyNumber(screen.timestamp)}s`}
+            >
+              {`${prettyNumber(screen.timestamp)}s`}
+            </span>
+          </div>
+          <button
+            onClick={() => handleDeleteFrame(index)}
+            className="inline-flex self-end items-center cursor-pointer"
+            title="Delete snapshot"
+          >
+            <X className="size-6 text-muted-foreground hover:opacity-75" />
+          </button>
+        </div>
         <div 
           ref={containerRef}
           className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
         >
-          {(isSelected || hasError) && !isLast && (
+          {(isSelected || hasError) && (
             <div
               className={cn(
                 "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
@@ -781,7 +805,7 @@ function FilmstripItem({
                     : ""
               )}
             >
-              {hasError && (
+              {hasError && !isLast  && (
                 <CircleAlert
                   className={cn(
                     "size-6",
@@ -791,24 +815,6 @@ function FilmstripItem({
               )}
             </div>
           )}
-          {/* Toolbar */}
-          <div className="flex flex-row w-full items-center justify-between">
-            <div className="flex p-1 justify-center items-center bg-background rounded-lg">
-              <span
-                className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
-                title={`Jump to time: ${prettyNumber(screen.timestamp)}s`}
-              >
-                {`${prettyNumber(screen.timestamp)}s`}
-              </span>
-            </div>
-            <button
-              onClick={() => handleDeleteFrame(index)}
-              className="inline-flex self-end items-center cursor-pointer"
-              title="Delete snapshot"
-            >
-              <X className="size-6 text-muted-foreground hover:opacity-75" />
-            </button>
-          </div>
           <div
             className={cn(
               "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
