@@ -21,6 +21,7 @@ import { CaptureSWROperations, fileFetcher, handleDeleteFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { processCaptureFiles } from "@/lib/actions";
 import { cn } from "@/lib/utils";
+import { OS } from "../edit/components/types";
 interface CaptureState {
   hasUploads: boolean;
   processingState: "idle" | "pending" | "finished" | "error";
@@ -127,7 +128,7 @@ export default function Page() {
     hasCopied: false,
     hasTranscoded: false,
   });
-  const os = capture?.task?.os;
+  const os: OS | undefined = capture?.task?.os as OS;
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`],
     fileFetcher,

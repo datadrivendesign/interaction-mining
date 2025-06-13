@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import {
   RedactionSchema,
   ScreenGestureSchema,
-  ScreenSchema,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
@@ -20,8 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
-// import ExtractFrames from "./components/extract-frames/extract-frames";
-// import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairScreen from "./components/repair-screen/index";
 import RepairDoc from "./components/repair-screen/doc.mdx";
 import Review from "./components/review/review";
@@ -32,7 +29,6 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 import { handleSave } from "./util";
 
 enum TraceSteps {
-  // Extract = 0,
   Repair = 0,
   Redact = 1,
   Review = 2,
@@ -62,17 +58,6 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    // if (stepIndex === TraceSteps.Extract) {
-    //   // Validate the "screens")
-    //   const validation = ScreenSchema.safeParse(methods.getValues().screens);
-    //   if (!validation.success) {
-    //     const errors = validation.error.issues || "Invalid input";
-    //     errors.forEach((error) => {
-    //       toast.error(error.message);
-    //     });
-    //     return;
-    //   }
-    // } else 
     if (stepIndex === TraceSteps.Repair) {
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods.getValues()
@@ -171,8 +156,6 @@ export default function Page() {
 
   const editorRender = () => {
     switch (stepIndex) {
-      // case 0:
-      //   return <ExtractFrames capture={capture} />;
       case 0:
         return <RepairScreen capture={capture} />;
       case 1:

@@ -39,6 +39,8 @@ export type AppInput = {
   },
   os: "android" | "ios"
 }
+
+export type OS = "ios" | "android";
     
 
 export async function getApps({

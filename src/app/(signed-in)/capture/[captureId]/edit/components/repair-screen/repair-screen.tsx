@@ -16,6 +16,7 @@ import {
   Grab,
   IterationCcw,
   IterationCw,
+  ListRestart,
   Shrink,
   X,
 } from "lucide-react";
@@ -30,18 +31,18 @@ import { ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn, prettyNumber } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Redaction, TraceFormData } from "../types";
-import { FrameData } from "../types";
+import { Redaction, TraceFormData, FrameData } from "../types";
 import FrameTimeline from "./extract-frames-timeline";
 
 import { listFromS3 } from "@/lib/aws";
 import { toast } from "sonner";
 import useSWR from "swr";
-import { ListedFiles } from "@/lib/actions";
+import { CaptureScreenFile, ListedFiles, OS } from "@/lib/actions";
 import { useHotkeys } from "react-hotkeys-hook";
 import { AnimatePresence, motion, spring, Variants } from "motion/react";
 import { extractVideoFrame } from "./utils";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export const gestureOptions = [
   {
@@ -184,14 +185,10 @@ export async function fileFetcher([_, fileKey]: [string, string]) {
 }
 
 export default function RepairScreen({ capture }: { capture: any }) {
-  const { setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
-    name: ["screens", "vhs", "gestures", "redactions"],
+  const [watchScreens] = useWatch({
+    name: ["screens"],
   });
   const screens = watchScreens as FrameData[];
-  const vhs = watchVHs as { [key: string]: any };
-  const gestures = watchGestures as { [key: string]: ScreenGesture };
-  const redactions = watchRedactions as { [key: string]: Redaction[] };
 
   const os = capture?.task ? capture.task.os : "none";
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
@@ -228,14 +225,64 @@ export default function RepairScreen({ capture }: { capture: any }) {
     handleTab();
   })
 
+  // Fetch file data
+  const { data: files = [], isLoading: isFilesLoading } = useSWR(
+    capture.id ? ["Capture files", `processed/${capture.id}`] : null,
+    fileFetcher
+  );
+
+  return (
+    <>
+      {(os as OS).toLowerCase() === "android" ? (
+        <RepairScreenAndroid 
+          capture={capture} 
+          files={files} 
+          os={os}
+          focusViewIndex={focusViewIndex} 
+          setFocusViewIndex={setFocusViewIndex} 
+        />
+      ) : (
+        <RepairScreenIOS 
+          capture={capture} 
+          files={files} 
+          os={os}
+          focusViewIndex={focusViewIndex} 
+          setFocusViewIndex={setFocusViewIndex} 
+        />
+      )}
+    </>
+  );
+}
+
+function RepairScreenIOS({ 
+  capture, 
+  files, 
+  focusViewIndex,
+  os, 
+  setFocusViewIndex
+}: { 
+  capture: any, 
+  files: ListedFiles[], 
+  focusViewIndex: number,
+  os: OS, 
+  setFocusViewIndex: (index: number) => void
+}) {
+  const { setValue } = useFormContext<TraceFormData>();
+  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "vhs", "gestures", "redactions"],
+  });
+  const screens = watchScreens as FrameData[];
+  const vhs = watchVHs as { [key: string]: any };
+  const gestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] };
 
   // video controls
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
         
   const MAX_THUMBS = 30;
+  const frameStep = 1 / MAX_THUMBS;
   const [currentTime, setCurrentTime] = useState(0);
-  const [frameStep, setFrameStep] = useState(1 / MAX_THUMBS);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [thumbnails, setThumbnails] = useState<{
@@ -244,12 +291,6 @@ export default function RepairScreen({ capture }: { capture: any }) {
     width: number;
     height: number;
   }[]>([]);
-
-  // Fetch file data
-  const { data: files = [], isLoading: isFilesLoading } = useSWR(
-    capture.id ? ["Capture files", `processed/${capture.id}`] : null,
-    fileFetcher
-  );
 
   // Load thumbnails
   const extractVideoThumbnails = useCallback(
@@ -504,7 +545,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
             <ResizablePanel defaultSize={75}>
               <Card
                 key="task"
-                className="absolute top-4 right-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
+                className={`${os === "ios" ? "right-4" : "left-4"} absolute top-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md`}
                 >
                 <CardHeader className="flex flex-col items-center p-2">
                   <CardTitle className="font-medium">Task</CardTitle>
@@ -512,7 +553,8 @@ export default function RepairScreen({ capture }: { capture: any }) {
                     {capture.task?.description ?? "No description"}
                   </CardDescription>
                 </CardHeader>
-              </Card>                {(focusViewIndex > -1 && focusViewIndex < screens.length) ? (
+              </Card>                
+              {(focusViewIndex > -1 && focusViewIndex < screens.length) ? (
                 <FocusView
                   key={focusViewIndex}
                   vh={vhs[screens[focusViewIndex].id]}
@@ -537,6 +579,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
             screens={screens}
             gestures={gestures}
             redactions={redactions}
+            os={os}
             focusViewIndex={focusViewIndex}
             setFocusViewIndex={setFocusViewIndex}
             handleSetTime={handleSetTime}
@@ -557,6 +600,214 @@ export default function RepairScreen({ capture }: { capture: any }) {
   );
 }
 
+function RepairScreenAndroid({ 
+  capture, 
+  files,
+  os, 
+  focusViewIndex,
+  setFocusViewIndex
+}: {
+  capture: any,
+  files: ListedFiles[],
+  os: OS, 
+  focusViewIndex: number,
+  setFocusViewIndex: (index: number) => void
+}) {
+  const { setValue } = useFormContext<TraceFormData>();
+  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "vhs", "gestures", "redactions"],
+  });
+
+  const originalScreens = useRef<FrameData[]>([]);
+  const originalVHs = useRef<{ [key: string]: any }>({});
+  const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
+  const currScreens = watchScreens as FrameData[];
+  const currVHs = watchVHs as { [key: string]: any };
+  const currGestures = watchGestures as { [key: string]: ScreenGesture };
+  const redactions = watchRedactions as { [key: string]: Redaction[] }
+
+  useEffect(() => {
+    const populateFrameData = async (
+      files: ListedFiles[]
+    ): Promise<{
+      frames: FrameData[];
+      vhs: { [key: string]: any };
+      gestures: { [key: string]: ScreenGesture };
+    }> => {
+      function createScreenGesture(gesture: ScreenGesture): ScreenGesture {
+        console.log("gestures:", gesture);
+        const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
+        const screenGesture: ScreenGesture = {
+          type: type,
+          x,
+          y,
+          scrollDeltaX,
+          scrollDeltaY,
+          description: "",
+        };
+
+        function translateTypeAndroidToODIM(
+          androidType: string,
+          scrollDeltaX: number | null,
+          scrollDeltaY: number | null
+        ): string {
+          if (androidType === "TYPE_VIEW_CLICKED" || 
+            androidType == "TYPE_VIEW_SELECTED") {
+            return "tap";
+          } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
+            return "touch and hold";
+          } else if (androidType === "TYPE_VIEW_SCROLLED") {
+            if (scrollDeltaX !== null && scrollDeltaY !== null) {
+              // get direction of scroll/swipe w. dominant delta direction
+              if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
+                return "swipe right";
+              } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
+                return "swipe left";
+              } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
+                return "swipe up";
+              } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
+                return "swipe down";
+              } else {
+                return "other";
+              }
+            }
+          }
+          // fall through case, don't know what will reach
+          return "";
+        }
+
+        if (!type || type === "") {
+          screenGesture.type = null;
+        } else {
+          screenGesture.type = translateTypeAndroidToODIM(
+            type, 
+            scrollDeltaX,
+            scrollDeltaY
+          )
+        }
+        return screenGesture;
+      }
+
+      const frameData: FrameData[] = [];
+      const frameVHs: { [key: string]: any } = {};
+      const frameGestures: { [key: string]: ScreenGesture } = {};
+      for (const [i, c] of files.entries()) {
+        try {
+          const frameResponse = await fetch(c.fileUrl);
+          const frameJson: CaptureScreenFile = await frameResponse.json();
+          const b64img = `data:image/png;base64,${frameJson.img}`.trim();
+          const frame: FrameData = {
+            id: frameJson.created + i.toString(),
+            src: b64img,
+            timestamp: Date.parse(frameJson.created),
+          };
+          frameData.push(frame);
+          if (frameJson.vh) {
+            frameVHs[frame.id] = JSON.parse(frameJson.vh);
+          }
+          if (frameJson.gesture) {
+            frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
+          }
+        } catch (e) {
+          console.error("Error fetching frame data:", e);
+          toast.error("Error fetching frame data");
+        }
+      }
+      return {
+        frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
+        vhs: frameVHs,
+        gestures: frameGestures,
+      };
+    };
+
+    populateFrameData(files).then(({ frames, vhs, gestures }) => {
+      originalScreens.current = [...frames];
+      originalVHs.current = { ...vhs };
+      originalGestures.current = { ...gestures };
+
+      // Only populate data if the form state is empty
+      if (
+        currScreens.length === 0 &&
+        Object.keys(currVHs).length === 0 &&
+        Object.keys(currGestures).length === 0
+      ) {
+        setValue("screens", frames);
+        setValue("vhs", vhs);
+        setValue("gestures", gestures);
+      }
+    });
+  }, [currScreens.length, files, setValue]);
+
+  return (
+    <div className="w-full h-full">
+      <ResizablePanelGroup direction="vertical">
+        <ResizablePanel defaultSize={75} minSize={50} maxSize={75}>
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={33} minSize={25} maxSize={50} className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border">
+              <div className="flex flex-col justify-center items-center w-full h-full gap-4">
+              <Card
+                key="task"
+                className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
+                >
+                <CardHeader className="flex flex-col items-center p-2">
+                  <CardTitle className="font-medium">Task</CardTitle>
+                  <CardDescription>
+                    {capture.task?.description ?? "No description"}
+                  </CardDescription>
+                </CardHeader>
+              </Card>    
+
+                <Button
+                  onClick={() => {
+                    if (originalScreens.current.length !== currScreens.length) {
+                      setValue("screens", originalScreens.current);
+                      setValue("vhs", originalVHs.current);
+                      setValue("gestures", originalGestures.current);
+                    }
+                  }}
+                >
+                <ListRestart /> Reset Screens
+              </Button>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={75}>            
+              {(focusViewIndex > -1 && focusViewIndex < currScreens.length) ? (
+                <FocusView
+                  key={focusViewIndex}
+                  vh={currVHs[currScreens[focusViewIndex].id]}
+                  screen={currScreens[focusViewIndex]}
+                  isLastScreen={focusViewIndex === currScreens.length - 1}
+                  os={os}
+                />
+              ) : (
+                <div className="flex justify-center items-center w-full h-full">
+                  <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+                    Select a screen from the filmstrip.
+                  </span>
+                </div>
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+          <Filmstrip
+            screens={currScreens}
+            gestures={currGestures}
+            redactions={redactions}
+            os={os}
+            focusViewIndex={focusViewIndex}
+            setFocusViewIndex={setFocusViewIndex}
+            handleSetTime={(_: number) => {}}  // empty function
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+}
+
 function FocusView({
   screen,
   vh,
@@ -565,7 +816,7 @@ function FocusView({
 }: {
   screen: FrameData;
   vh: any;
-  os: string;
+  os: OS;
   isLastScreen: boolean
 }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
@@ -618,6 +869,7 @@ function Filmstrip({
   screens,
   gestures,
   redactions,
+  os,
   focusViewIndex,
   setFocusViewIndex,
   handleSetTime,
@@ -625,6 +877,7 @@ function Filmstrip({
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
+  os: OS
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
   handleSetTime: (t: number) => void;
@@ -673,6 +926,7 @@ function Filmstrip({
             isLast={isLast}
             screen={screen}
             redactions={redactions[screen.id] ?? []}
+            os={os}
             isSelected={focusViewIndex === index}
             hasError={
               !gestures[screen.id] ||
@@ -697,6 +951,7 @@ function FilmstripItem({
   redactions,
   index = 0,
   isLast = false,
+  os,
   isSelected,
   hasError = false,
   handleSetTime,
@@ -708,6 +963,7 @@ function FilmstripItem({
   redactions: Array<Redaction>;
   index?: number;
   isLast: boolean;
+  os: OS;
   isSelected?: boolean;
   hasError?: boolean;
   handleSetTime: (t: number) => void;
@@ -777,9 +1033,9 @@ function FilmstripItem({
           <div className="flex p-1 justify-center items-center bg-background rounded-lg">
             <span
               className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
-              title={`Jump to time: ${prettyNumber(screen.timestamp)}s`}
+              title={`Jump to time: ${prettyNumber(screen.timestamp, os)}s`}
             >
-              {`${prettyNumber(screen.timestamp)}s`}
+              {`${prettyNumber(screen.timestamp, os)}s`}
             </span>
           </div>
           <button
@@ -794,7 +1050,7 @@ function FilmstripItem({
           ref={containerRef}
           className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
         >
-          {(isSelected || hasError) && (
+          {(isSelected || hasError) && !isLast && (
             <div
               className={cn(
                 "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
@@ -805,7 +1061,7 @@ function FilmstripItem({
                     : ""
               )}
             >
-              {hasError && !isLast  && (
+              {hasError  && (
                 <CircleAlert
                   className={cn(
                     "size-6",
