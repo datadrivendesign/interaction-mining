@@ -1,42 +1,54 @@
 "use client";
 
 import Link from "next/link";;
-import { getApps } from "@/lib/actions";
 
 import {
   createContext,
   useState,
   useContext,
   useCallback,
+  useMemo,
+  SetStateAction,
 } from "react";
 import Image from "next/image";
+import { Prisma } from "@prisma/client";
 import { Search } from "lucide-react";
-import { App } from "@prisma/client";
 
-const GalleryContext = createContext({
-  data: [] as App[],
-  setData: (_: any) => {},
-  filteredData: [] as any[],
-  setFilteredData: (_: any) => {},
+import { TitleMarquee } from "@/components/marquee";
+import { InputRoot, InputIcon, Input } from "@/components/ui/input-icon";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAppSearch } from "@/lib/hooks/app";
+import { MobileIcon } from "@radix-ui/react-icons";
+
+const GalleryContext = createContext<{
+  search: {
+    query: string;
+    where?: Prisma.AppWhereInput;
+  };
+  setSearch?: React.Dispatch<SetStateAction<{ query: string; where: Prisma.AppWhereInput; }>>;
+}>({
+  search: {
+    query: "",
+    where: { Trace: { some: {} } } as Prisma.AppWhereInput,
+  },
+  setSearch: () => { },
 });
 
 export function GalleryRoot({
-  data,
   children,
 }: {
-  data: App[];
   children: React.ReactNode;
 }) {
-  const [_data, setData] = useState<App[]>(data);
-  const [filteredData, setFilteredData] = useState<any[]>(data);
+  const [search, setSearch] = useState({
+    query: "",
+    where: { Trace: { some: {} } } as Prisma.AppWhereInput,
+  });
 
   return (
     <GalleryContext.Provider
       value={{
-        data: _data,
-        setData,
-        filteredData,
-        setFilteredData,
+        search,
+        setSearch
       }}
     >
       {children}
@@ -45,69 +57,100 @@ export function GalleryRoot({
 }
 
 export function GallerySearch() {
-  const { data, setFilteredData } = useContext(GalleryContext);
-  const [search, setSearch] = useState("");
+  const { search, setSearch } = useContext(GalleryContext);
 
-  const handleSearch = useCallback(
-    async (value: string) => {
-      setSearch(value);
-
-      if (value === "") {
-        setFilteredData(data);
-      } else {
-        await getApps({ query: value }).then((apps) => {
-          setFilteredData(apps);
-        });
-      }
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearch?.({
+        query: e.target.value,
+        where: search.where!, // Preserve existing filters
+      });
     },
-    [data, setFilteredData]
+    [setSearch]
+  );
+
+  const handleSetOS = useCallback(
+    (os: "android" | "ios") => {
+      setSearch?.({
+        query: search.query,
+        where: {
+          ...search.where,
+          os: os,
+        },
+      });
+    },
+    [setSearch, search.query, search.where]
   );
 
   return (
-    <>
-      <span className="inline-flex w-full md:w-auto items-center px-2 py-1 ring-1 ring-inset ring-neutral-200 dark:ring-neutral-800 has-focus:ring-2 has-focus:ring-blue-500 rounded-lg transition-all duration-75 ">
-        <Search size={16} className="text-neutral-400 mr-2" />
-        <input
-          className="text-base text-muted-foreground tracking-tight focus:outline-hidden"
-          placeholder="Search"
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
+    <div className="flex items-center gap-2 lg:gap-4">
+      <InputRoot className="w-full md:w-96">
+        <InputIcon>
+          <Search className="text-muted-foreground" />
+        </InputIcon>
+        <Input placeholder="Search for apps"
+          value={search.query}
+          onChange={handleSearchChange}
+          className="w-full"
         />
-      </span>
-    </>
+      </InputRoot>
+      <Select defaultValue="android" onValueChange={handleSetOS}>
+        <SelectTrigger className="max-w-45 h-full!">
+          <SelectValue placeholder="Select a platform" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Platforms</SelectLabel>
+            <SelectItem value="ios"><MobileIcon /> iOS</SelectItem>
+            <SelectItem value="android"><MobileIcon /> Android</SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
-export function Gallery({ children }: { children?: React.FC<any> }) {
-  const { filteredData } = useContext(GalleryContext);
+export function Gallery() {
+  const { search } = useContext(GalleryContext);
+  const params = useMemo(() => ({
+    query: search.query,
+    where: search.where,
+    limit: 500,
+    page: 1,
+  }), [search]);
+
+  const { apps = [] } = useAppSearch(params);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 px-4 md:px-16 mb-16">
-      {filteredData.map((app: any, index: number) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 p-4 lg:p-6">
+      {apps.length > 0 ? (apps.map((app: any, index: number) => (
         <Link
           key={index}
           href={`/app/${app.id}`}
-          className="flex w-full"
+          className="flex w-full min-w-0 overflow-hidden"
         >
           <Image
             src={app.metadata.icon}
             alt={`${app.metadata.name} icon`}
-            width={48}
-            height={48}
-            className="rounded-xl mr-4 drop-shadow-md"
+            width={0}
+            height={0}
+            sizes="100vw"
+            className="flex grow-0 shrink-0 basis-12 rounded-xl mr-4 aspect-square drop-shadow-md"
           />
-          <div className="flex flex-col justify-center">
-            <h2 className="text-base font-semibold line-clamp-1 leading-tight">
-              {app.metadata.name}
-            </h2>
-            <span className="text-sm text-muted-foreground line-clamp-1 leading-tight">
-              {app.company}
+          <div className="flex flex-col grow min-w-0 justify-center">
+            <TitleMarquee mode="hover" title={app.metadata.name} className="min-w-0">
+              <h2 className="text-base font-medium tracking-tight">{app.metadata.name}</h2>
+            </TitleMarquee>
+            <span className="text-sm text-muted-foreground line-clamp-1 leading-tight truncate">
+              {app.metadata.company || "Unknown Company"}
             </span>
           </div>
         </Link>
-      ))}
-      {/* {data.map((data: any, index: number) => (
-        <Fragment key={index}>{children(data, index)}</Fragment>
-      ))} */}
+      ))) : (
+        <div className="col-span-full text-center text-muted-foreground">
+          No apps found matching your search criteria.
+        </div>
+      )}
     </div>
   );
 }

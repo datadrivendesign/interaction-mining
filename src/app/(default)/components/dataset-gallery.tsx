@@ -17,21 +17,21 @@ export default function DatasetGallery() {
 
   const params = useMemo(() => ({
     query: search,
-    where: { os: platform },
+    where: { os: platform, Trace: { some: {} } },
     limit: 24,
     page: 1,
   }), [search, platform]);
 
-  const { apps, loading, refetch } = useAppSearch(params);
+  const { apps, loading } = useAppSearch(params);
 
   return (
     <>
-      <div className="flex items-center justify-between w-full gap-4 mb-4">
+      <div className="flex items-center justify-between w-full gap-2 lg:gap-4 mb-4">
         <InputRoot className="w-full">
           <InputIcon>
             <Search size={20} className="text-muted-foreground" />
           </InputIcon>
-          <Input placeholder="Search for apps, flows, or screens..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Search for apps" value={search} onChange={e => setSearch(e.target.value)} />
         </InputRoot>
         <Select defaultValue="android" onValueChange={value => setPlatform(value)}>
           <SelectTrigger className="max-w-45 h-full!">
@@ -51,7 +51,7 @@ export default function DatasetGallery() {
           <span className="text-lg font-medium text-muted-foreground">No apps to show.</span>
         </div>
       ) : (
-        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-8 w-full gap-4">
+        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-8 w-full gap-2 lg:gap-4">
           {apps.map(app => (
             <Link href={`/app/${app.id}`} key={app.id} className="group col-span-1 aspect-square overflow-hidden rounded-t-xl lg:rounded-t-2xl *:group-hover:-translate-y-5 *:transition-transform *:duration-300 *:ease-in-out">
               <Image
@@ -62,7 +62,7 @@ export default function DatasetGallery() {
                 height={0}
                 sizes="100vw"
               />
-              <TitleMarquee>
+              <TitleMarquee className="flex justify-center" title={app.metadata.name}>
                 <p className="text-xs font-medium tracking-tight">{app.metadata.name}</p>
               </TitleMarquee>
             </Link>
