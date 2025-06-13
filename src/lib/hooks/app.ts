@@ -18,7 +18,7 @@ export function useAppSearch(params: GetAppsParams) {
         } finally {
           setLoading(false);
         }
-      }, 300),
+      }, 500),
     []
   );
 

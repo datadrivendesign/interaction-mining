@@ -16,8 +16,8 @@ import { Role } from "@prisma/client";
 export default function NavigationBar() {
   return (
     <nav className="sticky z-40 top-0 flex w-full justify-center bg-white dark:bg-black">
-      <div className="flex w-full max-w-screen-2xl p-4 md:p-6 justify-between">
-        <div className="flex items-center basis-1/2 h-full gap-4 md:gap-6 ">
+      <div className="flex w-full max-w-screen-2xl p-4 lg:p-6 justify-between">
+        <div className="flex items-center basis-1/2 h-full gap-4 lg:gap-6 ">
           <Link
             href={"/"}
             className="text-2xl font-semibold leading-none tracking-tighter"
