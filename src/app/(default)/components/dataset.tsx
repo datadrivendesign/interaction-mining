@@ -40,7 +40,7 @@ export default function Dataset() {
           </p>
         </div>
       </div>
-      <Link href="/explore" className="group flex md:hidden lg:flex col-span-1 w-full p-px bg-gradient-to-br from-neutral-800 to-neutral-900 rounded-3xl lg:aspect-1/1">
+      <Link href="/explore" className="group flex md:hidden lg:flex col-span-1 w-full p-px bg-gradient-to-br from-neutral-800 to-neutral-900 rounded-3xl lg:aspect-1/1" scroll={false}>
         <div className="flex flex-col items-center justify-center w-full h-full p-6 bg-gradient-to-br from-muted-background to-dimmed-background group-hover:from-foreground group-hover:to-dimmed-foreground rounded-[calc(1.5rem-1px)] transition-colors duration-300 ease-in-out">
           <h2 className="text-3xl text-foreground group-hover:text-background font-medium tracking-tight transition-colors duration-300 ease-in-out">
             Explore the ODIM dataset <span className="group-hover:animate-bounce">→</span>

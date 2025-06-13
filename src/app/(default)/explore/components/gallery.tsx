@@ -139,7 +139,7 @@ export function Gallery() {
           />
           <div className="flex flex-col grow min-w-0 justify-center">
             <TitleMarquee mode="hover" title={app.metadata.name} className="min-w-0">
-              <h2 className="text-base font-medium tracking-tight">{app.metadata.name}</h2>
+              <h2 className="text-sm font-medium leading-tight tracking-tight">{app.metadata.name}</h2>
             </TitleMarquee>
             <span className="text-sm text-muted-foreground line-clamp-1 leading-tight truncate">
               {app.metadata.company || "Unknown Company"}
