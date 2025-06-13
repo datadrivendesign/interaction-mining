@@ -25,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { App } from "@prisma/client";
 
 export default function CaptureNewPage() {
   const { data: session } = useSession();
@@ -93,7 +92,7 @@ export default function CaptureNewPage() {
 
     console.log("Scraping app data from store...");
     const result =
-      platform === "android"
+      platform === OS.ANDROID
         ? await getAndroidApp({ appId: newAppId })
         : await getIosApp({ appId: newAppId });
 

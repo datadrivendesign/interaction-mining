@@ -48,7 +48,7 @@ import {
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
-import { FrameData, GestureOption } from "../types";
+import { FrameData, GestureOption, OS } from "../types";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
 
 export const GestureContext = createContext<{
@@ -91,7 +91,7 @@ export default function RepairScreenCanvas({
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
-  os: string;
+  os: OS;
   isLastScreen: boolean
 }) {
   const [imageRef, { width, height }] = useMeasure();

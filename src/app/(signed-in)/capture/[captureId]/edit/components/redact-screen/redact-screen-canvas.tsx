@@ -79,7 +79,6 @@ export default function RedactScreenCanvas({
   );
 
   const [selected, setSelected] = useState<Redaction | null>(null);
-  // const [copied, setCopied] = useState<Redaction | null>(null);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
   const canvasRef = useRef<CanvasRef>(null);
@@ -254,7 +253,7 @@ export default function RedactScreenCanvas({
   });
 
   // copy and paste redaction to other screens
-  useHotkeys("ctrl+c,mod+c", (e) => {
+  useHotkeys("ctrl+c,meta+c", (e) => {
     e.preventDefault()
     if (e.repeat) { return; }
     if (mode === "select") {
@@ -267,7 +266,7 @@ export default function RedactScreenCanvas({
     }
   });
 
-  useHotkeys("ctrl+v,mod+v", (e) => {
+  useHotkeys("ctrl+v,meta+v", (e) => {
     e.preventDefault()
     if (e.repeat) { return; }
     if (mode === "select") {
