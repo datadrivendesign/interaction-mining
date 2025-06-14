@@ -48,8 +48,9 @@ import {
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
-import { FrameData, GestureOption, OS } from "../types";
+import { FrameData, GestureOption } from "../types";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
+import { OS } from "@/lib/actions";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;

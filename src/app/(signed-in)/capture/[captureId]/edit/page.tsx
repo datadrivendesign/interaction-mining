@@ -74,7 +74,7 @@ export default function Page() {
         gestures: allButLastScreenGestures,
       });
       if (!validation.success) {
-        console.log(validation.error.issues);
+        console.error(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
           toast.error(error.message);
@@ -87,7 +87,7 @@ export default function Page() {
         methods.getValues().redactions
       );
       if (!validation.success) {
-        console.log(validation.error.issues);
+        console.error(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
           toast.error(error.message);

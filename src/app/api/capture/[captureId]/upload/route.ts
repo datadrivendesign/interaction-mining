@@ -28,7 +28,7 @@ export async function POST(
                 );
             }
 
-            console.log('Upload successful:', result.data);
+            console.log('Upload successful');
             console.log("update capture with url")
             const capture = await updateCapture(captureId, {
                 src: result.data.url

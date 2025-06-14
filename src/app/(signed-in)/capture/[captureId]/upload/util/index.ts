@@ -49,7 +49,7 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
 
     toast.success("File uploaded");
 
-    console.log("File uploaded successfully", res.data);
+    console.log("File uploaded successfully");
 
     // Optimistically update file list
     mutate(

@@ -335,8 +335,10 @@ function RepairScreenIOS({
     useEffect(() => {
       const extractThumbnails = async () => {
         const video = videoRef.current;
-        const isTranscodeDisabled = 
-          process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+        const isTranscodeDisabled = (
+          !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+          process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+        );
         if (!isTranscodeDisabled || !video || videoDuration === 0) { 
           return; 
         }   
@@ -358,8 +360,10 @@ function RepairScreenIOS({
     // useEffect to load thumbnails if video transcoding is enabled
     useEffect(() => {
       const video = videoRef.current;
-      const isTranscodeDisabled = 
-        process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+      const isTranscodeDisabled = (
+        !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+        process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+      );
       if (isTranscodeDisabled || !video || videoDuration === 0) {
         return;
       }      
@@ -376,8 +380,10 @@ function RepairScreenIOS({
     }, [files, videoRef, videoDuration]);
 
   const videoFiles = useMemo(() => {
-    const isTranscodeDisabled = 
-      process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+    const isTranscodeDisabled = (
+      !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+      process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+    );
     const regexRule = isTranscodeDisabled ? /\.(mp4|mov)$/ : /\.(webm)$/
     return files.filter((f) => regexRule.test(f.fileKey));
   }, [files]);
@@ -635,7 +641,6 @@ function RepairScreenAndroid({
       gestures: { [key: string]: ScreenGesture };
     }> => {
       function createScreenGesture(gesture: ScreenGesture): ScreenGesture {
-        console.log("gestures:", gesture);
         const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
         const screenGesture: ScreenGesture = {
           type: type,
@@ -894,7 +899,6 @@ function Filmstrip({
   };
 
   const handleDeleteFrame = (index: number) => {
-    console.log("delete:", index)
     // reset focus view index
     setFocusViewIndex(-1);
     // remove frame from view

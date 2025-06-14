@@ -9,8 +9,6 @@ export async function GET(
     const { captureId } = await params;
     const result = await getCapture({ id: captureId });
 
-    console.log(result)
-
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 404 });
     }
@@ -25,9 +23,6 @@ export async function GET(
         console.error('Error fetching task:', taskError);
       }
     }
-
-    console.log('Capture:', result.data);
-    console.log('Task:', taskDetails);
 
     return NextResponse.json({
       capture: {
