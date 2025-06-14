@@ -50,7 +50,7 @@ import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
 import { FrameData, GestureOption } from "../types";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
-import { OS } from "@/lib/actions";
+import { Platform } from "@/lib/actions";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -92,7 +92,7 @@ export default function RepairScreenCanvas({
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
-  os: OS;
+  os: Platform;
   isLastScreen: boolean
 }) {
   const [imageRef, { width, height }] = useMeasure();
@@ -312,7 +312,7 @@ export default function RepairScreenCanvas({
                     setTooltip({ x: null, y: null });
                   }}
                 />
-                {os === "android" ? (
+                {os === Platform.ANDROID ? (
                   <BoundingBoxOverlay
                     showBoxes={showBoxes}
                     mergedRef={
@@ -328,7 +328,7 @@ export default function RepairScreenCanvas({
                 )}
               </DroppableArea>
             </div>
-            {os === "android" ? (
+            {os === Platform.ANDROID ? (
               <FocusedElementTab
                 showBoxes={showBoxes}
                 setShowBoxes={setShowBoxes}

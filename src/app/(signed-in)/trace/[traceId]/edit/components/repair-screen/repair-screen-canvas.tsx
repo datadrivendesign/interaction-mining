@@ -52,6 +52,7 @@ import { GestureOption } from "../types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Platform } from "@/lib/actions";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -92,7 +93,7 @@ export default function RepairScreenCanvas({
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
-  os: string;
+  os: Platform;
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
@@ -322,7 +323,7 @@ export default function RepairScreenCanvas({
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
                 />
-                {os === "android" ? (
+                {os === Platform.ANDROID ? (
                   <BoundingBoxOverlay
                     showRedaction={showBoxes}
                     mergedRef={
@@ -338,7 +339,7 @@ export default function RepairScreenCanvas({
                 )}
               </DroppableArea>
             </div>
-            {os === "android" ? (
+            {os === Platform.ANDROID ? (
               <FocusedElementTab
                 showRedaction={showBoxes}
                 setShowRedaction={setShowBoxes}

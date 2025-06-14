@@ -12,6 +12,13 @@ interface GetAppParams {
   sort?: "asc" | "desc";
 }
 
+export const Platform = {
+  IOS: "ios",
+  ANDROID: "android",
+} as const;
+
+export type Platform = typeof Platform[keyof typeof Platform];
+
 export type AppItemList = {
   id: string;
   package: string;
@@ -37,11 +44,8 @@ export type AppInput = {
     downloads: string,
     url: string,
   },
-  os: "android" | "ios"
+  os: Platform
 }
-
-export type OS = "ios" | "android";
-    
 
 export async function getApps({
   limit,

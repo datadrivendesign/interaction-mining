@@ -1,8 +1,8 @@
 import { format } from "d3-format";
 import { timeFormat } from "d3-time-format";
-import { OS } from "../actions";
+import { Platform } from "../actions";
 
-export function prettyNumber(number: number, os: OS): string {
+export function prettyNumber(number: number, os: Platform): string {
   switch (os) {
     case "ios":
       return prettyNumberIOS(number);

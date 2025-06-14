@@ -37,7 +37,7 @@ import FrameTimeline from "./extract-frames-timeline";
 import { listFromS3 } from "@/lib/aws";
 import { toast } from "sonner";
 import useSWR from "swr";
-import { CaptureScreenFile, ListedFiles, OS } from "@/lib/actions";
+import { CaptureScreenFile, ListedFiles, Platform } from "@/lib/actions";
 import { useHotkeys } from "react-hotkeys-hook";
 import { AnimatePresence, motion, spring, Variants } from "motion/react";
 import { extractVideoFrame } from "./utils";
@@ -233,7 +233,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
 
   return (
     <>
-      {(os as OS).toLowerCase() === "android" ? (
+      {(os.toLowerCase() as Platform) === Platform.ANDROID ? (
         <RepairScreenAndroid 
           capture={capture} 
           files={files} 
@@ -264,7 +264,7 @@ function RepairScreenIOS({
   capture: any, 
   files: ListedFiles[], 
   focusViewIndex: number,
-  os: OS, 
+  os: Platform, 
   setFocusViewIndex: (index: number) => void
 }) {
   const { setValue } = useFormContext<TraceFormData>();
@@ -551,7 +551,7 @@ function RepairScreenIOS({
             <ResizablePanel defaultSize={75}>
               <Card
                 key="task"
-                className={`${os === "ios" ? "right-4" : "left-4"} absolute top-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md`}
+                className={`${os === Platform.IOS ? "right-4" : "left-4"} absolute top-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md`}
                 >
                 <CardHeader className="flex flex-col items-center p-2">
                   <CardTitle className="font-medium">Task</CardTitle>
@@ -615,7 +615,7 @@ function RepairScreenAndroid({
 }: {
   capture: any,
   files: ListedFiles[],
-  os: OS, 
+  os: Platform, 
   focusViewIndex: number,
   setFocusViewIndex: (index: number) => void
 }) {
@@ -821,7 +821,7 @@ function FocusView({
 }: {
   screen: FrameData;
   vh: any;
-  os: OS;
+  os: Platform;
   isLastScreen: boolean
 }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
@@ -882,7 +882,7 @@ function Filmstrip({
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
-  os: OS
+  os: Platform;
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
   handleSetTime: (t: number) => void;
@@ -967,7 +967,7 @@ function FilmstripItem({
   redactions: Array<Redaction>;
   index?: number;
   isLast: boolean;
-  os: OS;
+  os: Platform;
   isSelected?: boolean;
   hasError?: boolean;
   handleSetTime: (t: number) => void;

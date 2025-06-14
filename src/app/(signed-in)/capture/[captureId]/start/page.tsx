@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useCapture } from "@/lib/hooks";
 import { CaptureSWROperations, fileFetcher, handleDeleteFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { processCaptureFiles, OS } from "@/lib/actions";
+import { processCaptureFiles, Platform } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 interface CaptureState {
   hasUploads: boolean;
@@ -125,7 +125,7 @@ export default function Page() {
     hasCopied: false,
     hasTranscoded: false,
   });
-  const os: OS | undefined = capture?.task?.os as OS;
+  const os: Platform | undefined = capture?.task?.os as Platform | undefined;
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`],
     fileFetcher,
@@ -151,11 +151,11 @@ export default function Page() {
   };
 
   const isReadyToRedirect =
-    (os === "ios" &&
+    (os === Platform.IOS &&
       captureState.hasTranscoded &&
       captureState.hasCopied &&
       ["idle", "finished"].includes(captureState.processingState)) ||
-    (os === "android" && captureState.hasUploads);
+    (os === Platform.ANDROID && captureState.hasUploads);
 
   const redirectToFrameExtract = () => {
     capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
@@ -183,7 +183,7 @@ export default function Page() {
                   <QRCodeSVG
                     className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
                     value={
-                      os === "android"
+                      os === Platform.ANDROID
                         ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
                         : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
                     }
@@ -258,7 +258,7 @@ export default function Page() {
                 </div>
               )}
             </div>
-            {os === "ios" && (
+            {os === Platform.IOS && (
               <div className="flex justify-end mt-4">
                 <Button
                   disabled={uploadList.length === 0}
@@ -270,7 +270,7 @@ export default function Page() {
             )}
           </CardContent>
         </Card>
-        {os === "ios" && (
+        {os === Platform.IOS && (
           <Card
             className={cn(
               "w-full max-w-screen-sm transition-opacity duration-300 ease-in-out",
