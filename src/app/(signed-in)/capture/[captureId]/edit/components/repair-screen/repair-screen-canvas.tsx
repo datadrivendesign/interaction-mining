@@ -50,7 +50,7 @@ import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
 import { FrameData, GestureOption } from "../types";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
-import { Platform } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;

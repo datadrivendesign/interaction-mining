@@ -52,7 +52,7 @@ import { GestureOption } from "../types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Platform } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;

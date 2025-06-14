@@ -1,13 +1,15 @@
 import { format } from "d3-format";
 import { timeFormat } from "d3-time-format";
-import { Platform } from "../actions";
+import { Platform } from "@/lib/utils";
 
 export function prettyNumber(number: number, os: Platform): string {
   switch (os) {
-    case "ios":
+    case Platform.IOS:
       return prettyNumberIOS(number);
-    case "android":
+    case Platform.ANDROID:
       return prettyNumberAndroid(number);
+    default:
+      return number.toString();
   }
 }
 

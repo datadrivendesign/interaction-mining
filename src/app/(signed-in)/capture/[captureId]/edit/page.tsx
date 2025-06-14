@@ -27,7 +27,7 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleSave } from "./util";
-import { Platform } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 
 enum TraceSteps {
   Repair = 0,

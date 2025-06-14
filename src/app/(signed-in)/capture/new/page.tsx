@@ -12,8 +12,8 @@ import {
   saveApp,
   AppItemList,
   AppInput,
-  Platform
 } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
