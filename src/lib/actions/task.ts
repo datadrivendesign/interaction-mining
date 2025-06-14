@@ -13,8 +13,6 @@ import { prisma } from "@/lib/prisma";
 export async function getTask(id: string): Promise<Task | null> {
   let task: Task | null = null;
 
-  console.log("ID", id);
-
   if (!id || !isObjectIdOrHexString(id)) {
     throw new Error("Invalid task ID.");
   }

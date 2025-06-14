@@ -411,9 +411,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         width: image.width,
         height: image.height,
       });
-
-      console.log("redactions", redactions);
-
       renderLayer.add(renderImage);
 
       // render redactions

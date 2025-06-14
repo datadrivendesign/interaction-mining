@@ -19,9 +19,8 @@ import { Button } from "@/components/ui/button";
 import { useCapture } from "@/lib/hooks";
 import { CaptureSWROperations, fileFetcher, handleDeleteFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { processCaptureFiles } from "@/lib/actions";
+import { processCaptureFiles, OS } from "@/lib/actions";
 import { cn } from "@/lib/utils";
-import { OS } from "../edit/components/types";
 interface CaptureState {
   hasUploads: boolean;
   processingState: "idle" | "pending" | "finished" | "error";
@@ -62,14 +61,13 @@ function captureStateReducer(
       let hasCopied = false;
       let hasTranscoded = false;
 
-      console.log("Upload list:", uploadList);
-      console.log("Process list:", processList);
-
       if (hasUploads) {
         if (state.processingState !== "pending") {
           // determine if all video files have been transcoded
-          const isTranscodeDisabled =
-            process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true";
+          const isTranscodeDisabled = (
+            !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+            process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+          );
           hasTranscoded = isTranscodeDisabled || (
             hasUploads &&
             uploadList.every((upload) => {
@@ -90,7 +88,6 @@ function captureStateReducer(
           );
           // determine if file copying is needed, if not just display transcoding status
           hasCopied = false;
-          console.log("Non-video uploads:", nonVideoUploads);
           if (nonVideoUploads.length === 0 && !isTranscodeDisabled) {
             hasCopied = hasTranscoded;
           } else {
@@ -167,15 +164,6 @@ export default function Page() {
   useEffect(() => {
     dispatch({ type: "UPDATE", uploadList, processList });
   }, [uploadList, processList]);
-
-  useEffect(() => {
-    console.log("Capture state updated:", {
-      hasUploads: captureState.hasUploads,
-      processingState: captureState.processingState,
-      hasCopied: captureState.hasCopied,
-      hasTranscoded: captureState.hasTranscoded,
-    });
-  });
 
   return (
     <main className="relative z-0 flex flex-col w-dvw min-h-dvh items-center justify-start">
@@ -339,7 +327,8 @@ export default function Page() {
                       <Loader2 className="size-5 text-blue-500 animate-spin" />
                     ))}
                 </li>
-                {process.env.NEXT_PUBLIC_ENABLE_TRANSCODE === "true" &&
+                {(process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA && 
+                  process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA !== "") &&
                  <li className="flex justify-between items-center px-4 py-2 border-b border-muted-background last:border-none">
                   <span className="text-sm font-medium">
                     {captureState.processingState === "idle" &&

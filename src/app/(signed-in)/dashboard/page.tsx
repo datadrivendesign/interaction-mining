@@ -23,8 +23,6 @@ export default async function ProfilePage() {
 
   const user = session?.user as User;
 
-  console.log("user", user.id);
-
   // const captures = await getCaptures({
   //   userId: session.user.id,
   //   includes: { app: true, task: true },
@@ -56,9 +54,6 @@ export default async function ProfilePage() {
 
   const captures = capturesData.data;
   const traces = tracesData.data;
-
-  console.log("captures", captures);  
-  console.log("traces", traces);
 
   return (
     <>

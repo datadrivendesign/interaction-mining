@@ -100,7 +100,6 @@ export default function Page() {
   const handleNext = async () => {
     if (stepIndex === TraceSteps.Repair) {
       const validation = ScreenSchema.safeParse(methods.getValues().screens);
-      console.log("validation", validation);
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -115,7 +114,6 @@ export default function Page() {
     } else {
       // Validate the "description" field
       const validation = TraceFormSchema.safeParse(methods.getValues());
-      console.log("validation", validation);
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -125,8 +123,7 @@ export default function Page() {
       }
       // Submit the form
       const data = methods.getValues();
-      console.log("Submitting data", data);
-
+      console.log("Submitting data");
       handleSave(data, trace!);
     }
   };
@@ -207,13 +204,7 @@ export default function Page() {
       ).then(Object.fromEntries);
       const description = trace.description ?? "";
 
-      console.log("Resetting form with trace data", {
-        screens,
-        gestures,
-        redactions,
-        vhs,
-        description,
-      });
+      console.log("Resetting form with trace data");
 
       methods.reset({
         screens,

@@ -275,8 +275,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
     }
   }
 
-  console.log("Screens: ", screens);
-
   // Create trace AND screen records, update user
   const trace = await createTrace(
     {

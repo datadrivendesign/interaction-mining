@@ -81,7 +81,7 @@ export default function CaptureNewPage() {
   async function handleAddApp() {
     if (!newAppId) return;
 
-    console.log("Check if app exists:", newAppId);
+    console.log("Check if app exists");
     const existing = await checkIfAppExists(newAppId, platform);
     if (existing) {
       toast.success("App already exists!");
@@ -104,7 +104,6 @@ export default function CaptureNewPage() {
 
     console.log("Saving app to DB...");
     const saved = await saveApp(convertToPrismaApp(result.data));
-    console.log("Save result:", saved);
 
     if (saved.ok) {
       toast.success("App added!");

@@ -70,14 +70,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   events: {
     async signIn({ user }) {
       // Custom logic on sign in
-      console.log("User signed in:", user);
+      console.log("User signed in");
     },
     async signOut(message) {
-      // Custom logic on sign out
+      // Custom logic on sign out 
       if ("token" in message) {
-        console.log("User signed out:", message.token);
+        console.log("User signed out");
       } else {
-        console.log("User session signed out:", message.session);
+        console.log("User session signed out");
       }
     },
   },

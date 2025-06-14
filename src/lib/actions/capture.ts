@@ -133,8 +133,6 @@ export const getCaptures = unstable_cache(
       ...(taskId ? { taskId } : {}),
     };
 
-    console.log("Querying captures with:", query);
-
     try {
       const captures = await prisma.capture.findMany({
         where: query,
@@ -309,8 +307,9 @@ export async function createCaptureTask({
  * @returns
  */
 export async function processCaptureFiles(fileKey: string) {
-  console.log("Transcoding video for file key:", fileKey);
-  if (process.env.NEXT_PUBLIC_ENABLE_TRANSCODE !== "true") {
+  if (!process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+    process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+  ) {
     console.log("Lambda transcoding is disabled via env config.");
     const captureId = fileKey.split("/")[1];
     const destPathIndex = fileKey.indexOf(captureId);
@@ -328,7 +327,7 @@ export async function processCaptureFiles(fileKey: string) {
   }
 
   const cmd = new InvokeCommand({
-    FunctionName: "odim-transcode-mp4-webm",
+    FunctionName: process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA,
     InvocationType: "RequestResponse",
     Payload: Buffer.from(
       JSON.stringify({ bucket: process.env.AWS_UPLOAD_BUCKET!, key: fileKey })
