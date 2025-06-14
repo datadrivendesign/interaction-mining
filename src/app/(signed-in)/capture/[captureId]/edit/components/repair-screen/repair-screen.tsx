@@ -29,7 +29,7 @@ import {
 
 import { ScreenGesture } from "@prisma/client";
 import RepairScreenCanvas from "./repair-screen-canvas";
-import { cn, prettyNumber } from "@/lib/utils";
+import { cn, Platform, prettyNumber } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Redaction, TraceFormData, FrameData } from "../types";
 import FrameTimeline from "./extract-frames-timeline";
@@ -37,7 +37,7 @@ import FrameTimeline from "./extract-frames-timeline";
 import { listFromS3 } from "@/lib/aws";
 import { toast } from "sonner";
 import useSWR from "swr";
-import { CaptureScreenFile, ListedFiles, Platform } from "@/lib/actions";
+import { CaptureScreenFile, ListedFiles } from "@/lib/actions";
 import { useHotkeys } from "react-hotkeys-hook";
 import { AnimatePresence, motion, spring, Variants } from "motion/react";
 import { extractVideoFrame } from "./utils";

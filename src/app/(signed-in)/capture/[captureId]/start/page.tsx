@@ -19,8 +19,8 @@ import { Button } from "@/components/ui/button";
 import { useCapture } from "@/lib/hooks";
 import { CaptureSWROperations, fileFetcher, handleDeleteFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { processCaptureFiles, Platform } from "@/lib/actions";
-import { cn } from "@/lib/utils";
+import { processCaptureFiles } from "@/lib/actions";
+import { cn, Platform } from "@/lib/utils";
 interface CaptureState {
   hasUploads: boolean;
   processingState: "idle" | "pending" | "finished" | "error";

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Cake, CircleDot, Loader2, Plus } from "lucide-react";
+import { Cake, CircleDot, Plus } from "lucide-react";
 import { User } from "@prisma/client";
 
 import { Card, CardHeader } from "@/components/ui/card";

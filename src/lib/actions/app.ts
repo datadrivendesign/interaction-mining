@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { App, Prisma } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
+import { Platform } from "@/lib/utils";
 
 interface GetAppParams {
   limit?: number;
@@ -12,18 +13,11 @@ interface GetAppParams {
   sort?: "asc" | "desc";
 }
 
-export const Platform = {
-  IOS: "ios",
-  ANDROID: "android",
-} as const;
-
-export type Platform = typeof Platform[keyof typeof Platform];
-
 export type AppItemList = {
   id: string;
   package: string;
   name: string;
-  os: string;
+  os: Platform;
 };
 
 export type AppInput = {
@@ -154,7 +148,7 @@ export async function getAppByPackageName(
 
 export async function checkIfAppExists(
   packageName: string, 
-  os: string
+  os: Platform
 ): Promise<boolean> {
   if (!packageName) return false;
 
