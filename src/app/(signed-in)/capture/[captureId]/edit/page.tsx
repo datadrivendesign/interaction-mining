@@ -27,6 +27,7 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleSave } from "./util";
+import { Platform } from "@/lib/actions";
 
 enum TraceSteps {
   Repair = 0,
@@ -199,7 +200,7 @@ export default function Page() {
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
                       {stepIndex === 0 ? (
-                        capture?.app.os === "ios" ?
+                        (capture?.app.os as Platform) === Platform.IOS ?
                           "Annotate" : 
                           TraceSteps[stepIndex]
                       ) : 

@@ -1,4 +1,4 @@
-import { getCapture, getIosApp } from "@/lib/actions";
+import { getCapture, getIosApp, Platform } from "@/lib/actions";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -20,7 +20,8 @@ export async function generateMetadata({
     }
   });
 
-  if (capture.task.os === "ios" && capture.app?.packageName) {
+  if ((capture.task.os as Platform) === Platform.IOS 
+    && capture.app?.packageName) {
     try {
       let app = await getIosApp({ appId: capture.app.packageName });
 
