@@ -8,7 +8,7 @@ export default function Home() {
     <main className="relative flex min-h-dvh flex-col items-center justify-between">
       {/* Announcement banner */}
       <section id="banner" className="flex justify-center items-center w-full max-w-screen-2xl p-4 md:p-6">
-        <span className="px-3 py-1 mr-2 rounded-full bg-blue-500/50 text-sm text-blue-300 font-semibold">Info</span>
+        <span className="px-3 py-1 mr-2 rounded-full bg-blue-500 dark:bg-blue-500/50 text-sm text-white dark:text-blue-300 font-semibold">Info</span>
         <span className="text-md font-medium">Looking for the Rico dataset?</span>
         <Link
           href="/archive/rico"
@@ -46,7 +46,7 @@ export default function Home() {
               href="/contribute"
               className="px-4 py-2 bg-muted-background hover:bg-muted-background/90 rounded-xl transition-colors duration-150 ease-in-out"
             >
-              <span className="inline-flex items-center text-lg lg:text-xl text-white font-medium">
+              <span className="inline-flex items-center text-lg lg:text-xl text-foreground font-medium">
                 Contribute to dataset
               </span>
             </Link>
@@ -57,7 +57,7 @@ export default function Home() {
       <Dataset />
 
       {/* Platform section */}
-      <Platform />
+      {/* <Platform /> */}
       <div className="pb-8 lg:pb-16"></div>
     </main>
   );
