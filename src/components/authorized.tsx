@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, requireAuth } from "@/lib/auth/auth";
+import { auth } from "@/lib/auth/auth";
 import {
   Card,
   CardContent,

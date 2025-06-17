@@ -2,7 +2,7 @@ import Globe from "@/public/globe.svg";
 import Link from "next/link";
 import DatasetGallery from "./dataset-gallery";
 
-export default function Dataset() {
+export default async function Dataset() {
   return (
     <section
       id="dataset"

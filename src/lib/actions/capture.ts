@@ -133,8 +133,6 @@ export const getCaptures = unstable_cache(
       ...(taskId ? { taskId } : {}),
     };
 
-    console.log("Querying captures with:", query);
-
     try {
       const captures = await prisma.capture.findMany({
         where: query,
