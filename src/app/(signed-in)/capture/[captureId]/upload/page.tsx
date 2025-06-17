@@ -190,6 +190,12 @@ export default function Page() {
             )}
           </div>
 
+          <div className="font-semibold">
+            <article>
+              Please turn on "Do not Disturb" on your phone before recording to block notifications.
+            </article>
+          </div>
+
           <Accordion
             type="single"
             collapsible
