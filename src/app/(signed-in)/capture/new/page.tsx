@@ -181,8 +181,8 @@ export default function CaptureNewPage() {
               <SelectValue placeholder="Select an app" />
             </SelectTrigger>
             <SelectContent>
-              {apps.map((a: any) => (
-                <SelectItem key={a.id} value={a.package}>
+              {apps.map((a: any, index: number) => (
+                <SelectItem key={a.id + index} value={a.package}>
                   {a.name}
                 </SelectItem>
               ))}

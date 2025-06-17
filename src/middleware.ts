@@ -12,5 +12,5 @@ export default middleware((req) => {
 });
 
 export const config = {
-  matcher: ["/capture/:captureId/:path*"],
+  matcher: ["/capture/:captureId/:path*", "/dashboard", "/trace/:traceId/edit"],
 };
