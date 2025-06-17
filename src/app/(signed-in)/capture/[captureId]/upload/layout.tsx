@@ -1,4 +1,5 @@
-import { getCapture, getIosApp, Platform } from "@/lib/actions";
+import { getCapture, getIosApp } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
