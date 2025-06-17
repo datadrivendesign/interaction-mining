@@ -192,7 +192,7 @@ export default function Page() {
 
           <div className="font-semibold">
             <article>
-              Please turn on "Do not Disturb" on your phone before recording to block notifications.
+              Please turn on &ldquo;Do not Disturb&rdquo; on your phone to block notifications while recording.
             </article>
           </div>
 
