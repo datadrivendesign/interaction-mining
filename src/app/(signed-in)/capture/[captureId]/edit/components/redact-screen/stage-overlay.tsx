@@ -6,7 +6,9 @@ import React, {
   useEffect,
   useContext,
   useCallback,
+  useMemo,
 } from "react";
+import throttle from "lodash/throttle";
 import { RedactCanvasContext } from "./redact-screen-canvas";
 
 export interface Overlay {
@@ -23,13 +25,20 @@ export interface Overlay {
 interface OverlayContainerProps {
   stage: Konva.Stage | null;
   overlays: Overlay[];
+  isPanning: boolean;
+  setIsPanning: (_: boolean) => void;
 }
 
 /**
  * The OverlayContainer renders React elements over canvas nodes.
  * It queries each overlay's node position using getClientRect() and positions the corresponding overlay absolutely.
  */
-const Overlay: React.FC<OverlayContainerProps> = ({ stage, overlays }) => {
+const Overlay: React.FC<OverlayContainerProps> = ({
+  stage,
+  overlays,
+  isPanning,
+  setIsPanning,
+}) => {
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number; width: number; height: number }>
   >({});
@@ -37,7 +46,7 @@ const Overlay: React.FC<OverlayContainerProps> = ({ stage, overlays }) => {
   const { redactions } = useContext(RedactCanvasContext);
 
   // Update positions for each overlay item by querying the stage's nodes.
-  const updatePositions = useCallback(() => {
+  const updatePositionsUnthrottled = useCallback(() => {
     if (!stage) return;
     const newPositions: Record<
       string,
@@ -56,11 +65,32 @@ const Overlay: React.FC<OverlayContainerProps> = ({ stage, overlays }) => {
       }
     });
 
-    // Check if the new positions are different from the current ones
-    if (JSON.stringify(newPositions) !== JSON.stringify(positions)) {
-      setPositions(newPositions);
-    }
-  }, [stage, overlays, positions]);
+    setPositions((prev) => {
+      for (const key in newPositions) {
+        const prevBox = prev[key];
+        const newBox = newPositions[key];
+        if (
+          !prevBox ||
+          prevBox.x !== newBox.x ||
+          prevBox.y !== newBox.y ||
+          prevBox.width !== newBox.width ||
+          prevBox.height !== newBox.height
+        ) {
+          return newPositions;
+        }
+      }
+      return prev;
+    });
+  }, [stage, overlays]);
+
+  const updatePositions = useMemo(
+    () =>
+      throttle(updatePositionsUnthrottled, 1000 / 60, {
+        leading: true,
+        trailing: true,
+      }),
+    [updatePositionsUnthrottled]
+  );
 
   useEffect(() => {
     if (!stage) return;
@@ -103,8 +133,26 @@ const Overlay: React.FC<OverlayContainerProps> = ({ stage, overlays }) => {
     };
   }, [stage, overlays, redactions, updatePositions]);
 
+  // Handler to stop events from bubbling to Konva stage:
+  const stopPointer = (
+    event: React.MouseEvent | React.WheelEvent | React.TouchEvent
+  ) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setIsPanning(true);
+  };
+
   return (
-    <>
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+      }}
+    >
       {overlays.map((overlay) => {
         const box = positions[overlay.nodeId];
         if (!box) return null;
@@ -115,14 +163,16 @@ const Overlay: React.FC<OverlayContainerProps> = ({ stage, overlays }) => {
               position: "absolute",
               left: `calc(${box.x + box.width}px + 1rem)`,
               top: box.y,
-              pointerEvents: "none",
+              pointerEvents: isPanning ? "none" : "auto",
             }}
+            onWheel={stopPointer}
+            onTouchStart={stopPointer}
           >
-            {overlay.render()}
+            {overlay.render(box)}
           </div>
         );
       })}
-    </>
+    </div>
   );
 };
 

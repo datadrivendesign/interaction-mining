@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { GlobalHotKeys } from "react-hotkeys";
 import {
   ArrowDownFromLine,
   ArrowLeftFromLine,
@@ -31,6 +30,7 @@ import RepairScreenCanvas from "./repair-screen-canvas";
 import { cn } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
 import { TraceFormData } from "../types";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export const gestureOptions = [
   {
@@ -130,11 +130,7 @@ export const gestureOptions = [
   },
 ];
 
-export default function RepairScreen({
-  trace,
-}: {
-  trace: any;
-}) {
+export default function RepairScreen({ trace }: { trace: any }) {
   const [watchScreens, watchVHs, watchGestures] = useWatch({
     name: ["screens", "vhs", "gestures"],
   });
@@ -144,11 +140,6 @@ export default function RepairScreen({
   const os = trace?.task ? trace.task.os : "none";
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
-
-  const keymap = {
-    LEFT: "left",
-    RIGHT: "right",
-  };
 
   const handlePrevious = useCallback(() => {
     if (focusViewIndex > 0) {
@@ -162,36 +153,44 @@ export default function RepairScreen({
     }
   }, [focusViewIndex, screens]);
 
-  const handlers = {
-    LEFT: handlePrevious,
-    RIGHT: handleNext,
-  };
+  const handleTab = useCallback(() => {
+    const wrappedIndex = (focusViewIndex + 1) % screens.length;
+    setFocusViewIndex(wrappedIndex);
+  }, [focusViewIndex, screens]);
+
+  useHotkeys("left", (e) => {
+    e.preventDefault();
+    handlePrevious();
+  })
+
+  useHotkeys("right", (e) => {
+    e.preventDefault();
+    handleNext();
+  })
+
+  useHotkeys("tab", (e) => {
+    e.preventDefault();
+    handleTab();
+  })
 
   return (
-    // @ts-ignore - GlobalHotKeys is not typed
     <div className="w-full h-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
-          <GlobalHotKeys
-            key={focusViewIndex}
-            keyMap={keymap}
-            handlers={handlers}
-          >
-            {focusViewIndex > -1 ? (
-              <FocusView
-                key={focusViewIndex}
-                vh={vhs[screens[focusViewIndex].id]}
-                screen={screens[focusViewIndex]}
-                os={os}
-              />
-            ) : (
-              <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
-                  Select a screen from the filmstrip.
-                </span>
-              </div>
-            )}
-          </GlobalHotKeys>
+          {focusViewIndex > -1 ? (
+            <FocusView
+              key={focusViewIndex}
+              vh={vhs[screens[focusViewIndex].id]}
+              screen={screens[focusViewIndex]}
+              os={os}
+            />
+          ) : (
+            <div className="flex justify-center items-center w-full h-full">
+              <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+                Select a screen from the filmstrip.
+              </span>
+            </div>
+          )}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
@@ -290,7 +289,7 @@ function Filmstrip({
           <Image
             key={screen.id}
             src={screen.src}
-            alt="gallery"
+            alt="Gallery image"
             draggable={false}
             className="h-full w-auto object-contain"
             width={0}

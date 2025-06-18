@@ -4,10 +4,11 @@ import { unstable_cache } from "next/cache";
 import { Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { prisma } from "@/lib/prisma";
-import { getFromS3 } from "../aws";
+import { listFromS3, lambda, copyFromS3 } from "../aws";
 import { ActionPayload } from "./types";
-import { requireAuth } from "../auth";
+import { requireAuth } from "../auth/auth";
 import { updateUser } from "./user";
+import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 export type ListedFiles = {
   fileKey: string;
@@ -132,8 +133,6 @@ export const getCaptures = unstable_cache(
       ...(taskId ? { taskId } : {}),
     };
 
-    console.log("Querying captures with:", query);
-
     try {
       const captures = await prisma.capture.findMany({
         where: query,
@@ -185,23 +184,12 @@ export async function updateCapture(
  * @param captureId The ID of the capture to fetch uploaded files for.
  * @returns ActionPayload
  */
-export async function getCaptureFiles(captureId: string) {
+export async function getCaptureFiles(
+  captureId: string
+): Promise<ActionPayload<ListedFiles[]>> {
   try {
-    const objects = await getFromS3(`uploads/${captureId}`);
-
-    const files = objects.data?.map((file: any) => ({
-      fileKey: file.Key,
-      fileName: file.Key.split("/").pop() || "",
-      fileUrl: process.env.USE_MINIO_STORE === "true" 
-        ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
-        : `https://${process.env._AWS_UPLOAD_BUCKET}.s3.amazonaws.com/${file.Key}`,
-    }));
-
-    return {
-      ok: true,
-      message: "Uploaded files fetched successfully.",
-      data: files,
-    };
+    const files = await listFromS3(`processed/${captureId}`);
+    return files
   } catch (err) {
     console.error("Error fetching uploaded files:", err);
     return {
@@ -312,4 +300,79 @@ export async function createCaptureTask({
     console.error("Error creating capture/task:", error);
     throw new Error("Failed to create capture and task");
   }
+}
+
+/**
+ * @param fileKey
+ * @returns
+ */
+export async function processCaptureFiles(fileKey: string) {
+  if (!process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+    process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+  ) {
+    console.log("Lambda transcoding is disabled via env config.");
+    const captureId = fileKey.split("/")[1];
+    const destPathIndex = fileKey.indexOf(captureId);
+    const destPath = fileKey.substring(destPathIndex);
+    const res = await copyFromS3(fileKey, `processed/${destPath}`);
+    if (!res.ok) {
+      console.error("Failed to copy file to processed folder:", res.message);
+      return { ok: false, message: res.message, data: null };
+    }
+    return { 
+      ok: true, 
+      message: "Processing successfuly, disabled transcode.", 
+      data: null 
+  };
+  }
+
+  const cmd = new InvokeCommand({
+    FunctionName: process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA,
+    InvocationType: "RequestResponse",
+    Payload: Buffer.from(
+      JSON.stringify({ bucket: process.env.AWS_UPLOAD_BUCKET!, key: fileKey })
+    ),
+  });
+  const res = await lambda.send(cmd);
+
+  // Parse the Lambda payload into JSON
+  const raw = res.Payload ? new TextDecoder().decode(res.Payload) : "";
+  let response: { statusCode?: number; body?: string; [key: string]: any } = {};
+  try {
+    response = JSON.parse(raw);
+  } catch (err) {
+    console.error("Failed to parse Lambda payload:", raw, err);
+    return { ok: false, message: "Invalid transcoding response", data: null };
+  }
+
+  console.log("Parsed transcoding response:", response);
+
+  // Extract HTTP status and body
+  const { statusCode, body } = response;
+  let result: any = {};
+  try {
+    result = body ? JSON.parse(body) : {};
+  } catch {
+    result = { message: body };
+  }
+
+  if (statusCode !== 200) {
+    console.error(
+      "Transcoding Lambda returned error status:",
+      statusCode,
+      result
+    );
+    return {
+      ok: false,
+      message: result.message || "Transcoding failed",
+      data: null,
+    };
+  }
+
+  // Successful transcoding
+  return {
+    ok: true,
+    message: result.message || "Video transcoded successfully",
+    data: result,
+  };
 }

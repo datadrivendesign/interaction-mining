@@ -1,0 +1,9 @@
+@inproceedings{Deka:2017:Rico,
+ author = {Deka, Biplab and Huang, Zifeng and Franzen, Chad and Hibschman, Joshua and Afergan, Daniel and Li, Yang and Nichols, Jeffrey and Kumar, Ranjitha},
+ title = {Rico: A Mobile App Dataset for Building Data-Driven Design Applications},
+ booktitle = {Proceedings of the 30th Annual Symposium on User Interface Software and Technology},
+ series = {UIST '17},
+ year = {2017},
+ keywords = {Mobile app design; design mining; design search; app
+datasets},
+}

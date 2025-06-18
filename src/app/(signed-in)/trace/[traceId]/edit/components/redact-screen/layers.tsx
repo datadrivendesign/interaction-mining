@@ -17,7 +17,7 @@ export default function Layers({
     useContext(RedactCanvasContext);
   // const [selected, setSelected] = useState<number | null>(null);
   return (
-    <aside className="absolute z-10 right-4 flex flex-col justify-center items-center w-full max-w-2xs max-h-[calc(100%-2rem)] gap-2 bg-neutral-100 dark:bg-neutral-900 p-2 rounded-lg shadow-lg overflow-hidden">
+    <aside className="absolute z-10 right-4 flex flex-col grow justify-center items-center w-full  max-w-2xs h-full max-h-[calc(100%-2rem)] gap-2 bg-neutral-100 dark:bg-neutral-900 p-2 rounded-lg shadow-lg overflow-hidden">
       <span className="inline-flex items-center w-full text-left text-xs font-semibold">
         <Layers3 className="size-3 mr-1.5 text-muted-foreground" />
         Layers

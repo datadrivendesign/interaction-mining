@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Cake, CircleDot, Loader2, Plus } from "lucide-react";
+import { Cake, CircleDot, Plus } from "lucide-react";
 import { User } from "@prisma/client";
 
 import { Card, CardHeader } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { googleImageAdapter } from "../lib/image";
 import { prettyOS, prettyTime } from "@/lib/utils";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import { getCaptures, getTraces } from "@/lib/actions";
 
 export default async function ProfilePage() {
@@ -22,23 +22,6 @@ export default async function ProfilePage() {
   }
 
   const user = session?.user as User;
-
-  console.log("session", session);
-  console.log("user", user.id);
-
-  // const captures = await getCaptures({
-  //   userId: session.user.id,
-  //   includes: { app: true, task: true },
-  // });
-
-  // if (!captures.ok) {
-    
-  // }
-
-  // const traces = await getTraces({
-  //   userId: session.user.id,
-  //   includes: { app: true, task: true },
-  // });
 
   const [capturesData, tracesData] = await Promise.all([
     getCaptures({
@@ -58,9 +41,6 @@ export default async function ProfilePage() {
   const captures = capturesData.data;
   const traces = tracesData.data;
 
-  console.log("captures", captures);  
-  console.log("traces", traces);
-
   return (
     <>
       <main className="flex flex-col grow justify-start items-center min-w-dvw min-h-dvh">
@@ -73,7 +53,7 @@ export default async function ProfilePage() {
                   alt="User avatar"
                 />
                 <AvatarFallback>
-                  {user?.name?.[0]?.toUpperCase() ?? ""}
+                  <div className="w-full h-full bg-muted-background"></div>
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">

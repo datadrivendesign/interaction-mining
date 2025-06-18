@@ -11,8 +11,9 @@ import {
   checkIfAppExists,
   saveApp,
   AppItemList,
-  AppInput
+  AppInput,
 } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,18 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { App } from "@prisma/client";
 
 export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const enum OS {
-    IOS = "ios",
-    ANDROID = "android",
-  }
-
-  const [platform, setPlatform] = useState<OS>(OS.ANDROID);
+  const [platform, setPlatform] = useState<Platform>(Platform.ANDROID);
   const [app, setApp] = useState("");
   const [description, setDescription] = useState("");
   const [apps, setApps] = useState<AppItemList[]>([]);
@@ -55,9 +50,11 @@ export default function CaptureNewPage() {
     const app = {
       packageName: data.appId,
       category: {
-        id: platform == OS.ANDROID ? `${data.genre}` : `${data.primaryGenreId}`,
-        name: platform == OS.ANDROID 
-          ? `${data.genreId}`
+        id: platform === Platform.ANDROID 
+          ? `${data.genre}` 
+          : `${data.primaryGenreId}`,
+        name: platform === Platform.ANDROID 
+          ? `${data.genreId}` 
           : `${data.primaryGenre}`,
       },
       metadata: {
@@ -68,10 +65,12 @@ export default function CaptureNewPage() {
         icon: data.icon ?? "unknown",
         rating: data.score ?? -1,
         reviews: data.reviews ?? -1,
-        genre: platform == OS.ANDROID
+        genre: platform === Platform.ANDROID
           ? (data.categories.map((c: any) => c.name) ?? [])
           : (data.genres ?? []),
-        downloads: platform == OS.ANDROID ? data.installs : "-1",
+        downloads: platform === Platform.ANDROID ? 
+          data.installs : 
+          "-1",
         url: data.url ?? "unknown",
       },
       os: platform
@@ -82,7 +81,7 @@ export default function CaptureNewPage() {
   async function handleAddApp() {
     if (!newAppId) return;
 
-    console.log("Check if app exists:", newAppId);
+    console.log("Check if app exists");
     const existing = await checkIfAppExists(newAppId, platform);
     if (existing) {
       toast.success("App already exists!");
@@ -93,7 +92,7 @@ export default function CaptureNewPage() {
 
     console.log("Scraping app data from store...");
     const result =
-      platform === "android"
+      platform === Platform.ANDROID
         ? await getAndroidApp({ appId: newAppId })
         : await getIosApp({ appId: newAppId });
 
@@ -105,7 +104,6 @@ export default function CaptureNewPage() {
 
     console.log("Saving app to DB...");
     const saved = await saveApp(convertToPrismaApp(result.data));
-    console.log("Save result:", saved);
 
     if (saved.ok) {
       toast.success("App added!");
@@ -132,7 +130,7 @@ export default function CaptureNewPage() {
     });
 
     if (result.ok) {
-      toast.success("Capture task created!");
+      toast.success("Capture task created! Redirecting...");
       router.push(`/capture/${result.data?.captureId}/start`);
     } else {
       toast.error("Failed to create capture task.");
@@ -189,16 +187,16 @@ export default function CaptureNewPage() {
             value={platform}
             onValueChange={(selectPlatform) => {
               if (selectPlatform) {
-                setPlatform(selectPlatform as OS);
+                setPlatform(selectPlatform as Platform);
                 setApp("");
               }
             }}
             className="w-full"
           >
-            <ToggleGroupItem value={OS.ANDROID} className="w-full dark:text-neutral-200 cursor-pointer">
+            <ToggleGroupItem value={Platform.ANDROID} className="w-full dark:text-neutral-200 cursor-pointer">
               Android
             </ToggleGroupItem>
-            <ToggleGroupItem value={OS.IOS} className="w-full dark:text-neutral-200 cursor-pointer">
+            <ToggleGroupItem value={Platform.IOS} className="w-full dark:text-neutral-200 cursor-pointer">
               iOS
             </ToggleGroupItem>
           </ToggleGroup>
@@ -237,7 +235,9 @@ export default function CaptureNewPage() {
         {showAddApp && (
           <div className="space-y-2 animate-fade-in">
             <Label htmlFor="newAppId">
-              Enter {platform === OS.ANDROID ? "Package Name" : "iOS Bundle ID"}
+              Enter {platform === Platform.ANDROID 
+                ? "Package Name" 
+                : "iOS Bundle ID"}
             </Label>
             <input
               type="text"
