@@ -172,8 +172,11 @@ export default function Page() {
           <CardHeader>
             <CardTitle className="text-2xl">Start capture session</CardTitle>
             <CardDescription>
-              Open the ODIM app on your device and scan the QR code below to
-              start the capture session.
+              {os == 'android' ? 
+                "Open the ODIM app on your device and scan the QR code below to start the capture session." : 
+                "Open your Camera app and scan the QR code to navigate to the capture session page."
+              }
+
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-0">
@@ -200,7 +203,7 @@ export default function Page() {
             <CardTitle className="text-2xl">Task recording</CardTitle>
             <CardDescription>
               Your recorded task video will appear here once you start uploading
-              them from your device.
+              them from your device. <strong>Remember to turn on "Do not disturb" mode before you start recording.</strong>
             </CardDescription>
           </CardHeader>
           <CardContent>
