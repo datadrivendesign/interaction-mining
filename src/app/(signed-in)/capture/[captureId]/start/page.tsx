@@ -33,9 +33,9 @@ function captureStateReducer(
   state: CaptureState,
   action:
     | {
-        type: "UPDATE_PROCESS";
-        nextProcessingState: "idle" | "pending" | "finished" | "error";
-      }
+      type: "UPDATE_PROCESS";
+      nextProcessingState: "idle" | "pending" | "finished" | "error";
+    }
     | { type: "UPDATE"; uploadList: any[]; processList: any[] }
 ): CaptureState {
   switch (action.type) {
@@ -214,8 +214,7 @@ export default function Page() {
                       Loading...
                     </>
                   ) : (
-                    `${uploadList.length} file${
-                      uploadList.length !== 1 ? "s" : ""
+                    `${uploadList.length} file${uploadList.length !== 1 ? "s" : ""
                     } uploaded`
                   )}
                 </span>

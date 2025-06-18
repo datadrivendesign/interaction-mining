@@ -41,7 +41,7 @@ export default async function AdminUserDetails({
         {/* Left column: User Info */}
         <div className="space-y-6 md:col-span-1">
           <Avatar className="w-32 h-32">
-            <AvatarImage src={user.image ?? ""} alt="User avatar" />
+            <AvatarImage src={user.image ?? ""} alt="User avatar" crossOrigin="anonymous" />
             <AvatarFallback>
               {user.name?.charAt(0).toUpperCase() ?? "U"}
             </AvatarFallback>

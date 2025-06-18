@@ -1,6 +1,6 @@
-import { auth } from "./lib/auth";
+import { middleware } from "./lib/auth";
 
-export default auth((req) => {
+export default middleware((req) => {
   if (!req.auth && req.nextUrl.pathname !== "/sign-in") {
     const loginUrl = new URL("/sign-in", req.nextUrl.origin);
     loginUrl.searchParams.set(
@@ -12,6 +12,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  runtime: "nodejs",
-  matcher: ["/capture/:captureId/:path*"],
+  matcher: ["/capture/:captureId/:path*", "/dashboard", "/trace/:traceId/edit"],
 };

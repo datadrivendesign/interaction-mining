@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/lib/auth";
+import { auth } from "@/lib/auth/auth";
 import {
   Card,
   CardContent,
@@ -21,12 +21,7 @@ export async function AuthorizedRoute({
   resourceUserId?: string;
 }) {
   const ownershipEnforcedRoles = new Set(allowedRoles ?? ["USER", "ADMIN"]);
-  let session;
-  try {
-    session = await requireAuth();
-  } catch (err) {
-    session = null;
-  }
+  let session = await auth();
 
   if (!session || !session.user) {
     // If not authenticated, redirect to sign-in page
