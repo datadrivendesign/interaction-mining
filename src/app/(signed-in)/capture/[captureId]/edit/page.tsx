@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import {
   RedactionSchema,
   ScreenGestureSchema,
-  ScreenSchema,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
@@ -20,8 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
-import ExtractFrames from "./components/extract-frames/extract-frames";
-import ExtractFrameDoc from "./components/extract-frames/doc.mdx";
 import RepairScreen from "./components/repair-screen/index";
 import RepairDoc from "./components/repair-screen/doc.mdx";
 import Review from "./components/review/review";
@@ -30,12 +27,12 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleSave } from "./util";
+import { Platform } from "@/lib/utils";
 
 enum TraceSteps {
-  Extract = 0,
-  Repair = 1,
-  Redact = 2,
-  Review = 3,
+  Repair = 0,
+  Redact = 1,
+  Review = 2,
 }
 
 export default function Page() {
@@ -62,21 +59,23 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    if (stepIndex === TraceSteps.Extract) {
-      // Validate the "screens")
-      const validation = ScreenSchema.safeParse(methods.getValues().screens);
-      if (!validation.success) {
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
-        return;
-      }
-    } else if (stepIndex === TraceSteps.Repair) {
+    if (stepIndex === TraceSteps.Repair) {
+      // validate all screen gestures except the last one
+      const allButLastScreenIds = methods.getValues()
+        .screens.slice(0, -1)
+        .map((s)=> s.id);
+      const allButLastScreenGestures = Object.fromEntries(
+        Object.entries(methods.getValues().gestures).filter(
+          ([id, _]) => allButLastScreenIds.includes(id)
+        )
+      );
       // Validate the "gestures"
-      const validation = ScreenGestureSchema.safeParse(methods.getValues());
+      const validation = ScreenGestureSchema.safeParse({
+        ...methods.getValues(),
+        gestures: allButLastScreenGestures,
+      });
       if (!validation.success) {
-        console.log(validation.error.issues);
+        console.error(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
           toast.error(error.message);
@@ -89,7 +88,7 @@ export default function Page() {
         methods.getValues().redactions
       );
       if (!validation.success) {
-        console.log(validation.error.issues);
+        console.error(validation.error.issues);
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
           toast.error(error.message);
@@ -102,7 +101,20 @@ export default function Page() {
       setStepIndex(stepIndex + 1);
     } else {
       // Validate the "description" field
-      const validation = TraceFormSchema.safeParse(methods.getValues());
+      // validate all screen gestures except the last one
+      const allButLastScreenIds = methods.getValues()
+        .screens.slice(0, -1)
+        .map((s)=> s.id);
+      const allButLastScreenGestures = Object.fromEntries(
+        Object.entries(methods.getValues().gestures).filter(
+          ([id, _]) => allButLastScreenIds.includes(id)
+        )
+      );
+      // Validate the "gestures"
+      const validation = TraceFormSchema.safeParse({
+        ...methods.getValues(),
+        gestures: allButLastScreenGestures,
+      });
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -130,8 +142,8 @@ export default function Page() {
 
   const docRender = () => {
     switch (stepIndex) {
-      case 0:
-        return <ExtractFrameDoc />;
+      // case 0:
+      //   return <ExtractFrameDoc />;
       case 1:
         return <RepairDoc />;
       case 2:
@@ -146,33 +158,33 @@ export default function Page() {
   const editorRender = () => {
     switch (stepIndex) {
       case 0:
-        return <ExtractFrames capture={capture} />;
-      case 1:
         return <RepairScreen capture={capture} />;
-      case 2:
+      case 1:
         return <RedactScreen />;
-      case 3:
+      case 2:
         return <Review />;
       default:
         return null;
     }
   };
 
+  // usePreventTwoFingerBack();
+
   return (
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col w-dvw h-[calc(100dvh-65px)] bg-white dark:bg-black overflow-hidden"
+          className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (
             <>
               <div className="relative flex w-full h-[calc(100%-var(--nav-height))]">
-                <aside className="hidden md:flex flex-col w-full max-w-xs h-full border-r border-neutral-200 dark:border-neutral-800">
+                {/* <aside className="hidden md:flex flex-col w-full max-w-xs h-full border-r border-neutral-200 dark:border-neutral-800">
                   <article className="prose prose-neutral dark:prose-invert leading-snug p-4 md:p-6 overflow-auto">
                     {docRender()}
                   </article>
-                </aside>
+                </aside> */}
                 <div className="flex flex-col w-full h-full items-center">
                   {editorRender()}
                 </div>
@@ -187,7 +199,12 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {TraceSteps[stepIndex]}
+                      {stepIndex === 0 ? (
+                        (capture?.app.os as Platform) === Platform.IOS ?
+                          "Annotate" : 
+                          TraceSteps[stepIndex]
+                      ) : 
+                      TraceSteps[stepIndex]}
                     </span>
                   </h1>
                   <span className="block">

@@ -11,7 +11,6 @@ import { updateScreen, updateTrace } from "@/lib/actions";
 import { toast } from "sonner";
 import Konva from "konva";
 import { Redaction } from "../components/types";
-import { useSession } from "next-auth/react";
 
 export async function handleSave(data: TraceFormData, trace: Trace) {
   // Transpose gestures on to screens

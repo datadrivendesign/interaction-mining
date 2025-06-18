@@ -5,13 +5,11 @@ import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Prisma, ScreenGesture, ScreenRedaction } from "@prisma/client";
+import { ScreenGesture, ScreenRedaction } from "@prisma/client";
 
 import { toast } from "sonner";
 
 import {
-  RedactionSchema,
-  ScreenGestureSchema,
   ScreenSchema,
   TraceFormData,
   TraceFormSchema,
@@ -28,10 +26,6 @@ import { useTrace } from "@/lib/hooks";
 import { handleSave } from "./util/export";
 
 enum TraceSteps {
-  // Extract = 0,
-  // Repair = 1,
-  // Redact = 2,
-  // Review = 3,
   Repair = 0,
   Review = 1,
 }
@@ -106,7 +100,6 @@ export default function Page() {
   const handleNext = async () => {
     if (stepIndex === TraceSteps.Repair) {
       const validation = ScreenSchema.safeParse(methods.getValues().screens);
-      console.log("validation", validation);
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -121,7 +114,6 @@ export default function Page() {
     } else {
       // Validate the "description" field
       const validation = TraceFormSchema.safeParse(methods.getValues());
-      console.log("validation", validation);
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
         errors.forEach((error) => {
@@ -131,8 +123,7 @@ export default function Page() {
       }
       // Submit the form
       const data = methods.getValues();
-      console.log("Submitting data", data);
-
+      console.log("Submitting data");
       handleSave(data, trace!);
     }
   };
@@ -213,13 +204,7 @@ export default function Page() {
       ).then(Object.fromEntries);
       const description = trace.description ?? "";
 
-      console.log("Resetting form with trace data", {
-        screens,
-        gestures,
-        redactions,
-        vhs,
-        description,
-      });
+      console.log("Resetting form with trace data");
 
       methods.reset({
         screens,

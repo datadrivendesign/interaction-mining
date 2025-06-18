@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, createContext, useCallback, useMemo } from "react";
-import { HotKeys, KeyMap } from "react-hotkeys";
 import { useFormContext, useWatch } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
 import { TraceFormData, Redaction } from "../types";

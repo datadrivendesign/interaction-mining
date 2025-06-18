@@ -4,10 +4,12 @@ import {
   PutObjectCommand,
   ListObjectsV2Command,
   DeleteObjectCommand,
+  CopyObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "..";
 import { ActionPayload } from "@/lib/actions/types";
+import { ListedFiles } from "@/lib/actions";
 
 /**
  * Generates a presigned URL for uploading a file to S3.
@@ -33,11 +35,12 @@ export async function generatePresignedUploadURL(
       message: "Pre-signed upload URL generated.",
       data: {
         uploadUrl: url,
-        filePrefix: prefix,
         fileKey: `${prefix}/${fileName}`,
+        fileName: fileName,
+        filePrefix: prefix, 
         fileUrl: process.env.USE_MINIO_STORE === "true" 
           ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
-          : `https://${process.env._AWS_UPLOAD_BUCKET}.s3.${process.env._AWS_REGION}.amazonaws.com/${prefix}/${fileName}`,
+          : `${process.env._AWS_CLOUDFRONT_URL}/${prefix}/${fileName}`,
       },
     };
   } catch (err) {
@@ -55,7 +58,9 @@ export async function generatePresignedUploadURL(
  * @param key The S3 object key to fetch.
  * @returns
  */
-export async function getFromS3(key: string): Promise<ActionPayload<any>> {
+export async function listFromS3(
+  key: string
+): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const command = new ListObjectsV2Command({
       Bucket: process.env._AWS_UPLOAD_BUCKET!,
@@ -71,10 +76,18 @@ export async function getFromS3(key: string): Promise<ActionPayload<any>> {
       };
     }
 
+    const filePayload = files.Contents.map((file: any) => ({
+      fileKey: file.Key,
+      fileName: file.Key.split("/").pop() || "",
+      fileUrl: process.env.USE_MINIO_STORE === "true" 
+        ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
+        : `${process.env._AWS_CLOUDFRONT_URL}/${file.Key}`,
+    }));
+
     return {
       ok: true,
       message: "File(s) found",
-      data: files.Contents,
+      data: filePayload,
     };
   } catch (err) {
     console.error("Error fetching file from S3:", err);
@@ -83,6 +96,36 @@ export async function getFromS3(key: string): Promise<ActionPayload<any>> {
       message: "Failed to fetch file",
       data: null,
     };
+  }
+}
+
+export async function copyFromS3(fileKey: string, destPath: string) {
+  console.log("Copying from S3");
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
+      Prefix: fileKey,
+    });
+    const response = await s3.send(command);
+    if (!response.Contents || response.Contents.length === 0) {
+      return { ok: false, message: "File not found.", data: null };
+    }
+    const copyCommand = new CopyObjectCommand({
+      Bucket: process.env._AWS_UPLOAD_BUCKET!,
+      CopySource: `${process.env._AWS_UPLOAD_BUCKET!}/${fileKey}`,
+      Key: destPath,
+      MetadataDirective: "COPY",
+    });
+    let res = await s3.send(copyCommand);
+
+    if (res.$metadata.httpStatusCode !== 200) {
+      return { ok: false, message: "Failed to copy file.", data: null };
+    }
+
+    return { ok: true, message: "File copied.", data: null };
+  } catch (err) {
+    console.error("Error deleting file:", err);
+    return { ok: false, message: "Failed to copy file.", data: null };
   }
 }
 

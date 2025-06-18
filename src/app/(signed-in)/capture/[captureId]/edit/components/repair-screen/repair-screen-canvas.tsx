@@ -8,6 +8,8 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
+  RefObject,
 } from "react";
 import Image from "next/image";
 import {
@@ -48,6 +50,7 @@ import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
 import { FrameData, GestureOption } from "../types";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
+import { Platform } from "@/lib/utils";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -82,13 +85,15 @@ export default function RepairScreenCanvas({
   setGesture,
   gestureOptions,
   os,
+  isLastScreen
 }: {
   screen: FrameData;
   vh: any;
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
-  os: string;
+  os: Platform;
+  isLastScreen: boolean
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
@@ -119,6 +124,8 @@ export default function RepairScreenCanvas({
 
   // Set initial marker position on image
   const handleImageClick = () => {
+    // if last screen, disable gesture setting
+    if (isLastScreen) { return; }
     if (width && height) {
       const relativeX = mouse.elementX / width;
       const relativeY = mouse.elementY / height;
@@ -197,7 +204,7 @@ export default function RepairScreenCanvas({
           width,
           height,
           class: node.class_name,
-          id: node.id || `null_id_${Math.random().toString()}`,
+          id: node.id || "null_id",
         });
       }
       if (node.children && node.children.length > 0) {
@@ -247,35 +254,42 @@ export default function RepairScreenCanvas({
         >
           <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
             <div
-              className="relative w-auto h-full"
+              className="relative w-fit inline-flex h-full"
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
             >
               <DroppableArea>
                 <AnimatePresence>
                   {/* Only show floating tooltip when no marker is placed  */}
-                  {tooltip!.x && tooltip!.y && !gesture.x && !gesture.y ? (
-                    <motion.div
-                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
-                      initial={{
-                        x: 8 + tooltip!.x,
-                        y: 8 + tooltip!.y,
-                        opacity: 0,
-                      }}
-                      animate={{
-                        x: 8 + tooltip!.x,
-                        y: 8 + tooltip!.y,
-                        opacity: 1,
-                      }}
-                      exit={{
-                        x: 8 + tooltip!.x,
-                        y: 8 + tooltip!.y,
-                        opacity: 0,
-                      }}
-                      transition={{ duration: 0.05 }}
-                    >
-                      <span className="text-xs font-medium">Add a gesture</span>
-                    </motion.div>
-                  ) : null}
+                  {tooltip!.x && 
+                    tooltip!.y && 
+                    !gesture.x && 
+                    !gesture.y && 
+                    !isLastScreen ? (
+                      <motion.div
+                        className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                        initial={{
+                          x: 8 + tooltip!.x,
+                          y: 8 + tooltip!.y,
+                          opacity: 0,
+                        }}
+                        animate={{
+                          x: 8 + tooltip!.x,
+                          y: 8 + tooltip!.y,
+                          opacity: 1,
+                        }}
+                        exit={{
+                          x: 8 + tooltip!.x,
+                          y: 8 + tooltip!.y,
+                          opacity: 0,
+                        }}
+                        transition={{ duration: 0.05 }}
+                      >
+                        <span className="text-xs font-medium">
+                          Add a gesture
+                        </span>
+                    </motion.div>) : 
+                    null
+                  }
                 </AnimatePresence>
                 {markerPixelPosition.x !== null &&
                 markerPixelPosition.y !== null ? (
@@ -286,7 +300,7 @@ export default function RepairScreenCanvas({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className="w-auto h-full rounded-lg cursor-crosshair"
+                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair "} w-auto h-full rounded-lg select-none`}
                   width={0}
                   height={0}
                   sizes="100vw"
@@ -294,8 +308,11 @@ export default function RepairScreenCanvas({
                   onMouseMove={() => {
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
                   }}
+                  onMouseLeave={() => {
+                    setTooltip({ x: null, y: null });
+                  }}
                 />
-                {os === "android" ? (
+                {os === Platform.ANDROID ? (
                   <BoundingBoxOverlay
                     showBoxes={showBoxes}
                     mergedRef={
@@ -311,7 +328,7 @@ export default function RepairScreenCanvas({
                 )}
               </DroppableArea>
             </div>
-            {os === "android" ? (
+            {os === Platform.ANDROID ? (
               <FocusedElementTab
                 showBoxes={showBoxes}
                 setShowBoxes={setShowBoxes}
@@ -330,7 +347,7 @@ export default function RepairScreenCanvas({
 function DroppableArea({ children }: { children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id: "screenshot" });
   return (
-    <div ref={setNodeRef} className="relative w-full h-full">
+    <div ref={setNodeRef} className="relative w-full h-full" data-droppable>
       {children}
     </div>
   );
@@ -347,12 +364,13 @@ function DraggableMarker({
       id: "gestureMarker",
     });
 
-  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
+  const { gesture, gestureOptions } = useContext(GestureContext);
 
   return (
     <>
       <motion.div
         ref={setNodeRef}
+        data-marker
         style={{
           left: `calc(${position.x ?? 0}px - var(--marker-radius))`,
           top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
@@ -377,23 +395,94 @@ function DraggableMarker({
           <CircleDashed className="size-4 text-yellow-800 hover:text-black" />
         )}
       </motion.div>
-      <div
-        className="absolute z-50 ml-2"
-        style={{
-          left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
-          top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
-          transform: `translate3d(${transform?.x ?? 0}px, ${
-            transform?.y ?? 0
-          }px, 0)`,
-        }}
-      >
-        <GestureSelection />
-      </div>
+
+      <GestureMenu 
+        position={position} 
+        transform={transform} 
+      />
     </>
   );
 }
 
-function GestureSelection() {
+function GestureMenu({
+  position,
+  transform,
+}: {
+  position: { x: number | null; y: number | null };
+  transform: {x: number; y: number; scaleX: number; scaleY: number;} | null
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
+  const { gesture, setGesture } = useContext(GestureContext);
+
+  useEffect(() => {
+    // Get the marker's position and droppable area height
+    const droppableElement = document.querySelector('[data-droppable]');
+    const droppableRect = droppableElement?.getBoundingClientRect();
+    
+    // If marker is in bottom 25% of droppable area, place textarea above
+    const shouldPlaceAbove = (droppableRect 
+      && position.y !== null
+      && position.y > droppableRect.height * 0.8) || false;
+    if (shouldPlaceAbove !== placeTextareaAbove) {
+      setPlaceTextareaAbove(shouldPlaceAbove);
+    }
+  }, [position, placeTextareaAbove])
+
+  return (
+    <div
+    className="absolute z-50 ml-2"
+    style={{
+      left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
+      top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
+      transform: `translate3d(${transform?.x ?? 0}px, ${
+        transform?.y ?? 0
+      }px, 0)`,
+    }}
+  >
+    {placeTextareaAbove && (
+      <div className="absolute mb-1 w-full" style={{top: "-180%"}}>
+        <Textarea
+          ref={textareaRef}
+          className="text-sm w-full h-full bg-background!"
+          placeholder="How did you interact with this element?"
+          value={gesture.description ? gesture.description : ""}
+          onChange={(e) =>
+            setGesture((prev) => ({
+              ...prev,
+              description: e.target.value,
+            }))
+          }
+        />
+      </div>
+    )}
+
+    <GestureSelection textareaRef={textareaRef} />
+
+    {!placeTextareaAbove && (
+      <div className="absolute mt-1 w-full">
+        <Textarea
+          ref={textareaRef}
+          className="text-sm w-full h-full bg-background!"
+          placeholder="How did you interact with this element?"
+          value={gesture.description ? gesture.description : ""}
+          onChange={(e) =>
+            setGesture((prev) => ({
+              ...prev,
+              description: e.target.value,
+            }))
+          }
+        />
+      </div>
+    )}
+  </div>
+  )
+}
+
+function GestureSelection(
+  { textareaRef }: 
+  { textareaRef: RefObject<HTMLTextAreaElement> }
+) {
   const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState(gesture.type);
@@ -415,115 +504,124 @@ function GestureSelection() {
     }
   }, [value, setGesture]);
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-50 justify-between"
-        >
-          {value
-            ? gestureOptions
-                .flat()
-                .flatMap((option) => [option, ...(option.subGestures ?? [])])
-                .find((option) => option.value === value)?.label
-            : "Select gesture..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-50 p-0">
-        <Command>
-          <CommandInput placeholder="Search gestures..." />
-          <CommandList>
-            <CommandEmpty>No framework found.</CommandEmpty>
-            <CommandGroup>
-              {gestureOptions.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    if (option.subGestures === undefined) {
-                      setValue(currentValue === value ? "" : currentValue);
-                      setOpen(false);
-                    }
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
+  useEffect(() => {
+    if (value) {
+      // Focus the description box when a gesture is selected
+      textareaRef.current?.focus();
+    }
+  }, [value]);
 
-                  {option.subGestures && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={null}
-                          className="relative w-full h-full"
-                        >
-                          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-50 p-0"
-                        align="start"
-                        side="right"
-                      >
-                        <Command>
-                          <CommandList>
-                            {option.subGestures.map(
-                              (gesture: GestureOption) => (
-                                <CommandItem
-                                  key={gesture.value}
-                                  value={gesture.value}
-                                  onSelect={(currentValue) => {
-                                    setValue(
-                                      currentValue === value ? "" : currentValue
-                                    );
-                                    setOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "h-4 w-4",
-                                      gesture.value === value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {gesture.label}
-                                </CommandItem>
-                              )
+  return (
+    <div className="relative">      
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-50 justify-between"
+          >
+            {value
+              ? gestureOptions
+                  .flat()
+                  .flatMap((option) => [option, ...(option.subGestures ?? [])])
+                  .find((option) => option.value === value)?.label
+              : "Select gesture..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-50 p-0">
+          <Command>
+            <CommandInput placeholder="Search gestures..." />
+            <CommandList>
+              <CommandEmpty>No framework found.</CommandEmpty>
+              <CommandGroup>
+                {gestureOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={(currentValue) => {
+                      if (option.subGestures === undefined) {
+                        setValue(currentValue === value ? "" : currentValue);
+                        setOpen(false);
+                      }
+                    }}
+                  >
+                    {option.subGestures ? (
+                      <Popover>
+                        <PopoverTrigger className="flex justify-between items-center w-full">
+                          <span className="inline-flex items-center gap-2">
+                            {value === option.value ? (
+                              <Check className="size-4" />
+                            ) : option.subGestures.some(
+                                (gesture: GestureOption) =>
+                                  gesture.value === value
+                              ) ? (
+                              <div className="inline-flex justify-center items-center size-4 text-lg">
+                                •
+                              </div>
+                            ) : (
+                              <div className="size-4"></div>
                             )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-      <div className="flex flex-col bg-white dark:bg-black mt-1">
-        <Textarea
-          className="text-sm w-full h-full opacity-100"
-          placeholder="How did you interact with this element?"
-          value={gesture.description ? gesture.description : ""}
-          onChange={(e) =>
-            setGesture((prev) => ({
-              ...prev,
-              description: e.target.value,
-            }))
-          }
-        />
-      </div>
-    </Popover>
+
+                            {option.label}
+                          </span>
+                          <ChevronRight className="size-4" />
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-50 p-0"
+                          align="start"
+                          side="right"
+                        >
+                          <Command>
+                            <CommandList>
+                              {option.subGestures.map(
+                                (gesture: GestureOption) => (
+                                  <CommandItem
+                                    key={gesture.value}
+                                    value={gesture.value}
+                                    onSelect={(currentValue) => {
+                                      setValue(
+                                        currentValue === value ? "" : currentValue
+                                      );
+                                      setOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "h-4 w-4",
+                                        gesture.value === value
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {gesture.label}
+                                  </CommandItem>
+                                )
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span className="inline-flex items-center gap-2">
+                        <Check
+                          className={cn(
+                            "h-4 w-4",
+                            value === option.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {option.label}
+                      </span>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
