@@ -1,6 +1,6 @@
 // app/api/capture/[captureId]/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { handleAndroidScreenUpload, updateCapture } from '@/lib/actions';
+import { handleAndroidScreenUpload, processCaptureFiles, updateCapture } from '@/lib/actions';
 
 export async function POST(
     request: NextRequest,
@@ -28,12 +28,14 @@ export async function POST(
                 );
             }
 
-            console.log('Upload successful:', result.data);
+            console.log('Upload successful');
             console.log("update capture with url")
             const capture = await updateCapture(captureId, {
                 src: result.data.url
             })
             console.log("updated capture:", capture)
+
+            processCaptureFiles(result.data.fileKey);
 
             return NextResponse.json(
                 { message: 'Upload successful'},

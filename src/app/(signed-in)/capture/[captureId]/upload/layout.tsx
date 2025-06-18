@@ -1,4 +1,5 @@
 import { getCapture, getIosApp } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -20,18 +21,23 @@ export async function generateMetadata({
     }
   });
 
-  if (capture.task.os === "ios") {
-    let app = await getIosApp({ appId: capture.app.packageName });
+  if ((capture.task.os as Platform) === Platform.IOS 
+    && capture.app?.packageName) {
+    try {
+      let app = await getIosApp({ appId: capture.app.packageName });
 
-    if (app.ok) {
-      const metadata: Metadata = {
-        title: "Upload Capture",
-        other: {
-          "apple-itunes-app": `app-id=${app.data.id}`,
-        },
-      };
+      if (app.ok) {
+        const metadata: Metadata = {
+          title: "Upload Capture",
+          other: {
+            "apple-itunes-app": `app-id=${app.data.id}`,
+          },
+        };
 
-      return metadata;
+        return metadata;
+      }
+    } catch (error) {
+      console.error("Failed to fetch iOS app data:", error);
     }
   }
 

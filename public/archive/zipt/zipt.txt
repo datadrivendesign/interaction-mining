@@ -1,0 +1,9 @@
+@inproceedings{Deka:2017:ZIPT,
+ author = {Deka, Biplab and Huang, Zifeng and Franzen, Chad and Nichols, Jeffrey and LI, Yang and Kumar, Ranjitha},
+ title = {ZIPT: Zero-Integration Performance Testing of Mobile App Designs},
+ booktitle = {Proceedings of the 30th Annual Symposium on User Interface Software and Technology},
+ series = {UIST '17},
+ year = {2017},
+ keywords = {App design; design support tools; zero-integration
+performance testing},
+}

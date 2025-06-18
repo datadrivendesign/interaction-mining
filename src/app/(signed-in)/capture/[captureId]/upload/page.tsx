@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useCallback, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,7 +20,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
 import {
   Card,
   CardContent,
@@ -29,8 +28,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
 import { Button } from "@/components/ui/button";
+
 import { cn } from "@/lib/utils";
 
 import {
@@ -50,27 +49,25 @@ export default function Page() {
     includes: { app: true, task: true },
   });
 
-  // @ts-ignore app is in there it just doesn't know it :)
   const app = capture?.app;
 
   const { data: uploadList } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
-    fileFetcher,
-    {
-      refreshInterval: 10,
-    }
+    fileFetcher
   );
 
-  // File submission logic
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  const handleSubmit = async (_: any, formData: FormData) => {
-    return await handleUploadFile(captureId, formData).then((res) => {
-      setFile(null);
-      return res;
-    });
-  };
+  const handleSubmit = useCallback(
+    async (_: any, formData: FormData) => {
+      return await handleUploadFile(captureId, formData).then((res) => {
+        setFile(null);
+        return res;
+      });
+    },
+    [captureId]
+  );
 
   const [state, formAction, pending] = useActionState(handleSubmit, null);
 
@@ -193,6 +190,12 @@ export default function Page() {
             )}
           </div>
 
+          <div className="font-semibold mb-4">
+            <article>
+              Please turn on &ldquo;Do not Disturb&rdquo; on your phone to block notifications while recording.
+            </article>
+          </div>
+
           <Accordion
             type="single"
             collapsible
@@ -306,7 +309,7 @@ export default function Page() {
             </span>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end">
+        <CardFooter className="flex justify-end items-center">
           <form action={formAction}>
             <input
               hidden

@@ -7,7 +7,7 @@ import {
 
 export default function NotFound() {
   return (
-    <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">
+    <div className="flex w-dvw min-h-[calc(100dvh-64px)] justify-center items-center p-8 md:p-16">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>Not Found</CardTitle>

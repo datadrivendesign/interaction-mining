@@ -25,7 +25,7 @@ export async function traceFetcher([_, traceId, options]: [
 
 export function useTrace(traceId: string, options: TraceFetcherOptions = {}) {
   const { data, error, isLoading } = useSWR(
-    ["capture", traceId, options],
+    ["trace", traceId, options],
     traceFetcher
   );
 

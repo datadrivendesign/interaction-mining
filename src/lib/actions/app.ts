@@ -3,20 +3,13 @@
 import { prisma } from "@/lib/prisma";
 import { App, Prisma } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
-
-interface GetAppParams {
-  limit?: number;
-  page?: number;
-  query?: string;
-  order?: "name" | "rating" | "downloads";
-  sort?: "asc" | "desc";
-}
+import { Platform } from "@/lib/utils";
 
 export type AppItemList = {
   id: string;
   package: string;
   name: string;
-  os: string;
+  os: Platform;
 };
 
 export type AppInput = {
@@ -37,55 +30,51 @@ export type AppInput = {
     downloads: string,
     url: string,
   },
-  os: "android" | "ios"
+  os: Platform
 }
-    
+
+export interface GetAppsParams {
+  /** Simple full-text search (name, description, etc.) */
+  query?: string;
+  /** Deep-dive filters: any Prisma.AppWhereInput you want */
+  where?: Prisma.AppWhereInput;
+  /** Sort order (defaults to downloads desc) */
+  orderBy?: Prisma.AppOrderByWithRelationInput;
+  /** Pagination */
+  page?: number;
+  limit?: number;
+}
 
 export async function getApps({
-  limit,
+  query,
+  where = {},
+  orderBy = { metadata: { downloads: "desc" } },
   page = 1,
-  query = "",
-  order = "downloads",
-  sort = "desc",
-}: GetAppParams = {}) {
-  let app: App[] = [];
-
-  try {
-    const options: Prisma.AppFindManyArgs = {
-      where: {
-        metadata: {
-          is: {
-            name: {
-              contains: query,
-              mode: "insensitive",
+  limit = 10,
+}: GetAppsParams = {}) {
+  // build a base “where” that overlays text search onto any custom filters
+  const query_: Prisma.AppWhereInput = {
+    ...where,
+    ...(query || query !== ""
+      ? {
+          metadata: {
+            is: {
+              name: {
+                contains: query,
+                mode: "insensitive",
+              },
             },
           },
-        },
-      },
-      orderBy: {
-        metadata: {
-          [order]: sort,
-        },
-      },
-    } as Prisma.AppFindManyArgs;
+        }
+      : {}),
+  };
 
-    // if limit is not provided, return all apps
-    if (limit) {
-      options.take = limit;
-    }
-
-    // if page and limit are provided, calculate the offset
-    if (page && limit) {
-      options.skip = (page - 1) * limit;
-    }
-
-    app = await prisma.app.findMany(options);
-  } catch (err: any) {
-    console.error(err);
-    throw new Error("Failed to fetch apps.");
-  }
-
-  return app;
+  return prisma.app.findMany({
+    where: query_,
+    orderBy,
+    take: limit,
+    skip: limit ? (page - 1) * limit : undefined,
+  });
 }
 
 export async function getApp(id: string): Promise<App | null> {
@@ -148,7 +137,7 @@ export async function getAppByPackageName(
 
 export async function checkIfAppExists(
   packageName: string, 
-  os: string
+  os: Platform
 ): Promise<boolean> {
   if (!packageName) return false;
 
@@ -167,7 +156,7 @@ export async function checkIfAppExists(
 }
 
 export async function saveApp(
-  appData: AppInput
+  appData: Prisma.AppCreateInput
 ): Promise<{ ok: boolean; data: App | null }> {
   if (!appData || !appData.packageName) return { ok: false, data: null };
 
@@ -188,19 +177,19 @@ export async function saveApp(
       data: {
         packageName: appData.packageName,
         category: appData.category || null,
-        metadata: {
-          company: appData.metadata.company,
-          name: appData.metadata.name,
-          cover: appData.metadata.cover,
-          description: appData.metadata.description,
-          icon: appData.metadata.icon,
-          rating: appData.metadata.rating,
-          reviews: appData.metadata.reviews,
-          genre: appData.metadata.genre,
-          downloads: appData.metadata.downloads,
-          url: appData.metadata.url,
-        },
         os: appData.os,
+        metadata: {
+          company: appData.metadata.company!,
+          name: appData.metadata.name!,
+          cover: appData.metadata.cover!,
+          description: appData.metadata.description!,
+          icon: appData.metadata.icon!,
+          rating: appData.metadata.rating!,
+          reviews: appData.metadata.reviews!,
+          genre: appData.metadata.genre!,
+          downloads: appData.metadata.downloads!,
+          url: appData.metadata.url!,
+        },
       },
     });
 
