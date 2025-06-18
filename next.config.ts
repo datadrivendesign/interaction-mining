@@ -5,7 +5,8 @@ import { RemotePattern } from "next/dist/shared/lib/image-config";
 const remotePatterns: RemotePattern[] = [
   {
     protocol: "https",
-    hostname: "play-lh.googleusercontent.com",
+    hostname: "*.googleusercontent.com",
+    pathname: "**",
   },
   {
     protocol: "https",
@@ -40,7 +41,14 @@ if (process.env.MINIO_ENDPOINT) {
 }
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: ["@svgr/webpack"],
+        as: "*.js",
+      },
+    },
+  },
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   images: {
     remotePatterns,
@@ -49,13 +57,38 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "500mb",
     },
-    nodeMiddleware: true,
     viewTransition: true,
     reactCompiler: true,
   },
   webpack: (config) => {
+    // Canvas is a Node.js package that needs to be polyfilled in the browser
     config.externals = [...config.externals, { canvas: "canvas" }];
     config.resolve.fallback = { fs: false };
+
+    // Grab the existing rule that handles SVG imports
+    const fileLoaderRule = config.module.rules.find((rule: any) =>
+      rule.test?.test?.(".svg")
+    );
+
+    config.module.rules.push(
+      // Reapply the existing rule, but only for svg imports ending in ?url
+      {
+        ...fileLoaderRule,
+        test: /\.svg$/i,
+        resourceQuery: /url/, // *.svg?url
+      },
+      // Convert all other *.svg imports to React components
+      {
+        test: /\.svg$/i,
+        issuer: fileLoaderRule.issuer,
+        resourceQuery: { not: [...fileLoaderRule.resourceQuery.not, /url/] }, // exclude if *.svg?url
+        use: ["@svgr/webpack"],
+      }
+    );
+
+    // Modify the file loader rule to ignore *.svg, since we have it handled now.
+    fileLoaderRule.exclude = /\.svg$/i;
+
     return config;
   },
 };

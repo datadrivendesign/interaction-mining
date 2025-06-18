@@ -1,7 +1,6 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -15,18 +14,17 @@ import { Role } from "@prisma/client";
 
 export default function NavigationBar() {
   return (
-    <nav className="sticky z-40 top-0 flex w-full h-16 justify-center bg-white dark:bg-black border-b border-neutral-200 dark:border-neutral-800">
-      <div className="flex w-full max-w-screen-2xl px-4 py-4 justify-between">
+    <nav className="sticky z-40 top-0 flex w-full h-16 justify-center bg-background border-b border-muted-background">
+      <div className="flex w-full max-w-screen-2xl p-4 lg:px-6 lg:py-4 justify-between">
         <div className="flex basis-1/2 h-full">
           <Link
             href={"/"}
-            className="text-2xl font-title tracking-tighter"
-            style={{ fontWeight: 900, fontStretch: "ultra-expanded" }}
+            className="text-2xl font-semibold leading-none tracking-tighter"
           >
-            ODIM
+            Interaction Mining
           </Link>
         </div>
-        <div className="flex basis-1/2 h-full gap-6 justify-end items-center">
+        <div className="flex basis-1/2 h-full gap-4 lg:gap-6 justify-end items-center">
           <SessionContent />
         </div>
       </div>
@@ -40,7 +38,7 @@ function SessionContent() {
   if (status === "loading") {
     return (
       <>
-        <Avatar>
+      <Avatar>
           <AvatarFallback className="animate-pulse" />
         </Avatar>
       </>
