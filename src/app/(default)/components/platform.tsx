@@ -14,7 +14,7 @@ export default function Platform() {
               <span className="text-foreground font-semibold tracking-tight">
                 Built on trust.
               </span>{" "}
-              Contributers collect, clean, and annotate their own interaction data before sharing it.
+              Contributors collect, clean, and annotate their own interaction data before sharing it.
             </p>
             <p className="inline-flex items-center w-full max-w-md text-3xl text-muted-foreground font-medium tracking-tight">
               Let&lsquo;s try{" "}<span className="px-3 py-1 mx-2 rounded-full ring ring-neutral-200 dark:ring-neutral-800 text-foreground cursor-pointer">repairing</span>{" "}your trace.
