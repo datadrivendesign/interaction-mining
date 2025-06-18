@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import Dataset from "./components/dataset";
-import Platform from "./components/platform";
 
 export default function Home() {
   return (

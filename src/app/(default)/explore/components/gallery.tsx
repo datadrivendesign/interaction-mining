@@ -13,7 +13,12 @@ import {
 import Image from "next/image";
 import { Prisma } from "@prisma/client";
 import { Search } from "lucide-react";
-import { App } from "@prisma/client";
+
+import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAppSearch } from "@/lib/hooks/app";
+import { MobileIcon } from "@radix-ui/react-icons";
+import { TitleMarquee } from "@/components/marquee";
 
 const GalleryContext = createContext<{
   search: {
@@ -132,12 +137,12 @@ export function Gallery() {
             sizes="100vw"
             className="flex grow-0 shrink-0 basis-12 rounded-xl mr-4 aspect-square drop-shadow-md"
           />
-          <div className="flex flex-col justify-center">
-            <h2 className="text-base font-semibold line-clamp-1 leading-tight">
-              {app.metadata.name}
-            </h2>
-            <span className="text-sm text-muted-foreground line-clamp-1 leading-tight">
-              {app.company}
+          <div className="flex flex-col grow min-w-0 justify-center">
+            <TitleMarquee mode="hover" title={app.metadata.name} className="min-w-0">
+              <h2 className="text-sm font-medium leading-tight tracking-tight">{app.metadata.name}</h2>
+            </TitleMarquee>
+            <span className="text-sm text-muted-foreground line-clamp-1 leading-tight truncate">
+              {app.metadata.company || "Unknown Company"}
             </span>
           </div>
         </Link>
