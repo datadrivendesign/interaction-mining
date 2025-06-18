@@ -3,11 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
-
 import { Toaster } from "@/components/ui/sonner";
-import classNames from "classnames";
-import { SessionProvider } from "next-auth/react";
-import Configuration from "../components/configuration";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -47,22 +43,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <Configuration>
-      <SessionProvider>
-        <html lang="en">
-          <body
-            className={cn(
-              inter.variable,
-              interVariable.variable,
-              geistMono.variable,
-              "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth! font-sans"
-            )}
-          >
-            <Toaster />
-            {children}
-          </body>
-        </html>
-      </SessionProvider>
-    </Configuration>
+    <SessionProvider>
+      <html lang="en">
+        <body
+          className={cn(
+            inter.variable,
+            interVariable.variable,
+            geistMono.variable,
+            "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth! font-sans"
+          )}
+        >
+          <Toaster />
+          {children}
+        </body>
+      </html>
+    </SessionProvider>
   );
 }
