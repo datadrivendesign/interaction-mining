@@ -55,7 +55,6 @@ model App {
   os          String
   category    AppsCategory?
   packageName String
-  os          String
   metadata    AppMetadata
   Capture     Capture[]
   Trace       Trace[]
