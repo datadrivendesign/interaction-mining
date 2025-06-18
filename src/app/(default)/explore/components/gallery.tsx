@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useAppSearch } from "@/lib/hooks/app";
 import { MobileIcon } from "@radix-ui/react-icons";
 import { TitleMarquee } from "@/components/marquee";
+import { Platform, prettyOS } from "@/lib/utils";
 
 const GalleryContext = createContext<{
   search: {
@@ -70,7 +71,7 @@ export function GallerySearch() {
   );
 
   const handleSetOS = useCallback(
-    (os: "android" | "ios") => {
+    (os: Platform) => {
       setSearch?.({
         query: search.query,
         where: {
@@ -101,8 +102,12 @@ export function GallerySearch() {
         <SelectContent>
           <SelectGroup>
             <SelectLabel>Platforms</SelectLabel>
-            <SelectItem value="ios"><MobileIcon /> iOS</SelectItem>
-            <SelectItem value="android"><MobileIcon /> Android</SelectItem>
+            <SelectItem value={Platform.IOS}>
+              <MobileIcon />{prettyOS(Platform.IOS)}
+            </SelectItem>
+            <SelectItem value={Platform.ANDROID}>
+              <MobileIcon />{prettyOS(Platform.ANDROID)}
+            </SelectItem>
           </SelectGroup>
         </SelectContent>
       </Select>
