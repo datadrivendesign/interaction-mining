@@ -207,7 +207,7 @@ export default function Page() {
                 <article className="prose prose-neutral dark:prose-invert leading-snug mb-4">
                   <p>
                     Consult your phone or tablet&rsquo;s documentation to learn
-                    how to record your screen.
+                    how to record your screen. <strong>Remember to turn on "Do not disturb" mode before you start recording.</strong>
                   </p>
                 </article>
                 <Link
