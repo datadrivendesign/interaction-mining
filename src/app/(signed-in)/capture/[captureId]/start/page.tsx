@@ -203,7 +203,7 @@ export default function Page() {
             <CardTitle className="text-2xl">Task recording</CardTitle>
             <CardDescription>
               Your recorded task video will appear here once you start uploading
-              them from your device. <strong>Remember to turn on "Do not disturb" mode before you start recording.</strong>
+              them from your device. <strong>Remember to turn on &ldquo;Do not Disturb&rdquo; mode before you start recording.</strong>
             </CardDescription>
           </CardHeader>
           <CardContent>
