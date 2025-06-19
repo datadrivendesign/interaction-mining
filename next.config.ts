@@ -21,7 +21,7 @@ const remotePatterns: RemotePattern[] = [
 if (process.env._AWS_CLOUDFRONT_URL) {
   remotePatterns.push({
     protocol: "https",
-    hostname: process.env._AWS_CLOUDFRONT_URL,
+    hostname: new URL(process.env._AWS_CLOUDFRONT_URL).hostname,
   });
 }
 
