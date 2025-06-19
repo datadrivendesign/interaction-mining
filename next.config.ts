@@ -16,11 +16,15 @@ const remotePatterns: RemotePattern[] = [
     protocol: "https",
     hostname: "*.mzstatic.com",
   },
-  {
-    protocol: "https",
-    hostname: "d1nrlpeg5tvzyr.cloudfront.net",
-  },
 ];
+// conditionally add cloudfront url if set
+if (process.env._AWS_CLOUDFRONT_URL) {
+  remotePatterns.push({
+    protocol: "https",
+    hostname: process.env._AWS_CLOUDFRONT_URL,
+  });
+}
+
 // Conditionally add MinIO endpoint if set
 if (process.env.MINIO_ENDPOINT) {
   try {
