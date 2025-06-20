@@ -21,7 +21,7 @@ export default async function Layout({
   // Check if the capture has any uploaded files
   const render = (
     <>
-      <AuthorizedRoute resourceUserId={trace.data.userId}>
+      <AuthorizedRoute resourceUserId={trace.data.userId ?? undefined}>
         {children}
       </AuthorizedRoute>
     </>
