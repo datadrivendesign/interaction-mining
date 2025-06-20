@@ -50,7 +50,7 @@ export default async function Layout({
 
   return (
     <>
-      <AuthorizedRoute resourceUserId={capture.data?.userId}>
+      <AuthorizedRoute resourceUserId={capture.data?.userId ?? undefined}>
         {children}
       </AuthorizedRoute>
     </>
