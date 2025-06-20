@@ -1,13 +1,15 @@
+import { Platform } from "./platform";
+
 export const prettyOS = (os: string) => {
   // case insensitive
   const osLower = os.toLowerCase();
 
   switch (osLower) {
-    case "ios":
+    case Platform.IOS:
       return "iOS";
-    case "android":
+    case Platform.ANDROID:
       return "Android";
-    case "web":
+    case Platform.WEB:
       return "Web";
     default:
       return "Unknown Platform";

@@ -1,5 +1,11 @@
 "use client";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import { CircleAlert } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -13,20 +19,22 @@ import {
 
 import RedactScreenCanvas from "./redact-screen-canvas";
 import { Redaction } from "../types";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { TraceFormData } from "../types";
 import { FrameData } from "../types";
+
 
 export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();
   const screens = getValues("screens") as FrameData[];
-  const redactions = getValues("redactions") as {
-    [screenId: string]: Redaction[];
-  };
-  // TODO: pass vh by watch, then pass by prop in readct-screen-canvas
   const vhs = getValues("vhs") as { [key: string]: any };
+  const [watchRedactions] = useWatch({
+    name: ["redactions"],
+  });
+  const redactions = watchRedactions || {};
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
+  const [copied, setCopied] = useState<Redaction | null>(null);
 
   const handlePrevious = useCallback(() => {
     if (focusViewIndex > 0) {
@@ -40,8 +48,14 @@ export default function RedactScreen() {
     }
   }, [focusViewIndex, screens]);
 
+  const handleTab = useCallback(() => {
+    const wrappedIndex = (focusViewIndex + 1) % screens.length;
+    setFocusViewIndex(wrappedIndex);
+  }, [focusViewIndex, screens]);
+
   useHotkeys("left", handlePrevious);
   useHotkeys("right", handleNext);
+  useHotkeys("tab", handleTab);
 
   return (
     <div className="flex w-full h-full">
@@ -52,6 +66,8 @@ export default function RedactScreen() {
               key={focusViewIndex}
               screen={screens[focusViewIndex]}
               vh={vhs[screens[focusViewIndex].id]}
+              copied={copied}
+              setCopied={setCopied}
             />
           ) : (
             <div className="flex justify-center items-center w-full h-full">
@@ -62,7 +78,7 @@ export default function RedactScreen() {
           )}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+        <ResizablePanel defaultSize={20} minSize={20} maxSize={50}>
           <Filmstrip
             screens={screens}
             redactions={redactions}
@@ -75,11 +91,21 @@ export default function RedactScreen() {
   );
 }
 
-function FocusView({ screen, vh }: { screen: FrameData; vh: any }) {
+function FocusView(
+  { screen, vh, copied, setCopied }:
+    {
+      screen: FrameData;
+      vh: any,
+      copied: Redaction | null,
+      setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>
+    }
+) {
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
-        <RedactScreenCanvas screen={screen} vh={vh} />
+        <RedactScreenCanvas
+          screen={screen} vh={vh} copied={copied} setCopied={setCopied}
+        />
       </div>
     </>
   );
@@ -119,6 +145,7 @@ function FilmstripItem({
   index = 0,
   isSelected = false,
   hasError = false,
+  children,
   ...props
 }: {
   screen: FrameData;
@@ -165,17 +192,16 @@ function FilmstripItem({
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
-
+  }, [redactions]);
   return (
     <li
-      className="cursor-pointer min-w-fit h-full relative"
+      className="cursor-pointer min-w-fit h-full"
       data-index={index}
       {...props}
     >
       <div
         ref={containerRef}
-        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none"
+        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
       >
         {(isSelected || hasError) && (
           <div
@@ -198,47 +224,54 @@ function FilmstripItem({
             )}
           </div>
         )}
-        <Image
-          ref={imageRef}
-          src={screen.src}
-          alt="gallery"
-          draggable={false}
-          className="h-full w-auto object-contain"
-          onLoad={updateSize}
-          width={0}
-          height={0}
-          sizes="100vw"
-        />
-        {/* Render redaction overlays using the natural dimensions and scale factors */}
-        {imgDimensions.width > 0 &&
-          redactions.map((rect, idx) => (
-            <div
-              key={idx}
-              style={{
-                position: "absolute",
-                top:
-                  imgDimensions.offsetY +
-                  rect.y *
-                    imageRef.current!.naturalHeight *
-                    imgDimensions.scaleY,
-                left:
-                  imgDimensions.offsetX +
-                  rect.x *
+        <div
+          className={cn(
+            "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
+            hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100"
+          )}
+        >
+          <Image
+            ref={imageRef}
+            key={screen.id}
+            src={screen.src}
+            alt="gallery"
+            draggable={false}
+            className="h-full w-auto object-contain"
+            width={0}
+            height={0}
+            sizes="100vw"
+          />
+          {/* Render redaction overlays using the natural dimensions and scale factors */}
+          {imgDimensions.width > 0 &&
+            redactions.map((rect, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: "absolute",
+                  top:
+                    imgDimensions.offsetY +
+                    rect.y *
+                      imageRef.current!.naturalHeight *
+                      imgDimensions.scaleY,
+                  left:
+                    imgDimensions.offsetX +
+                    rect.x *
+                      imageRef.current!.naturalWidth *
+                      imgDimensions.scaleX,
+                  width:
+                    rect.width *
                     imageRef.current!.naturalWidth *
                     imgDimensions.scaleX,
-                width:
-                  rect.width *
-                  imageRef.current!.naturalWidth *
-                  imgDimensions.scaleX,
-                height:
-                  rect.height *
-                  imageRef.current!.naturalHeight *
-                  imgDimensions.scaleY,
-                backgroundColor: "black",
-                border: "1px solid black",
-              }}
-            />
-          ))}
+                  height:
+                    rect.height *
+                    imageRef.current!.naturalHeight *
+                    imgDimensions.scaleY,
+                  backgroundColor: "black",
+                  border: "1px solid black",
+                }}
+              />
+            ))}
+        </div>
       </div>
     </li>
   );

@@ -4,23 +4,25 @@
 
 @config '../../tailwind.config.ts';
 
-@utility text-balance {
-  text-wrap: balance;
-}
-
 @layer base {
   :root {
     --foreground: var(--color-black);
-    --background: var(--color-white);
+    --dimmed-foreground: var(--color-neutral-900);
     --muted-foreground: var(--color-neutral-500);
+
+    --background: var(--color-white);
+    --dimmed-background: var(--color-neutral-50);
     --muted-background: var(--color-neutral-100);
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
       --foreground: var(--color-white);
-      --background: var(--color-black);
+      --dimmed-foreground: var(--color-neutral-100);
       --muted-foreground: var(--color-neutral-400);
+
+      --background: var(--color-black);
+      --dimmed-background: var(--color-neutral-950);
       --muted-background: var(--color-neutral-900);
     }
   }
@@ -31,6 +33,10 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-caret-blink: caret-blink 0.2s ease-out infinite;
   --radius: 0.5rem;
+
+  --font-sans: InterVariable, Inter, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --font-display--font-feature-settings: "liga" 1, "calt" 1, "ss03" 1, "ss08" 1;
 
   @keyframes accordion-down {
     0% {
@@ -65,9 +71,16 @@
 
 @theme inline {
   --color-foreground: var(--foreground);
-  --color-background: var(--background);
+  --color-dimmed-foreground: var(--dimmed-foreground);
   --color-muted-foreground: var(--muted-foreground);
+
+  --color-background: var(--background);
+  --color-dimmed-background: var(--dimmed-background);
   --color-muted-background: var(--muted-background);
+}
+
+@utility text-balance {
+  text-wrap: balance;
 }
 
 html {
@@ -78,4 +91,9 @@ html {
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
 }

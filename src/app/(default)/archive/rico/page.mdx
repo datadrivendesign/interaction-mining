@@ -1,0 +1,517 @@
+import Image from "next/image";
+import Link from "next/link";
+import { Download } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+export const metadata = {
+  title: "RICO — Interaction Mining",
+};
+
+
+<h1 className="text-center text-8xl font-black tracking-tight mb-8">RICO</h1>
+
+<iframe className="w-full h-auto aspect-video mb-8" src="https://www.youtube.com/embed/aC0NEXaS610" title="Rico: A Mobile App Dataset for Building Data-Driven Design Applications" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+
+<div className="not-prose">
+  <Card>
+    <CardContent className="flex flex-wrap justify-between items-center">
+      <span className="text-2xl font-semibold">Download Rico</span>
+      <Link href="#quick-downloads" rel="noopener noreferrer">
+        <Button>
+          Download
+        </Button>
+      </Link>
+    </CardContent>
+  </Card>
+</div>
+
+Data-driven models help mobile app designers understand best practices and trends, and can be used to make predictions about design performance and support the creation of adaptive UIs. **This paper presents Rico, the largest repository of mobile app designs to date, created to support five classes of data-driven applications: design search, UI layout generation, UI code generation, user interaction modeling, and user perception prediction.** To create Rico, we built a system that combines crowdsourcing and automation to scalably mine design and interaction data from Android apps at runtime. The Rico dataset contains design data from more than 9.3k Android apps spanning 27 categories. It exposes visual, textual, structural, and interactive design properties of more than 66k unique UI screens. To demonstrate the kinds of applications that Rico enables, we present results from training an autoencoder for UI layout similarity, which supports query-by-example search over UIs. 
+
+<div className="grid grid-cols-3 w-full not-prose mt-8 gap-6">
+  <div className="flex flex-col col-span-1">
+    <Image
+      src="/archive/rico/rico_thumbnail.png"
+      alt="Rico paper"
+      className="w-full mb-2 rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+    <Link href="https://ranjithakumar.net/resources/rico.pdf" className="underline">
+      Download (19MB) ↓
+    </Link>
+  </div>
+  <div className="flex flex-col grow col-span-2">
+    <Card className="h-full">
+      <CardContent className="text-base grow">
+        Biplab Deka, Zifeng Huang, Chad Franzen, Joshua Hibschman, Daniel Afergan, Yang Li, Jeffrey Nichols and Ranjitha Kumar. 2017. <span className="font-bold">Rico: A Mobile App Dataset for Building Data-Driven Design Applications</span>. In Proceedings of the 30th <span className="italic">Annual Symposium on User Interface Software and Technology (UIST &rsquo;17)</span>. 
+
+        <a href="/archive/rico/rico.txt" className="underline">
+          Bibtex
+        </a>
+      </CardContent>
+      <CardFooter className="text-sm">
+        This work was supported in part by a Google Faculty Research Award.
+      </CardFooter>
+    </Card>
+  </div>
+</div>
+
+<div className="grid grid-cols-3 w-full not-prose mt-8 gap-6">
+  <div className="flex flex-col col-span-1">
+    <Image
+      src="/archive/rico/semantic_thumbnail.png"
+      alt="Semantic paper"
+      className="w-full mb-2 rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+    <Link href="https://www.ranjithakumar.net/resources/mobile-semantics.pdf" className="underline">
+      Download (10MB) ↓
+    </Link>
+  </div>
+  <div className="flex flex-col grow col-span-2">
+    <Card className="h-full">
+      <CardContent className="text-base grow">
+        Biplab Deka, Zifeng Huang, Chad Franzen, Joshua Hibschman, Daniel Afergan, Yang Li, Jeffrey Nichols and Ranjitha Kumar. 2017. <span className="font-bold">Rico: A Mobile App Dataset for Building Data-Driven Design Applications</span>. In Proceedings of the 30th <span className="italic">Annual Symposium on User Interface Software and Technology (UIST &rsquo;17)</span>. 
+
+        <a href="/archive/rico/semantic.txt" className="underline">
+          Bibtex
+        </a>
+      </CardContent>
+      <CardFooter className="text-sm">
+        This work was supported in part by a research donation from Adobe, a Google Faculty Research Award, and <a href="https://nsf.gov/awardsearch/showAward?AWD_ID=1750563">NSF Grant IIS-1750563</a>. 
+      </CardFooter>
+    </Card>
+  </div>
+</div>
+
+### The Dataset
+We mined over 9.3k free Android apps from 27 categories to create the Rico dataset. Apps in the dataset had an average user rating of 4.1. The Rico dataset contains visual, textual, structural, and interactive design properties of more than 66k unique UI screens and 3M UI elements. 
+
+<Image
+  src="/archive/rico/figure1.png"
+  alt="RICO figure"
+  className="not-prose w-full rounded shadow-sm"
+  width={0}
+  height={0}
+  sizes="100vw"
+/>
+
+### Data Collection
+<Image src="/archive/rico/figure2.png" alt="RICO data collection" className="not-prose float-right w-1/2 ml-8 mb-4 rounded" width={0} height={0} sizes="100vw rounded" /> Rico was built by mining Android apps at runtime via human-powered and programmatic exploration. Like its predecessor [ERICA](http://www.interactionmining.org/erica.html), Rico&rsquo;s app mining infrastructure requires no access to — or modification of — an app&rsquo;s source code. Apps are downloaded from the Google Play Store and served to crowd workers through a web interface. When crowd workers use an app, the system records a user interaction trace that captures the UIs visited and the interactions performed on them. Then, an automated agent replays the trace to warm up a new copy of the app and continues the exploration programmatically, leveraging a content-agnostic similarity heuristic to efficiently discover new UI states. By combining crowdsourcing and automation, Rico can achieve higher coverage over an app&rsquo;s UI states than either crawling strategy alone. In total, 13 workers recruited on UpWork spent 2,450 hours using apps on the platform over five months, producing 10,811 user interaction traces. After collecting a user trace for an app, we ran the automated crawler on the app for one hour. 
+
+### Design Representation
+<Image src="/archive/rico/figure3.png" alt="RICO design representation" className="not-prose float-right w-1/2 ml-8 mb-4 rounded" width={0} height={0} sizes="100vw" /> For each app, Rico exposes Google Play Store metadata, a set of user interaction traces, and a list of all the unique UIs discovered. The Play Store metadata includes an app&rsquo;s category, average rating, number of ratings, and number of downloads. Each user trace is composed of a sequence of UIs and user interactions that connect them. Each UI comprises a screenshot, an augmented Android view hierarchy, a set of explored user interactions, a set of animations capturing transition effects in response to user interaction, and a learned vector representation of the UI&rsquo;s layout. View hierarchies capture all of the elements comprising a UI, their properties, and relationships between them. For each element, Rico exposes its **visual** properties such as screen position, dimensionality, and visibility, **textual** properties such as class name, id, and displayed text, **structural** properties such as a list of its children in the hierarchy, and **interactive** properties such as the ways a user can interact with it. Additionally, we annotate elements with any Android superclasses that they are derived from (e.g., TextView), which can help third-party applications reason about element types. 
+
+### Deep Learning Applications
+The Rico dataset is large enough to support deep learning applications. We trained an autoencoder to learn an embedding for UI layouts, and used it to annotate each UI with a 64-dimensional vector representation encoding visual layout. This vector representation can be used to compute structurally — and often semantically — similar UIs, supporting example-based search over the dataset. To create training inputs for the autoencoder that embed layout information, we constructed a new image for each UI capturing the bounding box regions of all leaf elements in its view hierarchy, differentiating between text and non-text elements. Rico&rsquo;s view hierarchies obviate the need for noisy image processing or OCR techniques to create these inputs. 
+
+<Image
+  src="/archive/rico/figure4.png"
+  alt="RICO training"
+  className="not-prose w-full rounded shadow-sm"
+  width={0}
+  height={0}
+  sizes="100vw"
+/>
+
+<Card className="mt-8 gap-0">
+  <CardHeader className="not-prose">
+    <CardTitle id="quick-downloads">Quick Downloads</CardTitle>
+  </CardHeader>
+  <CardContent>
+    1. [UI Screenshots and View Hierarchies (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/unique_uis.tar.gz)
+    1. [UI Metadata (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_details.csv)
+    1. [UI Layout Vectors (8 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_layout_vectors.zip)
+    1. [Interaction Traces (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/traces.tar.gz)
+    1. [Animations (214 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/animations.tar.gz)
+    1. [Play Store Metadata (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/app_details.csv)
+    1. [UI Screenshots and Hierarchies with Semantic Annotations (150 MB)](https://storage.cloud.google.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/semantic_annotations.zip)
+  </CardContent>
+  <CardFooter className="not-prose">
+    <Link className="underline" href="/archive/rico/copyright.txt" target="_blank" rel="noopener noreferrer">
+      Copyright Notice ↗
+    </Link>
+  </CardFooter>
+</Card>
+
+
+### 1. UI Screenshots and View Hierarchies
+
+[Download (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/unique_uis.tar.gz)
+
+Contains 66k+ unique UI screens. For each UI, we present a screenshot (PNG file) and a detailed view hierarchy (JSON file). A few sample UI screenshots are shown below.
+A few example screenshots
+
+A sample view hierarchy file is shown below. The `activity_name` contains the name of the app package as well as the name of the activity the UI belongs to. All elements in the UI can be accessed by traversing the view hierarchy starting at the root node: `["activity"]["root"]`. For each element, the class property specifies its class name, and the ancestors property contains a list of its superclasses. The bounds property specifies an element&rsquo;s bounding box within a 1440x2560 screen window.
+
+```json
+{
+  "activity_name": "com.funforfones.android.chicagocta/com.funforfones.android.chicagocta.MainActivity",
+  "activity": {
+    "root": {
+      "scrollable-horizontal": false,
+      "draw": true,
+      "ancestors": [
+        "android.widget.FrameLayout",
+        "android.view.ViewGroup",
+        "android.view.View",
+        "java.lang.Object"
+      ],
+      "clickable": false,
+      "pressed": "not_pressed",
+      "focusable": false,
+      "long-clickable": false,
+      "enabled": true,
+      "bounds": [
+        36,
+        84,
+        1404,
+        2392
+      ],
+      "visibility": "visible",
+      "content-desc": [
+        null
+      ],
+      "rel-bounds": [
+        0,
+        0,
+        1368,
+        2308
+      ],
+      "focused": false,
+      "selected": false,
+      "scrollable-vertical": false,
+      "children": [
+          ....
+      ],
+      "adapter-view": false,
+      "abs-pos": true,
+      "pointer": "2e18ce7",
+      "class": "com.android.internal.policy.PhoneWindow$DecorView",
+      "visible-to-user": true
+    },
+    "added_fragments": [],
+    "active_fragments": []
+  },
+  "is_keyboard_deployed": true,
+  "request_id": "1350"
+}
+```     
+
+### 2. UI Metadata
+[Download (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_details.csv)
+
+Contains metadata about each UI screen: the name of the app it came from, the user interaction trace within that app, and the UI number within that trace. A few lines from the CSV file are shown below.
+
+```csv
+UI Number,App Package Name,Interaction Trace Number,UI Number in Trace
+0,com.brc.PeriodTrackerDiary,0,15
+1,com.brc.PeriodTrackerDiary,0,531
+2,yong.app.videoeditor,0,221
+.
+.
+.
+```
+
+
+### 3. UI Layout Vectors
+[Download (8 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_layout_vectors.zip)
+
+Contains 64-dimensional vector representations for each UI screen that encode layout based on the distribution of text and images. To access the layout vector for a particular UI, first find its index in the array contained in `ui_names.json`. Then, load the 2-D array in `ui_vectors.npy` and take the slice at that index along the first dimension. For example, the UI `20353.png` is at index 2. Therefore, its corresponding layout vector can be obtained by `ui_vectors[2,:]` in Python.
+
+This representation can be used to cluster and retrieve similar UIs from different apps. Below are some results that illustrate nearest-neighbor search in the learned layout space.
+
+<Image
+  src="/archive/rico/figure5.png"
+  alt="UI layout vectors example"
+  className="not-prose w-full rounded shadow-sm"
+  width={0}
+  height={0}
+  sizes="100vw"
+/>
+
+
+### 4. Interaction Traces
+[Download (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/traces.tar.gz)
+
+Contains user interaction traces organized by app. Each app can have multiple traces: `trace_0`, `trace_1`, etc. Each trace comprises a sequence of UIs (shown below) captured as screenshots and view hierarchies.
+
+<Image
+  src="/archive/rico/figure6.png"
+  alt="Contents of an interaction trace"
+  className="not-prose w-full rounded shadow-sm"
+  width={0}
+  height={0}
+  sizes="100vw"
+/>
+
+Each trace also has a corresponding `gestures.json` file, which captures the XY coordinates of user interactions performed on each UI screen (example below). A UI with a single pair of XY coordinates represents a tap; a UI with multiple XY coordinates represents a swipe. In the example below, a user tapped on UI 48, and swiped on UI 73.
+
+```json
+{
+  "48": [[0.2671957671957672, 0.7721088435374149]],
+  "73": [[0.5302343159486017, 0.36904761904761907],
+         [0.5302343159486017, 0.36904761904761908],
+         [0.5302343159486017, 0.36904761904761909],
+         [0.5302343159486017, 0.36904761904761910],
+         [0.5302343159486017, 0.36904761904761911]],
+  "550": [[0.36999244142101284, 0.7721088435374149]],
+  "764": [[0.5483749055177627, 0.3758503401360544]],
+  "828": [[0.46674225245653816, 0.7704081632653061]],
+  .
+  .
+  .
+}
+```
+                  
+
+### 5. Animations
+
+[Download (214 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/animations.tar.gz)
+
+Contains GIFs that demonstrate how screens animated in response to a user interaction; follows the same folder structure introduced for interaction traces. Example animations are shown below. 
+
+<div className="grid grid-cols-3 gap-4">
+  <Image
+    src="/archive/rico/figure7_1.gif"
+    alt="RICO animations"
+    className="not-prose w-full rounded shadow-sm"
+    width={0}
+    height={0}
+    sizes="100vw"
+  />
+  <Image
+    src="/archive/rico/figure7_2.gif"
+    alt="RICO animations"
+    className="not-prose w-full rounded shadow-sm"
+    width={0}
+    height={0}
+    sizes="100vw"
+  />
+  <Image
+    src="/archive/rico/figure7_3.gif"
+    alt="RICO animations"
+    className="not-prose w-full rounded shadow-sm"
+    width={0}
+    height={0}
+    sizes="100vw"
+  />
+</div>
+
+
+### 6. Play Store Metadata
+
+[Download (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/app_details.csv)
+
+Contains metadata about the apps in the dataset including an app’s category, average rating, number of ratings, and number of downloads.
+
+
+### 7. UI Screenshots and Hierarchies with Semantic Annotations
+
+[Download (150 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/app_details.csv)
+
+Contains 66k+ UI screens and hierarchies augmented with semantic annotations that describe what elements on the screen **mean** and how they are used. These screens and hierarchies capture 24 UI component categories, 197 text button concepts, and 97 icon classes.
+
+Semantic screenshots encode each component, button, and icon class with a unique color; the mapping between semantic concepts and their colors are given in three separate files, corresponding to component categories (`component_legend.json`),
+
+```json
+{
+  "Web View": {
+    "rgb": [
+      66,
+      166,
+      246
+      ],
+      "hex": "#42A5F5"
+    },
+    "List Item": {
+      "rgb": [
+      256,
+      225,
+      179
+      ],
+      "hex": "#FFE0B2"
+    },
+    .
+    .
+    .
+}
+```
+
+text button concepts (`textButton_legend.json`),
+
+```json
+{
+  "restore": {
+    "rgb": [
+      205,
+      219,
+      104
+      ],
+      "hex": "#ccda68"
+    },
+    "all": {
+      "rgb": [
+      205,
+      219,
+      191
+      ],
+      "hex": "#ccdabe"
+    },
+    .
+    .
+    .
+}
+```
+                  
+and finally, icon classes (`icon_legend.json`).
+
+```json
+{
+  "shop": {
+    "rgb": [
+      20,
+      20,
+      20
+      ],
+      "hex": "#141414"
+    },
+    "expand_less": {
+      "rgb": [
+      22,
+      22,
+      22
+      ],
+      "hex": "#161616"
+    },
+    .
+    .
+    .
+}
+```       
+
+A few examples of UI screens and their semantic annotations are shown below.
+
+
+<div className="not-prose grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+  <div className="flex gap-2">
+    <Image
+      src="/archive/rico/figure8_1.png"
+      alt="RICO semantic screenshot 1"
+      className="w-full rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+    <Image
+      src="/archive/rico/figure8_2.png"
+      alt="RICO semantic screenshot 2"
+      className="w-full rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+  </div>
+  <div className="flex gap-2">
+    <Image
+      src="/archive/rico/figure8_3.png"
+      alt="RICO semantic screenshot 3"
+      className="w-full rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+    <Image
+      src="/archive/rico/figure8_4.png"
+      alt="RICO semantic screenshot 4"
+      className="w-full rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+  </div>
+  <div className="flex gap-2">
+    <Image
+      src="/archive/rico/figure8_5.png"
+      alt="RICO semantic screenshot 5"
+      className="w-full rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+    <Image
+      src="/archive/rico/figure8_6.png"
+      alt="RICO semantic screenshot 6"
+      className="w-full rounded shadow-sm"
+      width={0}
+      height={0}
+      sizes="100vw"
+    />
+  </div>
+</div>
+
+For each screenshot, we also provide a corresponding UI hierarchy, which represents the semantic portion of the original view hierarchy. Each element in this hierarchy has a componentLabel field corresponding to one of the 24 UI component categories. Elements that are classified as specific types of text buttons or icons also contain `textButtonClass` or `iconClass` fields, respectively.
+
+```json
+{
+    .
+    .
+    .
+    {
+      "iconClass": "cart",
+      "resource-id": "com.mobile.android.patriots:id/action_shop",
+      "ancestors": [
+        "android.support.v7.widget.AppCompatTextView",
+        "android.widget.TextView",
+        "android.view.View",
+        "java.lang.Object"
+      ],
+      "clickable": true,
+      "class": "android.support.v7.view.menu.ActionMenuItemView",
+      "bounds": [
+        1272,
+        98,
+        1440,
+        266
+        ],
+      "componentLabel": "Icon"
+    }
+   .
+   .
+   .
+   {
+     "ancestors": [
+       "android.widget.LinearLayout",
+       "android.view.ViewGroup",
+       "android.view.View",
+       "java.lang.Object"
+     ],
+     "class": "android.support.design.widget.TabLayout$TabView",
+     "bounds": [
+       90,
+       280,
+       342,
+       448
+     ],
+     "clickable": true,
+     "componentLabel": "Text Button",
+     "textButtonClass": "all"
+   },
+   .
+   .
+   .
+}
+```

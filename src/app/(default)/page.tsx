@@ -1,85 +1,63 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Eye,
-  Hammer,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import Dataset from "./components/dataset";
 
 export default function Home() {
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-between">
+      {/* Announcement banner */}
+      <section id="banner" className="flex justify-center items-center w-full max-w-screen-2xl p-4 md:p-6">
+        <span className="px-3 py-1 mr-2 rounded-full bg-blue-500 dark:bg-blue-500/50 text-sm text-white dark:text-blue-300 font-semibold">Info</span>
+        <span className="text-md font-medium">Looking for the Rico dataset?</span>
+        <Link
+          href="/archive/rico"
+          className="px-3 py-1 ml-2 bg-foreground rounded-full hover:bg-foreground/90 text-sm text-background font-medium transition-colors duration-150 ease-in-out"
+        >
+          Take me there →
+        </Link>
+      </section>
+      {/* Masthead */}
       <section
         id="hero"
-        className="relative flex flex-col w-full max-w-(--breakpoint-2xl) h-[60dvh]"
+        className="relative flex flex-col w-full max-w-screen-2xl p-4 md:p-16 lg:p-24"
       >
-        <div className="flex flex-col grow w-full p-16 justify-center items-start">
-          <h1 className="text-9xl font-title tracking-tighter font-black font-stretch-200%">
-            ODIM
-          </h1>
-          <p className="max-w-full lg:max-w-1/2 text-3xl lg:text-4xl font-display font-normal tracking-tight mb-4">
-            Novel in-the-wild user interaction data collection architecture and
-            repository.
+        <div className="flex flex-col grow w-full justify-center items-center">
+          <p className="w-auto max-w-xl text-center text-lg lg:text-xl text-muted-foreground font-medium mb-2">
+            Introducing ODIM
           </p>
-          <div className="flex gap-4">
+          <h1 className="w-full max-w-5xl text-center text-5xl lg:text-6xl text-foreground font-black tracking-tight mb-2">
+            Your complete mobile interaction dataset and collection platform
+          </h1>
+          <p className="w-auto max-w-xl text-center text-lg lg:text-xl text-muted-foreground font-medium mb-4">
+            On-device interaction-mining (ODIM) provides a platform for collecting, managing, and sharing
+            mobile interaction datasets on a single, open platform
+          </p>
+          <div className="flex gap-6">
             <Link
               href="/explore"
-              className="px-4 py-2 bg-neutral-100 rounded-xl"
+              className="px-4 py-2 bg-foreground hover:bg-foreground/90 rounded-xl transition-colors duration-150 ease-in-out"
             >
-              <span className="inline-flex items-center text-xl text-black font-medium">
+              <span className="inline-flex items-center text-lg lg:text-xl text-background font-medium">
                 Explore dataset <ArrowRight size={24} className="ml-1" />
               </span>
             </Link>
-            <Link href="/contribute" className="px-4 py-2 bg-black rounded-xl">
-              <span className="inline-flex items-center text-xl text-white font-medium">
-                Contribute to ODIM <ArrowUpRight size={24} className="ml-1" />
+            <Link
+              href="/contribute"
+              className="px-4 py-2 bg-muted-background hover:bg-muted-background/90 rounded-xl transition-colors duration-150 ease-in-out"
+            >
+              <span className="inline-flex items-center text-lg lg:text-xl text-foreground font-medium">
+                Contribute to dataset
               </span>
             </Link>
           </div>
         </div>
       </section>
-      <section
-        id="about-the-project"
-        className="grid grid-cols-3 w-full px-8 gap-8 justify-center items-start"
-      >
-        <div className="flex col-span-1 w-full p-12 bg-neutral-50 dark:bg-neutral-950 rounded-6xl aspect-1/1"></div>
-        <div className="flex col-span-2 w-full h-full p-12 bg-neutral-50 dark:bg-neutral-950 rounded-6xl">
-          <p className="text-3xl lg:text-4xl font-display font-normal tracking-tight text-muted-foreground">
-            ODIM is an interaction mining architecture designed to
-            capture in-the-wild user interaction data—prioritizing
-            individual privacy while preserving authentic behavioral insights.
-          </p>
-        </div>
-        <div className="flex flex-col col-span-1 w-full p-12 bg-green-200 dark:bg-green-800  rounded-6xl aspect-1/1">
-          <Hammer
-            size={64}
-            className="text-green-400 dark:text-green-300 mb-8"
-          />
-          <p className="text-3xl lg:text-4xl font-display font-semibold tracking-tight text-green-400 dark:text-green-300">
-            Repair
-          </p>
-        </div>
-        <div className="flex flex-col col-span-1 w-full p-12 bg-purple-200 dark:bg-purple-800 rounded-6xl aspect-1/1">
-          <Eye
-            size={64}
-            className="text-purple-400 dark:text-purple-300 mb-8"
-          />
-          <p className="text-3xl lg:text-4xl font-display font-semibold tracking-tight text-purple-400 dark:text-purple-300">
-            Redact
-          </p>
-        </div>
-        <div className="flex flex-col col-span-1 w-full p-12 bg-blue-200 dark:bg-blue-800 rounded-6xl aspect-1/1">
-          <Sparkles
-            size={64}
-            className="text-blue-400 dark:text-blue-300 mb-8"
-          />
-          <p className="text-3xl lg:text-4xl font-display font-semibold tracking-tight text-blue-400 dark:text-blue-300">
-            Enrich
-          </p>
-        </div>
-      </section>
-      <div className="pb-8"></div>
+      {/* Dataset section */}
+      <Dataset />
+
+      {/* Platform section */}
+      {/* <Platform /> */}
+      <div className="pb-8 lg:pb-16"></div>
     </main>
   );
 }

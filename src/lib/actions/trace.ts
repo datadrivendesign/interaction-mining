@@ -3,7 +3,7 @@ import { Prisma, Trace as TracePrimitive } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
-import { requireAuth } from "../auth";
+import { requireAuth } from "../auth/auth";
 
 export type Trace = Prisma.TraceGetPayload<{
   include: {

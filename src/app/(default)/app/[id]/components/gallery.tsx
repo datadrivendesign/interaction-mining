@@ -341,35 +341,36 @@ export function InspectView({ data }: { data: any }) {
                   priority
                   onLoad={handleImageLoad}
                 />
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
-                        style={{
-                          left: `${(screen.gesture.x ?? 0) * 100}%`,
-                          top: `${(screen.gesture.y ?? 0) * 100}%`,
-                        }}
-                      >
-                        {
-                          gestureOptions
-                            .flatMap((option) => [
-                              option,
-                              ...(option.subGestures ?? []),
-                            ])
-                            .find(
-                              (option) =>
-                                option.value ===
-                                screen.gesture.type?.toLowerCase()
-                            )?.icon
-                        }
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="z-50">
-                      <p>{screen.gesture.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {(screen.gesture.x !== null && screen.gesture.y !== null) && 
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
+                          style={{
+                            left: `${(screen.gesture.x ?? 0) * 100}%`,
+                            top: `${(screen.gesture.y ?? 0) * 100}%`,
+                          }}
+                        >
+                          {
+                            gestureOptions
+                              .flatMap((option) => [
+                                option,
+                                ...(option.subGestures ?? []),
+                              ])
+                              .find(
+                                (option) =>
+                                  option.value ===
+                                  screen.gesture.type?.toLowerCase()
+                              )?.icon
+                          }
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="z-50">
+                        <p>{screen.gesture.description}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>}
               </figure>
             ))}
           </div>

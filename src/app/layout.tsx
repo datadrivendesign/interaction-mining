@@ -1,27 +1,35 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter, Roboto_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
-import { Toaster } from "@/components/ui/sonner";
-import classNames from "classnames";
-import Configuration from "./components/configuration";
 import { SessionProvider } from "next-auth/react";
-
-const robotoMono = Roboto_Mono({
-  subsets: ["latin"],
-  variable: "--font-roboto-mono",
-});
+import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({
-  subsets: ["latin"],
   variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
 });
 
-const mona = localFont({
-  src: "../../public/font/Mona/Mona-Sans.woff2",
+const interVariable = localFont({
+  variable: "--font-inter-variable",
+  src: [
+    {
+      path: "../../public/font/Inter/InterVariable.woff2",
+      style: "normal",
+    },
+    {
+      path: "../../public/font/Inter/InterVariable-Italic.woff2",
+      style: "italic",
+    }
+  ],
   display: "swap",
-  weight: "100 900",
-  variable: "--font-mona",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -35,22 +43,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <Configuration>
-      <SessionProvider>
-        <html lang="en">
-          <body
-            className={classNames(
-              mona.variable,
-              inter.variable,
-              robotoMono.variable,
-              "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth font-sans text-foreground bg-background "
-            )}
-          >
-            <Toaster />
-            {children}
-          </body>
-        </html>
-      </SessionProvider>
-    </Configuration>
+    <SessionProvider>
+      <html lang="en">
+        <body
+          className={cn(
+            inter.variable,
+            interVariable.variable,
+            geistMono.variable,
+            "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth! font-sans"
+          )}
+        >
+          <Toaster />
+          {children}
+        </body>
+      </html>
+    </SessionProvider>
   );
 }

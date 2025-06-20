@@ -169,7 +169,7 @@ export async function generatePresignedVHUpload(
         fileKey,
         fileUrl: process.env.USE_MINIO_STORE === "true" 
           ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}`
-          : `https://${process.env._AWS_UPLOAD_BUCKET}.s3.${process.env._AWS_REGION}.amazonaws.com/${fileKey}`,
+          : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${fileKey}`,
       },
     };
   } catch (err) {
@@ -195,7 +195,7 @@ export async function handleAndroidScreenUpload(data: {
     y?: number;
   };
   captureId: string;
-}): Promise<ActionPayload<{ url: string }>> {
+}): Promise<ActionPayload<{ url: string, fileKey: string }>> {
   try {
     // Upload files to S3
     // create s3 json
@@ -222,7 +222,7 @@ export async function handleAndroidScreenUpload(data: {
     return {
       ok: true,
       message: "Screen uploaded successfully",
-      data: { url: res.data.fileUrl },
+      data: { url: res.data.fileUrl, fileKey: res.data.fileKey },
     };
   } catch (error) {
     console.error("Android screen upload error:", error);
