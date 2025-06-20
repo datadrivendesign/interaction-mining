@@ -29,6 +29,7 @@ yarn-error.log*
 # local env files
 .env*.local
 _.env*.local
+.env
 
 # vercel
 .vercel
@@ -38,6 +39,6 @@ _.env*.local
 *.tsbuildinfo
 next-env.d.ts
 
+# mongo
 mongo.conf
 mongo_db/*
-.env
