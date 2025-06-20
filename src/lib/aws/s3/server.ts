@@ -40,7 +40,7 @@ export async function generatePresignedUploadURL(
         filePrefix: prefix, 
         fileUrl: process.env.USE_MINIO_STORE === "true" 
           ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
-          : `${process.env._AWS_CLOUDFRONT_URL}/${prefix}/${fileName}`,
+          : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${prefix}/${fileName}`,
       },
     };
   } catch (err) {
@@ -81,7 +81,7 @@ export async function listFromS3(
       fileName: file.Key.split("/").pop() || "",
       fileUrl: process.env.USE_MINIO_STORE === "true" 
         ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
-        : `${process.env._AWS_CLOUDFRONT_URL}/${file.Key}`,
+        : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${file.Key}`,
     }));
 
     return {

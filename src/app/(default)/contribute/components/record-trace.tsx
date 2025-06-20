@@ -23,7 +23,7 @@ export default function RecordTrace() {
           </article>
          <aside className="sticky top-20 flex flex-col w-full gap-2 max-w-xs">
            <Link
-             href={`${process.env._AWS_CLOUDFRONT_URL}/assets/apk/odim.apk`}
+             href={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/apk/odim.apk`}
              target="_blank"
            >
              <Button className="w-full">
@@ -44,7 +44,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/installation.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/installation.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -55,7 +55,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -66,7 +66,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -77,7 +77,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/traces.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/traces.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -88,7 +88,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/delete_screens.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/delete_screens.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -99,7 +99,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/add_gesture.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/add_gesture.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -110,7 +110,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/screen_redact_1.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-4" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/screen_redact_1.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-4" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>
@@ -121,7 +121,7 @@ export default function RecordTrace() {
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env._AWS_CLOUDFRONT_URL}/assets/screen_redact_2.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-4" autoPlay loop playsInline muted></video>
+            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/screen_redact_2.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-4" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>

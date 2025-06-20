@@ -18,10 +18,10 @@ const remotePatterns: RemotePattern[] = [
   },
 ];
 // conditionally add cloudfront url if set
-if (process.env._AWS_CLOUDFRONT_URL) {
+if (process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL) {
   remotePatterns.push({
     protocol: "https",
-    hostname: new URL(process.env._AWS_CLOUDFRONT_URL).hostname,
+    hostname: new URL(process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL).hostname,
   });
 }
 

@@ -169,7 +169,7 @@ export async function generatePresignedVHUpload(
         fileKey,
         fileUrl: process.env.USE_MINIO_STORE === "true" 
           ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}`
-          : `${process.env._AWS_CLOUDFRONT_URL}/${fileKey}`,
+          : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${fileKey}`,
       },
     };
   } catch (err) {
