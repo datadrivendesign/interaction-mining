@@ -40,3 +40,4 @@ next-env.d.ts
 
 mongo.conf
 mongo_db/*
+.env
