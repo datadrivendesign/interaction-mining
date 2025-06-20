@@ -23,7 +23,7 @@ export default function RecordTrace() {
           </article>
          <aside className="sticky top-20 flex flex-col w-full gap-2 max-w-xs">
            <Link
-             href={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/apk/odim.apk`}
+             href={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/apk/odim-1.0.apk`}
              target="_blank"
            >
              <Button className="w-full">
