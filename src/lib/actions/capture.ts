@@ -189,7 +189,7 @@ export async function getCaptureFiles(
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`processed/${captureId}`);
-    return files
+    return files;
   } catch (err) {
     console.error("Error fetching uploaded files:", err);
     return {
@@ -307,7 +307,8 @@ export async function createCaptureTask({
  * @returns
  */
 export async function processCaptureFiles(fileKey: string) {
-  if (!process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+  if (
+    !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
     process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
   ) {
     console.log("Lambda transcoding is disabled via env config.");
@@ -319,18 +320,18 @@ export async function processCaptureFiles(fileKey: string) {
       console.error("Failed to copy file to processed folder:", res.message);
       return { ok: false, message: res.message, data: null };
     }
-    return { 
-      ok: true, 
-      message: "Processing successfuly, disabled transcode.", 
-      data: null 
-  };
+    return {
+      ok: true,
+      message: "Processing successfuly, disabled transcode.",
+      data: null,
+    };
   }
 
   const cmd = new InvokeCommand({
     FunctionName: process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA,
     InvocationType: "RequestResponse",
     Payload: Buffer.from(
-      JSON.stringify({ bucket: process.env.AWS_UPLOAD_BUCKET!, key: fileKey })
+      JSON.stringify({ bucket: process.env._AWS_UPLOAD_BUCKET!, key: fileKey })
     ),
   });
   const res = await lambda.send(cmd);

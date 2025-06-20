@@ -18,9 +18,9 @@ export const s3 = new S3Client({
 });
 
 export const lambda = new LambdaClient({
-  region: process.env.AWS_REGION!,
+  region: process.env._AWS_REGION!,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env._AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env._AWS_SECRET_ACCESS_KEY!,
   },
 });
