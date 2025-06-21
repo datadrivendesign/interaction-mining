@@ -93,26 +93,32 @@ export const TitleMarquee: FC<TitleMarqueeProps> = ({
     }
   }, [ioRef]);
 
-  const contentElement = useMemo(() => (<div ref={contentRef} className={cn("whitespace-nowrap", isTruncated && "*:mr-2")}>{children}</div>
+  const contentElement = useMemo(() => (<div ref={contentRef} className={cn("w-full whitespace-nowrap", isTruncated && "*:mr-2")}>{children}</div>
   ), [children, isTruncated]);
 
   return (
     <div
       ref={mergedRef}
-      className={cn(isTruncated ? "overflow-hidden" : "truncate", className)}
+      className={cn(isTruncated ? "overflow-hidden" : "truncate flex justify-center", className)}
       title={title}
       onMouseEnter={handleMouseEnter}
     >
-      <Marquee
-        speed={speed}
-        pauseOnHover={false}
-        pauseOnClick={false}
-        loop={0}
-        play={isTruncated && (mode === "visibility" ? isVisible && isPlay : isPlay)}
-        onCycleComplete={handleCycleComplete}
-      >
-        {contentElement}
-      </Marquee>
+      {isTruncated ? (
+        <Marquee
+          speed={speed}
+          pauseOnHover={false}
+          pauseOnClick={false}
+          loop={0}
+          play={isTruncated && (mode === "visibility" ? isVisible && isPlay : isPlay)}
+          onCycleComplete={handleCycleComplete}
+        >
+          {contentElement}
+        </Marquee>
+      ) : (
+        <div className="flex items-center justify-center w-full">
+          {contentElement}
+        </div>
+      )}
     </div>
   );
 };
