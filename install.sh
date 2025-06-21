@@ -92,7 +92,7 @@ echo -e "${GREEN}✔ npm detected.${NC}"
 print_section "Starting ODIM Setup"
 # --- Frontend Setup ---
 
-# TODO: try to ask for secretsmanager here
+# try to ask for secretsmanager here
 echo -e "${BLUE}If you have aws access, this script can set up a remote dev environment for you."
 echo -e "${BLUE}👉 Would you like to set up a remote dev environment? (y/n):${NC} \c"
 read USE_DEV_ENV < /dev/tty
@@ -130,6 +130,7 @@ if [[ "$USE_DEV_ENV" == "y" ]]; then
   --query SecretString \
   --output text)
 
+  # TODO: add NEXT_PUBLIC_CLOUDFRONT_URL
   NEXT_PUBLIC_DEPLOYMENT_URL=$(echo "$SECRET_JSON" | jq -r '.NEXT_PUBLIC_DEPLOYMENT_URL')
   if [[ -z "$NEXT_PUBLIC_DEPLOYMENT_URL" ]]; then
     echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
@@ -165,13 +166,13 @@ if [[ "$USE_DEV_ENV" == "y" ]]; then
     echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
     exit 1
   fi
-  AUTH_GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.AUTH_GOOGLE_CLIENT_ID')
-  if [[ -z "$AUTH_GOOGLE_CLIENT_ID" ]]; then
+  GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_ID')
+  if [[ -z "$GOOGLE_CLIENT_ID" ]]; then
     echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
     exit 1
   fi
-  AUTH_GOOGLE_CLIENT_SECRET=$(echo "$SECRET_JSON" | jq -r '.AUTH_GOOGLE_CLIENT_SECRET')
-  if [[ -z "$AUTH_GOOGLE_CLIENT_SECRET" ]]; then
+  GOOGLE_CLIENT_SECRET=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_SECRET')
+  if [[ -z "$GOOGLE_CLIENT_SECRET" ]]; then
     echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
     exit 1
   fi
@@ -456,9 +457,9 @@ if [[ "$USE_DEV_ENV" != "y" ]]; then
   echo "2. Add your redirect URI: http://localhost:3000/api/auth/callback/google"
   echo "3. Add the credentials to your .env or Amplify environment settings"
   echo -e "${BLUE}👉 Google client ID:${NC} \c"
-  read AUTH_GOOGLE_CLIENT_ID < /dev/tty
+  read GOOGLE_CLIENT_ID < /dev/tty
   echo -e "${BLUE}👉 Google client secret:${NC} \c"
-  read AUTH_GOOGLE_CLIENT_SECRET < /dev/tty
+  read GOOGLE_CLIENT_SECRET < /dev/tty
 fi
 
 step "Environment variables are all set!"
@@ -469,8 +470,8 @@ echo -e "${GREEN}👉 AWS Access Key:${NC} $_AWS_SECRET_ACCESS_KEY"
 echo -e "${GREEN}👉 AWS Upload Bucket:${NC} $_AWS_UPLOAD_BUCKET"
 echo -e "${GREEN}👉 Use MinIO Object Store:${NC} $USE_MINIO_STORE"
 echo -e "${GREEN}👉 MinIO API Endpoint:${NC} $MINIO_ENDPOINT"
-echo -e "${GREEN}👉 Google OAuth Client ID set:${NC} $AUTH_GOOGLE_CLIENT_ID"
-echo -e "${GREEN}👉 Google OAuth Client Secret:${NC} $AUTH_GOOGLE_CLIENT_SECRET"
+echo -e "${GREEN}👉 Google OAuth Client ID set:${NC} $GOOGLE_CLIENT_ID"
+echo -e "${GREEN}👉 Google OAuth Client Secret:${NC} $GOOGLE_CLIENT_SECRET"
 echo -e "${GREEN}👉 Web Deploy URL:${NC} $NEXT_PUBLIC_DEPLOYMENT_URL"
 
 ENV_FILE=".env.local"
@@ -488,8 +489,8 @@ _AWS_UPLOAD_BUCKET=$_AWS_UPLOAD_BUCKET
 USE_MINIO_STORE=$USE_MINIO_STORE
 MINIO_ENDPOINT=$MINIO_ENDPOINT
 # >>>>> NextAuth configuration
-AUTH_GOOGLE_CLIENT_ID=$AUTH_GOOGLE_CLIENT_ID
-AUTH_GOOGLE_CLIENT_SECRET=$AUTH_GOOGLE_CLIENT_SECRET
+GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
 EOF
 # set auth secret directly into .env.local
 npx auth secret

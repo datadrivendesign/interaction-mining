@@ -62,17 +62,6 @@ export default function RecordTrace() {
 
       <section className="flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) gap-16 md:gap-16">
         <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
-          <TraceContributeSection />
-        </article>
-        <div className="flex justify-between items-center gap-8 mt-8">
-          <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
-          </div>
-        </div>
-      </section>
-
-      <section className="flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) gap-16 md:gap-16">
-        <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
           <TraceCaptureSection />
         </article>
         <div className="flex justify-between items-center gap-8 mt-8">
