@@ -1,44 +1,36 @@
-# ODIM Script Setup Guide
+## Set Up a Local Interaction Mining Instance
 
-This guide explains what our ODIM (On-Device Interaction Mining) installation script does when it is run. Some set up instruactions are included as well.
+This is a guide for running our interaction mining installation script. We also explain what the script does below.
 
 ### Running the Setup Script
 
 Run the following command to download and run our script:
 
 ```bash
-bash install.sh
+curl -o- https://dribosc0et3qr.cloudfront.net/install.sh | bash;
 ```
 
-The script will step you through the setup and build for both the web and mobile apps. We will explain below the different steps the script takes to set up all dependencies.
+The script will step you through the setup and build for both the web and mobile app.
 
-❗ **Important Note**: Our script uses `homebrew` to install needed dependencies. Please make sure you have it installed first before running our script. The script is currently targeted for OSX devices, but it may work on Linux with `homebrew` installed.
+❗ Our script uses [`homebrew`](https://brew.sh) to install dependencies. Make sure you have it installed first before running our script. The script is currently targeted for OSX devices, but it may work on Linux with `homebrew` installed.
 
-### ⚙️ Check Dependencies to Run ODIM Web
+---
 
-The script first checks if ODIM web dependencies are installed. If not, then it will install them on the machine for you.
+### ⚙️ Interaction Mining Web App Dependencies
+
+The script first checks if web app dependencies are installed. If not, then it will install them for you.
 
 #### Node.js (Web App)
 
-Our web interface uses **Next.js**, which requires Node.js (v16 or v18). The script first checks if you have `node` and `npm` installed. If these programs are not detected, it will install these packages for you through `homebrew`.
-
-### Run Script Options
-
-The script will give you a choice on how to set up the ODIM system:
-- If you want a [locally hosted version](#computer-locally-hosted-odim) of ODIM to develop, test, or use.
-- If you are a collaborator and have access to our [remote dev environment](#remove-dev-environment-set-up).
-
-### 💻 Locally Hosted ODIM
-
-This is a walkthrough guide on how the script sets up a locally hosted ODIM instance of ODIM. There will be some manual set up required later in the script, so please pay attention.
+Our web interface uses **Next.js**, which requires Node.js (v16 or v18). The script checks if you have `node` and `npm` installed. If these programs are not detected, it will install these packages for you.
 
 #### MinIO Set Up
 
-[MinIO](https://github.com/minio/) is an open-source, S3-compatible object store that can be run locally using Docker. We use it as a replacement for AWS S3 in the local environment.
+[MinIO](https://github.com/minio/) is an open-source, S3-compatible object store that can be run locally using Docker. We use it as a replacement for S3 in the local environment.
 
-The script installs MinIO through Docker. It will first check if you have Docker installed on your machine. If you do not have Docker installed, the script will install Docker for you through `homebrew`. If you have Docker installed, it will use your Docker installation.
+The script installs MinIO through Docker. If you do not have Docker installed, the script will install Docker for you through `homebrew`.
 
-⚠️ **If Docker was downloaded for the first time, you need to manually start Docker to complete set up first. The script will prompt you to do that.**
+⚠️ **If Docker was downloaded for the first time, you need to manually start Docker to complete set up.**
 
 The script will prompt you for **username** and **password** credentials to set up the MinIO object store. These credentials will be needed to access the object store bucket. The script then creates a Docker compose file to set up MinIO with these credentials. Docker will create a container with MinIO installed using the settings in the `docker-compose.yml` file.
 
@@ -75,11 +67,7 @@ The script will ask you for your **Client ID** and **Client Secret** for the ODI
 
 📖 [Detailed setup guide](https://developers.google.com/identity/protocols/oauth2)
 
-### Remote Dev Environment Set Up
-
-The script will also give you the option to run ODIM on a remote development environment. This remote dev environment uses a deployed AWS S3 bucket, Mongo Atlas cluster, and Google OAuth service. If you are a collaborator, we will give you AWS IAM user credentials (access key and secret). 
-
-The script will ask you to input these AWS credentials and use them to grab env variables from our AWS SecretsManager. These env variables are automatically parsed in the script and added to both the web and mobile app.
+---
 
 ### Cloning The ODIM Web Repository
 
@@ -110,6 +98,8 @@ AUTH_GOOGLE_CLIENT_ID=
 AUTH_GOOGLE_CLIENT_SECRET=
 NEXT_PUBLIC_DEPLOYMENT_URL=
 ```
+
+---
 
 ### ⚙️ ODIM Mobile (Android) Set Up
 
@@ -152,6 +142,8 @@ The APK is built using a Gradle script in the mobile repo:
 Once the build is done, the script will print the path to where the APK was built. You can install this file on an Android phone or add it to an emulator to run the app.
 
 ⚠️ **Security Note**: Use `./gradlew assembleDebug` only for local development. Debug builds allow cleartext (HTTP) traffic, which poses a security risk in production. Using `./gradlew assembleRelease` for production APKs, will block insecure HTTP calls by default.
+
+---
 
 ### Running ODIM on Localhost
 

@@ -31,7 +31,7 @@ export default function NavigationBar() {
           </Link>
           <Link href="/contribute">
             <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
-              Contribute
+              Get Involved
             </span>
           </Link>
         </div>

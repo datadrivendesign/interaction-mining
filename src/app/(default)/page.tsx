@@ -46,7 +46,7 @@ export default function Home() {
               className="px-4 py-2 bg-muted-background hover:bg-muted-background/90 rounded-xl transition-colors duration-150 ease-in-out"
             >
               <span className="inline-flex items-center text-lg lg:text-xl text-foreground font-medium">
-                Contribute to dataset
+                Get Involved
               </span>
             </Link>
           </div>

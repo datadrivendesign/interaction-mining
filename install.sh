@@ -92,107 +92,16 @@ echo -e "${GREEN}✔ npm detected.${NC}"
 print_section "Starting ODIM Setup"
 # --- Frontend Setup ---
 
-# try to ask for secretsmanager here
-echo -e "${BLUE}If you have aws access, this script can set up a remote dev environment for you."
-echo -e "${BLUE}👉 Would you like to set up a remote dev environment? (y/n):${NC} \c"
-read USE_DEV_ENV < /dev/tty
-if [[ "$USE_DEV_ENV" == "y" ]]; then
-  # Check if AWS CLI is installed
-  if ! command -v aws &> /dev/null; then
-    echo -e "${YELLOW}⚠️  AWS CLI not found. Installing...${NC}"
-    # download aws cli
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-      curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
-      sudo installer -pkg AWSCLIV2.pkg -target /
-      rm -f AWSCLIV2.pkg
-    else
-      echo -e "${RED}❌ Unsupported OS for auto AWS CLI install. Please install it manually.${NC}"
-      exit 1
-    fi
-    echo -e "${GREEN}✅ AWS CLI installed successfully.${NC}"
-  else
-    echo -e "${GREEN}✅ AWS CLI is already installed.${NC}"
-  fi
-  # input credentials
-  echo -e "${BLUE}Enter AWS credentials to retrieve from secretsmanager.${NC}"
-  echo -e "${BLUE}👉 Enter your AWS Access Key ID:${NC} \c"
-  read DEV_ACCESS_KEY_ID < /dev/tty
-  echo -e "${BLUE}👉 Enter your AWS Secret Access Key:${NC} \c"
-  read DEV_SECRET_ACCESS_KEY < /dev/tty
-  AWS_REGION="us-east-2"
-  # configure credentials
-  aws configure set aws_access_key_id "$DEV_ACCESS_KEY_ID"
-  aws configure set aws_secret_access_key "$DEV_SECRET_ACCESS_KEY"
-  aws configure set region "$AWS_REGION"
-  # retrieve secret env variables
-  SECRET_JSON=$(aws secretsmanager get-secret-value \
-  --secret-id "dev/odim" \
-  --query SecretString \
-  --output text)
-
-  # TODO: add NEXT_PUBLIC_CLOUDFRONT_URL
-  NEXT_PUBLIC_DEPLOYMENT_URL=$(echo "$SECRET_JSON" | jq -r '.NEXT_PUBLIC_DEPLOYMENT_URL')
-  if [[ -z "$NEXT_PUBLIC_DEPLOYMENT_URL" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  DATABASE_URL=$(echo "$SECRET_JSON" | jq -r '.DEV_DATABASE_URL')
-  if [[ -z "$DATABASE_URL" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  _AWS_REGION=$(echo "$SECRET_JSON" | jq -r '._AWS_REGION')
-  if [[ -z "$_AWS_REGION" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  _AWS_ACCESS_KEY_ID=$(echo "$SECRET_JSON" | jq -r '._AWS_ACCESS_KEY_ID')
-  if [[ -z "$_AWS_ACCESS_KEY_ID" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  _AWS_SECRET_ACCESS_KEY=$(echo "$SECRET_JSON" | jq -r '._AWS_SECRET_ACCESS_KEY')
-  if [[ -z "$_AWS_SECRET_ACCESS_KEY" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  _AWS_UPLOAD_BUCKET=$(echo "$SECRET_JSON" | jq -r '._AWS_UPLOAD_BUCKET')
-  if [[ -z "$_AWS_UPLOAD_BUCKET" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  NEXTAUTH_SECRET=$(echo "$SECRET_JSON" | jq -r '.NEXTAUTH_SECRET')
-  if [[ -z "$NEXTAUTH_SECRET" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  GOOGLE_CLIENT_ID=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_ID')
-  if [[ -z "$GOOGLE_CLIENT_ID" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  GOOGLE_CLIENT_SECRET=$(echo "$SECRET_JSON" | jq -r '.GOOGLE_CLIENT_SECRET')
-  if [[ -z "$GOOGLE_CLIENT_SECRET" ]]; then
-    echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-    exit 1
-  fi
-  USE_MINIO_STORE="false"
-  MINIO_ENDPOINT=""
-    echo -e "${GREEN}✔ Secrets have been loaded.${NC}"
-fi
-
 # Run this code for local deployment, not dev env
-if [[ "$USE_DEV_ENV" != "y" ]]; then
-  # grep the IP address of the computer
-  IP_ADDRESS=$(ifconfig | grep -Eo 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' | awk '{ print $2 }')
+# grep the IP address of the computer
+IP_ADDRESS=$(ifconfig | grep -Eo 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' | awk '{ print $2 }')
 
-  if [[ -z $IP_ADDRESS ]]; then
-    echo -e "${YELLOW}Local IP Address not found. Please enter it manually.${NC}"
-    echo -e "${BLUE}👉 IP address (IP_ADDRESS):${NC} \c"
-    read IP_ADDRESS < /dev/tty
-  else
-    echo -e "${BLUE}👉 IP address found:${NC} $IP_ADDRESS"
-  fi
+if [[ -z $IP_ADDRESS ]]; then
+  echo -e "${YELLOW}Local IP Address not found. Please enter it manually.${NC}"
+  echo -e "${BLUE}👉 IP address (IP_ADDRESS):${NC} \c"
+  read IP_ADDRESS < /dev/tty
+else
+  echo -e "${BLUE}👉 IP address found:${NC} $IP_ADDRESS"
 
   # try to install MinIO via Docker
   step "Set Up Docker and MinIO"
@@ -418,9 +327,9 @@ if [[ -z "$USE_HTTP" ]]; then
   USE_HTTP="y"
 fi
 if [[ "$USE_HTTP" == "y" ]]; then
-  REPO_URL="https://github.com/datadrivendesign/odim-frontend-next.git"
+  REPO_URL="https://github.com/datadrivendesign/interaction-mining.git"
 else
-  REPO_URL="git@github.com:datadrivendesign/odim-frontend-next.git"
+  REPO_URL="git@github.com:datadrivendesign/interaction-mining.git"
 fi
 # Clone the repo
 echo "Cloning repository $REPO_URL..."
@@ -441,26 +350,24 @@ step "Installing frontend dependencies"
 echo "Installing dependencies..."
 npm install
 
-if [[ "$USE_DEV_ENV" != "y" ]]; then
-  DATABASE_URL="mongodb://127.0.0.1:27017/$DATABASE_NAME"
-  _AWS_REGION="us-east-1"
-  _AWS_ACCESS_KEY_ID="$USERNAME"
-  _AWS_SECRET_ACCESS_KEY="$PASSWORD"
-  _AWS_UPLOAD_BUCKET="$BUCKET"
-  USE_MINIO_STORE="true"
-  MINIO_ENDPOINT="http://$IP_ADDRESS:9000"
-  NEXT_PUBLIC_DEPLOYMENT_URL="http://$IP_ADDRESS:3000"
-  echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
-  echo "See further details in INSTRUCTIONS.md"
-  echo "Visit https://console.cloud.google.com/apis/credentials"
-  echo "1. Create an OAuth Client ID"
-  echo "2. Add your redirect URI: http://localhost:3000/api/auth/callback/google"
-  echo "3. Add the credentials to your .env or Amplify environment settings"
-  echo -e "${BLUE}👉 Google client ID:${NC} \c"
-  read GOOGLE_CLIENT_ID < /dev/tty
-  echo -e "${BLUE}👉 Google client secret:${NC} \c"
-  read GOOGLE_CLIENT_SECRET < /dev/tty
-fi
+DATABASE_URL="mongodb://127.0.0.1:27017/$DATABASE_NAME"
+_AWS_REGION="us-east-1"
+_AWS_ACCESS_KEY_ID="$USERNAME"
+_AWS_SECRET_ACCESS_KEY="$PASSWORD"
+_AWS_UPLOAD_BUCKET="$BUCKET"
+USE_MINIO_STORE="true"
+MINIO_ENDPOINT="http://$IP_ADDRESS:9000"
+NEXT_PUBLIC_DEPLOYMENT_URL="http://$IP_ADDRESS:3000"
+echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
+echo "See further details in INSTRUCTIONS.md"
+echo "Visit https://console.cloud.google.com/apis/credentials"
+echo "1. Create an OAuth Client ID"
+echo "2. Add your redirect URI: http://localhost:3000/api/auth/callback/google"
+echo "3. Add the credentials to your .env or Amplify environment settings"
+echo -e "${BLUE}👉 Google client ID:${NC} \c"
+read GOOGLE_CLIENT_ID < /dev/tty
+echo -e "${BLUE}👉 Google client secret:${NC} \c"
+read GOOGLE_CLIENT_SECRET < /dev/tty
 
 step "Environment variables are all set!"
 echo -e "${GREEN}👉 MongoDB connection URI:${NC} $DATABASE_URL"
@@ -617,9 +524,9 @@ if [[ "$USE_ANDROID" == "y" ]]; then
     USE_HTTP="y"
   fi
   if [[ "$USE_HTTP" == "y" ]]; then
-    Mobile_REPO_URL="https://github.com/datadrivendesign/mobile-odim.git"
+    Mobile_REPO_URL="https://github.com/datadrivendesign/odim-android.git"
   else
-    Mobile_REPO_URL="git@github.com:datadrivendesign/mobile-odim.git"
+    Mobile_REPO_URL="git@github.com:datadrivendesign/odim-android.git"
   fi
   Mobile_REPO_NAME=$(basename "$Mobile_REPO_URL" .git)
   # Clone the mobile app repo
@@ -645,16 +552,8 @@ if [[ "$USE_ANDROID" == "y" ]]; then
 
   echo "Let's set up the URL domain where the Android app will upload to:"
   # Run this code for local deployment, not dev env
-  if [[ "$USE_DEV_ENV" == "y" ]]; then
-    API_URL_PREFIX=$(echo "$SECRET_JSON" | jq -r '.API_URL_PREFIX')
-    if [[ -z "$API_URL_PREFIX" ]]; then
-      echo -e "${RED}❌ Failed to retrieve secret. Check your AWS credentials or secret name.${NC}"
-      exit 1
-    fi
-  else
-    API_URL_PREFIX="http://$IP_ADDRESS:3000"
-    echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
-  fi
+  API_URL_PREFIX="http://$IP_ADDRESS:3000"
+  echo -e "${Green}👉 API URL Prefix:${NC} $API_URL_PREFIX"
   step "Building mobile APK"
   set +e
   echo "Building APK..."
