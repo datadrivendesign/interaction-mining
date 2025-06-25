@@ -1,0 +1,17 @@
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
+
+### Create a New Task Flow
+
+1. Sign in to the web application and navigate to the user dashboard.  
+2. Click on <Button size={"sm"}><Plus /> New</Button> to redirect to new task creation form.
+3. Fill out the form with chosen app and description and click <Button className="dark:bg-neutral-50 dark:text-black" type="submit">Start Capture</Button> 
+    - Add a new app by providing the Android app's package name from its [Google Play Store URL](https://support.google.com/admob/answer/9972781)
+4. A QR code corresponding to the new capture will be generated.  
+5. Open the Android app and scan this QR code to get task information.
+6. Follow on-screen prompts to enable accessibility permissions.
+
+*Note: Some phones may first ask you to grant app permissions. If this happens, go to Settings > Apps > ODIM and enable all necessary permissions.*
+
+---
