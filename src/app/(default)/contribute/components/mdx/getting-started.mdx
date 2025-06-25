@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 
@@ -10,15 +11,26 @@ We enable collection of app task flows directly from your Android phone. We do t
 **Check out our code below:**
 
 <div className="flex flex-col md:flex-row w-full justify-evenly">
-    <Button className="w-min" disabled>
-        <ArrowUpRight size={20} className="mr-1" />
-        Web Application Source
-    </Button>
+    <Link
+        href="https://github.com/datadrivendesign/interaction-mining"
+        target="_blank"
+    >
+        <Button className="w-min">
+            <ArrowUpRight size={20} className="mr-1" />
+            Web App Source
+        </Button>
+    </Link>
 
-    <Button className="w-min" disabled>
-        <ArrowUpRight size={20} className="mr-1" />
-        Android Application Source
-    </Button>
+
+    <Link
+        href="https://github.com/datadrivendesign/odim-android"
+        target="_blank"
+    >
+        <Button className="w-min">
+            <ArrowUpRight size={20} className="mr-1" />
+            Android App Source
+        </Button>
+    </Link>
 </div>
 
 

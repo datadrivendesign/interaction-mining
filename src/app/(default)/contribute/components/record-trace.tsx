@@ -62,7 +62,7 @@ export default function RecordTrace() {
         </div>
       </section>
 
-      <Tabs className="w-full max-w-(--breakpoint-xl) p-4">
+      <Tabs defaultValue="postprocess-web" className="w-full max-w-(--breakpoint-xl) p-4">
         <TabsList className="sticky left-10">
           <TabsTrigger value="postprocess-web">
             Post-Process on Web App

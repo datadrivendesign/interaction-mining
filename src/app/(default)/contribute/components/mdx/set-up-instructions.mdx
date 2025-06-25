@@ -44,7 +44,7 @@ The script will use [MinIO Client CLI](https://min.io/docs/minio/linux/reference
 
 This script uses MongoDB (Community Edition) to spin up a local Mongo server.
 
-The script checks if MongoDB Community Edition is installed by checking for a Mongo Shell (`mongosh`) installation. If you do not have `mongosh` installed on your machine, it will use install MongoDB Community Edition for you.
+The script checks if MongoDB is installed by checking for a Mongo Shell (`mongosh`) installation. If you do not have `mongosh` installed, it will install MongoDB for you.
 
 The script will prompt you for some settings to set up Mongo:
 
@@ -111,7 +111,7 @@ Next, the script will ask whether you want to set up the ODIM Android mobile app
 
 #### Java Set Up
 
-Our Android app requires **Java JDK 17 or higher** to build. The script will install `OpenJDK v17` and add it to your `$PATH` variable if you do not have it or have the wrong version. 
+Our Android app requires **Java JDK 17 or higher** to build. The script will install `OpenJDK v17` and add it to your `$PATH` variable if you do not have it.
 
 #### Android Studio SDK Set Up
 
@@ -135,7 +135,7 @@ The script will clone the [mobile app code repository](). Then it will write you
 
 #### Build Mobile App APK
 
-The script will try to bundle an **Android APK** using a Gradle script in the mobile repo. The script requires parameter`API_URL_PREFIX`: the root url domain where the web app is hosted. 
+The script will try to bundle an **APK** using a Gradle script in the mobile repo. The script requires parameter `API_URL_PREFIX`: the root url domain of the web app. 
 
 The app will use this parameter to upload recorded task flows. This parameter is automatically set by the script as the **local IP address of the web server**. 
 
