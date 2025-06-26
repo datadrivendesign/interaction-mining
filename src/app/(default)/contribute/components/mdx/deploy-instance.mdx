@@ -1,18 +1,19 @@
+import { Button } from "@/components/ui/button";
+import { Copy } from 'lucide-react';
+
 ## Deploy Your Own Interaction Mining Instance
 
-We use AWS S3 and MongoDB Atlas to deploy ODIM. These are instructions on how to set up these dependencies. 
+We use **AWS S3**, **CloudFront** and **MongoDB Atlas** to deploy Interaction Mining. Here are instructions for how to set up these dependencies. 
 
 ### Deploying an AWS S3 Bucket 
 
-ODIM uses AWS S3 to store trace data. To deploy your own version you will need to do some setup:
+The deployed instance stores screen data in S3 Object Store. To deploy your own version of Interaction Mining you will need to:
 
-1. Create an [AWS account](https://aws.amazon.com/free).
-2. Generate an **Access Key ID** and **Secret Access Key** — save these securely.
-3. Create a new **S3 bucket** and **note the bucket name**.
-4. To make your traces public:
-    - Go to your bucket → `Permissions` → turn **off** "Block all public access".
-    - Configure **CORS** under `Permissions` with:
-
+1. Log in or create an [AWS account](https://aws.amazon.com/free).
+2. Navigate to Amazon S3 in the AWS Console.
+3. Generate an **Access Key ID** and **Secret Access Key** — save these.
+4. Create a new **S3 bucket** — save the bucket name.
+5. Configure access for S3 to add your deployed instance and other allowed origins under CORS. Here's an example below:
     ```json
     [
       {
@@ -29,13 +30,49 @@ ODIM uses AWS S3 to store trace data. To deploy your own version you will need t
       }
     ]
     ```
-Once set up is done you will need to set up these env variables with the credentials you saved:
+
+### AWS CloudFront Set Up
+We use AWS CloudFront to distribute stored task flow screens in the S3 bucket. You will need to set up a distribution and connect it to your S3 bucket policy.
+
+1. Navigate to CloudFront on your AWS Console.
+2. Click the <Button size="sm" className="bg-orange-400 font-semibold text-black rounded-4xl">Create distribution</Button> button on the top right of the screen.
+3. Follow the form instructions for creating an name or (optional) custom domain.
+4. Select **Amazon S3** as "Origin type" and set your S3 bucket as the S3 origin.
+5. Choose whether to enable security protections and create the distribution.
+6. After your distribution is created, save the domain name. It should be in the format: `<random-string>.cloudfront.net`.
+
+Finally, you need to add the CloudFront distribution to your S3 policy.
+
+1. Select your CloudFront distribution and go to the "Origins" tab.
+2. Select the origin pointing to your S3 bucket and click the <Button  size="sm" className="bg-white font-semibold text-blue-500 border-2 border-blue-500 rounded-4xl">Edit</Button> button.
+3. In the "Origin access control" section, click the <Button  size="sm" className="bg-white font-semibold text-gray-500 border-2 border-gray-500 rounded-4xl"><Copy/> Copy policy</Button> button to get S3 access policy for CloudFront.
+4. Return to S3 on the AWS Console and paste the policy in the S3 bucket settings.
+---
+
+### MongoDB Atlas Set Up
+
+Task flow metadata is stored on a MongoDB Atlas database. Here's how to set it up:
+
+1. Log in or create a [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) account.
+2. Go to the "Clusters" tab and create a database cluster.
+3. Go to "Collections" tab in Clusters dashboard and create a Mongo database.
+4. Go "Database Access" → "Add New Database User" and set up a database user.
+5. Save your **connection string**:
+    - Go to your cluster → Click the  <Button size="sm" className="bg-gray-200 text-black border-1 border-black-500 rounded-xl">Connect</Button> button → choose **Drivers**.
+    - Copy the connection string, replace `<username>` and `<password>`, then append `<dbname>` to your connection string. The string should look like:  `mongodb+srv://<username>:<password>@cluster.mongodb.net/<dbname>`
+    - Follow the [connection string guide](https://www.mongodb.com/resources/products/fundamentals/mongodb-connection-string) for more details.
+
+---
+
+### Set Env Variables
+
+Once set up is done, set up these env variables with the information you saved:
 
 <table>
   <thead>
     <tr>
-      <th>Script Env Var</th>
-      <th>MinIO Setting</th>
+      <th>Env Variables</th>
+      <th>Description</th>
     </tr>
   </thead>
   <tbody>
@@ -51,32 +88,52 @@ Once set up is done you will need to set up these env variables with the credent
       <td><code>_AWS_UPLOAD_BUCKET</code></td>
       <td>Name of AWS S3 Bucket</td>
     </tr>
+    <tr>
+      <td><code>_AWS_REGION</code></td>
+      <td>AWS region where dependencies are set up</td>
+    </tr>
+    <tr>
+      <td><code>NEXT_PUBLIC_AWS_CLOUDFRONT_URL</code></td>
+      <td>CloudFront domain formatted as: `http://<random-string>.cloudfront.net`</td>
+    </tr>
+    <tr>
+      <td><code>DATABASE_URL</code></td>
+      <td>MongoDB connection string to database</td>
+    </tr>
   </tbody>
 </table>
 
-### AWS CloudFront Set Up
-This section will be added later.
-
-### MongoDB Atlas Set Up
-
-Trace metadata is stored in a MongoDB database. To deploy a MongoDB cloud instance:
-
-1. Create a [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) account.
-2. Create a database cluster.
-3. Set up a **database user** under `Database Access` → "Add New Database User".
-4. Get your **connection string**:
-    - Go to your cluster → `Connect` → choose **Drivers**.
-    - Copy the connection string and replace `<username>` and `<password>`.
-    - Create a name for your database and append to your connection string (i.e. `mongodb+srv://<username>:<password>@cluster.mongodb.net/<dbname>`)
-    - Save the full string securely.
-    - Follow the [connection string guide](https://www.mongodb.com/resources/products/fundamentals/mongodb-connection-string) for more details
-
-Once you have set up your database instance, **save your connection string as env variable** `DATABASE_URL`
-
 ### Deploying the Web App
 
-After setup and development, you can deploy the web interface. Our current implementation uses **AWS Amplify**. See these deploy guides:
+We deploy our Interaction Mining instance on **AWS Amplify**. 
+
+See these deploy guides on how to do this:
 - [Next.js Deployment Guide](https://nextjs.org/docs/app/getting-started/deploying)
 - [AWS Amplify Guide for Next.js](https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components)
 
-The deployed url should be saved as env variable `NEXT_PUBLIC_DEPLOYMENT_URL`. You will also need to set env variable `AUTH_TRUST_HOST` as `true`.
+### Additional Env Variables
+
+There are some additional env variables to set up after deploying on Amplify:
+
+<table>
+  <thead>
+    <tr>
+      <th>Env Variables</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>AUTH_TRUST_HOST</code></td>
+      <td>Set as `true` to ensure authentication works in Auth.js</td>
+    </tr>
+    <tr>
+      <td><code>NEXT_PUBLIC_DEPLOYMENT_URL</code></td>
+      <td>Root URL of the deployed web app</td>
+    </tr>
+    <tr>
+      <td><code>AUTH_URL</code></td>
+      <td>Root URL of the deployed web app</td>
+    </tr>
+  </tbody>
+</table>
