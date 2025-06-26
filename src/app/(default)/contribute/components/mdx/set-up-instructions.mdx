@@ -1,6 +1,6 @@
 ## Set Up a Local Interaction Mining Instance
 
-This is a guide for running our interaction mining installation script. We also explain what the script does below.
+This is a set up and explanation guide for running our interaction mining installation bash script.
 
 ### Running the Setup Script
 
@@ -12,7 +12,9 @@ curl -o- https://dribosc0et3qr.cloudfront.net/install.sh | bash;
 
 The script will step you through the setup and build for both the web and mobile app.
 
-❗ Our script uses [`homebrew`](https://brew.sh) to install dependencies. Make sure you have it installed first before running our script. The script is currently targeted for OSX devices, but it may work on Linux with `homebrew` installed.
+❗ Our script uses [`homebrew`](https://brew.sh) to install dependencies. Make sure you have it installed first before running our script. 
+
+The script targets for OSX devices, but may work on Linux with `homebrew` installed.
 
 ---
 
@@ -48,7 +50,7 @@ The script checks if MongoDB is installed by checking for a Mongo Shell (`mongos
 
 The script will prompt you for some settings to set up Mongo:
 
-1. Provide a **directory name*** for where you want Mongo database data to be stored.
+1. Provide a **directory name** for where you want Mongo database data to be stored.
 2. Provide **database name** for where interaction mining data will be uploaded to.
 
 The script will create a Mongo configuration file (`mongo.conf`). Then it will use the file initialize the database. with a replication set (required).
@@ -107,7 +109,7 @@ NEXT_PUBLIC_DEPLOYMENT_URL=
 
 ### ⚙️ Interaction Mining Mobile App (Android)
 
-Next, the script will ask whether you want to set up the ODIM Android mobile app. If not, the script will skip the set up in this section
+Next, the script will ask whether you want to set up the ODIM Android mobile app. If not, you can skip this section.
 
 #### Java Set Up
 
