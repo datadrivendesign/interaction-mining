@@ -25,7 +25,7 @@ export default function RecordTrace() {
         <div className="flex flex-row md:flex-col justify-center content-center items-center">
           <aside className="top-20 flex flex-col w-full gap-2 max-w-xs">
             <Link
-              href={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/apk/odim-1.0.apk`}
+              href={`https://dhyjzbfmbeej1.cloudfront.net/assets/apk/odim-1.0.apk`}
               target="_blank"
             >
               <Button className="w-full">
@@ -36,7 +36,7 @@ export default function RecordTrace() {
           </aside>
           <div className="flex justify-between justify-center content-center items-center gap-8 mt-8">
             <div className="w-full max-w-xs mx-auto text-center">
-              <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+              <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
             </div>
           </div>
         </div>          
@@ -54,10 +54,10 @@ export default function RecordTrace() {
         </article>
         <div className="flex flex-row justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center mr-8">
-            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/accessibility.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/traces.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/traces.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
       </section>

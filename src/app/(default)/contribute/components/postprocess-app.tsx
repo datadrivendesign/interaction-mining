@@ -12,7 +12,7 @@ export default function PostProcessApp() {
           </article>
           <div className="flex justify-between items-center gap-8 mt-8">
             <div className="w-full max-w-xs mx-auto text-center">
-              <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/delete_screens.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+              <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/delete_screens.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
             </div>
           </div>
         </section>
@@ -23,7 +23,7 @@ export default function PostProcessApp() {
           </article>
           <div className="flex justify-between items-center gap-8 mt-8">
             <div className="w-full max-w-xs mx-auto text-center">
-              <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/add_gesture.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+              <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/add_gesture.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
             </div>
           </div>
         </section>
@@ -36,10 +36,10 @@ export default function PostProcessApp() {
 
         <div className="flex flex-row justify-between items-center gap-4 mt-8">
           <div className="w-full max-w-xs mx-auto text-center mr-4">
-            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/screen_redact_1.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/screen_redact_1.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/screen_redact_2.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/screen_redact_2.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
           </div>
         </div>
         </section>

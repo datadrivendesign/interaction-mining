@@ -358,6 +358,9 @@ _AWS_UPLOAD_BUCKET="$BUCKET"
 USE_MINIO_STORE="true"
 MINIO_ENDPOINT="http://$IP_ADDRESS:9000"
 NEXT_PUBLIC_DEPLOYMENT_URL="http://$IP_ADDRESS:3000"
+AUTH_TRUST_HOST="true"
+AUTH_URL="http://$IP_ADDRESS:3000"
+
 echo -e "${YELLOW}⚠️  Google OAuth setup must be completed manually.${NC}"
 echo "See further details in INSTRUCTIONS.md"
 echo "Visit https://console.cloud.google.com/apis/credentials"
@@ -373,13 +376,15 @@ step "Environment variables are all set!"
 echo -e "${GREEN}👉 MongoDB connection URI:${NC} $DATABASE_URL"
 echo -e "${GREEN}👉 AWS region:${NC} $_AWS_REGION"
 echo -e "${GREEN}👉 AWS Access Key:${NC} $_AWS_ACCESS_KEY_ID"
-echo -e "${GREEN}👉 AWS Access Key:${NC} $_AWS_SECRET_ACCESS_KEY"
+echo -e "${GREEN}👉 AWS Secret Key:${NC} $_AWS_SECRET_ACCESS_KEY"
 echo -e "${GREEN}👉 AWS Upload Bucket:${NC} $_AWS_UPLOAD_BUCKET"
 echo -e "${GREEN}👉 Use MinIO Object Store:${NC} $USE_MINIO_STORE"
 echo -e "${GREEN}👉 MinIO API Endpoint:${NC} $MINIO_ENDPOINT"
 echo -e "${GREEN}👉 Google OAuth Client ID set:${NC} $GOOGLE_CLIENT_ID"
 echo -e "${GREEN}👉 Google OAuth Client Secret:${NC} $GOOGLE_CLIENT_SECRET"
 echo -e "${GREEN}👉 Web Deploy URL:${NC} $NEXT_PUBLIC_DEPLOYMENT_URL"
+echo -e "${GREEN}👉 Auth Trust Host:${NC} $AUTH_TRUST_HOST"
+echo -e "${GREEN}👉 Auth URL:${NC} $AUTH_URL"
 
 ENV_FILE=".env.local"
 
@@ -393,11 +398,14 @@ _AWS_REGION=$_AWS_REGION
 _AWS_ACCESS_KEY_ID=$_AWS_ACCESS_KEY_ID
 _AWS_SECRET_ACCESS_KEY=$_AWS_SECRET_ACCESS_KEY
 _AWS_UPLOAD_BUCKET=$_AWS_UPLOAD_BUCKET
+NEXT_PUBLIC_AWS_CLOUDFRONT_URL=""
 USE_MINIO_STORE=$USE_MINIO_STORE
 MINIO_ENDPOINT=$MINIO_ENDPOINT
 # >>>>> NextAuth configuration
 GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+AUTH_TRUST_HOST=$AUTH_TRUST_HOST
+AUTH_URL=$AUTH_URL
 EOF
 # set auth secret directly into .env.local
 npx auth secret
