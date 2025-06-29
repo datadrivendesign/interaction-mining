@@ -1,4 +1,7 @@
+// @ts-nocheck
 "use client";
+
+import { usePathname, useParams } from "next/navigation";
 
 import {
   createContext,
@@ -6,11 +9,9 @@ import {
   useContext,
   useEffect,
   useCallback,
-  useReducer,
   useMemo,
 } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "motion/react";
 import {
@@ -30,7 +31,6 @@ import {
   Search,
   Shrink,
   Download,
-  Inspect,
 } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
@@ -43,12 +43,13 @@ import {
 } from "@/components/ui/tooltip";
 import { GestureOption } from "@/app/(signed-in)/capture/[captureId]/edit/components/types";
 import { Button } from "@/components/ui/button";
+import { downloadTrace } from "../lib";
 
 const GalleryContext = createContext({
   data: [] as any[],
-  setData: (_: any) => {},
+  setData: (_: any) => { },
   inspectData: null as any,
-  setInspectData: (_: any) => {},
+  setInspectData: (_: any) => { },
 });
 
 export function GalleryRoot({
@@ -60,13 +61,6 @@ export function GalleryRoot({
 }) {
   const [_data, setData] = useState<any[]>(data);
   const [inspectData, setInspectData] = useState<any>(null);
-
-  // set default view to first trace
-  useEffect(() => {
-    if (data && data.length > 0) {
-      setInspectData(data[0]);
-    }
-  }, [data]);
 
   return (
     <GalleryContext.Provider
@@ -82,43 +76,57 @@ export function GalleryRoot({
   );
 }
 
-export function Gallery({ traceId }: { traceId: string }) {
+export function Gallery() {
   const { data, inspectData, setInspectData } = useContext(GalleryContext);
 
-  useEffect(() => {
-    // if traceId is passed in, set current view to specified trace
-    if (traceId) {
-      const trace = data.find((a) => a.id === traceId);
+  const params = useParams();
+  const appId = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+  const pathname = usePathname();
 
+  // Initialize selected trace from URL on mount / path change
+  useEffect(() => {
+    const match = window.location.pathname.match(/\/trace\/([^/]+)/);
+    const id = match ? match[1] : null;
+    if (id) {
+      const trace = data.find((a) => a.id === id);
       if (trace) {
         setInspectData(trace);
       }
     }
-  }, [traceId, data, setInspectData]);
+  }, [pathname, data, setInspectData]);
+
+  // Sync browser history when inspectData changes via clicks
+  useEffect(() => {
+    if (inspectData) {
+      window.history.pushState({}, "", `/app/${appId}/trace/${inspectData.id}`);
+    } else {
+      window.history.pushState({}, "", `/app/${appId}`);
+    }
+  }, [inspectData, appId]);
 
   return (
-    <div className="flex grow w-full max-w-screen-2xl h-full place-self-center gap-2">
+    <div className="flex w-full max-w-screen-2xl h-full min-h-0 flex-1 place-self-center">
       <aside
         className={clsx(
-          "flex-col grow shrink-0 basis-full lg:basis-[320px] lg:pl-4",
-          inspectData ? "hidden lg:flex" : "flex"
+          inspectData ? "hidden md:flex" : "flex",
+          "flex-col shrink-0 basis-full md:basis-[320px] h-full min-h-0 border-r border-muted-background divide-y divide-dimmed-background overflow-auto",
         )}
       >
         {data.map((data, index) => (
           <div
             key={index}
             className={clsx(
-              "flex flex-col px-4 py-4 cursor-pointer rounded-none lg:rounded-xl border-b-2 lg:border-none border-neutral-100 dark:border-neutral-900",
+              "flex flex-col p-4 cursor-pointer",
               inspectData?.id === data?.id
-                ? "bg-neutral-100 dark:bg-neutral-900"
+                ? "bg-muted-background"
                 : "bg-transparent"
             )}
             onClick={() => setInspectData(data)}
           >
-            <h2 className="text-lg md:text-xl font-bold tracking-tight line-clamp-1">
+            <h2 className="text-base font-medium line-clamp-1">
               {data?.description}
             </h2>
-            <span className="text-sm md:text-base text-muted-foreground line-clamp-1">
+            <span className="text-sm text-muted-foreground line-clamp-1">
               {prettyTime(data?.created, {
                 format: "LLLL dd, yyyy",
               })}
@@ -126,7 +134,7 @@ export function Gallery({ traceId }: { traceId: string }) {
           </div>
         ))}
       </aside>
-      <div className="flex flex-col basis-full lg:basis-[1216px] max-w-[1216px] overflow-x-hidden pr-4">
+      <div className="flex flex-col basis-full md:basis-[1216px] max-w-[1216px] overflow-x-hidden pr-4">
         {inspectData ? (
           <InspectView data={inspectData} />
         ) : (
@@ -138,7 +146,7 @@ export function Gallery({ traceId }: { traceId: string }) {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 
@@ -260,33 +268,26 @@ export function InspectView({ data }: { data: any }) {
   );
 
   const handleDownload = useCallback(() => {
-    const fileData = JSON.stringify(data, null, 2);
-    const blob = new Blob([fileData], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `inspectData-${data.id}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadTrace(data);
   }, [data]);
 
   return (
-    <div className="flex flex-col grow w-full h-full p-4 pr-0">
+    <div className="flex flex-col grow w-full h-full p-4 md:p-6 pr-0">
       <button
         onClick={() => setInspectData(null)}
-        className="inline-flex lg:hidden cursor-pointer mb-2"
+        className="inline-flex md:hidden cursor-pointer mb-2"
       >
         <ArrowLeft className="cursor-pointer size-6 text-muted-foreground mr-1" />
         <span className="text-base text-muted-foreground font-semibold">
           Back
         </span>
       </button>
-      <div className="flex justify-between items-start">
-        <section className="mb-4">
-          <h1 className="text-3xl font-bold tracking-tight">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4">
+        <section>
+          <h1 className="text-lg font-bold tracking-tight">
             {data?.description}
           </h1>
-          <span className="text-base text-muted-foreground mb-2">
+          <span className="text-sm text-muted-foreground mb-2">
             Created on{" "}
             {prettyTime(data?.created, {
               format: "LLLL dd, yyyy",
@@ -297,7 +298,7 @@ export function InspectView({ data }: { data: any }) {
             })}
           </span>
         </section>
-        <div className="hidden lg:flex gap-2">
+        <div className="hidden md:flex gap-2">
           <Button
             variant={"secondary"}
             onClick={handleDownload}
@@ -306,11 +307,6 @@ export function InspectView({ data }: { data: any }) {
             <Download className="size-4" />
             Download trace
           </Button>
-          {/* <Link href={`/trace/${data.id}`} target="_blank">
-            <Button tooltip="Open in trace inspector">
-              Open in trace inspector
-            </Button>
-          </Link> */}
         </div>
       </div>
       <section className="block w-full mb-4">
@@ -319,7 +315,7 @@ export function InspectView({ data }: { data: any }) {
             {data?.screens.map((screen: Screen, index: number) => (
               <figure
                 key={screen.id}
-                className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-xs overflow-clip"
+                className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden"
               >
                 <motion.div
                   animate={{ opacity: loading.status === "loading" ? 1 : 0 }}
@@ -341,7 +337,7 @@ export function InspectView({ data }: { data: any }) {
                   priority
                   onLoad={handleImageLoad}
                 />
-                {(screen.gesture.x !== null && screen.gesture.y !== null) && 
+                {(screen.gesture.x !== null && screen.gesture.y !== null) &&
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

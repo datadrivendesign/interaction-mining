@@ -20,7 +20,6 @@ import { spring } from "@/lib/motion";
 import { DateTime } from "luxon";
 
 export type FrameTimelineProps = {
-  src: string;
   thumbnails: {
     src: string;
     timestamp: number;

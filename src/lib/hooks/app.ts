@@ -6,7 +6,7 @@ import { App } from "@prisma/client";
 
 export function useAppSearch(params: GetAppsParams) {
   const [apps, setApps] = useState<App[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const debouncedFetch = useMemo(
     () =>

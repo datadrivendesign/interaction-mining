@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Role } from "@prisma/client";
+import LogoSm from "@/public/logo_sm.svg";
 
 export default function NavigationBar() {
   return (
@@ -22,7 +23,7 @@ export default function NavigationBar() {
             href={"/"}
             className="text-2xl font-semibold leading-none tracking-tighter"
           >
-            Interaction Mining
+            <LogoSm className="block w-auto h-8 fill-foreground" />
           </Link>
           <Link href="/explore">
             <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">

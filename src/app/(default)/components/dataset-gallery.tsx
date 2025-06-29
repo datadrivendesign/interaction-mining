@@ -62,8 +62,8 @@ export default function DatasetGallery() {
                 height={0}
                 sizes="100vw"
               />
-              <TitleMarquee className="flex justify-center" title={app.metadata.name}>
-                <p className="text-xs font-medium tracking-tight">{app.metadata.name}</p>
+              <TitleMarquee title={app.metadata.name} mode="visibility">
+                <p className="w-full text-center text-xs font-medium tracking-tight">{app.metadata.name}</p>
               </TitleMarquee>
             </Link>
           ))}
