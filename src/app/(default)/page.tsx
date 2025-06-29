@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import Dataset from "./components/dataset";
+import Footer from "./components/footer";
 
 export default function Home() {
   return (
@@ -57,7 +58,7 @@ export default function Home() {
 
       {/* Platform section */}
       {/* <Platform /> */}
-      <div className="pb-8 lg:pb-16"></div>
+      <Footer />
     </main>
   );
 }
