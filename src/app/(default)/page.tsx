@@ -26,7 +26,7 @@ export default function Home() {
             Introducing Interaction Mining
           </p>
           <h1 className="w-full max-w-5xl text-center text-5xl lg:text-6xl text-foreground font-black tracking-tight mb-2">
-            Your complete mobile interaction dataset and collection platform
+            Open mobile interaction dataset platform
           </h1>
           <p className="w-auto max-w-xl text-center text-lg lg:text-xl text-muted-foreground font-medium mb-4">
             Interaction Mining is an open platform for collecting, managing, and sharing
