@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import Dataset from "./components/dataset";
-import Footer from "./components/footer";
 
 export default function Home() {
   return (
@@ -24,14 +23,14 @@ export default function Home() {
       >
         <div className="flex flex-col grow w-full justify-center items-center">
           <p className="w-auto max-w-xl text-center text-lg lg:text-xl text-muted-foreground font-medium mb-2">
-            Introducing Interaction Mining
+            Introducing ODIM
           </p>
           <h1 className="w-full max-w-5xl text-center text-5xl lg:text-6xl text-foreground font-black tracking-tight mb-2">
-            Open mobile interaction dataset platform
+            Your complete mobile interaction dataset and collection platform
           </h1>
           <p className="w-auto max-w-xl text-center text-lg lg:text-xl text-muted-foreground font-medium mb-4">
-            Interaction Mining is an open platform for collecting, managing, and sharing
-            mobile interaction datasets.
+            On-device interaction-mining (ODIM) provides a platform for collecting, managing, and sharing
+            mobile interaction datasets on a single, open platform
           </p>
           <div className="flex gap-6">
             <Link
@@ -58,7 +57,7 @@ export default function Home() {
 
       {/* Platform section */}
       {/* <Platform /> */}
-      <Footer />
+      <div className="pb-8 lg:pb-16"></div>
     </main>
   );
 }

@@ -8,16 +8,17 @@ import { Screen } from "@prisma/client";
 
 export default async function AppPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ trace: string }>;
 }) {
   let app;
   let traces;
 
   try {
-    let { slug } = await params;
-    let id = slug[0];
-
+    var { id } = await params;
+    var { trace: traceId } = await searchParams;
     app = await getApp(id);
     await getTraces({ appId: id, includes: { screens: true } }).then((res) => {
       if (res.ok) {
@@ -42,22 +43,23 @@ export default async function AppPage({
 
   return (
     <GalleryRoot data={traces}>
-      <main className="relative flex flex-col w-full max-w-dvw h-[calc(100dvh-65px)] items-center justify-start overflow-hidden">
-        <div className="flex w-full max-w-screen-2xl items-center p-4">
-          <Image
-            src={app.metadata.icon}
-            alt={`${app?.metadata.name} icon`}
-            width={0}
-            height={0}
-            sizes="2.5rem"
-            className="size-10 rounded-lg shadow mr-2"
-          />
-          <h1 className="text-2xl font-extrabold tracking-tight leading-normal truncate">
-            {app?.metadata.name} {`(${prettyOS(app.os)})`}
-          </h1>
-        </div>
-        <div className="w-full border-b border-muted-background" />
-        <Gallery />
+      <main className="relative flex flex-col grow items-center justify-between">
+        <section className="relative flex flex-col grow w-full">
+          <div className="flex w-full max-w-screen-2xl self-center items-center mb-4 px-4">
+            <Image
+              src={app.metadata.icon}
+              alt={`${app?.metadata.name} icon`}
+              width={48}
+              height={48}
+              className="rounded-xl drop-shadow-md mr-4"
+            />
+            <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-normal truncate">
+              {app?.metadata.name} {`(${prettyOS(app.os)})`}
+            </h1>
+          </div>
+          <div className="w-full h-0.5 bg-neutral-100 dark:bg-neutral-900 rounded-full mb-0 lg:mb-4" />
+          <Gallery traceId={traceId || ""} />
+        </section>
       </main>
     </GalleryRoot>
   );

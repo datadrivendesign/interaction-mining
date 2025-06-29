@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Role } from "@prisma/client";
-import LogoSm from "@/public/logo_sm.svg";
 
 export default function NavigationBar() {
   return (
@@ -22,7 +21,7 @@ export default function NavigationBar() {
             href={"/"}
             className="text-2xl font-semibold leading-none tracking-tighter"
           >
-            <LogoSm className="block w-auto h-8 fill-foreground" />
+            Interaction Mining
           </Link>
         </div>
         <div className="flex basis-1/2 h-full gap-4 lg:gap-6 justify-end items-center">
@@ -39,7 +38,7 @@ function SessionContent() {
   if (status === "loading") {
     return (
       <>
-        <Avatar>
+      <Avatar>
           <AvatarFallback className="animate-pulse" />
         </Avatar>
       </>

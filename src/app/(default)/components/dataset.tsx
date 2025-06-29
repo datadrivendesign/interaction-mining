@@ -1,35 +1,8 @@
 import Globe from "@/public/globe.svg";
 import Link from "next/link";
 import DatasetGallery from "./dataset-gallery";
-import { prisma } from "@/lib/prisma";
-import { formatNumber } from "@/lib/utils";
-import { cache } from "react";
-
-export const revalidate = 43200
-
-const fetchStats = cache(async () => {
-  "use server";
-  const [appsCount, tracesCount, screensCount, redactionsCount] = await Promise.all([
-    prisma.app.count(),
-    prisma.trace.count(),
-    prisma.screen.count(),
-
-    // aggregate redactions‐array lengths server‐side
-    prisma.screen.aggregateRaw({
-      pipeline: [
-        // for each document, project the size of its redactions array
-        { $project: { count: { $size: { $ifNull: ["$redactions", []] } } } },
-        // then sum all those sizes into a single total
-        { $group: { _id: null, total: { $sum: "$count" } } },
-      ],
-    }).then(res => ((res as unknown) as { total: number }[])[0]?.total ?? 0),
-  ])
-
-  return { appsCount, tracesCount, screensCount, redactionsCount }
-});
 
 export default async function Dataset() {
-  const { appsCount, tracesCount, screensCount, redactionsCount } = await fetchStats()
   return (
     <section
       id="dataset"
@@ -58,12 +31,12 @@ export default async function Dataset() {
         <div className="flex flex-col items-start justify-start w-full h-full p-6 bg-gradient-to-br from-white to-neutral-100 dark:from-neutral-900 dark:to-black rounded-[calc(1.5rem-1px)]">
           <p className="text-3xl text-muted-foreground font-medium tracking-tight">
             <span className="text-foreground">
-              {formatNumber(screensCount)} screens
+              1.9K screens
             </span>
             {" "}from{" "}
-            <span className="text-foreground">{formatNumber(tracesCount)} user flows</span>
+            <span className="text-foreground">176 user flows</span>
             {" "}across{" "}
-            <span className="text-foreground">{formatNumber(appsCount)} apps</span>.
+            <span className="text-foreground">106 apps</span>.
           </p>
         </div>
       </div>

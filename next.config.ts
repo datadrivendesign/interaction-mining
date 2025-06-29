@@ -64,12 +64,6 @@ const nextConfig: NextConfig = {
     viewTransition: true,
     reactCompiler: true,
   },
-  rewrites: async () => [
-    {
-      source: "/cdn/:path*", // public-facing path
-      destination: `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL || ""}/:path*`,
-    },
-  ],
   webpack: (config) => {
     // Canvas is a Node.js package that needs to be polyfilled in the browser
     config.externals = [...config.externals, { canvas: "canvas" }];

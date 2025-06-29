@@ -67,7 +67,7 @@ export function GallerySearch() {
         where: search.where!, // Preserve existing filters
       });
     },
-    [setSearch, search.where]
+    [setSearch]
   );
 
   const handleSetOS = useCallback(
@@ -124,7 +124,7 @@ export function Gallery() {
     page: 1,
   }), [search]);
 
-  const { apps = [], loading: isAppsLoading } = useAppSearch(params);
+  const { apps = [] } = useAppSearch(params);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 p-4 lg:p-6">
@@ -152,14 +152,9 @@ export function Gallery() {
           </div>
         </Link>
       ))) : (
-        isAppsLoading ? (
-          <div className="col-span-full text-center text-muted-foreground">
-            Loading apps...
-          </div>) : (
-          <div className="col-span-full text-center text-muted-foreground">
-            No apps found matching your search criteria.
-          </div>
-        )
+        <div className="col-span-full text-center text-muted-foreground">
+          No apps found matching your search criteria.
+        </div>
       )}
     </div>
   );
