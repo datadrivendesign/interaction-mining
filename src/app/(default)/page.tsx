@@ -25,7 +25,8 @@ export default function Home() {
         className="relative flex flex-col items-center w-full max-w-screen-2xl px-4 py-12 lg:px-6 lg:py-18 gap-4 lg:gap-6"
       >
         <h1 className="w-full max-w-5xl text-center text-4xl md:text-5xl lg:text-6xl text-foreground font-black tracking-tight">
-          Interaction and Design Data for Mobile Apps
+          Interaction and Design Data <br className="hidden sm:block" />
+          for Mobile Apps
         </h1>
         <div className="relative z-0 flex col-span-1 md:col-span-2 grow w-full max-w-screen-md h-full p-px -mb-4 lg:-mb-6 bg-gradient-to-b from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
           <div className="absolute z-10 bottom-0 left-0 right-0 flex w-full h-full justify-center items-end bg-gradient-to-b from-transparent from-25% to-background to-90% pointer-events-none">
