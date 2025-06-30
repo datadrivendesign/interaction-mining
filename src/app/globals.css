@@ -35,7 +35,7 @@
   --radius: 0.5rem;
 
   --font-sans: InterVariable, Inter, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-mono: GeistMono, monospace;
   --font-display--font-feature-settings: "liga" 1, "calt" 1, "ss03" 1, "ss08" 1;
 
   @keyframes accordion-down {
