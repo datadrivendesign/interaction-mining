@@ -48,7 +48,8 @@ import {
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
-import { FrameData, GestureOption } from "../types";
+import { FrameData } from "../types";
+import { GestureOption } from "@/lib/utils/gesture-options";
 import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
 import { Platform } from "@/lib/utils";
 

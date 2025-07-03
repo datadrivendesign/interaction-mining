@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { gestureOptions } from "../repair-screen";
+import { gestureOptions } from "@/lib/utils/gesture-options";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();

@@ -14,21 +14,8 @@ import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "motion/react";
 import {
-  ArrowDownFromLine,
   ArrowLeft,
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
-  ArrowUpFromLine,
-  Circle,
-  CircleDot,
-  CircleHelp,
-  CircleStop,
-  Expand,
-  Grab,
-  IterationCcw,
-  IterationCw,
   Search,
-  Shrink,
   Download,
   Inspect,
 } from "lucide-react";
@@ -43,6 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { GestureOption } from "@/app/(signed-in)/capture/[captureId]/edit/components/types";
 import { Button } from "@/components/ui/button";
+import { gestureOptions } from "@/lib/utils/gesture-options";
 
 const GalleryContext = createContext({
   data: [] as any[],
@@ -150,114 +138,7 @@ export function InspectView({ data }: { data: any }) {
     setLoading({ status: "loaded" });
   }, []);
 
-  const gestureOptions = useMemo<GestureOption[]>(
-    () => [
-      {
-        value: "tap",
-        label: "Tap",
-        icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "double tap",
-        label: "Double tap",
-        icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "touch and hold",
-        label: "Touch and hold",
-        icon: (
-          <CircleStop className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-      {
-        value: "swipe",
-        label: "Swipe",
-        subGestures: [
-          {
-            value: "swipe up",
-            label: "Swipe up",
-            icon: (
-              <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "swipe down",
-            label: "Swipe down",
-            icon: (
-              <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "swipe left",
-            label: "Swipe left",
-            icon: (
-              <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "swipe right",
-            label: "Swipe right",
-            icon: (
-              <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-        ],
-      },
-      {
-        value: "drag",
-        label: "Drag",
-        icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "zoom",
-        label: "Zoom",
-        subGestures: [
-          {
-            value: "zoom in",
-            label: "Zoom in",
-            icon: (
-              <Shrink className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "zoom out",
-            label: "Zoom out",
-            icon: (
-              <Expand className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-        ],
-      },
-      {
-        value: "rotate",
-        label: "Rotate",
-        subGestures: [
-          {
-            value: "rotate cw",
-            label: "Rotate cw",
-            icon: (
-              <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "rotate ccw",
-            label: "Rotate ccw",
-            icon: (
-              <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-        ],
-      },
-      {
-        value: "other",
-        label: "Other",
-        icon: (
-          <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-    ],
-    []
-  );
+
 
   const handleDownload = useCallback(() => {
     const fileData = JSON.stringify(data, null, 2);

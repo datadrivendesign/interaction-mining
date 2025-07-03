@@ -48,7 +48,7 @@ import { Switch } from "@/components/ui/switch";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
-import { GestureOption } from "../types";
+import { GestureOption } from "@/lib/utils/gesture-options";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

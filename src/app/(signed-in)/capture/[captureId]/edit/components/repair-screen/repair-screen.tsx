@@ -3,21 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
-  ArrowDownFromLine,
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
-  ArrowUpFromLine,
-  Circle,
   CircleAlert,
-  CircleDot,
-  CircleHelp,
-  CircleStop,
-  Expand,
-  Grab,
-  IterationCcw,
-  IterationCw,
   ListRestart,
-  Shrink,
   X,
 } from "lucide-react";
 
@@ -43,104 +30,7 @@ import { AnimatePresence, motion, spring, Variants } from "motion/react";
 import { extractVideoFrame } from "./utils";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-export const gestureOptions = [
-  {
-    value: "tap",
-    label: "Tap",
-    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "double tap",
-    label: "Double tap",
-    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "touch and hold",
-    label: "Touch and hold",
-    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "swipe",
-    label: "Swipe",
-    subGestures: [
-      {
-        value: "swipe up",
-        label: "Swipe up",
-        icon: (
-          <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-      {
-        value: "swipe down",
-        label: "Swipe down",
-        icon: (
-          <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-      {
-        value: "swipe left",
-        label: "Swipe left",
-        icon: (
-          <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-      {
-        value: "swipe right",
-        label: "Swipe right",
-        icon: (
-          <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-    ],
-  },
-  {
-    value: "drag",
-    label: "Drag",
-    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "zoom",
-    label: "Zoom",
-    subGestures: [
-      {
-        value: "zoom in",
-        label: "Zoom in",
-        icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "zoom out",
-        label: "Zoom out",
-        icon: <Expand className="size-4 text-yellow-800 hover:text-black" />,
-      },
-    ],
-  },
-  {
-    value: "rotate",
-    label: "Rotate",
-    subGestures: [
-      {
-        value: "rotate cw",
-        label: "Rotate clockwise",
-        icon: (
-          <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-      {
-        value: "rotate ccw",
-        label: "Rotate counter-clockwise",
-        icon: (
-          <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-    ],
-  },
-  {
-    value: "other",
-    label: "Other",
-    icon: <CircleHelp className="size-4 text-yellow-800 hover:text-black" />,
-  },
-];
+import { gestureOptions } from "@/lib/utils/gesture-options";
 
 export const card = {
   initial: {
@@ -380,12 +270,14 @@ function RepairScreenIOS({
     }, [files, videoRef, videoDuration]);
 
   const videoFiles = useMemo(() => {
+    console.log("files", files);
     const isTranscodeDisabled = (
       !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
       process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
     );
     const regexRule = isTranscodeDisabled ? /\.(mp4|mov)$/ : /\.(webm)$/
-    return files.filter((f) => regexRule.test(f.fileKey));
+    // iOS screen recordings capitalize file extension, so we lowercase here
+    return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
 
   useEffect(() => {

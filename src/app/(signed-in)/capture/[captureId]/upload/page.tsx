@@ -140,7 +140,7 @@ export default function Page() {
                         className="inline-flex items-center px-3 py-0.5 rounded-full bg-blue-500 hover:bg-blue-600 disabled:bg-neutral-500 text-white text-sm md:text-base font-medium cursor-pointer transition-colors duration-150 ease-in-out"
                       >
                         <ExternalLink className="size-3.5 md:size-4 mr-1" />{" "}
-                        Install/Open
+                        Open App Store
                       </button>
                     </Link>
                   ) : (
@@ -167,7 +167,7 @@ export default function Page() {
             <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-950 dark:text-neutral-50 text-sm tabular-nums">
               2
             </span>{" "}
-            Record the following task
+            Make a screen recording of the following task
           </CardTitle>
           <CardDescription hidden>Record the following task</CardDescription>
         </CardHeader>
@@ -177,7 +177,7 @@ export default function Page() {
               <>
                 <article className="prose prose-neutral dark:prose-invert leading-snug">
                   <p>
-                    {capture?.task?.description
+                    <strong>Task:</strong> {capture?.task?.description
                       ? capture?.task?.description
                       : "No description provided."}
                   </p>
@@ -192,7 +192,7 @@ export default function Page() {
 
           <div className="font-semibold mb-4">
             <article>
-              Please turn on &ldquo;Do not Disturb&rdquo; on your phone to block notifications while recording.
+              Turn on &ldquo;Do not Disturb&rdquo; on your phone to block notifications while screen recording.
             </article>
           </div>
 
@@ -309,8 +309,8 @@ export default function Page() {
             </span>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end items-center">
-          <form action={formAction}>
+        <CardFooter className="flex flex-col justify-end items-center">
+          <form className="self-end" action={formAction}>
             <input
               hidden
               className="hidden"
@@ -324,14 +324,16 @@ export default function Page() {
               Upload
             </Button>
           </form>
+          <div className="font-semibold mt-4 justify-self-center self-center">
+            <article>
+              Close this tab once you have finished uploading your recording.
+            </article>
+          </div>
+
         </CardFooter>
       </Card>
-      <Card className="w-full max-w-screen-sm">
-        <CardContent className="p-4 md:p-6">
-          If you are done uploading recordings, you may now close this page and
-          return to your original device.
-        </CardContent>
-      </Card>
+
+      
     </div>
   );
 }
