@@ -1,0 +1,14 @@
+import { Pencil, X, ListCheck, Save } from 'lucide-react'
+
+### Redact Screens
+
+Sensitive data can be redacted from both the visual screenshot and the view hierarchy metadata. The mobile app provides multiple redaction methods.
+
+**Redact Screens by Bounding Box and Keyword**
+
+1. Tap the screen containing sensitive information to open redaction interface.
+2. Tap on the screen bounding box containing that information.
+3. Provide a justification for the redaction, optionally add a keyword to redact additional elements in the screen.
+4. Tap the FAB to expand tools: Redact <Pencil className="inline-block w-4 h-4 align-middle text-blue-300" />, Erase <X className="inline-block w-4 h-4 align-middle text-red-400" />, List <ListCheck className="inline-block w-4 h-4 align-middle text-gray-400" />, and Save <Save className="inline-block w-4 h-4 align-middle text-red-200" />.
+5. Tap the Erase button to remove redactions.
+6. Tap the Save button to redact data from both screenshot and view hierarchy.

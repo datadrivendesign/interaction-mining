@@ -1,0 +1,77 @@
+import { 
+    X, 
+    ListRestart, 
+    CircleAlert, 
+    CircleX, 
+    MousePointer2, 
+    Pencil, 
+    Eraser
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Kbd from "@/components/ui/kbd";
+
+## Post-Process on Web App
+
+Once screens are uploaded, you must post-process the screens to fix errors and remove privacy sensitive information in the screens.
+
+The post-processing interface uses a multi-part form with phases to:
+- Delete extraneous or irrelevant screens from a trace.
+- Tag missing or incorrect gestures and interactions.
+- Redact sensitive information from screens.
+
+---
+
+### Delete Screens
+
+To delete unneeded screens from your trace:
+
+1. Review your trace and locate extraneous screen(s).
+2. Click the <X className="inline-block w-4 h-4 align-middle text-gray-400" /> icon on the top right of the screen.
+
+Restore deleted screens by clicking <Button><ListRestart /> Reset Screens</Button> on the top left
+
+---
+
+### Tag Gestures
+
+To complete the post-processing stage, all screens must be tagged with an gestures and a short 1-2 word description of the interaction. 
+
+#### Add a Gestures to Screen
+Screens with missing gestures will overlay <CircleAlert className="inline-block w-6 h-6 align-middle text-red-500" /> icon in the bottom filmstrip.
+
+1. Select the screen with missing gesture from the bottom filmstrip.
+2. On the top right view displaying the selected screen, click the area of screen where the interaction occurred.
+3. A colored circle will pop up with a dropdown of common interaction types, select the correct interaction type
+4. Write a short description of what the gesture does in the text area below.
+
+#### Amend Incorrect Gestures
+Some screens may have erroneous interactions and may need to be corrected.
+
+1. Select the screen with incorrect gesture from the bottom filmstrip.
+2. On the top right view displaying the selected screen, drag the colored gesture icon to where the interaction actually occurred on screen.
+3. Change the gesture type from dropdown and description from text area if needed.
+
+---
+
+### Redact Screens
+
+Private data can be redacted from screens by clicking and dragging over screen regions containing sensitive data.
+
+#### Tools
+The redaction editor provides three tools to help you redact personal data.
+
+- Move: Select <MousePointer2 className="inline-flex justify-center items-center size-6 p-1 mr-0.5 rounded-md text-white bg-black dark:text-black dark:bg-white aspect-square" /> (or click <Kbd className="sm:inline-flex justify-center align-middle text-muted-foreground rounded-sm w-min">V</Kbd>) to move around and zoom in/out of the screen on the redaction canvas.
+- Draw: Select <Pencil className="inline-flex justify-center items-center size-6 p-1 mr-0.5 rounded-md text-white bg-black dark:text-black dark:bg-white aspect-square" /> (or click <Kbd className="sm:inline-flex align-middle text-muted-foreground rounded-sm w-min">P</Kbd>) to draw a redaction over the screen by click + drag.
+- Eraser: Select <Eraser className="inline-flex justify-center items-center size-6 p-1 mr-0.5 rounded-md text-white bg-black dark:text-black dark:bg-white aspect-square" /> (or click <Kbd className="sm:inline-flex align-middle text-muted-foreground rounded-sm w-min">E</Kbd>) to erase a redaction by clicking on a redaction box. You can also click the <CircleX className="inline-block w-6 h-6 align-middle" /> icon on the top left of the redaction.
+
+1. Select the screen with sensitive data from bottom filmstrip.
+2. On the top right view displaying the selected screen, click the draw tool and click + drag over bounding box containing sensitive data.
+3. Redact the bounding box area so the view hierarchy metadata of the element with personal data is also redacted.
+
+**View hierarchy metadata only redaction is currently in development**
+
+--- 
+
+### Annotate Task Flow
+
+Review all the screen annotations to make sure everything is correct. Then, give a 1-2 sentence summary of the screens and click <Button>Finish</Button> to submit the task flow.
