@@ -28,7 +28,6 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { GestureOption } from "@/app/(signed-in)/capture/[captureId]/edit/components/types";
 import { Button } from "@/components/ui/button";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 

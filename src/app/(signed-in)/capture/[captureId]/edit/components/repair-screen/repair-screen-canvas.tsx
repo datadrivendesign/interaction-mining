@@ -446,7 +446,8 @@ function GestureMenu({
         <Textarea
           ref={textareaRef}
           className="text-sm w-full h-full bg-background!"
-          placeholder="How did you interact with this element?"
+          placeholder="What was your goal with this gesture?"
+          maxLength={50}
           value={gesture.description ? gesture.description : ""}
           onChange={(e) =>
             setGesture((prev) => ({
@@ -465,7 +466,8 @@ function GestureMenu({
         <Textarea
           ref={textareaRef}
           className="text-sm w-full h-full bg-background!"
-          placeholder="How did you interact with this element?"
+          placeholder="What was your goal with this gesture?"
+          maxLength={50}
           value={gesture.description ? gesture.description : ""}
           onChange={(e) =>
             setGesture((prev) => ({
@@ -542,6 +544,7 @@ function GestureSelection(
                   <CommandItem
                     key={option.value}
                     value={option.value}
+                    className="cursor-pointer"
                     onSelect={(currentValue) => {
                       if (option.subGestures === undefined) {
                         setValue(currentValue === value ? "" : currentValue);
@@ -551,10 +554,15 @@ function GestureSelection(
                   >
                     {option.subGestures ? (
                       <Popover>
-                        <PopoverTrigger className="flex justify-between items-center w-full">
+                        <PopoverTrigger className="flex justify-between items-center cursor-pointer w-full">
                           <span className="inline-flex items-center gap-2">
                             {value === option.value ? (
-                              <Check className="size-4" />
+                              <Check
+                                className={cn(
+                                  "h-4 w-4",
+                                  "opacity-100"
+                                )}
+                              />
                             ) : option.subGestures.some(
                                 (gesture: GestureOption) =>
                                   gesture.value === value
@@ -563,7 +571,7 @@ function GestureSelection(
                                 •
                               </div>
                             ) : (
-                              <div className="size-4"></div>
+                              <div className="w-4 h-4"> {option.icon} </div>
                             )}
 
                             {option.label}
@@ -582,6 +590,7 @@ function GestureSelection(
                                   <CommandItem
                                     key={gesture.value}
                                     value={gesture.value}
+                                    className="cursor-pointer"
                                     onSelect={(currentValue) => {
                                       setValue(
                                         currentValue === value ? "" : currentValue
@@ -589,14 +598,15 @@ function GestureSelection(
                                       setOpen(false);
                                     }}
                                   >
-                                    <Check
-                                      className={cn(
-                                        "h-4 w-4",
-                                        gesture.value === value
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
+                                    {gesture.value === value ?
+                                      <Check
+                                        className={cn(
+                                          "h-4 w-4",
+                                          "opacity-100"
+                                        )}
+                                      /> : 
+                                      gesture.icon
+                                    }
                                     {gesture.label}
                                   </CommandItem>
                                 )
@@ -607,12 +617,15 @@ function GestureSelection(
                       </Popover>
                     ) : (
                       <span className="inline-flex items-center gap-2">
-                        <Check
-                          className={cn(
-                            "h-4 w-4",
-                            value === option.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
+                        {value === option.value ?
+                          <Check
+                            className={cn(
+                              "h-4 w-4",
+                              "opacity-100"
+                            )}
+                          /> : 
+                          option.icon
+                        }
                         {option.label}
                       </span>
                     )}

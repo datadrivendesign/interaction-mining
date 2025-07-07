@@ -601,12 +601,15 @@ function GestureSelection() {
                     }
                   }}
                 >
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
+                  {value === option.value ? 
+                    <Check
+                      className={cn(
+                        "h-4 w-4",
+                        "opacity-100"
+                      )}
+                    /> :
+                    option.icon 
+                  }
                   {option.label}
 
                   {option.subGestures && (
@@ -638,14 +641,15 @@ function GestureSelection() {
                                     setOpen(false);
                                   }}
                                 >
-                                  <Check
-                                    className={cn(
-                                      "h-4 w-4",
-                                      gesture.value === value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
+                                  {gesture.value === value ?
+                                    <Check
+                                      className={cn(
+                                        "h-4 w-4",
+                                        "opacity-100"
+                                      )}
+                                    /> : 
+                                    gesture.icon
+                                  }
                                   {gesture.label}
                                 </CommandItem>
                               )

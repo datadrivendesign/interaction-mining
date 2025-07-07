@@ -8,11 +8,15 @@ import {
   CircleDot,
   CircleHelp,
   CircleStop,
-  Expand,
   Grab,
   IterationCcw,
   IterationCw,
-  Shrink,
+  Keyboard,
+  Move,
+  RefreshCw,
+  ScanSearch,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { z } from "zod";
 
@@ -41,48 +45,57 @@ export const gestureOptions: GestureOption[] = [
     icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
   },
   {
-    value: "double tap",
-    label: "Double tap",
-    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "touch and hold",
-    label: "Touch and hold",
-    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
     value: "swipe",
     label: "Swipe",
+    icon: <Move className="size-4 text-yellow-800 hover:text-black" />,
     subGestures: [
       {
         value: "swipe up",
         label: "Swipe up",
         icon: (
-          <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
+          <ArrowUpFromLine 
+            className="size-4 text-yellow-800 hover:text-black" 
+          />
         ),
       },
       {
         value: "swipe down",
         label: "Swipe down",
         icon: (
-          <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
+          <ArrowDownFromLine 
+            className="size-4 text-yellow-800 hover:text-black" 
+          />
         ),
       },
       {
         value: "swipe left",
         label: "Swipe left",
         icon: (
-          <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
+          <ArrowLeftFromLine 
+            className="size-4 text-yellow-800 hover:text-black" 
+          />
         ),
       },
       {
         value: "swipe right",
         label: "Swipe right",
         icon: (
-          <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
+          <ArrowRightFromLine 
+            className="size-4 text-yellow-800 hover:text-black" 
+          />
         ),
       },
     ],
+  },
+  {
+    value: "typing",
+    label: "Typing",
+    icon: <Keyboard className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "touch and hold",
+    label: "Touch and hold",
+    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
   },
   {
     value: "drag",
@@ -90,24 +103,31 @@ export const gestureOptions: GestureOption[] = [
     icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
   },
   {
+    value: "double tap",
+    label: "Double tap",
+    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
     value: "zoom",
     label: "Zoom",
+    icon: <ScanSearch className="size-4 text-yellow-800 hover:text-black" />,
     subGestures: [
       {
         value: "zoom in",
         label: "Zoom in",
-        icon: <Shrink className="size-4 text-yellow-800 hover:text-black" />,
+        icon: <ZoomIn className="size-4 text-yellow-800 hover:text-black" />,
       },
       {
         value: "zoom out",
         label: "Zoom out",
-        icon: <Expand className="size-4 text-yellow-800 hover:text-black" />,
+        icon: <ZoomOut className="size-4 text-yellow-800 hover:text-black" />,
       },
     ],
   },
   {
     value: "rotate",
     label: "Rotate",
+    icon: <RefreshCw className="size-4 text-yellow-800 hover:text-black" />,
     subGestures: [
       {
         value: "rotate cw",
