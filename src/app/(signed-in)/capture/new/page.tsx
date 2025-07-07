@@ -21,7 +21,7 @@ export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const [platform, setPlatform] = useState<Platform>(Platform.ANDROID);
+  const [platform, setPlatform] = useState<Platform>(Platform.IOS);
   const [app, setApp] = useState({name: "", id: ""});
   const [description, setDescription] = useState("");
   const [showAddApp, setShowAddApp] = useState(false);
@@ -105,7 +105,7 @@ export default function CaptureNewPage() {
             }}
             className="w-full"
           >
-            <ToggleGroupItem value={Platform.ANDROID} className="w-full dark:text-neutral-200 cursor-pointer">
+            <ToggleGroupItem disabled value={Platform.ANDROID} className="w-full dark:text-neutral-200 cursor-pointer">
               {prettyOS(Platform.ANDROID)}
             </ToggleGroupItem>
             <ToggleGroupItem value={Platform.IOS} className="w-full dark:text-neutral-200 cursor-pointer">
