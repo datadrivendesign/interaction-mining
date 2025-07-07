@@ -34,7 +34,7 @@ export default async function Dataset() {
   return (
     <section
       id="dataset"
-      className="grid grid-cols-2 w-full max-w-screen-md gap-4 lg:gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 w-full max-w-screen-md p-4 lg:p-6 gap-4 lg:gap-6"
     >
       <div className="flex col-span-1 row-span-1 w-full h-full p-px bg-gradient-to-br om-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
         <div className="flex flex-col grow w-full p-6 bg-gradient-to-br from-white to-neutral-100 dark:from-neutral-900 dark:to-black rounded-[calc(1.5rem-1px)] overflow-hidden">
