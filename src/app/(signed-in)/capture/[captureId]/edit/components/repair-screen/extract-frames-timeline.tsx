@@ -18,6 +18,12 @@ import Kbd from "@/components/ui/kbd";
 import useMeasure from "@/lib/hooks/useMeasure";
 import { spring } from "@/lib/motion";
 import { DateTime } from "luxon";
+import { 
+  Tooltip, 
+  TooltipTrigger, 
+  TooltipContent, 
+  TooltipProvider 
+} from "@/components/ui/tooltip";
 
 export type FrameTimelineProps = {
   src: string;
@@ -137,11 +143,12 @@ export default function FrameTimeline({
           className="aspect-square"
           onClick={handlePlayPause}
           tooltip={
-            <div className="flex w-full justify-between items-center gap-4 text-sm">
+            <div className="flex w-full justify-between items-center gap-2 text-sm">
               <span>Play/pause</span>
               <Kbd>Space</Kbd>
             </div>
           }
+          delayDuration={0}
         >
           {isPlaying ? (
             <Pause className="size-4 fill-foreground" />
@@ -171,7 +178,7 @@ export default function FrameTimeline({
           className="hidden md:inline-flex aspect-square"
           onClick={handleSkipForward}
           tooltip={
-            <div className="w-full justify-between items-center gap-4 text-sm">
+            <div className="flex w-full justify-between items-center gap-4 text-sm">
               <span>Skip forward 5s</span>
               <Kbd>
                 <ArrowRight className="size-4" />
@@ -205,14 +212,25 @@ export default function FrameTimeline({
         ))}
 
         <motion.div
-          className="absolute top-0 bottom-0 w-full h-full pointer-events-none"
+          className="absolute top-0 bottom-0 w-full h-full pointer-events-auto"
           animate={{
             opacity: dragging ? 0.5 : 1,
             x: `${(currentTime / videoDuration) * 100}%`,
           }}
           transition={dragging ? { duration: 0 } : spring({ duration: 0.125 })}
         >
-          <div className="w-[2px] h-full bg-yellow-500 rounded" />
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-[5px] h-full bg-yellow-500 rounded" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="flex w-full justify-between items-center gap-4 text-sm">
+                <span>Drag yellow bar to scrub</span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </motion.div>
       </div>
 
@@ -223,6 +241,13 @@ export default function FrameTimeline({
           size="sm"
           className="hover:bg-yellow-400! hover:text-black!"
           onClick={handleCapture}
+          tooltip={
+            <div className="flex w-full justify-between items-center gap-2 text-sm">
+              <span>Capture screen</span>
+              <Kbd>C</Kbd>
+            </div>
+          }
+          delayDuration={0}
         >
           <Camera className="size-4" />
           Capture

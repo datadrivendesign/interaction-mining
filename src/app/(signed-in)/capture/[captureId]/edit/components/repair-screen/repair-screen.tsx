@@ -31,6 +31,7 @@ import { extractVideoFrame } from "./utils";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { gestureOptions } from "@/lib/utils/gesture-options";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const card = {
   initial: {
@@ -209,8 +210,10 @@ function RepairScreenIOS({
       const scale = THUMB_HEIGHT / thumbVideo.videoHeight;
       // need to do sequentially, parallel messes up seeking
       const thumbsRes: FrameData[] = [];
+      // Before the loop, do a "warm-up" seek to ensure video is loaded:
+      await extractVideoFrame(thumbVideo, 0.1, scale);
       for (let i = 0; i < thumbnailCount; i++) {
-        const t = (videoDuration / thumbnailCount) * i;
+        let t = (videoDuration / thumbnailCount) * i;
         const frame = await extractVideoFrame(thumbVideo, t, scale);
         thumbsRes.push(frame);
       }
@@ -443,12 +446,24 @@ function RepairScreenIOS({
             <ResizablePanel defaultSize={75}>
               <Card
                 key="task"
-                className={`${os === Platform.IOS ? "right-4" : "left-4"} absolute top-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md`}
+                className={"right-4 absolute top-2 w-60 h-48 p-2 z-10 shadow-md bg-background border rounded-md"}
                 >
                 <CardHeader className="flex flex-col items-center p-2">
-                  <CardTitle className="font-medium">Task</CardTitle>
+                  <CardTitle className="font-medium mb-2">Instructions</CardTitle>
                   <CardDescription>
-                    {capture.task?.description ?? "No description"}
+                    <p>
+                      <strong>Recorded Task: </strong> 
+                      {capture.task?.description ?? "No description"}
+                    </p>
+                    <p className="mt-2">
+                      <strong>1. </strong> Capture screens from video
+                    </p>
+                    <p>
+                      <strong>2. </strong> Add gestures to screens
+                    </p>
+                    <p className="mt-2">
+                      Hover over buttons to see keyboard shortcuts.
+                    </p>
                   </CardDescription>
                 </CardHeader>
               </Card>                
@@ -958,12 +973,21 @@ function FilmstripItem({
               )}
             >
               {hasError  && (
-                <CircleAlert
-                  className={cn(
-                    "size-6",
-                    isSelected ? "text-yellow-500" : "text-red-500"
-                  )}
-                />
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <CircleAlert
+                        className={cn(
+                          "size-6",
+                          isSelected ? "text-yellow-500" : "text-red-500"
+                        )}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>Add a gesture to this screen</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
           )}
