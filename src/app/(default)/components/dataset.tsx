@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatNumber } from "@/lib/utils";
 import { cache } from "react";
-import { ArrowRight, Container, DraftingCompass } from "lucide-react";
+import {  Container, DraftingCompass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const revalidate = 43200
