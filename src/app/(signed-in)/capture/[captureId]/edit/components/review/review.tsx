@@ -31,6 +31,7 @@ export default function Review() {
           <Textarea
             {...register("description")}
             id="description"
+            maxLength={75}
             placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens." />
         </div>
       </div>
