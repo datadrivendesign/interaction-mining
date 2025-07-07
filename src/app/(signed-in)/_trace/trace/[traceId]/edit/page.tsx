@@ -36,6 +36,7 @@ export default function Page() {
   const { trace, isLoading: isTraceLoading } = useTrace(traceId, {
     includes: { app: true, screens: true, task: true },
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [navRef, { height }] = useMeasure();
 
@@ -113,6 +114,7 @@ export default function Page() {
       setStepIndex(stepIndex + 1);
     } else {
       // Validate the "description" field
+      setIsSubmitting(true);
       const validation = TraceFormSchema.safeParse(methods.getValues());
       if (!validation.success) {
         const errors = validation.error.issues || "Invalid input";
@@ -124,7 +126,9 @@ export default function Page() {
       // Submit the form
       const data = methods.getValues();
       console.log("Submitting data");
-      handleSave(data, trace!);
+      handleSave(data, trace!).finally(() => {
+        setIsSubmitting(false);
+      });
     }
   };
   const handlePrevious = () => {
@@ -265,7 +269,12 @@ export default function Page() {
                   {stepIndex < TraceSteps.Review ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
-                    <Button onClick={handleNext}>Finish</Button>
+                    <Button onClick={handleNext} disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 
+                        className="size-4 animate-spin" 
+                      />}
+                      Finish
+                    </Button>
                   )}
                 </div>
               </nav>

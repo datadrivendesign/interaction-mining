@@ -16,7 +16,7 @@ export default function Toolbar({
   setMode: React.Dispatch<React.SetStateAction<"pencil" | "eraser" | "select">>;
 }) {
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0}>
       <aside className="absolute z-10 left-4 flex flex-col justify-center items-center bg-neutral-100 dark:bg-neutral-900 p-1 rounded-lg shadow-lg">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -32,8 +32,8 @@ export default function Toolbar({
             </button>
           </TooltipTrigger>
           <TooltipContent asChild side="right" sideOffset={10}>
-            <div className="flex w-full justify-between items-center gap-4 text-sm">
-              <span>Selection Tool</span>
+            <div className="flex w-full justify-between items-center gap-2 text-sm">
+              <span>Move: Press</span>
               <Kbd className="text-muted-foreground rounded-sm">V</Kbd>
             </div>
           </TooltipContent>
@@ -52,8 +52,8 @@ export default function Toolbar({
             </button>
           </TooltipTrigger>
           <TooltipContent asChild side="right" sideOffset={10}>
-            <div className="flex w-full justify-between items-center gap-4 text-sm">
-              <span>Pencil Tool</span>
+            <div className="flex w-full justify-between items-center gap-2 text-sm">
+              <span>Redact: Press</span>
               <Kbd className="text-muted-foreground rounded-sm">P</Kbd>
             </div>
           </TooltipContent>
@@ -73,7 +73,7 @@ export default function Toolbar({
           </TooltipTrigger>
           <TooltipContent asChild side="right" sideOffset={10}>
             <div className="flex w-full justify-between items-center gap-2 text-sm">
-              <span>Eraser Tool</span>
+              <span>Erase: Press</span>
               <Kbd className="text-muted-foreground rounded-sm">E</Kbd>
             </div>
           </TooltipContent>

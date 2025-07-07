@@ -104,26 +104,26 @@ export default function RedactScreenCanvas({
     setSelected(redactionsOnScreen.find((r) => r.id === id) || null);
   };
 
-  const checkCanCopyRedaction = (): { status: boolean, message: string } => {
-    if (!copied) { return { status: false, message: "No redaction to copy" }; }
-    // if no redactions exist yet, paste is possible
-    if (redactionsOnScreen.length === 0) {
-      return { status: true, message: "Redaction can be pasted" };
-    }
-    // if redactions exist, check if the copied redaction is a duplicate
-    const isDuplicateExist = redactionsOnScreen.every((r) =>
-      copied.x === r.x &&
-      copied.y === r.y &&
-      copied.width === r.width &&
-      copied.height === r.height
-    );
-    return {  // if duplicate, unable to paste
-      status: !isDuplicateExist,
-      message: isDuplicateExist ?
-        "Redaction already exists" :
-        "Redaction can be pasted"
-    }
-  }
+  // const checkCanCopyRedaction = (): { status: boolean, message: string } => {
+  //   if (!copied) { return { status: false, message: "No redaction to copy" }; }
+  //   // if no redactions exist yet, paste is possible
+  //   if (redactionsOnScreen.length === 0) {
+  //     return { status: true, message: "Redaction can be pasted" };
+  //   }
+  //   // if redactions exist, check if the copied redaction is a duplicate
+  //   const isDuplicateExist = redactionsOnScreen.every((r) =>
+  //     copied.x === r.x &&
+  //     copied.y === r.y &&
+  //     copied.width === r.width &&
+  //     copied.height === r.height
+  //   );
+  //   return {  // if duplicate, unable to paste
+  //     status: !isDuplicateExist,
+  //     message: isDuplicateExist ?
+  //       "Redaction already exists" :
+  //       "Redaction can be pasted"
+  //   }
+  // }
 
   const createRedaction = (
     newRedaction: Redaction,
@@ -270,10 +270,10 @@ export default function RedactScreenCanvas({
     e.preventDefault()
     if (e.repeat) { return; }
     if (mode === "select") {
-      const result = checkCanCopyRedaction();
-      if (!result.status) { // cannot copy
-        toast.error(result.message);
-      } else { // add copied redaction to screen
+      // const result = checkCanCopyRedaction();
+      // if (!result.status) { // cannot copy
+      //   toast.error(result.message);
+      // } else { // add copied redaction to screen
         createRedaction({
           id: `${Date.now()}`, // unique enough id for redaction
           x: copied!.x,
@@ -282,8 +282,8 @@ export default function RedactScreenCanvas({
           height: copied!.height,
           annotation: copied!.annotation,
         }),
-          toast.success("Redaction pasted to screen");
-      }
+        toast.success("Redaction pasted to screen");
+      // }
     }
   });
 

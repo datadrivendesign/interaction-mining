@@ -145,7 +145,7 @@ export default function FrameTimeline({
           tooltip={
             <div className="flex w-full justify-between items-center gap-2 text-sm">
               <span>Play/pause</span>
-              <Kbd>Space</Kbd>
+              <Kbd className="text-muted-foreground rounded-sm">Space</Kbd>
             </div>
           }
           delayDuration={0}
@@ -164,7 +164,7 @@ export default function FrameTimeline({
           tooltip={
             <div className="flex w-full justify-between items-center gap-4 text-sm">
               <span>Skip backward 5s</span>
-              <Kbd>
+              <Kbd className="text-muted-foreground rounded-sm">
                 <ArrowLeft className="size-4" />
               </Kbd>
             </div>
@@ -180,7 +180,7 @@ export default function FrameTimeline({
           tooltip={
             <div className="flex w-full justify-between items-center gap-4 text-sm">
               <span>Skip forward 5s</span>
-              <Kbd>
+              <Kbd className="text-muted-foreground rounded-sm">
                 <ArrowRight className="size-4" />
               </Kbd>
             </div>
@@ -244,7 +244,7 @@ export default function FrameTimeline({
           tooltip={
             <div className="flex w-full justify-between items-center gap-2 text-sm">
               <span>Capture screen</span>
-              <Kbd>C</Kbd>
+              <Kbd className="text-muted-foreground rounded-sm">C</Kbd>
             </div>
           }
           delayDuration={0}

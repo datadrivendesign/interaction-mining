@@ -32,6 +32,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Button } from "@/components/ui/button";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import Kbd from "@/components/ui/kbd";
 
 export const card = {
   initial: {
@@ -446,7 +447,7 @@ function RepairScreenIOS({
             <ResizablePanel defaultSize={75}>
               <Card
                 key="task"
-                className={"right-4 absolute top-2 w-60 h-48 p-2 z-10 shadow-md bg-background border rounded-md"}
+                className={"right-4 absolute top-0 w-60 h-45 p-0 z-10 shadow-md bg-background border rounded-md"}
                 >
                 <CardHeader className="flex flex-col items-center p-2">
                   <CardTitle className="font-medium mb-2">Instructions</CardTitle>
@@ -455,14 +456,14 @@ function RepairScreenIOS({
                       <strong>Recorded Task: </strong> 
                       {capture.task?.description ?? "No description"}
                     </p>
-                    <p className="mt-2">
+                    <p className="mt-1">
                       <strong>1. </strong> Capture screens from video
                     </p>
                     <p>
                       <strong>2. </strong> Add gestures to screens
                     </p>
-                    <p className="mt-2">
-                      Hover over buttons to see keyboard shortcuts.
+                    <p className="mt-1">
+                      Start gesture description with a verb, do not use full sentences.
                     </p>
                   </CardDescription>
                 </CardHeader>
@@ -984,7 +985,15 @@ function FilmstripItem({
                       />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <span>Add a gesture to this screen</span>
+                      <div className="text-sm">Add a gesture.</div>
+                      <div className="flex w-full justify-between items-center gap-2 text-sm">
+                        <span>
+                          <Kbd className="text-muted-foreground rounded-sm">
+                            Tab
+                          </Kbd>   
+                        </span>
+                        to next screen.
+                      </div>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

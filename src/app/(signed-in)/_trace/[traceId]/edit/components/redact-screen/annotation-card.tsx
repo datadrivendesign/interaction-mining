@@ -26,7 +26,6 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
         <TabSelect className="mb-4" defaultValue="black">
           <TabSelectList>
             <TabSelectTrigger value="black">Black</TabSelectTrigger>
-            <TabSelectTrigger value="blur">Blur</TabSelectTrigger>
           </TabSelectList>
         </TabSelect>
         <Label className="text-sm font-semibold mb-2">Note</Label>

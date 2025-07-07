@@ -41,6 +41,7 @@ export default function Page() {
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
@@ -100,6 +101,7 @@ export default function Page() {
     if (stepIndex < TraceSteps.Review) {
       setStepIndex(stepIndex + 1);
     } else {
+      setIsSubmitting(true);
       // Validate the "description" field
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods.getValues()
@@ -131,6 +133,8 @@ export default function Page() {
         })
         .catch((reason: string) => {
           console.error(reason);
+        }).finally(() => {
+          setIsSubmitting(false);
         });
     }
   };
@@ -222,7 +226,12 @@ export default function Page() {
                   {stepIndex < TraceSteps.Review ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
-                    <Button onClick={handleNext}>Finish</Button>
+                    <Button onClick={handleNext} disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 
+                        className="size-4 animate-spin" 
+                      />}
+                      Finish
+                    </Button>
                   )}
                 </div>
               </nav>

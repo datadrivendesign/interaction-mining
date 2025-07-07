@@ -5,6 +5,7 @@ import { Redaction } from "../types";
 import { cn } from "@/lib/utils";
 import { Layers3, Square, X } from "lucide-react";
 import { RedactCanvasContext } from "./redact-screen-canvas";
+import Kbd from "@/components/ui/kbd";
 
 export default function Layers({
   redactions,
