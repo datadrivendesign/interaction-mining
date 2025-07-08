@@ -33,7 +33,6 @@ export default function CaptureNewPage() {
 
     setIsSubmitting(true);
     try {
-      console.log("app", app)
       const result = await createCaptureTask({
         appId: app.id,
         os: platform,
@@ -44,12 +43,11 @@ export default function CaptureNewPage() {
         toast.success("Capture task created! Redirecting...");
         router.push(`/capture/${result.data?.captureId}/start`);
       } else {
-        toast.error("Failed to create capture task.");
+        throw new Error(`Failed to create capture task: ${result.message}`);
       }
     } catch (error) {
-      toast.error("Failed to create capture task.");
+      toast.error("Failed to create capture task. Please try again.");
       console.error(error);
-    } finally {
       setIsSubmitting(false);
     }
   };

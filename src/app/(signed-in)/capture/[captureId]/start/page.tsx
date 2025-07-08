@@ -263,7 +263,9 @@ export default function Page() {
             {os === Platform.IOS && (
               <div className="flex justify-end mt-4">
                 <Button
-                  disabled={uploadList.length === 0}
+                  disabled={uploadList.length === 0 
+                    || captureState.processingState === "pending"
+                    || captureState.processingState === "finished"}
                   onClick={handleProcessFiles}
                 >
                   Submit files

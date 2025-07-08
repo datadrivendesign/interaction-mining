@@ -447,23 +447,25 @@ function RepairScreenIOS({
             <ResizablePanel defaultSize={75}>
               <Card
                 key="task"
-                className={"right-4 absolute top-0 w-60 h-45 p-0 z-10 shadow-md bg-background border rounded-md"}
+                className={"right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"}
                 >
                 <CardHeader className="flex flex-col items-center p-2">
-                  <CardTitle className="font-medium mb-2">Instructions</CardTitle>
+                  {/* <CardTitle className="font-medium mb-2">
+                    Instructions
+                  </CardTitle> */}
                   <CardDescription>
                     <p>
-                      <strong>Recorded Task: </strong> 
-                      {capture.task?.description ?? "No description"}
+                      <strong>Task: </strong> 
+                      {capture.task?.description ?? "No task"}
                     </p>
                     <p className="mt-1">
-                      <strong>1. </strong> Capture screens from video
+                      <strong>1. Capture screens from video.</strong>
                     </p>
                     <p>
-                      <strong>2. </strong> Add gestures to screens
+                      <strong>2. Add gestures to screens</strong>
                     </p>
                     <p className="mt-1">
-                      Start gesture description with a verb, do not use full sentences.
+                      <strong>Add screen gestures on this here. </strong>Start gesture description with a verb, no full sentences.
                     </p>
                   </CardDescription>
                 </CardHeader>
@@ -479,7 +481,7 @@ function RepairScreenIOS({
               ) : (
                 <div className="flex justify-center items-center w-full h-full">
                   <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
-                    Select a screen from the filmstrip.
+                    Select a screen from the capture filmstrip.
                   </span>
                 </div>
               )}
@@ -962,44 +964,45 @@ function FilmstripItem({
           ref={containerRef}
           className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
         >
-          {(isSelected || hasError) && !isLast && (
-            <div
-              className={cn(
-                "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
-                isSelected
-                  ? "ring-2 ring-inset ring-yellow-500"
-                  : hasError
-                    ? "ring-2 ring-inset ring-red-500"
-                    : ""
-              )}
-            >
-              {hasError  && (
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {(isSelected || hasError) && !isLast && (
+                  <div
+                    className={cn(
+                      "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
+                      isSelected
+                        ? "ring-2 ring-inset ring-yellow-500"
+                        : hasError
+                          ? "ring-2 ring-inset ring-red-500"
+                          : ""
+                    )}
+                  >
+                    {hasError  && (
                       <CircleAlert
                         className={cn(
                           "size-6",
                           isSelected ? "text-yellow-500" : "text-red-500"
                         )}
                       />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-sm">Add a gesture.</div>
-                      <div className="flex w-full justify-between items-center gap-2 text-sm">
-                        <span>
-                          <Kbd className="text-muted-foreground rounded-sm">
-                            Tab
-                          </Kbd>   
-                        </span>
-                        to next screen.
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-          )}
+                    )}
+                  </div>
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-sm">Add a gesture.</div>
+                <div className="flex w-full justify-between items-center gap-2 text-sm">
+                  <span>
+                    <Kbd className="text-muted-foreground rounded-sm">
+                      Tab
+                  </Kbd>   
+                </span>
+                to next screen.
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <div
             className={cn(
               "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",

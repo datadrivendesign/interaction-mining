@@ -98,14 +98,14 @@ export const gestureOptions: GestureOption[] = [
     icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
   },
   {
-    value: "drag",
-    label: "Drag",
-    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
-  },
-  {
     value: "double tap",
     label: "Double tap",
     icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />,
+  },
+  {
+    value: "drag",
+    label: "Drag",
+    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
   },
   {
     value: "zoom",

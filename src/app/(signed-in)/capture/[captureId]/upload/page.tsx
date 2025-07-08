@@ -40,6 +40,7 @@ import {
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { useCapture } from "@/lib/hooks";
+import { Badge } from "@/components/ui/badge";
 
 export default function Page() {
   const params = useParams();
@@ -174,15 +175,15 @@ export default function Page() {
         <CardContent>
           <div className="mb-4">
             {!isDataLoading && capture?.task ? (
-              <>
-                <article className="prose prose-neutral dark:prose-invert leading-snug">
+              <Badge>
+                <article className="prose prose-neutral dark:prose-invert leading-snug font-medium font-semibold text-white dark:text-neutral-900">
                   <p>
-                    <strong>Task:</strong> {capture?.task?.description
+                    Task: {capture?.task?.description
                       ? capture?.task?.description
                       : "No description provided."}
                   </p>
                 </article>
-              </>
+              </Badge>
             ) : (
               <>
                 <div className="w-full h-4 bg-neutral-500 dark:bg-neutral-400 animate-pulse rounded"></div>
@@ -190,9 +191,15 @@ export default function Page() {
             )}
           </div>
 
-          <div className="font-semibold mb-4">
+          <div className="mb-2">
             <article>
-              Turn on &ldquo;Do not Disturb&rdquo; on your phone to block notifications while screen recording.
+              Explore the app to familiarize yourself with the task before screen recording. The recording should be short (max 1-2 minutes). 
+            </article>
+          </div>
+
+          <div className="mb-2">
+            <article>
+              Turn on &ldquo;Do not Disturb&rdquo; to block notifications while recording.
             </article>
           </div>
 
@@ -240,7 +247,7 @@ export default function Page() {
             <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-950 dark:text-neutral-50 text-sm tabular-nums">
               3
             </span>{" "}
-            Upload your task recording
+            Upload your screen recording of the task
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -325,7 +332,7 @@ export default function Page() {
             </Button>
           </form>
           <div className="font-semibold mt-4 justify-self-center self-center">
-            <article>
+            <article className="text-sm">
               Close this tab once you have finished uploading your recording.
             </article>
           </div>

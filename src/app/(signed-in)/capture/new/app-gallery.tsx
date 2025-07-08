@@ -48,7 +48,7 @@ export default function AppGallery({
               <Tooltip>
                 <TooltipTrigger asChild>                
                   <div
-                    className={`flex flex-col items-center content-center justify-center cursor-pointer hover:bg-neutral-400 rounded-lg ${searchApp.id === app.id ? "bg-neutral-300" : ""}`} 
+                    className={`flex flex-col items-center content-center justify-center cursor-pointer hover:bg-neutral-400 rounded-lg ${searchApp.metadata.name === app.name ? "bg-neutral-400" : ""}`} 
                     onClick={() => setApp({
                       name: searchApp.metadata.name, 
                       id: searchApp.packageName

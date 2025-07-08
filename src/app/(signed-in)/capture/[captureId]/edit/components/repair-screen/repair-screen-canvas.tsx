@@ -536,7 +536,6 @@ function GestureSelection(
         </PopoverTrigger>
         <PopoverContent className="w-50 p-0">
           <Command>
-            <CommandInput placeholder="Search gestures..." />
             <CommandList>
               <CommandEmpty>No framework found.</CommandEmpty>
               <CommandGroup>

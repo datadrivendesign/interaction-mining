@@ -237,7 +237,7 @@ export default function FrameTimeline({
       {/* Capture */}
       <div className="flex items-center w-auto h-full p-2 gap-4">
         <Button
-          variant="secondary"
+          variant="default"
           size="sm"
           className="hover:bg-yellow-400! hover:text-black!"
           onClick={handleCapture}
@@ -249,8 +249,9 @@ export default function FrameTimeline({
           }
           delayDuration={0}
         >
-          <Camera className="size-4" />
+          {/* <Camera className="size-4" /> */}
           Capture
+          <Kbd className="text-muted-foreground rounded-sm">C</Kbd>
         </Button>
       </div>
     </div>
