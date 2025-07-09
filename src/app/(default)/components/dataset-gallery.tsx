@@ -35,7 +35,7 @@ export default function DatasetGallery() {
           <Input placeholder="Search for apps" value={search} onChange={e => setSearch(e.target.value)} />
         </InputRoot>
         <Select defaultValue="android" onValueChange={value => setPlatform(value)}>
-          <SelectTrigger className="max-w-45 h-full!">
+          <SelectTrigger className="w-full max-w-32 h-full!">
             <SelectValue placeholder="Select a platform" />
           </SelectTrigger>
           <SelectContent>

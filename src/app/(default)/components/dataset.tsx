@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatNumber } from "@/lib/utils";
 import { cache } from "react";
-import { ArrowRight, Container, DraftingCompass } from "lucide-react";
+import {  Container, DraftingCompass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const revalidate = 43200
@@ -34,9 +34,9 @@ export default async function Dataset() {
   return (
     <section
       id="dataset"
-      className="grid grid-cols-2 w-full max-w-screen-md gap-4 lg:gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 w-full max-w-screen-md p-4 lg:p-6 gap-4 lg:gap-6"
     >
-      <div className="flex col-span-1 row-span-1 w-full h-full p-px bg-gradient-to-br om-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
+      <div className="flex col-span-1 row-span-1 w-full h-full p-px bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
         <div className="flex flex-col grow w-full p-6 bg-gradient-to-br from-white to-neutral-100 dark:from-neutral-900 dark:to-black rounded-[calc(1.5rem-1px)] overflow-hidden">
           <div className="flex flex-col items-start text-blue-500 dark:text-blue-400 mb-4">
             <div className="flex justify-center items-center size-10 mb-2 aspect-square rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950">
@@ -67,7 +67,7 @@ export default async function Dataset() {
           </Link>
         </div>
       </div>
-      <div className="flex col-span-1 row-span-1 w-full h-full p-px bg-gradient-to-br om-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
+      <div className="flex col-span-1 row-span-1 w-full h-full p-px bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
         <div className="flex flex-col grow w-full p-6 bg-gradient-to-br from-white to-neutral-
         100 dark:from-neutral-900 dark:to-black rounded-[calc(1.5rem-1px)] overflow-hidden">
           <div className="flex flex-col items-start text-purple-500 dark:text-purple-400 mb-4">
