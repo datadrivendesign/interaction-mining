@@ -35,8 +35,14 @@ export default function NavigationBar() {
               Get Involved
             </span>
           </Link>
+
         </div>
-        <div className="flex basis-1/2 h-full justify-end items-center">
+        <div className="flex gap-4 lg:gap-6 basis-1/2 h-full justify-end items-center">
+          <Link href="/archive/rico" target="_blank">
+            <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
+              Rico Dataset <ArrowUpRight className="ml-0.5 size-4" />
+            </span>
+          </Link>
           <SessionContent />
         </div>
       </div>

@@ -96,7 +96,7 @@ export function GallerySearch() {
         />
       </InputRoot>
       <Select defaultValue="android" onValueChange={handleSetOS}>
-        <SelectTrigger className="max-w-45 h-full!">
+        <SelectTrigger className="w-full max-w-32 h-full!">
           <SelectValue placeholder="Select a platform" />
         </SelectTrigger>
         <SelectContent>
