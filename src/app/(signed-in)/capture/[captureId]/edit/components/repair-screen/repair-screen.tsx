@@ -231,40 +231,42 @@ export default function RepairScreen({ capture }: { capture: any }) {
     fileFetcher
   );
 
+  console.log("RepairScreen files:", files);
+
   return (
     <>
       {(os.toLowerCase() as Platform) === Platform.ANDROID ? (
-        <RepairScreenAndroid 
-          capture={capture} 
-          files={files} 
+        <RepairScreenAndroid
+          capture={capture}
+          files={files}
           os={os}
-          focusViewIndex={focusViewIndex} 
-          setFocusViewIndex={setFocusViewIndex} 
+          focusViewIndex={focusViewIndex}
+          setFocusViewIndex={setFocusViewIndex}
         />
       ) : (
-        <RepairScreenIOS 
-          capture={capture} 
-          files={files} 
+        <RepairScreenIOS
+          capture={capture}
+          files={files}
           os={os}
-          focusViewIndex={focusViewIndex} 
-          setFocusViewIndex={setFocusViewIndex} 
+          focusViewIndex={focusViewIndex}
+          setFocusViewIndex={setFocusViewIndex}
         />
       )}
     </>
   );
 }
 
-function RepairScreenIOS({ 
-  capture, 
-  files, 
+function RepairScreenIOS({
+  capture,
+  files,
   focusViewIndex,
-  os, 
+  os,
   setFocusViewIndex
-}: { 
-  capture: any, 
-  files: ListedFiles[], 
+}: {
+  capture: any,
+  files: ListedFiles[],
   focusViewIndex: number,
-  os: Platform, 
+  os: Platform,
   setFocusViewIndex: (index: number) => void
 }) {
   const { setValue } = useFormContext<TraceFormData>();
@@ -279,7 +281,7 @@ function RepairScreenIOS({
   // video controls
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
-        
+
   const MAX_THUMBS = 30;
   const frameStep = 1 / MAX_THUMBS;
   const [currentTime, setCurrentTime] = useState(0);
@@ -295,7 +297,7 @@ function RepairScreenIOS({
   // Load thumbnails
   const extractVideoThumbnails = useCallback(
     async (
-      video: HTMLVideoElement, 
+      video: HTMLVideoElement,
       videoDuration: number
     ): Promise<ListedFiles[]> => {
       const thumbVideo = document.createElement("video");
@@ -331,44 +333,20 @@ function RepairScreenIOS({
       }))
     }, []);
 
-    // useEffect to manually load thumbnails if video transcoding is disabled
-    useEffect(() => {
-      const extractThumbnails = async () => {
-        const video = videoRef.current;
-        const isTranscodeDisabled = (
-          !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
-          process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
-        );
-        if (!isTranscodeDisabled || !video || videoDuration === 0) { 
-          return; 
-        }   
-        const thumbnailFiles = await extractVideoThumbnails(
-          video, 
-          videoDuration
-        );
-        const thumbs = thumbnailFiles.map((f, index) => ({
-          src: f.fileUrl,
-          timestamp: (videoDuration / thumbnailFiles.length) * index,
-          width: video.videoWidth,
-          height: video.videoHeight,
-        }));
-        setThumbnails(thumbs);
-      }
-      extractThumbnails();
-    }, [videoRef, videoDuration])
-
-    // useEffect to load thumbnails if video transcoding is enabled
-    useEffect(() => {
+  // useEffect to manually load thumbnails if video transcoding is disabled
+  useEffect(() => {
+    const extractThumbnails = async () => {
       const video = videoRef.current;
       const isTranscodeDisabled = (
-        !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+        !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
         process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
       );
-      if (isTranscodeDisabled || !video || videoDuration === 0) {
+      if (!isTranscodeDisabled || !video || videoDuration === 0) {
         return;
-      }      
-      const thumbnailFiles = files.filter((f) =>
-        f.fileKey.includes("thumbnails/")
+      }
+      const thumbnailFiles = await extractVideoThumbnails(
+        video,
+        videoDuration
       );
       const thumbs = thumbnailFiles.map((f, index) => ({
         src: f.fileUrl,
@@ -377,11 +355,35 @@ function RepairScreenIOS({
         height: video.videoHeight,
       }));
       setThumbnails(thumbs);
-    }, [files, videoRef, videoDuration]);
+    }
+    extractThumbnails();
+  }, [videoRef, videoDuration, extractVideoThumbnails]);
+
+  // useEffect to load thumbnails if video transcoding is enabled
+  useEffect(() => {
+    const video = videoRef.current;
+    const isTranscodeDisabled = (
+      !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
+      process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
+    );
+    if (isTranscodeDisabled || !video || videoDuration === 0) {
+      return;
+    }
+    const thumbnailFiles = files.filter((f) =>
+      f.fileKey.includes("thumbnails/")
+    );
+    const thumbs = thumbnailFiles.map((f, index) => ({
+      src: f.fileUrl,
+      timestamp: (videoDuration / thumbnailFiles.length) * index,
+      width: video.videoWidth,
+      height: video.videoHeight,
+    }));
+    setThumbnails(thumbs);
+  }, [files, videoRef, videoDuration]);
 
   const videoFiles = useMemo(() => {
     const isTranscodeDisabled = (
-      !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+      !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
       process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
     );
     const regexRule = isTranscodeDisabled ? /\.(mp4|mov)$/ : /\.(webm)$/
@@ -393,6 +395,7 @@ function RepairScreenIOS({
       if (videoFiles.length > 0 && videoRef.current) {
         try {
           const response = await fetch(videoFiles[0].fileUrl);
+          console.log("Loading video blob from:", videoFiles[0].fileUrl);
           const blob = await response.blob();
           const objectUrl = URL.createObjectURL(blob);
           videoRef.current.src = objectUrl;
@@ -475,60 +478,60 @@ function RepairScreenIOS({
   });
 
   useHotkeys("left", (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime - 5);
-    },
+    e.preventDefault();
+    handleSetTime(currentTime - 5);
+  },
     [currentTime, handleSetTime]
   );
 
   useHotkeys("j", (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime - 5);
-    },
+    e.preventDefault();
+    handleSetTime(currentTime - 5);
+  },
     [currentTime, handleSetTime]
   );
 
   useHotkeys("right", (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime + 5);
-    },
+    e.preventDefault();
+    handleSetTime(currentTime + 5);
+  },
     [currentTime, handleSetTime]
   );
 
   useHotkeys("l", (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime + 5);
-    },
+    e.preventDefault();
+    handleSetTime(currentTime + 5);
+  },
     [currentTime, handleSetTime]
   );
 
   // Seek backward/forward by one frame
   useHotkeys("comma", (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime - frameStep);
-    },
+    e.preventDefault();
+    handleSetTime(currentTime - frameStep);
+  },
     [currentTime, handleSetTime]
   );
 
   useHotkeys("period", (e) => {
-      e.preventDefault(); 
-      handleSetTime(currentTime + frameStep);
-    },
+    e.preventDefault();
+    handleSetTime(currentTime + frameStep);
+  },
     [currentTime, handleSetTime]
   );
 
   useHotkeys("c", (e) => {
-      e.preventDefault();
-      handleCaptureFrame();
-    },
+    e.preventDefault();
+    handleCaptureFrame();
+  },
     { keyup: true },
     [handleCaptureFrame]
   );
 
   return (
-    <div className="w-full h-full">
+    <div className="flex flex-col w-full h-full">
       <ResizablePanelGroup direction="vertical">
-        <ResizablePanel defaultSize={75} minSize={50} maxSize={75}>
+        <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={33} minSize={25} maxSize={50} className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border">
               <div className="flex flex-col justify-center items-center w-full h-full gap-4">
@@ -548,18 +551,18 @@ function RepairScreenIOS({
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={75}>
+            <ResizablePanel defaultSize={67}>
               <Card
                 key="task"
                 className={`${os === Platform.IOS ? "right-4" : "left-4"} absolute top-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md`}
-                >
+              >
                 <CardHeader className="flex flex-col items-center p-2">
                   <CardTitle className="font-medium">Task</CardTitle>
                   <CardDescription>
                     {capture.task?.description ?? "No description"}
                   </CardDescription>
                 </CardHeader>
-              </Card>                
+              </Card>
               {(focusViewIndex > -1 && focusViewIndex < screens.length) ? (
                 <FocusView
                   key={focusViewIndex}
@@ -580,7 +583,7 @@ function RepairScreenIOS({
         </ResizablePanel>
 
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+        <ResizablePanel defaultSize={33} minSize={33} maxSize={50} className="flex flex-col">
           <Filmstrip
             screens={screens}
             gestures={gestures}
@@ -590,32 +593,31 @@ function RepairScreenIOS({
             setFocusViewIndex={setFocusViewIndex}
             handleSetTime={handleSetTime}
           />
+          <FrameTimeline
+            thumbnails={thumbnails}
+            currentTime={currentTime}
+            videoDuration={videoDuration}
+            isPlaying={isPlaying}
+            handleSetTime={handleSetTime}
+            handlePlayPause={handlePlayPause}
+            handleCapture={handleCaptureFrame}
+          />
         </ResizablePanel>
-        <FrameTimeline
-          src={""}
-          thumbnails={thumbnails}
-          currentTime={currentTime}
-          videoDuration={videoDuration}
-          isPlaying={isPlaying}
-          handleSetTime={handleSetTime}
-          handlePlayPause={handlePlayPause}
-          handleCapture={handleCaptureFrame}
-        />
       </ResizablePanelGroup>
     </div>
   );
 }
 
-function RepairScreenAndroid({ 
-  capture, 
+function RepairScreenAndroid({
+  capture,
   files,
-  os, 
+  os,
   focusViewIndex,
   setFocusViewIndex
 }: {
   capture: any,
   files: ListedFiles[],
-  os: Platform, 
+  os: Platform,
   focusViewIndex: number,
   setFocusViewIndex: (index: number) => void
 }) {
@@ -656,7 +658,7 @@ function RepairScreenAndroid({
           scrollDeltaX: number | null,
           scrollDeltaY: number | null
         ): string {
-          if (androidType === "TYPE_VIEW_CLICKED" || 
+          if (androidType === "TYPE_VIEW_CLICKED" ||
             androidType == "TYPE_VIEW_SELECTED") {
             return "tap";
           } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
@@ -685,7 +687,7 @@ function RepairScreenAndroid({
           screenGesture.type = null;
         } else {
           screenGesture.type = translateTypeAndroidToODIM(
-            type, 
+            type,
             scrollDeltaX,
             scrollDeltaY
           )
@@ -750,17 +752,17 @@ function RepairScreenAndroid({
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={33} minSize={25} maxSize={50} className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border">
               <div className="flex flex-col justify-center items-center w-full h-full gap-4">
-              <Card
-                key="task"
-                className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
+                <Card
+                  key="task"
+                  className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
                 >
-                <CardHeader className="flex flex-col items-center p-2">
-                  <CardTitle className="font-medium">Task</CardTitle>
-                  <CardDescription>
-                    {capture.task?.description ?? "No description"}
-                  </CardDescription>
-                </CardHeader>
-              </Card>    
+                  <CardHeader className="flex flex-col items-center p-2">
+                    <CardTitle className="font-medium">Task</CardTitle>
+                    <CardDescription>
+                      {capture.task?.description ?? "No description"}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
 
                 <Button
                   onClick={() => {
@@ -771,12 +773,12 @@ function RepairScreenAndroid({
                     }
                   }}
                 >
-                <ListRestart /> Reset Screens
-              </Button>
+                  <ListRestart /> Reset Screens
+                </Button>
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={75}>            
+            <ResizablePanel defaultSize={75}>
               {(focusViewIndex > -1 && focusViewIndex < currScreens.length) ? (
                 <FocusView
                   key={focusViewIndex}
@@ -805,7 +807,7 @@ function RepairScreenAndroid({
             os={os}
             focusViewIndex={focusViewIndex}
             setFocusViewIndex={setFocusViewIndex}
-            handleSetTime={(_: number) => {}}  // empty function
+            handleSetTime={(_: number) => { }}  // empty function
           />
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -920,29 +922,29 @@ function Filmstrip({
 
   return (
     <AnimatePresence mode="popLayout">
-      <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+      <ul className="flex h-full p-2 gap-1 overflow-x-auto">
         {screens?.map((screen: FrameData, index: number) => {
           const isLast = screens.length - 1 === index;
           return (
-          <FilmstripItem
-            key={screen.id}
-            index={index}
-            isLast={isLast}
-            screen={screen}
-            redactions={redactions[screen.id] ?? []}
-            os={os}
-            isSelected={focusViewIndex === index}
-            hasError={
-              !gestures[screen.id] ||
-              gestures[screen.id].type === null ||
-              gestures[screen.id].description === undefined ||
-              gestures[screen.id].description === ""
-            }
-            onClick={() => setFocusViewIndex(index)}
-            handleSetTime={handleSetTime}
-            handleDeleteFrame={handleDeleteFrame}
-          >
-          </FilmstripItem>
+            <FilmstripItem
+              key={screen.id}
+              index={index}
+              isLast={isLast}
+              screen={screen}
+              redactions={redactions[screen.id] ?? []}
+              os={os}
+              isSelected={focusViewIndex === index}
+              hasError={
+                !gestures[screen.id] ||
+                gestures[screen.id].type === null ||
+                gestures[screen.id].description === undefined ||
+                gestures[screen.id].description === ""
+              }
+              onClick={() => setFocusViewIndex(index)}
+              handleSetTime={handleSetTime}
+              handleDeleteFrame={handleDeleteFrame}
+            >
+            </FilmstripItem>
           )
         })}
       </ul>
@@ -1014,6 +1016,7 @@ function FilmstripItem({
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
+
   return (
     <motion.div
       className="min-w-fit h-full max-w-full"
@@ -1025,7 +1028,7 @@ function FilmstripItem({
       transition={spring}
       key={`${screen.timestamp}-${screen.id}`}
       onClick={() => handleSetTime(screen.timestamp)}
-    
+
     >
       <li
         className="cursor-pointer min-w-fit h-full"
@@ -1034,9 +1037,9 @@ function FilmstripItem({
       >
         {/* Toolbar */}
         <div className="flex flex-row w-full items-center justify-between">
-          <div className="flex p-1 justify-center items-center bg-background rounded-lg">
+          <div className="flex justify-center items-center bg-background rounded-lg">
             <span
-              className="text-sm text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
+              className="text-xs text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
               title={`Jump to time: ${prettyNumber(screen.timestamp, os)}s`}
             >
               {`${prettyNumber(screen.timestamp, os)}s`}
@@ -1047,12 +1050,12 @@ function FilmstripItem({
             className="inline-flex self-end items-center cursor-pointer"
             title="Delete snapshot"
           >
-            <X className="size-6 text-muted-foreground hover:opacity-75" />
+            <X className="size-4 text-muted-foreground hover:opacity-75" />
           </button>
         </div>
-        <div 
+        <div
           ref={containerRef}
-          className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
+          className="relative h-[calc(100%-1rem)] rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
         >
           {(isSelected || hasError) && !isLast && (
             <div
@@ -1065,7 +1068,7 @@ function FilmstripItem({
                     : ""
               )}
             >
-              {hasError  && (
+              {hasError && (
                 <CircleAlert
                   className={cn(
                     "size-6",
@@ -1105,13 +1108,13 @@ function FilmstripItem({
                     top:
                       imgDimensions.offsetY +
                       rect.y *
-                        imageRef.current!.naturalHeight *
-                        imgDimensions.scaleY,
+                      imageRef.current!.naturalHeight *
+                      imgDimensions.scaleY,
                     left:
                       imgDimensions.offsetX +
                       rect.x *
-                        imageRef.current!.naturalWidth *
-                        imgDimensions.scaleX,
+                      imageRef.current!.naturalWidth *
+                      imgDimensions.scaleX,
                     width:
                       rect.width *
                       imageRef.current!.naturalWidth *

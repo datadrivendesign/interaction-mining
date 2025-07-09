@@ -64,6 +64,29 @@ const nextConfig: NextConfig = {
     viewTransition: true,
     reactCompiler: true,
   },
+  rewrites: async () => [
+    {
+      source: "/cdn/:path*", // public-facing path
+      destination: `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL || ""}/:path*`,
+    },
+  ],
+  redirects: async () => [
+    {
+      source: "/rico/:path*",
+      destination: "/archive/rico/:path*",
+      permanent: true,
+    }, // Redirect /rico to /archive/rico
+    {
+      source: "/erica/:path*",
+      destination: "/archive/erica/:path*",
+      permanent: true,
+    }, // Redirect /erica to /archive/erica
+    {
+      source: "/zipt/:path*",
+      destination: "/archive/zipt/:path*",
+      permanent: true,
+    }, // Redirect /zipt to /archive/zipt
+  ],
   webpack: (config) => {
     // Canvas is a Node.js package that needs to be polyfilled in the browser
     config.externals = [...config.externals, { canvas: "canvas" }];
