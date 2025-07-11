@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -30,7 +30,7 @@ import { handleSave } from "./util";
 import { Platform } from "@/lib/utils";
 
 enum TraceSteps {
-  Repair = 0,
+  Capture = 0,
   Redact = 1,
   Review = 2,
 }
@@ -60,7 +60,7 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    if (stepIndex === TraceSteps.Repair) {
+    if (stepIndex === TraceSteps.Capture) {
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods.getValues()
         .screens.slice(0, -1)
@@ -146,13 +146,11 @@ export default function Page() {
 
   const docRender = () => {
     switch (stepIndex) {
-      // case 0:
-      //   return <ExtractFrameDoc />;
-      case 1:
+      case 0:
         return <RepairDoc />;
-      case 2:
+      case 1:
         return <RedactDoc />;
-      case 3:
+      case 2:
         return <ReviewDoc />;
       default:
         return null;
@@ -203,12 +201,19 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {stepIndex === 0 ? (
-                        (capture?.app.os as Platform) === Platform.IOS ?
-                          "Annotate" : 
-                          TraceSteps[stepIndex]
-                      ) : 
-                      TraceSteps[stepIndex]}
+                      {
+                        Array(stepIndex + 1)
+                          .fill(0)
+                          .map((_, i) => TraceSteps[i])
+                          .map((step, index, array) => (
+                            <Fragment key={index}>
+                              <span>{step}</span>
+                              {index < array.length - 1 && (
+                                <ChevronRight className="size-6" />
+                              )}
+                            </Fragment>
+                          ))
+                      }
                     </span>
                   </h1>
                   <span className="block">

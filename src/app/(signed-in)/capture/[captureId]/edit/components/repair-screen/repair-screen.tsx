@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   CircleAlert,
+  CirclePlay,
   ListRestart,
+  Pencil,
   X,
 } from "lucide-react";
 
@@ -76,6 +78,36 @@ export async function fileFetcher([_, fileKey]: [string, string]) {
   }
 }
 
+interface NavigationContextType {
+  handleNext: () => void;
+  handlePrevious: () => void;
+  focusViewIndex: number;
+  setFocusViewIndex: (index: number) => void;
+}
+
+const NavigationContext = createContext<NavigationContextType | undefined>(
+  undefined
+);
+
+export const NavigationProvider: React.FC<{
+  children: React.ReactNode;
+  value: NavigationContextType;
+}> = ({ children, value }) => {
+  return (
+    <NavigationContext.Provider value={value}>
+      {children}
+    </NavigationContext.Provider>
+  );
+};
+
+export const useNavigation = () => {
+  const context = useContext(NavigationContext);
+  if (!context) {
+    throw new Error("useNavigation must be used within a NavigationProvider");
+  }
+  return context;
+};
+
 export default function RepairScreen({ capture }: { capture: any }) {
   const [watchScreens] = useWatch({
     name: ["screens"],
@@ -86,18 +118,15 @@ export default function RepairScreen({ capture }: { capture: any }) {
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
   const handlePrevious = useCallback(() => {
-    if (focusViewIndex > 0) {
-      setFocusViewIndex(focusViewIndex - 1);
+    // javascript be stupid, negative modulo isn't a thing here
+    let wrappedIndex = (focusViewIndex - 1) % screens.length;
+    if (wrappedIndex < 0) {
+      wrappedIndex = screens.length - 1;
     }
+    setFocusViewIndex(wrappedIndex);
   }, [focusViewIndex]);
 
   const handleNext = useCallback(() => {
-    if (focusViewIndex < screens.length - 1) {
-      setFocusViewIndex(focusViewIndex + 1);
-    }
-  }, [focusViewIndex, screens]);
-
-  const handleTab = useCallback(() => {
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
   }, [focusViewIndex, screens]);
@@ -114,7 +143,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
 
   useHotkeys("tab", (e) => {
     e.preventDefault();
-    handleTab();
+    handleNext();
   })
 
   // Fetch file data
@@ -124,41 +153,39 @@ export default function RepairScreen({ capture }: { capture: any }) {
   );
 
   return (
-    <>
+    <NavigationProvider value={{
+      handleNext,
+      handlePrevious,
+      focusViewIndex,
+      setFocusViewIndex,
+    }}>
       {(os.toLowerCase() as Platform) === Platform.ANDROID ? (
         <RepairScreenAndroid 
           capture={capture} 
           files={files} 
           os={os}
-          focusViewIndex={focusViewIndex} 
-          setFocusViewIndex={setFocusViewIndex} 
         />
       ) : (
         <RepairScreenIOS 
           capture={capture} 
           files={files} 
           os={os}
-          focusViewIndex={focusViewIndex} 
-          setFocusViewIndex={setFocusViewIndex} 
         />
       )}
-    </>
+    </NavigationProvider>
   );
 }
 
 function RepairScreenIOS({ 
   capture, 
   files, 
-  focusViewIndex,
   os, 
-  setFocusViewIndex
 }: { 
   capture: any, 
   files: ListedFiles[], 
-  focusViewIndex: number,
   os: Platform, 
-  setFocusViewIndex: (index: number) => void
 }) {
+  const { focusViewIndex } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
   const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
     name: ["screens", "vhs", "gestures", "redactions"],
@@ -274,7 +301,6 @@ function RepairScreenIOS({
     }, [files, videoRef, videoDuration]);
 
   const videoFiles = useMemo(() => {
-    console.log("files", files);
     const isTranscodeDisabled = (
       !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
       process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
@@ -427,6 +453,21 @@ function RepairScreenIOS({
         <ResizablePanel defaultSize={75} minSize={50} maxSize={75}>
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={33} minSize={25} maxSize={50} className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border">
+
+              <Card
+                key="video"
+                className={"left-4 absolute top-0 w-20 h-20 p-0 z-10 shadow-md bg-background border rounded-md"}
+                >
+                <CardHeader className="flex flex-col items-center p-2">
+                  <CardDescription>
+                    <CirclePlay className="size-10" />
+                    <p className="text-sm font-semibold">
+                      <strong>Video</strong> 
+                    </p>
+                  </CardDescription>
+                </CardHeader>
+              </Card>     
+
               <div className="flex flex-col justify-center items-center w-full h-full gap-4">
                 <video
                   ref={videoRef}
@@ -450,9 +491,6 @@ function RepairScreenIOS({
                 className={"right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"}
                 >
                 <CardHeader className="flex flex-col items-center p-2">
-                  {/* <CardTitle className="font-medium mb-2">
-                    Instructions
-                  </CardTitle> */}
                   <CardDescription>
                     <p>
                       <strong>Task: </strong> 
@@ -465,7 +503,7 @@ function RepairScreenIOS({
                       <strong>2. Add gestures to screens</strong>
                     </p>
                     <p className="mt-1">
-                      <strong>Add screen gestures on this here. </strong>Start gesture description with a verb, no full sentences.
+                      <strong>Add screen gestures on this side. </strong>Start gesture description with a verb, no full sentences.
                     </p>
                   </CardDescription>
                 </CardHeader>
@@ -496,8 +534,6 @@ function RepairScreenIOS({
             gestures={gestures}
             redactions={redactions}
             os={os}
-            focusViewIndex={focusViewIndex}
-            setFocusViewIndex={setFocusViewIndex}
             handleSetTime={handleSetTime}
           />
         </ResizablePanel>
@@ -520,16 +556,13 @@ function RepairScreenAndroid({
   capture, 
   files,
   os, 
-  focusViewIndex,
-  setFocusViewIndex
 }: {
   capture: any,
   files: ListedFiles[],
   os: Platform, 
-  focusViewIndex: number,
-  setFocusViewIndex: (index: number) => void
 }) {
   const { setValue } = useFormContext<TraceFormData>();
+  const { focusViewIndex } = useNavigation();
   const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
     name: ["screens", "vhs", "gestures", "redactions"],
   });
@@ -713,8 +746,6 @@ function RepairScreenAndroid({
             gestures={currGestures}
             redactions={redactions}
             os={os}
-            focusViewIndex={focusViewIndex}
-            setFocusViewIndex={setFocusViewIndex}
             handleSetTime={(_: number) => {}}  // empty function
           />
         </ResizablePanel>
@@ -785,19 +816,15 @@ function Filmstrip({
   gestures,
   redactions,
   os,
-  focusViewIndex,
-  setFocusViewIndex,
   handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
   os: Platform;
-  focusViewIndex: number;
-  setFocusViewIndex: (index: number) => void;
   handleSetTime: (t: number) => void;
 }) {
-
+  const { focusViewIndex, setFocusViewIndex } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
 
   const setFrameData = (value: FrameData[]) => setValue("screens", value);
@@ -968,22 +995,22 @@ function FilmstripItem({
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
-                {(isSelected || hasError) && !isLast && (
+                {(isSelected || hasError) && (
                   <div
                     className={cn(
                       "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
                       isSelected
-                        ? "ring-2 ring-inset ring-yellow-500"
-                        : hasError
-                          ? "ring-2 ring-inset ring-red-500"
+                        ? "ring-2 ring-inset ring-blue-500"
+                        : hasError && !isLast
+                          ? "ring-2 ring-inset ring-yellow-500"
                           : ""
                     )}
                   >
-                    {hasError  && (
+                    {hasError && !isLast && (
                       <CircleAlert
                         className={cn(
                           "size-6",
-                          isSelected ? "text-yellow-500" : "text-red-500"
+                          "text-yellow-500"
                         )}
                       />
                     )}
@@ -1007,7 +1034,10 @@ function FilmstripItem({
             className={cn(
               "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
               hasError && !isLast
-                ? "grayscale brightness-50"
+                ? (isSelected
+                  ? "grayscale brightness-70" 
+                  : "grayscale brightness-50"
+                )
                 : "grayscale-0 brightness-100"
             )}
           >

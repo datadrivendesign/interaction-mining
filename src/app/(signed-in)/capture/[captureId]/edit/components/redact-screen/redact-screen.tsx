@@ -37,25 +37,18 @@ export default function RedactScreen() {
   const [copied, setCopied] = useState<Redaction | null>(null);
 
   const handlePrevious = useCallback(() => {
-    if (focusViewIndex > 0) {
-      setFocusViewIndex(focusViewIndex - 1);
-    }
+    const wrappedIndex = (focusViewIndex - 1 + screens.length) % screens.length;
+    setFocusViewIndex(wrappedIndex);
   }, [focusViewIndex]);
 
   const handleNext = useCallback(() => {
-    if (focusViewIndex < screens.length - 1) {
-      setFocusViewIndex(focusViewIndex + 1);
-    }
-  }, [focusViewIndex, screens]);
-
-  const handleTab = useCallback(() => {
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
   }, [focusViewIndex, screens]);
 
   useHotkeys("left", handlePrevious);
   useHotkeys("right", handleNext);
-  useHotkeys("tab", handleTab);
+  useHotkeys("tab", handleNext);
 
   return (
     <div className="flex w-full h-full">
@@ -241,7 +234,7 @@ function FilmstripItem({
             height={0}
             sizes="100vw"
           />
-          {/* Render redaction overlays using the natural dimensions and scale factors */}
+          {/* Render redaction overlays using natural dimensions and scale */}
           {imgDimensions.width > 0 &&
             redactions.map((rect, idx) => (
               <div

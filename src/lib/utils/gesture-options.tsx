@@ -46,7 +46,7 @@ export const gestureOptions: GestureOption[] = [
   },
   {
     value: "swipe",
-    label: "Swipe",
+    label: "Finger swipe",
     icon: <Move className="size-4 text-yellow-800 hover:text-black" />,
     subGestures: [
       {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -20,6 +20,8 @@ import { Loader2 } from "lucide-react";
 export default function CaptureNewPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const taskRef = useRef<HTMLTextAreaElement>(null);
+  const maxLength = 200;
 
   const [platform, setPlatform] = useState<Platform>(Platform.IOS);
   const [app, setApp] = useState({name: "", id: ""});
@@ -135,11 +137,22 @@ export default function CaptureNewPage() {
           </Label>
           <Textarea
             id="description"
+            maxLength={maxLength}
             value={description}
+            ref={taskRef}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. Create a new message and attach a photo"
             required
           />
+          {taskRef.current && (
+            <div className="w-full flex flex-col">
+              <div 
+                className="text-sm flex justify-end text-muted-foreground z-10"
+              > 
+                {`${description.length}/${maxLength}`}
+              </div>
+            </div>
+          )}
         </div>
           <Button 
             className="dark:bg-neutral-50 dark:text-black" 

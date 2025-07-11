@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext } from "react";
+import React, { useRef, useState } from "react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,9 +14,13 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { gestureOptions } from "@/lib/utils/gesture-options";
+import { Progress } from "@/components/ui/progress";
 
 export default function Review() {
   const { register } = useFormContext<TraceFormData>();
+  const [descriptionLen, setDescriptionLen] = useState(0);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  
 
   return (
     <div className="flex w-full h-full">
@@ -32,7 +36,25 @@ export default function Review() {
             {...register("description")}
             id="description"
             maxLength={75}
-            placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens." />
+            onChange={(e) => {
+              setDescriptionLen(e.target.value.length);
+            }}
+            ref={descriptionRef}
+            placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens."
+          />
+          {descriptionRef.current && (
+            <div className="w-full flex flex-col">
+              <Progress
+                className="w-full"
+                value={(descriptionLen / descriptionRef.current.maxLength) * 100} 
+              />
+              <div 
+                className="text-sm flex justify-end text-muted-foreground z-10"
+              > 
+                {`${descriptionLen}/${descriptionRef.current.maxLength}`}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
