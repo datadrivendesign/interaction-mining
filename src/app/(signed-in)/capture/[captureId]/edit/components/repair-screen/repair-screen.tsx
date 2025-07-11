@@ -124,12 +124,12 @@ export default function RepairScreen({ capture }: { capture: any }) {
       wrappedIndex = screens.length - 1;
     }
     setFocusViewIndex(wrappedIndex);
-  }, [focusViewIndex]);
+  }, [focusViewIndex, screens.length]);
 
   const handleNext = useCallback(() => {
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
-  }, [focusViewIndex, screens]);
+  }, [focusViewIndex, screens.length]);
 
   useHotkeys("left", (e) => {
     e.preventDefault();
@@ -276,7 +276,7 @@ function RepairScreenIOS({
         setThumbnails(thumbs);
       }
       extractThumbnails();
-    }, [videoRef, videoDuration])
+    }, [videoRef, videoDuration, extractVideoThumbnails])
 
     // useEffect to load thumbnails if video transcoding is enabled
     useEffect(() => {

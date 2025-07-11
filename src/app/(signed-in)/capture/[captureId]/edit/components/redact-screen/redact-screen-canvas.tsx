@@ -72,7 +72,7 @@ export default function RedactScreenCanvas({
   const [watchRedactions] = useWatch({
     name: ["redactions"],
   });
-  const redactions = watchRedactions || {};
+  const redactions = useMemo(() => watchRedactions || {}, [watchRedactions]);
   const redactionsOnScreen: Redaction[] = useMemo(
     () => redactions[screen.id] || [],
     [redactions, screen.id]
@@ -246,6 +246,10 @@ export default function RedactScreenCanvas({
   useHotkeys("ctrl+v,meta+v", (e) => {
     e.preventDefault()
     if (e.repeat) { return; }
+    if (!copied) {
+      toast.error("No redaction to paste");
+      return;
+    }
     if (mode === "select") {
       createRedaction({
         id: `${Date.now()}`, // unique enough id for redaction

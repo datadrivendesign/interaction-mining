@@ -2,7 +2,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -39,12 +38,12 @@ export default function RedactScreen() {
   const handlePrevious = useCallback(() => {
     const wrappedIndex = (focusViewIndex - 1 + screens.length) % screens.length;
     setFocusViewIndex(wrappedIndex);
-  }, [focusViewIndex]);
+  }, [focusViewIndex, screens.length]);
 
   const handleNext = useCallback(() => {
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
-  }, [focusViewIndex, screens]);
+  }, [focusViewIndex, screens.length]);
 
   useHotkeys("left", handlePrevious);
   useHotkeys("right", handleNext);

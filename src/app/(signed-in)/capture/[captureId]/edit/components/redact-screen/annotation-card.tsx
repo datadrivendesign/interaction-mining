@@ -5,6 +5,7 @@ import React, {
   KeyboardEvent, 
   useCallback, 
   useContext, 
+  useEffect, 
   useRef, 
   useState 
 } from "react";
@@ -35,6 +36,12 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const [customInput, setCustomInput] = useState(annotation);
   const maxLength = 30;
   const  { selectRedaction } = useContext(RedactCanvasContext);
+
+  useEffect(() => {
+    if (labelValue === "") {
+      setOpen(true);
+    }
+  }, [labelValue, setOpen]);
 
   const handleLabelSelect = useCallback((selectedValue: string) => {
     // Focus the textarea if it requires custom input
