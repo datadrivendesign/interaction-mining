@@ -42,19 +42,19 @@ export const gestureOptions: GestureOption[] = [
   {
     value: "tap",
     label: "Tap",
-    icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <Circle className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
   },
   {
     value: "swipe",
     label: "Finger swipe",
-    icon: <Move className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <Move className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
     subGestures: [
       {
         value: "swipe up",
         label: "Swipe up",
         icon: (
           <ArrowUpFromLine 
-            className="size-4 text-yellow-800 hover:text-black" 
+            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
           />
         ),
       },
@@ -63,7 +63,7 @@ export const gestureOptions: GestureOption[] = [
         label: "Swipe down",
         icon: (
           <ArrowDownFromLine 
-            className="size-4 text-yellow-800 hover:text-black" 
+            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
           />
         ),
       },
@@ -72,7 +72,7 @@ export const gestureOptions: GestureOption[] = [
         label: "Swipe left",
         icon: (
           <ArrowLeftFromLine 
-            className="size-4 text-yellow-800 hover:text-black" 
+            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
           />
         ),
       },
@@ -81,7 +81,7 @@ export const gestureOptions: GestureOption[] = [
         label: "Swipe right",
         icon: (
           <ArrowRightFromLine 
-            className="size-4 text-yellow-800 hover:text-black" 
+            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
           />
         ),
       },
@@ -90,57 +90,57 @@ export const gestureOptions: GestureOption[] = [
   {
     value: "typing",
     label: "Typing",
-    icon: <Keyboard className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <Keyboard className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
   },
   {
     value: "touch and hold",
     label: "Touch and hold",
-    icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <CircleDot className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
   },
   {
     value: "double tap",
     label: "Double tap",
-    icon: <CircleStop className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <CircleStop className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
   },
   {
     value: "drag",
     label: "Drag",
-    icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <Grab className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
   },
   {
     value: "zoom",
     label: "Zoom",
-    icon: <ScanSearch className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <ScanSearch className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
     subGestures: [
       {
         value: "zoom in",
         label: "Zoom in",
-        icon: <ZoomIn className="size-4 text-yellow-800 hover:text-black" />,
+        icon: <ZoomIn className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
       },
       {
         value: "zoom out",
         label: "Zoom out",
-        icon: <ZoomOut className="size-4 text-yellow-800 hover:text-black" />,
+        icon: <ZoomOut className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
       },
     ],
   },
   {
     value: "rotate",
     label: "Rotate",
-    icon: <RefreshCw className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <RefreshCw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
     subGestures: [
       {
         value: "rotate cw",
         label: "Rotate clockwise",
         icon: (
-          <IterationCw className="size-4 text-yellow-800 hover:text-black" />
+          <IterationCw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />
         ),
       },
       {
         value: "rotate ccw",
         label: "Rotate counter-clockwise",
         icon: (
-          <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
+          <IterationCcw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />
         ),
       },
     ],
@@ -148,6 +148,6 @@ export const gestureOptions: GestureOption[] = [
   {
     value: "other",
     label: "Other",
-    icon: <CircleHelp className="size-4 text-yellow-800 hover:text-black" />,
+    icon: <CircleHelp className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
   },
 ]; 

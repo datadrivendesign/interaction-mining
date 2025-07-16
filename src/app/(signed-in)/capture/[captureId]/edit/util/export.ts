@@ -2,16 +2,94 @@
 import Konva from "konva";
 import { toast } from "sonner";
 import { Capture } from "@prisma/client";
-import { DateTime } from "luxon";
 import plimit from "p-limit";
 
-import { createTrace, generatePresignedVHUpload } from "@/lib/actions";
+import { createTrace, generatePresignedVHUpload, updateTrace } from "@/lib/actions";
 import { uploadToS3 } from "@/lib/aws/s3/client";
 
-import { FrameData, TraceFormData, Redaction } from "../components/types";
+import { FrameData, TraceFormData, Redaction, ScreenReviewData } from "../components/types";
 import { computeIoU } from "./iou";
 
-export async function handleSave(data: TraceFormData, capture: Capture) {
+export async function handleReviewSave(data: TraceFormData, capture: Capture) {
+  // upload screens to s3
+  const screenData = data.screens.map((screen: FrameData) => {
+    const gesture = data.gestures[screen.id] ?? {
+      type: null,
+      x: null,
+      y: null,
+      scrollDeltaX: null,
+      scrollDeltaY: null,
+      description: null,
+    };
+    const redactions = data.redactions[screen.id] ?? [];
+    const vh = data.vhs ? data.vhs[screen.id] : "";
+    return {
+      id: screen.id,
+      src: screen.src,
+      timestamp: screen.timestamp,
+      gesture: gesture,
+      redactions: redactions,
+      vh: vh,
+      description: data.description
+    }
+  });
+  // upload screens as json to s3
+  const limit = plimit(3);
+  const uploadScreenResponse = await Promise.all(
+    screenData.map((screen: ScreenReviewData) =>
+      limit(async () => {
+        const prefix = `processed/${capture.id}/screens`;
+        const fileName = `${screen.id}.json`;
+        const file = new File([JSON.stringify(screen)], fileName, {
+          type: "application/json",
+        })
+        const uploadRes = await uploadToS3(
+          file,
+          prefix,
+          fileName,
+          file.type
+        );
+        if (!uploadRes || !uploadRes.ok) {
+          toast.error("Failed to upload screen image.");
+          throw new Error("Failed to upload screen image.");
+        }
+        return uploadRes;
+      })
+    )
+  )
+
+  if (!uploadScreenResponse || uploadScreenResponse.some((res) => !res.ok)) {
+    toast.error("Failed to upload screen data.");
+    return Promise.reject("Failed to upload screen data.");
+  }
+  toast.success("Screen data uploaded successfully.");
+}
+
+export async function handleTraceSave(data: TraceFormData, capture: Capture) {
+  // create a new trace without screens
+  const traceRes = await createTrace(
+    {
+      name: "New Trace",
+      description: data.description,
+      app: {
+        connect: {
+          id: capture.appId!,
+        },
+      },
+      captureId: capture.id,
+      task: {
+        connect: {
+          id: capture.taskId,
+        },
+      },
+      worker: "web",
+    },
+  );
+  if (!traceRes.ok) {
+    toast.error("Failed to create trace.");
+    return Promise.reject("Failed to create trace.");
+  }
+  const trace = traceRes.data;
   // Transpose gestures on to screens
   let screens = data.screens.map((screen: FrameData) => {
     const gesture = data.gestures[screen.id] ?? {
@@ -32,105 +110,84 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
       redactions: redactions,
     };
   });
-
+  // upload screens to s3
   const limit = plimit(3);
   const uploadScreenResponse = await Promise.all(
     screens.map((screen: any) =>
       limit(async () => {
-        const res = await fetch(screen.src);
-        if (!res.ok) {
-          toast.error("Failed to fetch screen image.");
-          throw new Error("Failed to fetch screen image.");
-        }
+          // Upload original image
+          const res = await fetch(screen.src);
+          if (!res.ok) {
+            toast.error("Failed to fetch screen image.");
+            throw new Error("Failed to fetch screen image.");
+          }
+        if (data.redactions[screen.id] &&
+            data.redactions[screen.id].length > 0) {
+          // Process redacted image
+          const dataURL = await exportRedactedImage(
+            data.redactions[screen.id],
+            screen.src
+          );
+          if (!dataURL) {
+            toast.error("Failed to export redacted image.");
+            throw new Error("Failed to export redacted image.");
+          }
 
-        const blob = await res.blob();
-        const file = new File([blob], `${screen.id}.png`, {
-          type: "image/png",
-        });
+          // Create a new file from the data URL
+          const byteString = atob(dataURL.split(",")[1]);
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const file = new File([ab], `${screen.id}.png`, {
+            type: "image/png"
+          });
 
-        const prefix = `uploads/${capture.id}/screens`;
-        const fileName = `${DateTime.now()}.png`;
-        const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+          const prefix = `trace/${trace.id}`;
+          const fileName = `${screen.id}.png`;
+          const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+          if (!uploadRes.ok) {
+            toast.error("Failed to upload redacted image.");
+            throw new Error("Failed to upload redacted image.");
+          }
 
-        if (!uploadRes || !uploadRes.ok) {
-          toast.error("Failed to upload screen image.");
-          throw new Error("Failed to upload screen image.");
-        }
-
-        // Set screen src to S3 URL if no redaction
-        if (!data.redactions[screen.id]) {
+          // Set screen src to redacted S3 URL
           screens.find((s: any) => s.id === screen.id)!.src =
             uploadRes.data.fileUrl;
-        }
+          return uploadRes;
+        } else {
+          const blob = await res.blob();
+          const file = new File([blob], `${screen.id}.png`, {
+            type: "image/png",
+          });
 
-        return uploadRes;
+          const prefix = `trace/${trace.id}`;
+          const fileName = `${screen.id}.png`;
+          const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+
+          if (!uploadRes || !uploadRes.ok) {
+            toast.error("Failed to upload screen image.");
+            throw new Error("Failed to upload screen image.");
+          }
+
+          // Set screen src to original S3 URL
+          screens.find((s: any) => s.id === screen.id)!.src =
+            uploadRes.data.fileUrl;
+
+          return uploadRes;
+        }
       })
     )
   );
-
   if (!uploadScreenResponse || uploadScreenResponse.some((res) => !res.ok)) {
     toast.error("Failed to upload screen images.");
     return Promise.reject("Failed to upload screen images.");
   }
-
-  const uploadRedactionScreenResponse = await Promise.all(
-    screens.map((screen: any) =>
-      limit(async () => {
-        if (!data.redactions[screen.id]) {
-          return { ok: true, message: "No redactions", data: null };
-        }
-
-        // Get redaction image
-        const dataURL = await exportRedactedImage(
-          data.redactions[screen.id],
-          screen.src
-        );
-
-        if (!dataURL) {
-          toast.error("Failed to export redacted image.");
-          throw new Error("Failed to export redacted image.");
-        }
-
-        // Create a new file from the data URL
-        const byteString = atob(dataURL.split(",")[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        const file = new File([ab], `${screen.id}.png`, { type: "image/png" });
-
-        const prefix = `uploads/${capture.id}/redacted-screens`;
-        const fileName = `${DateTime.now()}.png`;
-        const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
-
-        if (!uploadRes.ok) {
-          toast.error("Failed to upload redacted image.");
-          throw new Error("Failed to upload redacted image.");
-        }
-
-        // Set screen src to S3 URL
-        screens.find((s: any) => s.id === screen.id)!.src =
-          uploadRes.data.fileUrl;
-
-        return uploadRes;
-      })
-    )
-  );
-
-  if (
-    !uploadRedactionScreenResponse ||
-    uploadRedactionScreenResponse.some((res) => !res.ok)
-  ) {
-    toast.error("Failed to upload redacted screen images.");
-    return Promise.reject("Failed to upload redacted screen images.");
-  }
-
   // Cleaning up the screen objects
   screens = screens.map((screen: any) => {
     // delete screen id
     delete screen.id;
-
     // delete redaction id
     if (screen.redactions) {
       screen.redactions = screen.redactions.map((redaction: any) => {
@@ -149,7 +206,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
         limit(() => generatePresignedVHUpload(capture.id, "application/json"))
       )
     );
-
     if (!generateVHUploadRes || generateVHUploadRes.some((res) => !res.ok)) {
       toast.error(
         "Failed to upload screen images: Failed to generate presigned URLs."
@@ -158,7 +214,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
         "Failed to upload screen images: Failed to generate presigned URLs."
       );
     }
-
     // recurse through tree and check IoU with all redactions
     function redactVH(
       node: any,
@@ -205,13 +260,12 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
         );
       }
     }
-
+    // upload view hierarchies to s3
     const vhUploadRes = await Promise.all(
       data.screens.map((screen: FrameData, index: number) =>
         limit(async () => {
           let res;
           const vh = vhs[screen.id];
-
           // Try to determine image dimensions
           let imgWidth = 0;
           let imgHeight = 0;
@@ -239,7 +293,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
           if (redactions) {
             redactVH(vh, redactions, imgWidth, imgHeight);
           }
-
           if (!vh) {
             return { ok: false, message: "Failed to find view hierarchies." };
           }
@@ -251,7 +304,6 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
               body: JSON.stringify(vh),
               headers: { "Content-Type": "application/json" },
             });
-
             if (!res.ok) {
               toast.error("Failed to upload view hierarchies.");
               return {
@@ -259,53 +311,31 @@ export async function handleSave(data: TraceFormData, capture: Capture) {
                 message: "Failed to upload view hierarchies.",
               };
             }
-
             screens[index].vh = uploadMeta.data.fileUrl;
             return uploadMeta;
           }
-
           return { ok: false, message: "Presigned URL generation failed." };
         })
       )
     );
-
     if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
       toast.error("Failed to upload screen view hierarchies.");
       return Promise.reject("Failed to upload screen view hierarchies.");
     }
   }
-
-  // Create trace AND screen records, update user
-  const trace = await createTrace(
-    {
-      name: "New Trace",
-      description: data.description,
-      app: {
-        connect: {
-          id: capture.appId!,
-        },
-      },
-      captureId: capture.id,
+  // update trace with screens and view hierarchies
+  const updateTraceRes = await updateTrace(trace.id, {
       screens: {
         create: screens,
       },
-      task: {
-        connect: {
-          id: capture.taskId,
-        },
-      },
-      worker: "web",
-    },
-    {
-      includes: {
-        screens: true,
-      },
+    }, {
+    includes: {
+      screens: true,
     }
-  );
-
-  if (!trace.ok) {
-    toast.error("Failed to create trace.");
-    return Promise.reject("Failed to create trace.");
+  })
+  if (!updateTraceRes.ok) {
+    toast.error("Failed to update trace.");
+    return Promise.reject("Failed to update trace.");
   }
 
   toast.success("Trace created successfully. Redirecting...");

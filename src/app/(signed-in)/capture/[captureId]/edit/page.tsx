@@ -26,8 +26,7 @@ import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { handleSave } from "./util";
-import { Platform } from "@/lib/utils";
+import { handleReviewSave } from "./util";
 
 enum TraceSteps {
   Capture = 0,
@@ -122,14 +121,15 @@ export default function Page() {
         errors.forEach((error) => {
           toast.error(error.message);
         });
+        setIsSubmitting(false);
         return;
       }
       // Submit the form
       const data = methods.getValues();
 
-      handleSave(data, capture!)
+      handleReviewSave(data, capture!)
         .then(() => {
-          router.push(`/app/${capture!.appId!}`);
+          router.push(`/capture/${captureId}/evaluate`);
         })
         .catch((reason: string) => {
           console.error(reason);

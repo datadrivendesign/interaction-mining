@@ -24,6 +24,16 @@ export type TraceFormData = {
   description: string;
 };
 
+export type ScreenReviewData = {
+  id: string;
+  src: string;
+  timestamp: number;
+  gesture: ScreenGesture;
+  redactions: Redaction[];
+  vh: string;
+  description: string;
+}
+
 export const ScreenSchema = z
   .array(
     z.object({

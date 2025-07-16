@@ -6,18 +6,14 @@ import {
   useContext,
   useEffect,
   useCallback,
-  useReducer,
-  useMemo,
 } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
   Search,
   Download,
-  Inspect,
 } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
@@ -221,8 +217,8 @@ export function InspectView({ data }: { data: any }) {
                   priority
                   onLoad={handleImageLoad}
                 />
-                {(screen.gesture.x !== null && screen.gesture.y !== null) && 
-                  <TooltipProvider>
+                <TooltipProvider>
+                  {screen.gesture.x !== null && screen.gesture.y !== null && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
@@ -250,7 +246,25 @@ export function InspectView({ data }: { data: any }) {
                         <p>{screen.gesture.description}</p>
                       </TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>}
+                  )}
+                  {(screen.redactions || []).map((redaction, i) => (
+                  <Tooltip key={`${redaction.annotation}-${i}`}>
+                    <TooltipTrigger asChild>
+                      <div className="absolute z-10 cursor-pointer"
+                        style={{
+                          left: `${redaction.x * 100}%`,
+                          top: `${redaction.y * 100}%`,
+                          width: `${redaction.width * 100}%`,
+                          height: `${redaction.height * 100}%`,
+                        }}>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={10}>
+                      <p>{redaction.annotation}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                </TooltipProvider>
               </figure>
             ))}
           </div>

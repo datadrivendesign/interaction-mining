@@ -16,6 +16,10 @@ const remotePatterns: RemotePattern[] = [
     protocol: "https",
     hostname: "*.mzstatic.com",
   },
+  {
+    protocol: "https",
+    hostname: "dev.interactionmining.org"
+  }
 ];
 // conditionally add cloudfront url if set
 if (process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL) {
