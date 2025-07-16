@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/tooltip";
 
 export type FrameTimelineProps = {
-  src: string;
   thumbnails: {
     src: string;
     timestamp: number;

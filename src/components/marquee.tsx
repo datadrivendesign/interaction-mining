@@ -36,23 +36,25 @@ export const TitleMarquee: FC<TitleMarqueeProps> = ({
   });
   const isVisible = entry?.isIntersecting ?? false;
 
-  useEffect(() => {
-    const c = containerRef.current;
-    const t = contentRef.current;
-    if (!c || !t) return;
-    const observer = new ResizeObserver(() => {
-      const containerW = Math.floor(c.clientWidth);
-      const contentW = Math.max(Math.ceil(c.scrollWidth), Math.ceil(t.scrollWidth)); // LOL this is a hack to get the content width, might break
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (!containerRef.current || !contentRef.current) return;
+      const containerW = containerRef.current!.getBoundingClientRect().width;
+      const contentW = Math.max(
+        contentRef.current!.scrollWidth,
+        contentRef.current!.getBoundingClientRect().width
+      );
       setIsTruncated(contentW > containerW);
-    });
-    observer.observe(c);
-    observer.observe(t);
-    // initial measurement
-    observer.disconnect(); // restart to capture initial sizes
-    observer.observe(c);
-    observer.observe(t);
-    return () => observer.disconnect();
-  }, [size]);
+    };
+    const rafId = requestAnimationFrame(measure);
+    const observer = new ResizeObserver(measure);
+    if (containerRef.current) observer.observe(containerRef.current);
+    if (contentRef.current) observer.observe(contentRef.current);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, [size, children]);
 
   // delay initial play by 1s when truncation is true and mode is visibility
   useEffect(() => {
@@ -93,26 +95,32 @@ export const TitleMarquee: FC<TitleMarqueeProps> = ({
     }
   }, [ioRef]);
 
-  const contentElement = useMemo(() => (<div ref={contentRef} className={cn("whitespace-nowrap", isTruncated && "*:mr-2")}>{children}</div>
+  const contentElement = useMemo(() => (<div ref={contentRef} className={cn("w-full whitespace-nowrap", isTruncated && "*:mr-2")}>{children}</div>
   ), [children, isTruncated]);
 
   return (
     <div
       ref={mergedRef}
-      className={cn(isTruncated ? "overflow-hidden" : "truncate", className)}
+      className={cn(isTruncated ? "overflow-hidden" : "truncate flex justify-center", className)}
       title={title}
       onMouseEnter={handleMouseEnter}
     >
-      <Marquee
-        speed={speed}
-        pauseOnHover={false}
-        pauseOnClick={false}
-        loop={0}
-        play={isTruncated && (mode === "visibility" ? isVisible && isPlay : isPlay)}
-        onCycleComplete={handleCycleComplete}
-      >
-        {contentElement}
-      </Marquee>
+      {isTruncated ? (
+        <Marquee
+          speed={speed}
+          pauseOnHover={false}
+          pauseOnClick={false}
+          loop={0}
+          play={isTruncated && (mode === "visibility" ? isVisible && isPlay : isPlay)}
+          onCycleComplete={handleCycleComplete}
+        >
+          {contentElement}
+        </Marquee>
+      ) : (
+        <div className="flex items-center justify-center w-full">
+          {contentElement}
+        </div>
+      )}
     </div>
   );
 };
