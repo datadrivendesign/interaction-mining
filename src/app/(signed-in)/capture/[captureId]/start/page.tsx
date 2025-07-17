@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button";
 import { useCapture } from "@/lib/hooks";
 import { CaptureSWROperations, fileFetcher, handleDeleteFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { processCaptureFiles } from "@/lib/actions";
+import { processCaptureFiles, updateCapture } from "@/lib/actions";
 import { cn, Platform } from "@/lib/utils";
+import { CaptureStatus } from "@prisma/client";
 interface CaptureState {
   hasUploads: boolean;
   processingState: "idle" | "pending" | "finished" | "error";
@@ -65,7 +66,7 @@ function captureStateReducer(
         if (state.processingState !== "pending") {
           // determine if all video files have been transcoded
           const isTranscodeDisabled = (
-            !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA || 
+            !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
             process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
           );
           hasTranscoded = isTranscodeDisabled || (
@@ -79,7 +80,7 @@ function captureStateReducer(
               );
             })
           );
-          
+
           // determine if all non-video files or thumbnails have been copied
           const nonVideoUploads = uploadList.filter(
             (upload) =>
@@ -158,7 +159,20 @@ export default function Page() {
     (os === Platform.ANDROID && captureState.hasUploads);
 
   const redirectToFrameExtract = () => {
-    capture?.id ? redirect(`/capture/${capture.id}/edit`) : null;
+    updateCapture(captureId, {
+      status: CaptureStatus.PROCESSING
+    }).then((res) => {
+      if (res.ok && capture?.id) {
+        redirect(`/capture/${capture.id}/edit`);
+      } else {
+        throw new Error(
+          `Failure to update capture ${capture?.id}: ${res.message}`
+        );
+      }
+    }).catch((err) => {
+      console.error("Failed to update capture:", err);
+      dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "error" });
+    });
   };
 
   useEffect(() => {

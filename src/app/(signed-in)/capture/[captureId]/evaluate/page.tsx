@@ -4,16 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getCaptureFiles } from "@/lib/actions";
+import { getCaptureFiles, updateCapture } from "@/lib/actions";
 import { gestureOptions } from "@/lib/utils/gesture-options";
-// import TraceData from "@/public/example-trace/inspectData-686c351e1a49688eff88aa70.json"
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScreenReviewData, TraceFormData } from "../edit/components/types";
 import { handleTraceSave } from "../edit/util";
 import { useCapture } from "@/lib/hooks/capture";
-import { Capture } from "@prisma/client";
+import { Capture, CaptureStatus } from "@prisma/client";
 
 export default function Page() {
   const params = useParams();
@@ -50,7 +49,6 @@ export default function Page() {
       }).reduce((acc, curr) => 
         ({ ...acc, ...curr }), {}
       );
-      console.log("vhs:", vhs);
       const gestures = screenData.map((s) => {
         return { [s.id]: s.gesture };
       }).reduce((acc, curr) => 
@@ -108,6 +106,47 @@ function ReviewPanel({
   capture: Capture,
   router: ReturnType<typeof useRouter>
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    try {
+      await handleTraceSave(traceData, capture);
+      const updateRes = await updateCapture(capture.id, {
+        status: CaptureStatus.APPROVED
+      });
+      if (!updateRes.ok) {
+        console.error(updateRes.message ?? "Failed to update capture");
+        return;
+      }
+      router.push(`/app/${capture.appId}`);
+    } catch (err) {
+      console.error(err ?? "Failed to save trace");
+      return;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const handleDeny = async () => {
+    setIsSubmitting(true);
+    try {
+      const updateRes = await updateCapture(capture.id, {
+        status: CaptureStatus.PROCESSING
+      });
+      if (!updateRes.ok) {
+        console.error(updateRes.message ?? "Failed to update capture");
+        return;
+      }
+      router.push(`/capture/${capture.id}/edit`);
+    } catch (err) {
+      console.error(err ?? "Failed to update capture");
+      return;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return(
     <aside className="w-full h-full flex flex-col flex-grow justify-between p-3">
       <Badge variant="default" className="bg-gray-500 mt-5">
@@ -121,21 +160,16 @@ function ReviewPanel({
         <Button 
           variant="outline" 
           className="bg-green-600 text-white hover:bg-green-700 dark:bg-white dark:text-black"
-          onClick={() => {
-            handleTraceSave(traceData, capture)
-              .then(() => {
-                router.push(`/app/${capture.appId}`);
-              })
-          }}
+          onClick={handleApprove}
+          disabled={isSubmitting}
         >
           Approve
         </Button>
         <Button 
           variant="outline" 
           className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-500 dark:text-white"
-          onClick={() => {
-            router.push(`/capture/${capture.id}/edit`);
-          }}
+          onClick={handleDeny}
+          disabled={isSubmitting}
         >
           Deny
         </Button>

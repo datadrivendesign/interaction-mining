@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   RedactionSchema,
   ScreenGestureSchema,
+  ScreenReviewData,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
@@ -27,6 +28,8 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleReviewSave } from "./util";
+import { getCaptureFiles, updateCapture } from "@/lib/actions";
+import { CaptureStatus } from "@prisma/client";
 
 enum TraceSteps {
   Capture = 0,
@@ -55,6 +58,65 @@ export default function Page() {
     },
     resolver: zodResolver(TraceFormSchema),
   });
+  // populate form with saved capture data if there is any
+  useEffect(() => {
+    const fetchFiles = async () => {
+      const files = await getCaptureFiles(captureId);
+      if (!files.ok) {
+        console.error("Failed to fetch files");
+        return;
+      }
+      const fetchedScreenFiles =  files.data.filter(
+        (file) => file.fileKey.includes(`${captureId}/screens`)
+      );
+      if (fetchedScreenFiles.length === 0) {
+        return;
+      }
+      // grab json file from the fileKey
+      const screenData: ScreenReviewData[] = await Promise.all(
+        fetchedScreenFiles.map(async (file) => {
+          const response = await fetch(file.fileUrl);
+          const data = await response.json();
+          return data;
+        })
+      )
+      const screens = screenData.map((s) => {
+        return { id: s.id, src: s.src, timestamp: s.timestamp };
+      });
+      if (screens.length > 0) {
+        methods.setValue("screens", screens);
+      }
+      const vhs = screenData.map((s) => {
+        return s.vh ? { [s.id]: s.vh } : {};
+      }).reduce((acc, curr) =>
+        ({ ...acc, ...curr }), {}
+      );
+      if (Object.keys(vhs).length > 0) {
+        methods.setValue("vhs", vhs);
+      }
+      const gestures = screenData.map((s) => {
+        return { [s.id]: s.gesture };
+      }).reduce((acc, curr) =>
+        ({ ...acc, ...curr }), {}
+      );
+      if (Object.keys(gestures).length > 0) {
+        methods.setValue("gestures", gestures);
+      }
+      const redactions = screenData.map((s) => {
+        return { [s.id]: s.redactions };
+      }).reduce((acc, curr) =>
+        ({ ...acc, ...curr }), {}
+      );
+      if (Object.keys(redactions).length > 0) {
+        methods.setValue("redactions", redactions);
+      }
+      const description = screenData[0].description;
+      if (description) {
+        methods.setValue("description", description);
+      }
+    }
+    fetchFiles();
+  }, [captureId, methods]);
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -101,7 +163,8 @@ export default function Page() {
       setStepIndex(stepIndex + 1);
     } else {
       setIsSubmitting(true);
-      // Validate the "description" field
+      try {
+
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods.getValues()
         .screens.slice(0, -1)
@@ -126,16 +189,20 @@ export default function Page() {
       }
       // Submit the form
       const data = methods.getValues();
-
-      handleReviewSave(data, capture!)
-        .then(() => {
-          router.push(`/capture/${captureId}/evaluate`);
-        })
-        .catch((reason: string) => {
-          console.error(reason);
-        }).finally(() => {
-          setIsSubmitting(false);
-        });
+      // save review data to s3 and route to evaluate
+      await handleReviewSave(data, capture!)
+      const updateResult = await updateCapture(captureId, {
+        status: CaptureStatus.REVIEWING
+      })
+      if (!updateResult.ok) {
+        throw new Error(updateResult.message || "Failed to update capture")
+      }
+      router.push(`/capture/${captureId}/evaluate`);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
   const handlePrevious = () => {

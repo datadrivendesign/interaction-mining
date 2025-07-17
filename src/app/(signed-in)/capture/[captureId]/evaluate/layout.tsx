@@ -1,20 +1,18 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Capture, getCapture, getCaptureFiles } from "@/lib/actions";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
 } from "@/components/ui/card";
+import { Capture, getCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 enum ErrorType {
   NO_CAPTURE = "NO_CAPTURE",
   NOT_INITIATED = "NOT_INITIATED",
-  IN_REVIEW = "IN_REVIEW",
-  NO_FILES = "NO_FILES",
+  NOT_PROCESSED = "NOT_PROCESSED",
   APPROVED = "APPROVED",
 }
 
@@ -41,82 +39,56 @@ export default async function Layout({
       capture={capture}
       errorType={ErrorType.NOT_INITIATED}
     />;
-  } else if (capture?.status === CaptureStatus.REVIEWING) {
+  } else if (capture?.status === CaptureStatus.PROCESSING) {
     return <Error
       captureId={captureId}
       capture={capture}
-      errorType={ErrorType.IN_REVIEW}
+      errorType={ErrorType.NOT_PROCESSED}
     />;
   } else if (capture?.status === CaptureStatus.APPROVED && capture.appId) {
-    return <Error
-      captureId={captureId}
+    return <Error 
+      captureId={captureId} 
       capture={capture}
-      errorType={ErrorType.APPROVED}
+      errorType={ErrorType.APPROVED} 
     />;
   }
 
-  // Check if the capture has any uploaded files
-  const render = await getCaptureFiles(captureId).then((res) => {
-    if (!res.ok) {
-      notFound();
-    }
-
-    if (res.data.length === 0) {
-      return (
-        <>
-          <Error
-            captureId={captureId}
-            capture={capture}
-            errorType={ErrorType.NO_FILES}
-          />
-        </>
-      );
-    } else {
-      return <>{children}</>;
-    }
-  });
-
-  return render;
+  return (
+    <>{children}</>
+  )
 }
 
-function Error({
-  captureId,
+function Error({ 
+  captureId, 
   capture,
   errorType
-}: {
-  captureId: string;
-  capture: Capture | null;
-  errorType: ErrorType;
+}: { 
+    captureId: string;
+    capture: Capture | null;
+    errorType: ErrorType;
 }) {
   const getError = (type: ErrorType) => {
     switch (type) {
-      case ErrorType.NO_FILES:
+      case ErrorType.NO_CAPTURE:
         return {
-          title: "Waiting for files...",
-          message: "The capture you are looking for does not have any uploaded files. Please upload files to proceed.",
+          title: "Capture not found",
+          message: `Failed to fetch capture. Please try again later.`,
           linkText: "Return to upload",
-          linkUrl: `/capture/${captureId}/upload`,
+          linkUrl: `/capture/${captureId}/start`,
         };
       case ErrorType.NOT_INITIATED:
         return {
           title: "Intiate the capture",
           message: "The capture you are looking for has not been initiated yet or uploaded files. Please upload files and intialize the capture.",
           linkText: "Return to upload",
-          linkUrl: `/capture/${captureId}/upload`,
+          linkUrl: `/capture/${captureId}/start`,
         };
-      case ErrorType.NO_CAPTURE:
+      case ErrorType.NOT_PROCESSED:
         return {
-          title: "Capture not found",
-          message: `Failed to fetch capture. Please try again later.`,
-          linkText: "Return to upload",
-          linkUrl: `/capture/${captureId}/upload`,
-        };
-      case ErrorType.IN_REVIEW:
-        return {
-          title: "Capture in review",
-          message: "The capture you are looking for is currently in review. Please wait for the review to complete.",
-          linkText: "Return to review",
-          linkUrl: `/capture/${captureId}/evaluate`,
+          title: "Capture not processed",
+          message: "The capture has not been processed yet. Please finish processing the capture before evaluating.",
+          linkText: "Return to processing",
+          linkUrl: `/capture/${captureId}/edit`,
         }
       case ErrorType.APPROVED:
         return {
@@ -127,6 +99,7 @@ function Error({
         }
     }
   }
+
   const error = getError(errorType);
 
   return (
@@ -137,7 +110,8 @@ function Error({
           <CardDescription>
             {error.message}
           </CardDescription>
-          <Link href={error.linkUrl}>
+          <Link href={error.linkUrl}
+          >
             <span className="inline-flex items-center underline">
               <ArrowLeft className="w-4 h-4 mr-1 inline-block" />
               {error.linkText}
@@ -147,4 +121,4 @@ function Error({
       </Card>
     </div>
   );
-}
+  }

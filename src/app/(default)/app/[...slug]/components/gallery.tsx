@@ -30,23 +30,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import { downloadTrace } from "../lib";
+import { Trace } from "@/lib/actions";
 
 const GalleryContext = createContext({
-  data: [] as any[],
-  setData: (_: any) => { },
-  inspectData: null as any,
-  setInspectData: (_: any) => { },
+  data: [] as Trace[],
+  setData: (_: Trace[]) => { },
+  inspectData: null as Trace | null,
+  setInspectData: (_: Trace | null) => { },
 });
 
 export function GalleryRoot({
   data,
   children,
 }: {
-  data: any;
+  data: Trace[];
   children: React.ReactNode;
 }) {
-  const [_data, setData] = useState<any[]>(data);
-  const [inspectData, setInspectData] = useState<any>(null);
+  const [_data, setData] = useState<Trace[]>(data);
+  const [inspectData, setInspectData] = useState<Trace | null>(null);
 
   return (
     <GalleryContext.Provider
@@ -136,7 +137,7 @@ export function Gallery() {
   );
 }
 
-export function InspectView({ data }: { data: any }) {
+export function InspectView({ data }: { data: Trace }) {
   const { setInspectData } = useContext(GalleryContext);
   const [loading, setLoading] = useState({ status: "loading" });
 

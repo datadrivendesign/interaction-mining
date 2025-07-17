@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Kbd from "@/components/ui/kbd";
+import { Badge } from "@/components/ui/badge";
 
 export const card = {
   initial: {
@@ -492,18 +493,23 @@ function RepairScreenIOS({
                 >
                 <CardHeader className="flex flex-col items-center p-2">
                   <CardDescription>
-                    <p>
-                      <strong>Task: </strong> 
-                      {capture.task?.description ?? "No task"}
+                    <Badge>
+                      <article className="prose prose-neutral dark:prose-invert leading-snug text-sm font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
+                        <p>
+                          {capture?.task?.description ??
+                            "No task description provided."
+                          }
+                        </p>
+                      </article>
+                    </Badge>
+                    <p className="mt-1 text-sm font-semibold">
+                      1. Capture screens from video.
                     </p>
-                    <p className="mt-1">
-                      <strong>1. Capture screens from video.</strong>
+                    <p className="text-sm font-semibold">
+                      2. Add gestures to screens
                     </p>
-                    <p>
-                      <strong>2. Add gestures to screens</strong>
-                    </p>
-                    <p className="mt-1">
-                      <strong>Add screen gestures on this side. </strong>Start gesture description with a verb, no full sentences.
+                    <p className="text-sm">
+                      <strong>Add screen gestures on this side.</strong> Start gesture description with a verb, no full sentences.
                     </p>
                   </CardDescription>
                 </CardHeader>
