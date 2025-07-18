@@ -7,24 +7,44 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getCaptureFiles, updateCapture } from "@/lib/actions";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { redirect, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ScreenReviewData, TraceFormData } from "../edit/components/types";
 import { handleTraceSave } from "../edit/util";
 import { useCapture } from "@/lib/hooks/capture";
 import { Capture, CaptureStatus, Role } from "@prisma/client";
-import { auth } from "@/lib/auth";
 import { Session } from "next-auth";
+import { useSession } from "next-auth/react";
+import { Loader2 } from "lucide-react";
 
-export default async function Page() {
+export default function Page() {
   const params = useParams();
+  const { data: session, status } = useSession();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
   const router = useRouter();
-  const session = await auth();
+
+  // Handle loading state
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader2 className="size-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle unauthenticated state
+  if (status === "unauthenticated" || !session) {
+    redirect("/sign-in");
+  }
+  // Check if user has admin role
+  const isAdmin = session?.user?.role === Role.ADMIN;
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -84,7 +104,7 @@ export default async function Page() {
                 traceData={traceData} 
                 capture={capture} 
                 router={router}
-                session={session}
+                isAdmin={isAdmin}
               />
             )}
           </ResizablePanel>
@@ -105,12 +125,12 @@ function ReviewPanel({
   traceData, 
   capture,
   router,
-  session,
+  isAdmin,
 }: { 
   traceData: TraceFormData;
   capture: Capture;
   router: ReturnType<typeof useRouter>;
-  session: Session | null;
+  isAdmin: boolean;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -162,7 +182,7 @@ function ReviewPanel({
           </p>
         </article>
       </Badge>
-      {session?.user?.role === Role.ADMIN && (
+      {isAdmin && (
         <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
         <Button 
           variant="outline" 

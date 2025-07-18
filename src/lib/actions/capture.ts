@@ -30,6 +30,20 @@ export type Capture = Prisma.CaptureGetPayload<{
   };
 }>;
 
+export type CaptureAdminView = Prisma.CaptureGetPayload<{
+  include: {
+    app: boolean;
+    task: boolean;
+    user: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      }
+    }
+  };
+}>;
+
 interface GetCaptureProps {
   id?: string;
   taskId?: string;
