@@ -8,13 +8,15 @@ import { getCaptureFiles, updateCapture } from "@/lib/actions";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ScreenReviewData, TraceFormData } from "../edit/components/types";
 import { handleTraceSave } from "../edit/util";
 import { useCapture } from "@/lib/hooks/capture";
-import { Capture, CaptureStatus } from "@prisma/client";
+import { Capture, CaptureStatus, Role } from "@prisma/client";
+import { auth } from "@/lib/auth";
+import { Session } from "next-auth";
 
-export default function Page() {
+export default async function Page() {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
@@ -22,6 +24,7 @@ export default function Page() {
     includes: { app: true, task: true },
   });
   const router = useRouter();
+  const session = await auth();
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -81,6 +84,7 @@ export default function Page() {
                 traceData={traceData} 
                 capture={capture} 
                 router={router}
+                session={session}
               />
             )}
           </ResizablePanel>
@@ -101,10 +105,12 @@ function ReviewPanel({
   traceData, 
   capture,
   router,
+  session,
 }: { 
-  traceData: TraceFormData, 
-  capture: Capture,
-  router: ReturnType<typeof useRouter>
+  traceData: TraceFormData;
+  capture: Capture;
+  router: ReturnType<typeof useRouter>;
+  session: Session | null;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -156,7 +162,8 @@ function ReviewPanel({
           </p>
         </article>
       </Badge>
-      <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
+      {session?.user?.role === Role.ADMIN && (
+        <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
         <Button 
           variant="outline" 
           className="bg-green-600 text-white hover:bg-green-700 dark:bg-white dark:text-black"
@@ -173,7 +180,7 @@ function ReviewPanel({
         >
           Deny
         </Button>
-      </div>
+      </div>)}
     </aside>
   )
 }
