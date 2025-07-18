@@ -49,6 +49,13 @@ const statusConfig = {
     color: "bg-purple-500", 
     textColor: "text-purple-500",
     description: "Currently in review"
+  },
+  [CaptureStatus.APPROVED]: {
+    label: "Approved",
+    icon: CheckCircle,
+    color: "bg-green-500",
+    textColor: "text-green-500", 
+    description: "Completed and approved"
   }
 };
 
@@ -274,7 +281,7 @@ export default async function DashboardPage() {
                             </p>
                           </div>
                         </div>
-                        <Link href={`/app/${trace.appId}`}>
+                        <Link href={`/app/${trace.appId}/trace/${trace.id}`}>
                           <Button size="sm" variant="secondary">
                             <EyeIcon className="mr-2 size-4" />
                             View

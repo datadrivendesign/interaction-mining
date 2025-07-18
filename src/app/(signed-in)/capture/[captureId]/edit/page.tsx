@@ -80,9 +80,10 @@ export default function Page() {
           return data;
         })
       )
-      const screens = screenData.map((s) => {
-        return { id: s.id, src: s.src, timestamp: s.timestamp };
-      });
+      const screens = screenData
+        .map((s) => {
+          return { id: s.id, src: s.src, timestamp: s.timestamp };
+        }).sort((a, b) => a.timestamp - b.timestamp);
       if (screens.length > 0) {
         methods.setValue("screens", screens);
       }
