@@ -148,6 +148,7 @@ export default function Page() {
       dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "error" });
       return;
     }
+    console.log(res);
     dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "finished" });
   };
 
@@ -158,21 +159,16 @@ export default function Page() {
       ["idle", "finished"].includes(captureState.processingState)) ||
     (os === Platform.ANDROID && captureState.hasUploads);
 
-  const redirectToFrameExtract = () => {
-    updateCapture(captureId, {
-      status: CaptureStatus.PROCESSING
-    }).then((res) => {
-      if (res.ok && capture?.id) {
-        redirect(`/capture/${capture.id}/edit`);
-      } else {
-        throw new Error(
-          `Failure to update capture ${capture?.id}: ${res.message}`
-        );
-      }
-    }).catch((err) => {
-      console.error("Failed to update capture:", err);
-      dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "error" });
+  const redirectToTraceProcess = async () => {
+    const captureRes = await updateCapture(captureId,  {
+      status: CaptureStatus.PROCESSING,
     });
+    if (!captureRes.ok || !captureRes.data || !captureRes.data.id) {
+      console.error(captureRes.message);
+      return;
+    }
+    console.log(captureRes.data);
+    redirect(`/capture/${captureRes.data.id}/edit`);
   };
 
   useEffect(() => {
@@ -255,6 +251,7 @@ export default function Page() {
                       </div>
                       <DeleteUploadDialog
                         onContinue={() =>
+                          // TODO: remove from processList too
                           handleDeleteFile(captureId, file.fileKey)
                         }
                       >
@@ -389,7 +386,7 @@ export default function Page() {
         )}
         <div className="flex w-full max-w-screen-sm justify-end">
           <Button
-            onClick={redirectToFrameExtract}
+            onClick={redirectToTraceProcess}
             disabled={!isReadyToRedirect}
             tooltip={"Navigate to trace creation editor"}
           >

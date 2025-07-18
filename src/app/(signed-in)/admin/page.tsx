@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth/auth";
+import { Role } from "@prisma/client";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -23,7 +24,7 @@ export default async function AdminPage() {
     redirect(`/sign-in?callbackUrl=/admin`);
   }
 
-  if (session!.user!.role !== "ADMIN") {
+  if (session!.user!.role !== Role.ADMIN) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
