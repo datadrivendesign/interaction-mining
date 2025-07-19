@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { Role } from "@prisma/client";
 
 export default async function AdminUserDetails({
   params,
@@ -56,7 +57,7 @@ export default async function AdminUserDetails({
               {user.name ?? "Unnamed User"}
             </h1>
             <p className="text-lg text-muted-foreground">{user.email}</p>
-            <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
+            <Badge variant={user.role === Role.ADMIN ? "default" : "secondary"}>
               {user.role}
             </Badge>
           </div>
