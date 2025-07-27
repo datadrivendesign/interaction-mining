@@ -1,19 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { 
-  Cake, 
-  CircleDot, 
-  Plus, 
-  Clock, 
-  Play, 
-  Eye, 
-  CheckCircle, 
+import {
+  Cake,
+  CircleDot,
+  Plus,
+  Clock,
+  Play,
+  Eye,
+  CheckCircle,
   AlertCircle,
   Upload,
   Edit,
   Eye as EyeIcon,
-  Pencil
+  Pencil,
 } from "lucide-react";
 import { User, CaptureStatus } from "@prisma/client";
 
@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { googleImageAdapter } from "../lib/image";
 import { prettyOS, prettyTime } from "@/lib/utils";
 import { auth } from "@/lib/auth/auth";
-import { getCaptures, getTraces } from "@/lib/actions";
+import { Capture, getCaptures, getTraces, Trace } from "@/lib/actions";
 
 const statusConfig = {
   [CaptureStatus.CREATED]: {
@@ -34,29 +34,29 @@ const statusConfig = {
     icon: Clock,
     color: "bg-blue-500",
     textColor: "text-blue-500",
-    description: "Upload your recording to start"
+    description: "Upload your recording to start",
   },
   [CaptureStatus.PROCESSING]: {
-    label: "Processing", 
+    label: "Processing",
     icon: Play,
     color: "bg-yellow-500",
     textColor: "text-yellow-500",
-    description: "Needs to be processed"
+    description: "Needs to be processed",
   },
   [CaptureStatus.REVIEWING]: {
     label: "Reviewing",
     icon: Eye,
-    color: "bg-purple-500", 
+    color: "bg-purple-500",
     textColor: "text-purple-500",
-    description: "Currently in review"
+    description: "Currently in review",
   },
   [CaptureStatus.APPROVED]: {
     label: "Approved",
     icon: CheckCircle,
     color: "bg-green-500",
-    textColor: "text-green-500", 
-    description: "Completed and approved"
-  }
+    textColor: "text-green-500",
+    description: "Completed and approved",
+  },
 };
 
 export default async function DashboardPage() {
@@ -87,87 +87,40 @@ export default async function DashboardPage() {
   const traces = tracesData.data;
 
   // Group captures by status
-  const capturesByStatus = captures.reduce((acc, capture) => {
-    if (!acc[capture.status]) {
-      acc[capture.status] = [];
-    }
-    acc[capture.status].push(capture);
-    return acc;
-  }, {} as Record<CaptureStatus, typeof captures>);
+  const capturesByStatus = captures.reduce(
+    (acc, capture) => {
+      if (!acc[capture.status]) {
+        acc[capture.status] = [];
+      }
+      acc[capture.status].push(capture);
+      return acc;
+    },
+    {} as Record<CaptureStatus, typeof captures>
+  );
 
   const totalCaptures = captures.length;
-  const approvedCaptures = capturesByStatus[
-    CaptureStatus.APPROVED
-  ]?.length || 0;
+  const approvedCaptures =
+    capturesByStatus[CaptureStatus.APPROVED]?.length || 0;
   const pendingCaptures = totalCaptures - approvedCaptures;
 
   return (
     <main className="flex flex-col grow justify-start items-center min-w-dvw min-h-dvh bg-neutral-50 dark:bg-neutral-950">
       <div className="flex w-full max-w-screen-xl p-6 gap-6">
-        {/* User Profile Card */}
-        <Card className="flex flex-col w-80 p-6 h-fit">
-          <aside>
-            <Avatar className="w-full h-auto aspect-square mb-4">
-              <AvatarImage
-                src={googleImageAdapter(user?.image ?? "", 512)}
-                alt="User avatar"
-              />
-              <AvatarFallback>
-                <div className="w-full h-full bg-muted-background flex items-center justify-center">
-                  <span className="text-2xl font-semibold">
-                    {user?.name?.charAt(0)?.toUpperCase() || "U"}
-                  </span>
-                </div>
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col space-y-3">
-              <div>
-                <h1 className="text-xl font-semibold">{user?.name}</h1>
-                <span className="text-muted-foreground text-sm">{user?.email}</span>
-              </div>
-              
-              {/* Stats */}
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
-                  <div className="flex items-center">
-                    <CircleDot className="mr-2 size-4 text-blue-500" />
-                    <span className="text-sm">Total Captures</span>
-                  </div>
-                  <span className="font-semibold tabular-nums">{totalCaptures}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
-                  <div className="flex items-center">
-                    <CheckCircle className="mr-2 size-4 text-green-500" />
-                    <span className="text-sm">Approved Traces</span>
-                  </div>
-                  <span className="font-semibold tabular-nums">{approvedCaptures}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
-                  <div className="flex items-center">
-                    <Clock className="mr-2 size-4 text-yellow-500" />
-                    <span className="text-sm">Pending Captures</span>
-                  </div>
-                  <span className="font-semibold tabular-nums">{pendingCaptures}</span>
-                </div>
-              </div>
-
-              <span className="inline-flex items-center text-muted-foreground text-sm">
-                <Cake className="mr-1 size-4" />
-                Contributer since{" "}
-                {prettyTime(new Date(user?.createdAt), {
-                  format: "yyyy",
-                })}
-              </span>
-            </div>
-          </aside>
-        </Card>
+        <ProfileCard
+          user={user}
+          totalCaptures={totalCaptures}
+          approvedCaptures={approvedCaptures}
+          pendingCaptures={pendingCaptures}
+        />
 
         {/* Main Content */}
-        <div className="flex flex-col flex-1">
+        <section className="flex flex-col flex-1">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-muted-foreground">Manage your captures and traces</p>
+              <p className="text-muted-foreground">
+                Manage your captures and traces
+              </p>
             </div>
             <Link href="/capture/new">
               <Button>
@@ -181,136 +134,187 @@ export default async function DashboardPage() {
               <TabsTrigger value="captures">Captures</TabsTrigger>
               <TabsTrigger value="traces">Traces</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="captures" className="mt-6">
               {totalCaptures > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {Object.entries(statusConfig)
-                    .filter(([status]) => status !== CaptureStatus.APPROVED)
-                    .map(([status, config]) => {
-                      const statusCaptures = capturesByStatus[status as CaptureStatus] || [];
-                      const Icon = config.icon;
-                      return (
-                        <Card key={status} className="overflow-hidden">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Icon 
-                                  className={`size-5 ${config.textColor}`}
-                                />
-                                <h3 className="font-semibold">
-                                  {config.label}
-                                </h3>
-                                <Badge variant="secondary" className="ml-2">
-                                  {statusCaptures.length}
-                                </Badge>
-                              </div>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{config.description}</p>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            {statusCaptures.length > 0 ? (
-                              <div className="space-y-3">
-                                {statusCaptures.map((capture) => (
-                                  <CaptureCard 
-                                    key={capture.id} 
-                                    capture={capture} 
-                                    status={status as CaptureStatus}
-                                  />
-                                ))}
-                              </div>
-                            ) : (
-                              <div 
-                                className="flex items-center justify-center py-8 text-muted-foreground"
-                              >
-                                <AlertCircle className="mr-2 size-4" />
-                                No {config.label.toLowerCase()} captures
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })
-                  }
-                </div>
+                <CaptureCardColumns capturesByStatus={capturesByStatus} />
               ) : (
-                <Card className="p-12">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <Upload className="size-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No captures yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Start by creating your first capture to begin contributing to the dataset.
-                    </p>
-                    <Link href="/capture/new">
-                      <Button>
-                        <Plus className="mr-2 size-4" /> Create First Capture
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
+                <NoCapturesCard />
               )}
             </TabsContent>
 
             <TabsContent value="traces" className="mt-6">
               {traces.length > 0 ? (
-                <div className="space-y-4">
-                  {traces.map((trace) => (
-                    <Card key={trace.id}>
-                      <CardHeader className="flex flex-row justify-between gap-4 space-y-0">
-                        <div className="flex gap-4">
-                          {trace.app?.metadata?.icon ? (
-                            <Image
-                              src={trace.app?.metadata?.icon}
-                              alt="App Icon"
-                              className="w-16 h-16 rounded-2xl object-cover"
-                              width={64}
-                              height={64}
-                            />
-                          ) : (
-                            <div className="size-16 rounded-2xl bg-muted-background animate-pulse" />
-                          )}
-                          <div className="flex flex-col w-full">
-                            <h3 className="text-foreground font-semibold">
-                              {trace.app?.metadata?.name ?? "Unnamed App"} ({prettyOS(trace.task?.os)})
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              {trace.description || "No description"}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Created {prettyTime(trace.created)}
-                            </p>
-                          </div>
-                        </div>
-                        <Link href={`/app/${trace.appId}/trace/${trace.id}`}>
-                          <Button size="sm" variant="secondary">
-                            <EyeIcon className="mr-2 size-4" />
-                            View
-                          </Button>
-                        </Link>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
+                <TracesList traces={traces} />
               ) : (
-                <Card className="p-12">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <CheckCircle className="size-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No traces yet</h3>
-                    <p className="text-muted-foreground">
-                      Traces will appear here once you complete and approve captures.
-                    </p>
-                  </div>
-                </Card>
+                <NoTracesCard />
               )}
             </TabsContent>
           </Tabs>
-        </div>
+        </section>
       </div>
     </main>
   );
 }
 
-function CaptureCard({ capture, status }: { capture: any, status: CaptureStatus }) {
+function ProfileCard({
+  user,
+  totalCaptures,
+  approvedCaptures,
+  pendingCaptures,
+}: {
+  user: User;
+  totalCaptures: number;
+  approvedCaptures: number;
+  pendingCaptures: number;
+}) {
+  return (
+    <Card className="flex flex-col w-80 p-6 h-fit">
+      <aside>
+        <Avatar className="w-full h-auto aspect-square mb-4">
+          <AvatarImage
+            src={googleImageAdapter(user?.image ?? "", 512)}
+            alt="User avatar"
+          />
+          <AvatarFallback>
+            <div className="w-full h-full bg-muted-background flex items-center justify-center">
+              <span className="text-2xl font-semibold">
+                {user?.name?.charAt(0)?.toUpperCase() || "U"}
+              </span>
+            </div>
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col space-y-3">
+          <div>
+            <h1 className="text-xl font-semibold">{user?.name}</h1>
+            <span className="text-muted-foreground text-sm">{user?.email}</span>
+          </div>
+
+          {/* Stats */}
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
+              <div className="flex items-center">
+                <CircleDot className="mr-2 size-4 text-blue-500" />
+                <span className="text-sm">Total Captures</span>
+              </div>
+              <span className="font-semibold tabular-nums">
+                {totalCaptures}
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
+              <div className="flex items-center">
+                <CheckCircle className="mr-2 size-4 text-green-500" />
+                <span className="text-sm">Approved Traces</span>
+              </div>
+              <span className="font-semibold tabular-nums">
+                {approvedCaptures}
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
+              <div className="flex items-center">
+                <Clock className="mr-2 size-4 text-yellow-500" />
+                <span className="text-sm">Pending Captures</span>
+              </div>
+              <span className="font-semibold tabular-nums">
+                {pendingCaptures}
+              </span>
+            </div>
+          </div>
+
+          <span className="inline-flex items-center text-muted-foreground text-sm">
+            <Cake className="mr-1 size-4" />
+            Contributer since{" "}
+            {prettyTime(new Date(user?.createdAt), {
+              format: "yyyy",
+            })}
+          </span>
+        </div>
+      </aside>
+    </Card>
+  );
+}
+
+function NoCapturesCard() {
+  return (
+    <Card className="p-12">
+      <div className="flex flex-col items-center justify-center text-center">
+        <Upload className="size-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No captures yet</h3>
+        <p className="text-muted-foreground mb-4">
+          Start by creating your first capture to begin contributing to the
+          dataset.
+        </p>
+        <Link href="/capture/new">
+          <Button>
+            <Plus className="mr-2 size-4" /> Create First Capture
+          </Button>
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
+function CaptureCardColumns({
+  capturesByStatus,
+}: {
+  capturesByStatus: Record<CaptureStatus, Capture[]>;
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {Object.entries(statusConfig)
+        .filter(([status]) => status !== CaptureStatus.APPROVED)
+        .map(([status, config]) => {
+          const statusCaptures =
+            capturesByStatus[status as CaptureStatus] || [];
+          const Icon = config.icon;
+          return (
+            <Card key={status} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Icon className={`size-5 ${config.textColor}`} />
+                    <h3 className="font-semibold">{config.label}</h3>
+                    <Badge variant="secondary" className="ml-2">
+                      {statusCaptures.length}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {config.description}
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {statusCaptures.length > 0 ? (
+                  <div className="space-y-3">
+                    {statusCaptures.map((capture) => (
+                      <CaptureCard
+                        key={capture.id}
+                        capture={capture}
+                        status={status as CaptureStatus}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <AlertCircle className="mr-2 size-4" />
+                    No {config.label.toLowerCase()} captures
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+    </div>
+  );
+}
+
+function CaptureCard({
+  capture,
+  status,
+}: {
+  capture: any;
+  status: CaptureStatus;
+}) {
   const config = statusConfig[status];
   const Icon = config.icon;
 
@@ -376,9 +380,69 @@ function CaptureCard({ capture, status }: { capture: any, status: CaptureStatus 
       <div className="flex flex-col h-full justify-evenly content-evenly items-center text-center ml-2">
         {getActionButton()}
         <p className="text-xs text-muted-foreground self-end">
-          {prettyOS(capture.task?.os)} • {capture.task?.description?.slice(0, 30)}{`${capture.task?.description?.length > 30 ? "..." : ""}`}
+          {prettyOS(capture.task?.os)} •{" "}
+          {capture.task?.description?.slice(0, 30)}
+          {`${capture.task?.description?.length > 30 ? "..." : ""}`}
         </p>
       </div>
+    </div>
+  );
+}
+
+function NoTracesCard() {
+  return (
+    <Card className="p-12">
+      <div className="flex flex-col items-center justify-center text-center">
+        <CheckCircle className="size-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No traces yet</h3>
+        <p className="text-muted-foreground">
+          Traces will appear here once you complete and approve captures.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function TracesList({ traces }: { traces: Trace[] }) {
+  return (
+    <div className="space-y-4">
+      {traces.map((trace) => (
+        <Card key={trace.id}>
+          <CardHeader className="flex flex-row justify-between gap-4 space-y-0">
+            <div className="flex gap-4">
+              {trace.app?.metadata?.icon ? (
+                <Image
+                  src={trace.app?.metadata?.icon}
+                  alt="App Icon"
+                  className="w-16 h-16 rounded-2xl object-cover"
+                  width={64}
+                  height={64}
+                />
+              ) : (
+                <div className="size-16 rounded-2xl bg-muted-background animate-pulse" />
+              )}
+              <div className="flex flex-col w-full">
+                <h3 className="text-foreground font-semibold">
+                  {trace.app?.metadata?.name ?? "Unnamed App"} (
+                  {prettyOS(trace.task?.os)})
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {trace.description || "No description"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Created {prettyTime(trace.created)}
+                </p>
+              </div>
+            </div>
+            <Link href={`/app/${trace.appId}/trace/${trace.id}`}>
+              <Button size="sm" variant="secondary">
+                <EyeIcon className="mr-2 size-4" />
+                View
+              </Button>
+            </Link>
+          </CardHeader>
+        </Card>
+      ))}
     </div>
   );
 }
