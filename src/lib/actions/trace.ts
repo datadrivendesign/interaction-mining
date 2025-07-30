@@ -217,7 +217,8 @@ export async function createTrace(
 
 export async function updateTrace(
   id: string,
-  data: Prisma.TraceUpdateInput
+  data: Prisma.TraceUpdateInput,
+  { includes }: { includes?: Prisma.TraceInclude } = {}
 ): Promise<ActionPayload<TracePrimitive>> {
   let trace = {} as TracePrimitive;
 
@@ -229,6 +230,11 @@ export async function updateTrace(
     trace = await prisma.trace.update({
       where: query,
       data,
+      include: {
+        app: includes?.app || false,
+        screens: includes?.screens || false,
+        task: includes?.task || false,
+      }
     });
 
     if (!trace) {

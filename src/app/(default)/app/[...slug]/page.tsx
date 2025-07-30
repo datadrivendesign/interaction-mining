@@ -1,18 +1,18 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-import { getApp, getTraces } from "@/lib/actions";
+import { getApp, getTraces, Trace } from "@/lib/actions";
 import { GalleryRoot, Gallery } from "./components/gallery";
 import { prettyOS } from "@/lib/utils";
-import { Screen } from "@prisma/client";
+import { App, Screen } from "@prisma/client";
 
 export default async function AppPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  let app;
-  let traces;
+  let app: App | null;
+  let traces: Trace[] = [];
 
   try {
     let { slug } = await params;

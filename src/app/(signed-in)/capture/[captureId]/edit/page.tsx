@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   RedactionSchema,
   ScreenGestureSchema,
+  ScreenReviewData,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
@@ -26,11 +27,12 @@ import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { handleSave } from "./util";
-import { Platform } from "@/lib/utils";
+import { handleReviewSave } from "./util";
+import { getCaptureFiles, updateCapture } from "@/lib/actions";
+import { CaptureStatus } from "@prisma/client";
 
 enum TraceSteps {
-  Repair = 0,
+  Capture = 0,
   Redact = 1,
   Review = 2,
 }
@@ -41,6 +43,7 @@ export default function Page() {
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
@@ -55,11 +58,71 @@ export default function Page() {
     },
     resolver: zodResolver(TraceFormSchema),
   });
+  // populate form with saved capture data if there is any
+  useEffect(() => {
+    const fetchFiles = async () => {
+      const files = await getCaptureFiles(captureId);
+      if (!files.ok) {
+        console.error("Failed to fetch files");
+        return;
+      }
+      const fetchedScreenFiles =  files.data.filter(
+        (file) => file.fileKey.includes(`${captureId}/screens`)
+      );
+      if (fetchedScreenFiles.length === 0) {
+        return;
+      }
+      // grab json file from the fileKey
+      const screenData: ScreenReviewData[] = await Promise.all(
+        fetchedScreenFiles.map(async (file) => {
+          const response = await fetch(file.fileUrl);
+          const data = await response.json();
+          return data;
+        })
+      )
+      const screens = screenData
+        .map((s) => {
+          return { id: s.id, src: s.src, timestamp: s.timestamp };
+        }).sort((a, b) => a.timestamp - b.timestamp);
+      if (screens.length > 0) {
+        methods.setValue("screens", screens);
+      }
+      const vhs = screenData.map((s) => {
+        return s.vh ? { [s.id]: s.vh } : {};
+      }).reduce((acc, curr) =>
+        ({ ...acc, ...curr }), {}
+      );
+      if (Object.keys(vhs).length > 0) {
+        methods.setValue("vhs", vhs);
+      }
+      const gestures = screenData.map((s) => {
+        return { [s.id]: s.gesture };
+      }).reduce((acc, curr) =>
+        ({ ...acc, ...curr }), {}
+      );
+      if (Object.keys(gestures).length > 0) {
+        methods.setValue("gestures", gestures);
+      }
+      const redactions = screenData.map((s) => {
+        return { [s.id]: s.redactions };
+      }).reduce((acc, curr) =>
+        ({ ...acc, ...curr }), {}
+      );
+      if (Object.keys(redactions).length > 0) {
+        methods.setValue("redactions", redactions);
+      }
+      const description = screenData[0].description;
+      if (description) {
+        methods.setValue("description", description);
+      }
+    }
+    fetchFiles();
+  }, [captureId, methods]);
 
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
-    if (stepIndex === TraceSteps.Repair) {
+    if (stepIndex === TraceSteps.Capture) {
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods.getValues()
         .screens.slice(0, -1)
@@ -100,7 +163,9 @@ export default function Page() {
     if (stepIndex < TraceSteps.Review) {
       setStepIndex(stepIndex + 1);
     } else {
-      // Validate the "description" field
+      setIsSubmitting(true);
+      try {
+
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods.getValues()
         .screens.slice(0, -1)
@@ -120,18 +185,25 @@ export default function Page() {
         errors.forEach((error) => {
           toast.error(error.message);
         });
+        setIsSubmitting(false);
         return;
       }
       // Submit the form
       const data = methods.getValues();
-
-      handleSave(data, capture!)
-        .then(() => {
-          router.push(`/app/${capture!.appId!}`);
-        })
-        .catch((reason: string) => {
-          console.error(reason);
-        });
+      // save review data to s3 and route to evaluate
+      await handleReviewSave(data, capture!)
+      const updateResult = await updateCapture(captureId, {
+        status: CaptureStatus.REVIEWING
+      })
+      if (!updateResult.ok) {
+        throw new Error(updateResult.message || "Failed to update capture")
+      }
+      router.push(`/capture/${captureId}/evaluate`);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
   const handlePrevious = () => {
@@ -142,13 +214,11 @@ export default function Page() {
 
   const docRender = () => {
     switch (stepIndex) {
-      // case 0:
-      //   return <ExtractFrameDoc />;
-      case 1:
+      case 0:
         return <RepairDoc />;
-      case 2:
+      case 1:
         return <RedactDoc />;
-      case 3:
+      case 2:
         return <ReviewDoc />;
       default:
         return null;
@@ -199,12 +269,19 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {stepIndex === 0 ? (
-                        (capture?.app.os as Platform) === Platform.IOS ?
-                          "Annotate" : 
-                          TraceSteps[stepIndex]
-                      ) : 
-                      TraceSteps[stepIndex]}
+                      {
+                        Array(stepIndex + 1)
+                          .fill(0)
+                          .map((_, i) => TraceSteps[i])
+                          .map((step, index, array) => (
+                            <Fragment key={index}>
+                              <span>{step}</span>
+                              {index < array.length - 1 && (
+                                <ChevronRight className="size-6" />
+                              )}
+                            </Fragment>
+                          ))
+                      }
                     </span>
                   </h1>
                   <span className="block">
@@ -222,7 +299,12 @@ export default function Page() {
                   {stepIndex < TraceSteps.Review ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
-                    <Button onClick={handleNext}>Finish</Button>
+                    <Button onClick={handleNext} disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 
+                        className="size-4 animate-spin" 
+                      />}
+                      Finish
+                    </Button>
                   )}
                 </div>
               </nav>

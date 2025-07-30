@@ -96,7 +96,7 @@ export default function Page() {
   }, [trace, methods]);
 
   const [stepIndex, setStepIndex] = useState(0);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const handleNext = async () => {
     if (stepIndex === TraceSteps.Repair) {
       const validation = ScreenSchema.safeParse(methods.getValues().screens);
@@ -112,6 +112,7 @@ export default function Page() {
     if (stepIndex < TraceSteps.Review) {
       setStepIndex(stepIndex + 1);
     } else {
+      setIsSubmitting(true);
       // Validate the "description" field
       const validation = TraceFormSchema.safeParse(methods.getValues());
       if (!validation.success) {
@@ -124,7 +125,9 @@ export default function Page() {
       // Submit the form
       const data = methods.getValues();
       console.log("Submitting data");
-      handleSave(data, trace!);
+      handleSave(data, trace!).finally(() => {
+        setIsSubmitting(false);
+      });
     }
   };
   const handlePrevious = () => {
@@ -265,7 +268,12 @@ export default function Page() {
                   {stepIndex < TraceSteps.Review ? (
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
-                    <Button onClick={handleNext}>Finish</Button>
+                    <Button onClick={handleNext} disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 
+                        className="size-4 animate-spin" 
+                      />}
+                      Finish
+                    </Button>
                   )}
                 </div>
               </nav>

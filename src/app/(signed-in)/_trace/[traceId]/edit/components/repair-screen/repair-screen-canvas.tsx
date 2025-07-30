@@ -48,7 +48,7 @@ import { Switch } from "@/components/ui/switch";
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
-import { GestureOption } from "../types";
+import { GestureOption } from "@/lib/utils/gesture-options";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -601,12 +601,15 @@ function GestureSelection() {
                     }
                   }}
                 >
-                  <Check
+                  {value === option.value ? 
+                    <Check
                     className={cn(
                       "h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      "opacity-100"
                     )}
-                  />
+                  /> : 
+                    option.icon 
+                  }
                   {option.label}
 
                   {option.subGestures && (
@@ -638,14 +641,15 @@ function GestureSelection() {
                                     setOpen(false);
                                   }}
                                 >
-                                  <Check
-                                    className={cn(
-                                      "h-4 w-4",
-                                      gesture.value === value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
+                                  {value === option.value ? 
+                                    <Check
+                                      className={cn(
+                                        "h-4 w-4",
+                                        "opacity-100"
+                                      )}
+                                    /> : 
+                                    option.icon 
+                                  }
                                   {gesture.label}
                                 </CommandItem>
                               )

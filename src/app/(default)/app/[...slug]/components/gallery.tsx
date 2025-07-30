@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { usePathname, useParams } from "next/navigation";
@@ -15,21 +14,8 @@ import Image from "next/image";
 import clsx from "clsx";
 import { motion } from "motion/react";
 import {
-  ArrowDownFromLine,
   ArrowLeft,
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
-  ArrowUpFromLine,
-  Circle,
-  CircleDot,
-  CircleHelp,
-  CircleStop,
-  Expand,
-  Grab,
-  IterationCcw,
-  IterationCw,
   Search,
-  Shrink,
   Download,
 } from "lucide-react";
 
@@ -41,26 +27,27 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { GestureOption } from "@/app/(signed-in)/capture/[captureId]/edit/components/types";
 import { Button } from "@/components/ui/button";
+import { gestureOptions } from "@/lib/utils/gesture-options";
 import { downloadTrace } from "../lib";
+import { Trace } from "@/lib/actions";
 
 const GalleryContext = createContext({
-  data: [] as any[],
-  setData: (_: any) => { },
-  inspectData: null as any,
-  setInspectData: (_: any) => { },
+  data: [] as Trace[],
+  setData: (_: Trace[]) => { },
+  inspectData: null as Trace | null,
+  setInspectData: (_: Trace | null) => { },
 });
 
 export function GalleryRoot({
   data,
   children,
 }: {
-  data: any;
+  data: Trace[];
   children: React.ReactNode;
 }) {
-  const [_data, setData] = useState<any[]>(data);
-  const [inspectData, setInspectData] = useState<any>(null);
+  const [_data, setData] = useState<Trace[]>(data);
+  const [inspectData, setInspectData] = useState<Trace | null>(null);
 
   return (
     <GalleryContext.Provider
@@ -150,7 +137,7 @@ export function Gallery() {
   );
 }
 
-export function InspectView({ data }: { data: any }) {
+export function InspectView({ data }: { data: Trace }) {
   const { setInspectData } = useContext(GalleryContext);
   const [loading, setLoading] = useState({ status: "loading" });
 
@@ -158,114 +145,7 @@ export function InspectView({ data }: { data: any }) {
     setLoading({ status: "loaded" });
   }, []);
 
-  const gestureOptions = useMemo<GestureOption[]>(
-    () => [
-      {
-        value: "tap",
-        label: "Tap",
-        icon: <Circle className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "double tap",
-        label: "Double tap",
-        icon: <CircleDot className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "touch and hold",
-        label: "Touch and hold",
-        icon: (
-          <CircleStop className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-      {
-        value: "swipe",
-        label: "Swipe",
-        subGestures: [
-          {
-            value: "swipe up",
-            label: "Swipe up",
-            icon: (
-              <ArrowUpFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "swipe down",
-            label: "Swipe down",
-            icon: (
-              <ArrowDownFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "swipe left",
-            label: "Swipe left",
-            icon: (
-              <ArrowLeftFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "swipe right",
-            label: "Swipe right",
-            icon: (
-              <ArrowRightFromLine className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-        ],
-      },
-      {
-        value: "drag",
-        label: "Drag",
-        icon: <Grab className="size-4 text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "zoom",
-        label: "Zoom",
-        subGestures: [
-          {
-            value: "zoom in",
-            label: "Zoom in",
-            icon: (
-              <Shrink className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "zoom out",
-            label: "Zoom out",
-            icon: (
-              <Expand className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-        ],
-      },
-      {
-        value: "rotate",
-        label: "Rotate",
-        subGestures: [
-          {
-            value: "rotate cw",
-            label: "Rotate cw",
-            icon: (
-              <IterationCw className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-          {
-            value: "rotate ccw",
-            label: "Rotate ccw",
-            icon: (
-              <IterationCcw className="size-4 text-yellow-800 hover:text-black" />
-            ),
-          },
-        ],
-      },
-      {
-        value: "other",
-        label: "Other",
-        icon: (
-          <CircleHelp className="size-4 text-yellow-800 hover:text-black" />
-        ),
-      },
-    ],
-    []
-  );
+
 
   const handleDownload = useCallback(() => {
     downloadTrace(data);
@@ -337,8 +217,8 @@ export function InspectView({ data }: { data: any }) {
                   priority
                   onLoad={handleImageLoad}
                 />
-                {(screen.gesture.x !== null && screen.gesture.y !== null) &&
-                  <TooltipProvider>
+                <TooltipProvider>
+                  {screen.gesture.x !== null && screen.gesture.y !== null && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
@@ -366,7 +246,25 @@ export function InspectView({ data }: { data: any }) {
                         <p>{screen.gesture.description}</p>
                       </TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>}
+                  )}
+                  {(screen.redactions || []).map((redaction, i) => (
+                  <Tooltip key={`${redaction.annotation}-${i}`}>
+                    <TooltipTrigger asChild>
+                      <div className="absolute z-10 cursor-pointer"
+                        style={{
+                          left: `${redaction.x * 100}%`,
+                          top: `${redaction.y * 100}%`,
+                          width: `${redaction.width * 100}%`,
+                          height: `${redaction.height * 100}%`,
+                        }}>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={10}>
+                      <p>{redaction.annotation}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                </TooltipProvider>
               </figure>
             ))}
           </div>

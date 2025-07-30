@@ -5,6 +5,7 @@ import { Redaction } from "../types";
 import { cn } from "@/lib/utils";
 import { Layers3, Square, X } from "lucide-react";
 import { RedactCanvasContext } from "./redact-screen-canvas";
+import Kbd from "@/components/ui/kbd";
 
 export default function Layers({
   redactions,
@@ -15,7 +16,6 @@ export default function Layers({
 }) {
   const { selected: selectedRedaction, selectRedaction } =
     useContext(RedactCanvasContext);
-  // const [selected, setSelected] = useState<number | null>(null);
   return (
     <aside className="absolute z-10 right-4 flex flex-col grow justify-start items-center w-full  max-w-3xs h-full max-h-[calc(100%-2rem)] gap-2 p-4 bg-background border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg overflow-hidden">
       <div className="flex flex-col w-full gap-2">

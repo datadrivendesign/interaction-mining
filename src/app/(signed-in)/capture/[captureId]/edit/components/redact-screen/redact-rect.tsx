@@ -59,7 +59,7 @@ const CloseButton = ({
 };
 
 export default function RedactRectangle({
-  type = "blur",
+  type = "black-box",
   redaction,
   displayWidth,
   displayHeight,
@@ -71,7 +71,7 @@ export default function RedactRectangle({
   handleTransform,
   handleRectDelete
 }: {
-  type?: "black-box" | "blur";
+  type?: "black-box"
   redaction: Redaction;
   displayWidth: number;
   displayHeight: number;
@@ -88,13 +88,7 @@ export default function RedactRectangle({
   useEffect(() => {
     let node = ref.current;
     if (node) {
-      if (type === "blur") {
-        // node.cache();
-        node.filters([Konva.Filters.Blur]);
-        node.blurRadius(10);
-        node.fill("black");
-        node.opacity(1.0);
-      } else {
+      if (type === "black-box") {
         node.filters([]);
         node.fill("black");
         node.opacity(1.0);

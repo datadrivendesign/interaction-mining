@@ -1,20 +1,8 @@
-import Link from "next/link";
-import { redirect } from "next/navigation"
-;
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { UserRoleSelector } from "@/components/ui/roleselector";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth/auth";
+import { CaptureStatus, Role } from "@prisma/client";
+import { AdminTabs } from "./components/admin-tabs";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -23,7 +11,7 @@ export default async function AdminPage() {
     redirect(`/sign-in?callbackUrl=/admin`);
   }
 
-  if (session!.user!.role !== "ADMIN") {
+  if (session!.user!.role !== Role.ADMIN) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -38,7 +26,7 @@ export default async function AdminPage() {
     );
   }
 
-  const users = await prisma.user.findMany({
+  let users = await prisma.user.findMany({
     select: {
       id: true,
       name: true,
@@ -47,62 +35,32 @@ export default async function AdminPage() {
     },
   });
 
+  let captures = await prisma.capture.findMany({
+    where: {
+      status: CaptureStatus.REVIEWING,
+    },
+    include: {
+      task: true,
+      app: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <div className="flex flex-col w-full h-full items-center justify-center">
       <div className="space-y-4 w-full max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-start">
             Admin Dashboard
           </h1>
-          <p className="text-muted-foreground text-center mt-1">
-            Manage platform users and their roles.
-          </p>
         </div>
-
-        {/* Filter/Search Bar */}
-        <div className="flex items-center gap-4 mb-6">
-          <Input
-            placeholder="Search users by name or email"
-            className="w-full max-w-sm"
-          />
-          {/* You can add more filters here later */}
-        </div>
-
-        {/* Users Table */}
-        <div className="rounded-xl bg-muted/10 p-4">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-none">
-                <TableHead className="text-muted-foreground">Name</TableHead>
-                <TableHead className="text-muted-foreground">Email</TableHead>
-                <TableHead className="text-muted-foreground">Role</TableHead>
-                <TableHead className="text-muted-foreground"></TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} className="hover:bg-muted/10 border-0">
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <UserRoleSelector
-                      userId={user.id}
-                      currentRole={user.role}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/admin/user/${user.id}`}>
-                      <Button variant="outline" size="icon" className="hover">
-                        <ChevronRight />
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <AdminTabs users={users} captures={captures} />
       </div>
     </div>
   );

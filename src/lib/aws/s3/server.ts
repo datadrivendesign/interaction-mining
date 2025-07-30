@@ -7,6 +7,7 @@ import {
   CopyObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getSignedUrl as getSignedCloudfrontUrl } from "@aws-sdk/cloudfront-signer";
 import { s3 } from "..";
 import { ActionPayload } from "@/lib/actions/types";
 import { ListedFiles } from "@/lib/actions";
@@ -21,9 +22,14 @@ export async function generatePresignedUploadURL(
   prefix: string,
   fileName: string,
   contentType: string
-): Promise<ActionPayload<any>> {
+): Promise<ActionPayload<{
+  uploadUrl: string;
+  fileKey: string;
+  fileName: string;
+  filePrefix: string;
+}>> {
   const command = new PutObjectCommand({
-  Bucket: process.env._AWS_UPLOAD_BUCKET!,
+    Bucket: process.env._AWS_UPLOAD_BUCKET!,
     Key: `${prefix}/${fileName}`,
     ContentType: contentType,
   });
@@ -38,9 +44,6 @@ export async function generatePresignedUploadURL(
         fileKey: `${prefix}/${fileName}`,
         fileName: fileName,
         filePrefix: prefix, 
-        fileUrl: process.env.USE_MINIO_STORE === "true" 
-          ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${prefix}/${fileName}`
-          : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${prefix}/${fileName}`,
       },
     };
   } catch (err) {
@@ -76,13 +79,31 @@ export async function listFromS3(
       };
     }
 
-    const filePayload = files.Contents.map((file: any) => ({
-      fileKey: file.Key,
-      fileName: file.Key.split("/").pop() || "",
-      fileUrl: process.env.USE_MINIO_STORE === "true" 
-        ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
-        : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${file.Key}`,
-    }));
+    const filePayload = files.Contents.map((file: any) => {
+      // use signed cloudfront url to grab file url
+      let fileUrl = ""
+      if (process.env.USE_MINIO_STORE === "true") {
+        fileUrl = `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
+      } else {
+        const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${file.Key}`
+        if (file.Key.includes("traces/")) { // traces are available publicly
+          fileUrl = cloudfrontUrl
+        } else {  // get signed url for private files
+          const timeToExpire = 1000*60*60*2; // 2 hours
+          fileUrl = getSignedCloudfrontUrl({ 
+            url: cloudfrontUrl,
+            dateLessThan: new Date(Date.now() + timeToExpire),
+            keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID!,
+            privateKey: process.env.CLOUDFRONT_PRIVATE_KEY!,
+          });
+        }
+      }
+      return ({
+        fileKey: file.Key,
+        fileName: file.Key.split("/").pop() || "",
+        fileUrl: fileUrl,
+      })
+    });
 
     return {
       ok: true,

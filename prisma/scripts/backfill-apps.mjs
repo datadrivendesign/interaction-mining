@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 async function main() {
   const os = "ios";
   console.log(process.env.DATABASE_URL)
-  if (process.env.DATABASE_URL == "mongodb+srv://odim-next:RVUio65RQ9m2OUEt@cluster0.1ickhjn.mongodb.net/odim") {
+  if (process.env.DATABASE_URL == "YOUR_MONGO_DB_URL") {
     os = "android";
   }
 

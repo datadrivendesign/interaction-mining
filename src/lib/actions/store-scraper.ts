@@ -4,9 +4,18 @@
 import appStore from "app-store-scraper";
 import gplay from "google-play-scraper";
 
-export async function getIosApp({ appId }: { appId: string }) {
+type GetIosAppParams = 
+  | { id: string; appId?: string }
+  | { id?: string; appId: string }
+
+export async function getIosApp({ id, appId }: GetIosAppParams) {
   try {
-    let res = await appStore.app({ appId });
+    let res;
+    if (id) {
+      res = await appStore.app({ id });
+    } else {
+      res = await appStore.app({ appId });
+    }
 
     if (!res) {
       return {

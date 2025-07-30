@@ -33,7 +33,7 @@ interface OverlayContainerProps {
  * The OverlayContainer renders React elements over canvas nodes.
  * It queries each overlay's node position using getClientRect() and positions the corresponding overlay absolutely.
  */
-const Overlay: React.FC<OverlayContainerProps> = ({
+const OverlayContainer: React.FC<OverlayContainerProps> = ({
   stage,
   overlays,
   isPanning,
@@ -176,4 +176,4 @@ const Overlay: React.FC<OverlayContainerProps> = ({
   );
 };
 
-export default Overlay;
+export default OverlayContainer;

@@ -1,7 +1,7 @@
 "use server";
 
 import { unstable_cache } from "next/cache";
-import { Prisma, ScreenGesture } from "@prisma/client";
+import { CaptureStatus, Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { prisma } from "@/lib/prisma";
 import { listFromS3, lambda, copyFromS3 } from "../aws";
@@ -27,6 +27,20 @@ export type Capture = Prisma.CaptureGetPayload<{
   include: {
     app: boolean;
     task: boolean;
+  };
+}>;
+
+export type CaptureAdminView = Prisma.CaptureGetPayload<{
+  include: {
+    app: boolean;
+    task: boolean;
+    user: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      }
+    }
   };
 }>;
 
@@ -166,6 +180,12 @@ export async function updateCapture(
   id: string,
   data: Prisma.CaptureUpdateInput
 ) {
+  const session = await requireAuth();
+
+  if (!session || !session.user || !session.user.id) {
+    return { ok: false, message: "User not authenticated.", data: null };
+  }
+
   try {
     const capture = await prisma.capture.update({
       where: { id },
@@ -278,6 +298,7 @@ export async function createCaptureTask({
         },
         otp: "",
         src: "",
+        status: CaptureStatus.CREATED,
       } as Prisma.CaptureCreateInput,
     });
 

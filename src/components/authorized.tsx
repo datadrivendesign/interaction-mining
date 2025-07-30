@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import { Role } from "@prisma/client";
 
 export async function AuthorizedRoute({
   children,
@@ -20,7 +21,9 @@ export async function AuthorizedRoute({
   callbackUrl?: string;
   resourceUserId?: string;
 }) {
-  const ownershipEnforcedRoles = new Set(allowedRoles ?? ["USER", "ADMIN"]);
+  const ownershipEnforcedRoles = new Set(
+    allowedRoles ?? [Role.USER, Role.ADMIN]
+  );
   let session = await auth();
 
   if (!session || !session.user) {

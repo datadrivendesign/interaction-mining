@@ -1,4 +1,10 @@
-import { FrameData } from "../types";
+import { toast } from "sonner";
+import { FrameData } from "../../types";
+import { listFromS3 } from "@/lib/aws/s3/server";
+import { ListedFiles } from "@/lib/actions";
+import { mutate, SWRConfiguration, SWRResponse } from "swr";
+import { isCloudfrontUrlExpired } from "@/lib/aws";
+import { Variants } from "motion/react";
 
 /**
  * Fallback frame grabber using Canvas2D (works in Safari).
@@ -55,3 +61,61 @@ export async function extractVideoFrame(
   // Always use Canvas2D fallback for frame extraction
   return grabFrameViaCanvas(video, t, scale);
 }
+
+export async function fileFetcher([_, fileKey]: [string, string]) {
+  let res = await listFromS3(fileKey);
+
+  if (res.ok) {
+    return res.data;
+  } else {
+    console.error("Failed to fetch uploaded files", res.message);
+    toast.error("Failed to fetch uploaded files");
+    return [];
+  }
+}
+
+export const card = {
+  initial: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      type: "spring",
+      bounce: 0.125,
+      duration: 0.5,
+    },
+  },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      type: "spring",
+      bounce: 0.125,
+      duration: 0.5,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      type: "spring",
+      bounce: 0.125,
+      duration: 0.5,
+    },
+  },
+} as Variants;
+
+export const getSWRConfig = (
+  captureId: string
+): SWRConfiguration<ListedFiles[]> => ({
+  refreshInterval: 5000,
+  onSuccess: (data: ListedFiles[]) => {
+    if (
+      captureId &&
+      data &&
+      data.some((file: ListedFiles) => isCloudfrontUrlExpired(file.fileUrl))
+    ) {
+      console.log("Detected expired URLs, forcing revalidation");
+      mutate(["Capture files", `processed/${captureId}`]);
+    }
+  },
+});

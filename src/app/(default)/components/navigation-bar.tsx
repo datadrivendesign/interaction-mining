@@ -35,7 +35,6 @@ export default function NavigationBar() {
               Get Involved
             </span>
           </Link>
-
         </div>
         <div className="flex gap-4 lg:gap-6 basis-1/2 h-full justify-end items-center">
           <Link href="/archive/rico" target="_blank">
