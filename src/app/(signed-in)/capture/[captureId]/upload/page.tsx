@@ -4,7 +4,7 @@ import { useActionState, useCallback, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import {
   ExternalLink,
   File,
@@ -37,10 +37,13 @@ import {
   handleUploadFile,
   handleDeleteFile,
   CaptureSWROperations,
+  getSWRConfig,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { useCapture } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
+import { ListedFiles } from "@/lib/actions";
+import { isCloudfrontUrlExpired } from "@/lib/aws";
 
 export default function Page() {
   const params = useParams();
@@ -54,7 +57,8 @@ export default function Page() {
 
   const { data: uploadList } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
-    fileFetcher
+    fileFetcher,
+    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +182,8 @@ export default function Page() {
               <Badge>
                 <article className="prose prose-neutral dark:prose-invert leading-snug font-medium font-semibold text-white dark:text-neutral-900">
                   <p>
-                    Task: {capture?.task?.description
+                    Task:{" "}
+                    {capture?.task?.description
                       ? capture?.task?.description
                       : "No description provided."}
                   </p>
@@ -193,13 +198,15 @@ export default function Page() {
 
           <div className="mb-2">
             <article>
-              Explore the app to familiarize yourself with the task before screen recording. The recording should be short (max 1-2 minutes). 
+              Explore the app to familiarize yourself with the task before
+              screen recording. The recording should be short (max 1-2 minutes).
             </article>
           </div>
 
           <div className="mb-2">
             <article>
-              Turn on &ldquo;Do not Disturb&rdquo; to block notifications while recording.
+              Turn on &ldquo;Do not Disturb&rdquo; to block notifications while
+              recording.
             </article>
           </div>
 
@@ -336,11 +343,8 @@ export default function Page() {
               Close this tab once you have finished uploading your recording.
             </article>
           </div>
-
         </CardFooter>
       </Card>
-
-      
     </div>
   );
 }

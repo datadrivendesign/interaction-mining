@@ -1,7 +1,8 @@
-import { deleteFromS3, listFromS3 } from "@/lib/aws";
+import { ListedFiles } from "@/lib/actions";
+import { deleteFromS3, isCloudfrontUrlExpired, listFromS3 } from "@/lib/aws";
 
 import { toast } from "sonner";
-import { mutate } from "swr";
+import { mutate, SWRConfiguration } from "swr";
 
 export enum CaptureSWROperations {
   CAPTURE = "capture",
@@ -44,3 +45,19 @@ export async function fileFetcher([_, fileKey]: [string, string]) {
     return [];
   }
 }
+
+export const getSWRConfig = (
+  operation: CaptureSWROperations,
+  prefix: string,
+): SWRConfiguration<ListedFiles[]> => (    {
+  refreshInterval: 5000,
+  onSuccess: (data: ListedFiles[]) => {
+    if (
+      data &&
+      data.some((file: ListedFiles) => isCloudfrontUrlExpired(file.fileUrl))
+    ) {
+      console.log("Detected expired URLs, forcing revalidation");
+      mutate([operation, prefix]);
+    }
+  },
+});

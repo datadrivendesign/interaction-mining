@@ -35,22 +35,6 @@ export default function Page() {
   });
   const router = useRouter();
 
-  // Handle loading state
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <Loader2 className="size-8 animate-spin mx-auto mb-4" />
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle unauthenticated state
-  if (status === "unauthenticated" || !session) {
-    redirect("/sign-in");
-  }
   // Check if user has admin role
   const isAdmin = session?.user?.role === Role.ADMIN;
 
@@ -95,6 +79,23 @@ export default function Page() {
     };
     fetchFiles();
   }, [captureId]);
+
+  // Handle loading state
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader2 className="size-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle unauthenticated state
+  if (status === "unauthenticated" || !session) {
+    redirect("/sign-in");
+  }
 
   return (
     <main className="relative w-full h-[calc(100dvh-64px)] flex flex-grow">

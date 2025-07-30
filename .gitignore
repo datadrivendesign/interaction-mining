@@ -42,3 +42,6 @@ next-env.d.ts
 # mongo
 mongo.conf
 mongo_db/*
+
+# scripts (for now)
+prisma/scripts/reorg-s3-dirs.mjs

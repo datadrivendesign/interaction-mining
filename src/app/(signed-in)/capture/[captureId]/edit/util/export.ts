@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Capture } from "@prisma/client";
 import plimit from "p-limit";
 
-import { createTrace, generatePresignedVHUpload, updateTrace } from "@/lib/actions";
+import { createTrace, updateTrace } from "@/lib/actions";
 import { uploadToS3 } from "@/lib/aws/s3/client";
 
 import { FrameData, TraceFormData, Redaction, ScreenReviewData } from "../components/types";
@@ -141,7 +141,6 @@ export async function handleTraceSave(data: TraceFormData, capture: Capture) {
               message: "Failed to export redacted image.",
             }
           }
-
           // Create a new file from the data URL
           const byteString = atob(dataURL.split(",")[1]);
           const ab = new ArrayBuffer(byteString.length);
@@ -153,7 +152,7 @@ export async function handleTraceSave(data: TraceFormData, capture: Capture) {
             type: "image/png"
           });
 
-          const prefix = `trace/${trace.id}`;
+          const prefix = `traces/${trace.id}/screens`;
           const fileName = `${screen.id}.png`;
           const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
           if (!uploadRes.ok) {
@@ -163,17 +162,17 @@ export async function handleTraceSave(data: TraceFormData, capture: Capture) {
               message: "Failed to upload redacted image.",
             }
           }
-
           // Set screen src to redacted S3 URL
-          screens.find((s: any) => s.id === screen.id)!.src =
-            uploadRes.data.fileUrl;
+          screens.find(
+            (s: any) => s.id === screen.id
+          )!.src = uploadRes.data.fileUrl;
           return uploadRes;
         } else {
           const blob = await res.blob();
           const file = new File([blob], `${screen.id}.png`, {
             type: "image/png",
           });
-          const prefix = `trace/${trace.id}`;
+          const prefix = `traces/${trace.id}/screens`;
           const fileName = `${screen.id}.png`;
           const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
           if (!uploadRes || !uploadRes.ok) {
@@ -218,21 +217,6 @@ export async function handleTraceSave(data: TraceFormData, capture: Capture) {
   // check if there are view hierarchies, if so then upload them
   const vhs = data.vhs;
   if (vhs && Object.keys(vhs).length > 0) {
-    const generateVHUploadRes = await Promise.all(
-      screens.map(() =>
-        limit(() => generatePresignedVHUpload(capture.id, "application/json"))
-      )
-    );
-    if (!generateVHUploadRes || generateVHUploadRes.some((res) => !res.ok)) {
-      toast.error(
-        generateVHUploadRes.find((res) => !res.ok)?.message ??
-          "Failed to upload screen images: Failed to generate presigned URLs."
-      );
-      return Promise.reject(
-        generateVHUploadRes.find((res) => !res.ok)?.message ??
-          "Failed to upload screen images: Failed to generate presigned URLs."
-      );
-    }
     // recurse through tree and check IoU with all redactions
     function redactVH(
       node: any,
@@ -316,24 +300,30 @@ export async function handleTraceSave(data: TraceFormData, capture: Capture) {
             return { ok: false, message: "Failed to find view hierarchies." };
           }
 
-          const uploadMeta = generateVHUploadRes[index];
-          if (uploadMeta.ok) {
-            res = await fetch(uploadMeta.data.uploadUrl, {
-              method: "PUT",
-              body: JSON.stringify(vh),
-              headers: { "Content-Type": "application/json" },
-            });
-            if (!res.ok) {
-              toast.error("Failed to upload view hierarchies.");
-              return {
-                ok: false,
-                message: "Failed to upload view hierarchies.",
-              };
-            }
-            screens[index].vh = uploadMeta.data.fileUrl;
-            return uploadMeta;
+          // upload view hierarchies to s3
+          const blob = new Blob([JSON.stringify(vh, null, 2)], {
+            type: "application/json",
+          })
+          const file = new File([blob], `${screen.id}.json`, {
+            type: "application/json",
+          })
+          const prefix = `traces/${trace.id}/vhs`;
+          const fileName = `${screen.id}.json`;
+          const uploadRes = await uploadToS3(
+            file,
+            prefix,
+            fileName, 
+            file.type
+          )
+          if (!uploadRes.ok) {
+            toast.error("Failed to upload view hierarchies.");
+            return {
+              ok: false,
+              message: "Failed to upload view hierarchies.",
+            };
           }
-          return { ok: false, message: "Presigned URL generation failed." };
+          screens[index].vh = uploadRes.data.fileUrl;
+          return uploadRes;
         })
       )
     );
