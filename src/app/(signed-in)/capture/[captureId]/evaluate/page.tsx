@@ -10,22 +10,21 @@ import { NotAuthorized } from "@/components/authorized";
 export default async function Page({
   params,
 }: {
-  params: { captureId: string };
+  params: Promise<{ captureId: string }>;
 }) {
+  const { captureId } = await params;
+  // auth check
   const session = await auth();
   // Handle unauthenticated state
   if (!session || !session?.user) {
     redirect("/sign-in");
   }
-
   const isAdmin = session.user.role === Role.ADMIN;
   // check if captureId matches the user
-  const capture = await getCapture({ id: params.captureId });
+  const capture = await getCapture({ id: captureId });
   const isOwner = capture.data?.userId === session.user.id;
-
   if (!isOwner && !isAdmin) {
     return <NotAuthorized />;
   }
-
   return <EvaluationClient isAdmin={isAdmin} />;
 }
