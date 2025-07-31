@@ -1,26 +1,42 @@
-'use client';
+"use client";
 
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { updateUserRole } from "@/lib/actions/index";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Role } from "@prisma/client";
+import { useSession } from "next-auth/react";
 
 interface UserRoleSelectorProps {
   userId: string;
   currentRole: Role;
 }
 
-export function UserRoleSelector({ userId, currentRole }: UserRoleSelectorProps) {
+export function UserRoleSelector({
+  userId,
+  currentRole,
+}: UserRoleSelectorProps) {
   const [isPending, startTransition] = useTransition();
+  const { data: session } = useSession();
+
+  // do not render if user is not admin
+  if (session?.user?.role !== Role.ADMIN) {
+    return <></>;
+  }
 
   const handleRoleChange = (newRole: Role) => {
     startTransition(async () => {
-      try {
-        await updateUserRole(userId, newRole);
+      const res = await updateUserRole(userId, newRole);
+      if (res.ok) {
         toast.success("User role updated successfully!");
-      } catch (error) {
-        toast.error("Failed to update role. Please try again.");
+      } else {
+        toast.error(res.message);
       }
     });
   };

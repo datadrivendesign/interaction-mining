@@ -2,9 +2,11 @@ import { getCaptures, getUser } from "@/lib/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import { Role } from "@prisma/client";
+import { NotAuthorized } from "@/components/authorized";
+import { auth } from "@/lib/auth";
 
 export default async function AdminUserDetails({
   params,
@@ -12,6 +14,14 @@ export default async function AdminUserDetails({
   params: Promise<{ userid: string }>;
 }) {
   const { userid } = await params;
+  const session = await auth();
+
+  if (!session || !session.user) {
+    redirect(`/sign-in?callbackUrl=/admin/user/${userid}`);
+  }
+  if (session!.user!.role !== Role.ADMIN) {
+    return <NotAuthorized />;
+  }
 
   if (!userid) {
     console.error("User ID is undefined");
