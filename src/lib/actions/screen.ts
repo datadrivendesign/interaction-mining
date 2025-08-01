@@ -5,7 +5,6 @@ import { Prisma, Screen } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { uploadAndroidAPIDataToS3 } from "../aws";
 
 const s3 = new S3Client({
@@ -122,60 +121,6 @@ export async function updateScreen(
     message: "Screen updated successfully.",
     data: screen,
   };
-}
-
-/**
- * Generates a pre-signed URL for direct S3 upload of view hierarchy JSON.
- * @param captureId The ID of the capture to upload the file to.
- * @param fileType The MIME type of the file to upload.
- * @returns ActionPayload
- */
-export async function generatePresignedVHUpload(
-  captureId: string,
-  fileType: string
-): Promise<
-  ActionPayload<{
-    uploadUrl: string;
-    fileKey: string;
-    filePrefix: string;
-    fileUrl: string;
-  }>
-> {
-  if (!(fileType === "application/json")) {
-    return {
-      ok: false,
-      message: "Invalid file type. Please upload a JSON",
-      data: null,
-    };
-  }
-
-  try {
-    const fileKey = `uploads/${captureId}/vhs/${Date.now()}.${fileType.split("/")[fileType.split("/").length - 1]}`;
-
-    const command = new PutObjectCommand({
-      Bucket: process.env._AWS_UPLOAD_BUCKET!,
-      Key: fileKey,
-      ContentType: fileType,
-    });
-
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
-
-    return {
-      ok: true,
-      message: "View Hierarchy uploaded to storage",
-      data: {
-        uploadUrl,
-        filePrefix: `uploads/${captureId}/`,
-        fileKey,
-        fileUrl: process.env.USE_MINIO_STORE === "true" 
-          ? `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}`
-          : `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${fileKey}`,
-      },
-    };
-  } catch (err) {
-    console.error("Error uploading image to storage:", err);
-    return { ok: false, message: "Failed to upload image.", data: null };
-  }
 }
 
 /**

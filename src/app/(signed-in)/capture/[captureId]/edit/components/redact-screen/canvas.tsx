@@ -23,7 +23,6 @@ import { useMeasure } from "@uidotdev/usehooks";
 
 import { FrameData, Redaction } from "../types";
 import AnnotationCard from "./annotation-card";
-import Overlay from "./stage-overlay";
 import { cn } from "@/lib/utils";
 import {
   RedactCanvasContext,
@@ -34,8 +33,11 @@ import mergeRefs from "@/lib/utils/merge-refs";
 import RedactRectangle from "./redact-rect";
 import { useInvertedScroll } from "@/lib/hooks/useInvertedScroll";
 import { KonvaEventObject } from "konva/lib/Node";
+import Konva from "konva";
+import OverlayContainer, { Overlay } from "./stage-overlay";
 
-const MIN_PIXEL_SIZE = 8;
+
+const MIN_PIXEL_SIZE = 10;
 
 export interface CanvasComponentProps {
   screen: FrameData;
@@ -48,16 +50,20 @@ export interface CanvasComponentProps {
 }
 
 export interface CanvasRef {
-  getStage: () => any;
+  getStage: () => Konva.Stage | null;
 }
 
 const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
   function CanvasComponent({ screen, redactions, vh }, ref) {
-    const [refMeasure, { width, height } = { width: 0, height: 0 }] =
-      useMeasure();
+    const [refMeasure, { 
+      width, 
+      height 
+    } = { 
+      width: 0, 
+      height: 0 
+    }] = useMeasure();
     const containerRef = useRef<HTMLDivElement>(null);
     const { vhBoxes, rootBounds } = vh;
-
     const {
       mode,
       setMode,
@@ -70,12 +76,10 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
 
     const [newRect, setNewRect] = useState<Redaction | null>(null);
     const [stageScale, setStageScale] = useState(1);
-    const [overlay, setOverlay] = useState<any>([]);
+    const [overlay, setOverlay] = useState<Array<Overlay>>([]);
     const [isPanning, setIsPanning] = useState(false);
-
-    const stageRef = useRef<any>(null);
-    const transformerRef = useRef<any>(null);
-
+    const stageRef = useRef<Konva.Stage | null>(null);
+    const transformerRef = useRef<Konva.Transformer | null>(null);
     const isInverted = useInvertedScroll();
 
     // useGesture handles pinch (for zoom) and drag (for pan).
@@ -152,11 +156,10 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       return pos;
     }, []);
 
-    // Load the image from the screen URL and calculate scaling
-    const [image, imageStatus] = useImage(screen.src);
     // Calculate layout dimensions and offsets only when dependencies change.
+    const [image, imageStatus] = useImage(screen.src, 'anonymous');
     const { displayWidth, displayHeight, offsetX, offsetY } = useMemo(() => {
-      // Return default values if image is not ready
+      // Return default values if image is not ready or has error
       if (imageStatus !== 'loaded' || !image || !width || !height) {
         return {
           image: null,
@@ -184,7 +187,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       const offsetX = image ? (width! - displayWidth) / 2 : 0;
       const offsetY = image ? vPadding + (availableH - displayHeight) / 2 : 0;
       return { displayWidth, displayHeight, offsetX, offsetY };
-    }, [width, height, image]);
+    }, [width, height, image, imageStatus]);
 
     // handler for mouse down event
     const handleStageMouseDown = useCallback(
@@ -213,7 +216,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         displayHeight,
         mode,
         getRelativePointer,
-        selectRedaction,
       ]
     );
 
@@ -273,7 +275,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           setNewRect(null);
         }
       },
-      [newRect, createRedaction, mode, setMode]
+      [newRect, createRedaction, mode, setMode, displayWidth, displayHeight]
     );
 
     // function to update the rectangle properties
@@ -303,6 +305,18 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         selectRedaction(id);
       }
     };
+
+    const boundBoxFunc = useCallback((oldBox: any, newBox: any) => {
+      const x0 = offsetX,
+        y0 = offsetY;
+      const maxW = displayWidth,
+        maxH = displayHeight;
+      const w = Math.max(MIN_PIXEL_SIZE, Math.min(newBox.width, maxW));
+      const h = Math.max(MIN_PIXEL_SIZE, Math.min(newBox.height, maxH));
+      const x = Math.min(Math.max(newBox.x, x0), x0 + maxW - w);
+      const y = Math.min(Math.max(newBox.y, y0), y0 + maxH - h);
+      return { ...oldBox, x, y, width: w, height: h };
+    }, [offsetX, offsetY, displayWidth, displayHeight]);
 
     const handleTransform = useCallback(
       (e: any, id: string) => {
@@ -340,20 +354,16 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         });
         node.getLayer().batchDraw();
       },
-      [offsetX, offsetY, displayWidth, displayHeight, updateRect]
+      [
+        offsetX,
+        offsetY,
+        displayWidth,
+        displayHeight,
+        selectedRedaction,
+        updateRect,
+        boundBoxFunc
+      ]
     );
-
-    const boundBoxFunc = (oldBox: any, newBox: any) => {
-      const x0 = offsetX,
-        y0 = offsetY;
-      const maxW = displayWidth,
-        maxH = displayHeight;
-      const w = Math.max(MIN_PIXEL_SIZE, Math.min(newBox.width, maxW));
-      const h = Math.max(MIN_PIXEL_SIZE, Math.min(newBox.height, maxH));
-      const x = Math.min(Math.max(newBox.x, x0), x0 + maxW - w);
-      const y = Math.min(Math.max(newBox.y, y0), y0 + maxH - h);
-      return { ...oldBox, x, y, width: w, height: h };
-    };
 
     const handleRectDelete = (e: any, id: string) => {
       deleteRedaction(id);
@@ -384,7 +394,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
 
         if (selectedNode) {
           transformer.nodes([selectedNode]);
-          transformer.getLayer().batchDraw();
+          transformer.getLayer()?.batchDraw();
 
           setOverlay((prev: any) => [
             ...prev.filter((o: any) => o.type !== `annotation`),
@@ -395,7 +405,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                 <AnnotationCard
                   key={`annotation-${selectedRedaction.id}`}
                   annotation={selectedRedaction.annotation}
-                  onChange={(value) => {
+                  setAnnotation={(value) => {
                     updateRect(selectedRedaction.id, {
                       annotation: value,
                     });
@@ -411,7 +421,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         }
       } else {
         transformer.nodes([]);
-        transformer.getLayer().batchDraw();
+        transformer.getLayer()?.batchDraw();
         setOverlay((prev: any) =>
           prev.filter((o: any) => o.type !== `annotation`)
         );
@@ -421,6 +431,8 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     useImperativeHandle(ref, () => ({
       getStage: () => stageRef.current,
     }));
+
+    console.log("image", !!image, offsetX, offsetY, displayWidth, displayHeight);
 
     return (
       <div className="relative w-full h-full">
@@ -438,23 +450,29 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             mode === "eraser" && "cursor-normal"
           )}
         >
-          <Stage
-            ref={stageRef}
-            width={width ?? 0}
-            height={height ?? 0}
-            onMouseDown={handleStageMouseDown}
-            onMouseMove={handleStageMouseMove}
-            onMouseUp={handleStageMouseUp}
-            onClick={handleBackgroundClick}
-            draggable={mode === "select"}
-            onWheel={() => setIsPanning(true)}
-            onDragStart={() => setIsPanning(true)}
-            onDragEnd={() => setIsPanning(false)}
-            scaleX={stageScale}
-            scaleY={stageScale}
-          >
-            <Layer>
-              {imageStatus === 'loaded' && image && image.complete && (
+          {imageStatus === 'loaded' && 
+            !!image && 
+            image.complete && 
+            offsetX > 0 &&
+            offsetY > 0 &&
+            displayWidth > 0 &&
+            displayHeight > 0 && (
+            <Stage
+              ref={stageRef}
+              width={width ?? 0}
+              height={height ?? 0}
+              onMouseDown={handleStageMouseDown}
+              onMouseMove={handleStageMouseMove}
+              onMouseUp={handleStageMouseUp}
+              onClick={handleBackgroundClick}
+              draggable={mode === "select"}
+              onWheel={() => setIsPanning(true)}
+              onDragStart={() => setIsPanning(true)}
+              onDragEnd={() => setIsPanning(false)}
+              scaleX={stageScale}
+              scaleY={stageScale}
+            >
+              <Layer>
                 <KonvaImage
                   image={image}
                   x={offsetX}
@@ -462,70 +480,68 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                   width={displayWidth}
                   height={displayHeight}
                 />
-              )}
-              {
-                // add vh bouding boxes here
-                rootBounds &&
-                vhBoxes.map((box: vhBox, index: number) => (
-                  <Rect
-                    key={box.id + index}
-                    x={(box.x / rootBounds.width) * displayWidth + offsetX}
-                    y={(box.y / rootBounds.height) * displayHeight + offsetY}
-                    width={(box.width / rootBounds.width) * displayWidth}
-                    height={(box.height / rootBounds.height) * displayHeight}
-                    stroke="red"
-                    strokeWidth={1}
-                  />
-                ))
-              }
-              {imageStatus === "loaded"
-                && image?.complete
-                && (redactions || []).map((redaction) => (
-                  <React.Fragment key={redaction.id}>
-                    <RedactRectangle // redaction rectanges
-                      redaction={redaction}
-                      displayWidth={displayWidth}
-                      displayHeight={displayHeight}
-                      offsetX={offsetX}
-                      offsetY={offsetY}
-                      mode={mode}
-                      selectRedaction={selectRedaction}
-                      handleRectClick={handleRectClick}
-                      handleTransform={handleTransform}
-                      handleRectDelete={handleRectDelete}
+                {
+                  // add vh bouding boxes here
+                  rootBounds &&
+                  vhBoxes.map((box: vhBox, index: number) => (
+                    <Rect
+                      key={box.id + index}
+                      x={(box.x / rootBounds.width) * displayWidth + offsetX}
+                      y={(box.y / rootBounds.height) * displayHeight + offsetY}
+                      width={(box.width / rootBounds.width) * displayWidth}
+                      height={(box.height / rootBounds.height) * displayHeight}
+                      stroke="red"
+                      strokeWidth={1}
                     />
-                  </React.Fragment>
-                ))}
-              {newRect &&
-                image && ( // draws rectangle while drawing
-                  <Rect
-                    x={newRect.x * displayWidth + offsetX}
-                    y={newRect.y * displayHeight + offsetY}
-                    width={newRect.width * displayWidth}
-                    height={newRect.height * displayHeight}
-                    fill="black"
-                    opacity={0.5}
+                  ))
+                }
+                {imageStatus === "loaded" && 
+                  image && 
+                  image.complete && 
+                  image.naturalWidth > 0 &&
+                  (redactions || []).map((redaction) => (
+                    <React.Fragment key={redaction.id}>
+                      <RedactRectangle
+                        redaction={redaction}
+                        displayWidth={displayWidth}
+                        displayHeight={displayHeight}
+                        offsetX={offsetX}
+                        offsetY={offsetY}
+                        mode={mode}
+                        selectRedaction={selectRedaction}
+                        handleRectClick={handleRectClick}
+                        handleTransform={handleTransform}
+                        handleRectDelete={handleRectDelete}
+                      />
+                    </React.Fragment>
+                  ))}
+                {newRect &&  (
+                    // draws rectangle while drawing
+                    <Rect
+                      x={newRect.x * displayWidth + offsetX}
+                      y={newRect.y * displayHeight + offsetY}
+                      width={newRect.width * displayWidth}
+                      height={newRect.height * displayHeight}
+                      fill="black"
+                      opacity={0.5}
+                    />
+                  )}
+                {mode === "select" && (
+                  <Transformer
+                    boundBoxFunc={boundBoxFunc}
+                    onTransformStart={() => setIsPanning(true)}
+                    onTransformEnd={() => setIsPanning(false)}
+                    flipEnabled={false}
+                    keepRatio={false}
+                    rotateEnabled={false}
+                    ref={transformerRef}
                   />
                 )}
-              {mode === "select" && (
-                <Transformer
-                  boundBoxFunc={boundBoxFunc}
-                  onTransformStart={() => setIsPanning(true)}
-                  onTransformEnd={() => setIsPanning(false)}
-                  flipEnabled={false}
-                  keepRatio={false}
-                  rotateEnabled={false}
-                  ref={transformerRef}
-                />
-              )}
-            </Layer>
-          </Stage>
+              </Layer>
+            </Stage>)}
         </div>
-        {/* {stageRef.current && (
-          <Overlay stage={stageRef.current} overlays={overlay} isPanning={isPanning} />
-        )} */}
         {stageRef.current && (
-          <Overlay
+          <OverlayContainer
             stage={stageRef.current}
             overlays={overlay}
             isPanning={isPanning}

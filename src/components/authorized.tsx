@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import { Role } from "@prisma/client";
 
 export async function AuthorizedRoute({
   children,
@@ -20,7 +21,9 @@ export async function AuthorizedRoute({
   callbackUrl?: string;
   resourceUserId?: string;
 }) {
-  const ownershipEnforcedRoles = new Set(allowedRoles ?? ["USER", "ADMIN"]);
+  const ownershipEnforcedRoles = new Set(
+    allowedRoles ?? [Role.USER, Role.ADMIN]
+  );
   let session = await auth();
 
   if (!session || !session.user) {
@@ -32,10 +35,11 @@ export async function AuthorizedRoute({
     return <NotAuthorized />;
   }
 
-  if (resourceUserId! && session.user.id === resourceUserId) {
+  const isOwner = resourceUserId! && session.user.id === resourceUserId;
+  const isAdmin = session.user.role === Role.ADMIN;
+  if (isOwner || isAdmin) {
     return <>{children}</>;
   }
-
   return <NotAuthorized />;
 }
 

@@ -24,6 +24,16 @@ export type TraceFormData = {
   description: string;
 };
 
+export type ScreenReviewData = {
+  id: string;
+  src: string;
+  timestamp: number;
+  gesture: ScreenGesture;
+  redactions: Redaction[];
+  vh: string;
+  description: string;
+}
+
 export const ScreenSchema = z
   .array(
     z.object({
@@ -52,24 +62,6 @@ export const GestureSchema = z.record(
     }),
   })
 );
-
-export const GestureOptionSchema: z.ZodType<{
-  value: string;
-  label: string;
-  icon?: React.JSX.Element;
-  subGestures?: any;
-}> = z.lazy(
-  (): z.ZodType<any> => // 👈 annotate the return type here
-    z.object({
-      value: z.string(),
-      label: z.string(),
-      icon: z.custom<React.JSX.Element>().optional(),
-      subGestures: z.array(GestureOptionSchema).optional(),
-    })
-);
-
-// Then define the type from schema (for safety & completion support)
-export type GestureOption = z.infer<typeof GestureOptionSchema>;
 
 export const ScreenGestureSchema = z
   .object({

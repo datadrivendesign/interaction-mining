@@ -2,6 +2,7 @@ import NextAuth, { Session, DefaultSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import authConfig from "./auth.config";
+import { Role } from "@prisma/client";
 
 declare module "next-auth" {
   /**
@@ -35,7 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
         if (dbUser) {
           session.user.id = dbUser.id;
-          session.user.role = dbUser.role ?? "USER";
+          session.user.role = dbUser.role ?? Role.USER;
           session.user.createdAt = dbUser.createdAt;
         }
       }

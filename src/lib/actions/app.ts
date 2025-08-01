@@ -138,8 +138,8 @@ export async function getAppByPackageName(
 export async function checkIfAppExists(
   packageName: string, 
   os: Platform
-): Promise<boolean> {
-  if (!packageName) return false;
+): Promise<App | null> {
+  if (!packageName) return null;
 
   try {
     const app = await prisma.app.findUnique({
@@ -148,10 +148,10 @@ export async function checkIfAppExists(
       },
     });
 
-    return !!app;
+    return app;
   } catch (error) {
     console.error("Failed to check if app exists:", error);
-    return false;
+    return null;
   }
 }
 

@@ -20,6 +20,7 @@
 .DS_Store
 *.pem
 public/*.mp4
+*_b64.txt
 
 # debug
 npm-debug.log*
@@ -42,3 +43,7 @@ next-env.d.ts
 # mongo
 mongo.conf
 mongo_db/*
+
+# scripts (for now)
+prisma/scripts/reorg-s3-dirs.mjs
+prisma/scripts/add-capture-task.mjs

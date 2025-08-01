@@ -10,11 +10,15 @@ export const revalidate = 43200
 
 const fetchStats = cache(async () => {
   "use server";
-  const [appsCount, tracesCount, screensCount, redactionsCount] = await Promise.all([
+  const [
+    appsCount, 
+    tracesCount, 
+    screensCount, 
+    redactionsCount
+  ] = await Promise.all([
     prisma.app.count(),
     prisma.trace.count(),
     prisma.screen.count(),
-
     // aggregate redactions‐array lengths server‐side
     prisma.screen.aggregateRaw({
       pipeline: [
@@ -30,7 +34,12 @@ const fetchStats = cache(async () => {
 });
 
 export default async function Dataset() {
-  const { appsCount, tracesCount, screensCount, redactionsCount } = await fetchStats()
+  const { 
+    appsCount, 
+    tracesCount, 
+    screensCount, 
+    redactionsCount 
+  } = await fetchStats()
   return (
     <section
       id="dataset"

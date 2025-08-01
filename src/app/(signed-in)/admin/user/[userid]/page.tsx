@@ -2,8 +2,11 @@ import { getCaptures, getUser } from "@/lib/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
+import { Role } from "@prisma/client";
+import { NotAuthorized } from "@/components/authorized";
+import { auth } from "@/lib/auth";
 
 export default async function AdminUserDetails({
   params,
@@ -11,6 +14,14 @@ export default async function AdminUserDetails({
   params: Promise<{ userid: string }>;
 }) {
   const { userid } = await params;
+  const session = await auth();
+
+  if (!session || !session.user) {
+    redirect(`/sign-in?callbackUrl=/admin/user/${userid}`);
+  }
+  if (session!.user!.role !== Role.ADMIN) {
+    return <NotAuthorized />;
+  }
 
   if (!userid) {
     console.error("User ID is undefined");
@@ -41,7 +52,11 @@ export default async function AdminUserDetails({
         {/* Left column: User Info */}
         <div className="space-y-6 md:col-span-1">
           <Avatar className="w-32 h-32">
-            <AvatarImage src={user.image ?? ""} alt="User avatar" crossOrigin="anonymous" />
+            <AvatarImage
+              src={user.image ?? ""}
+              alt="User avatar"
+              crossOrigin="anonymous"
+            />
             <AvatarFallback>
               {user.name?.charAt(0).toUpperCase() ?? "U"}
             </AvatarFallback>
@@ -52,7 +67,7 @@ export default async function AdminUserDetails({
               {user.name ?? "Unnamed User"}
             </h1>
             <p className="text-lg text-muted-foreground">{user.email}</p>
-            <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
+            <Badge variant={user.role === Role.ADMIN ? "default" : "secondary"}>
               {user.role}
             </Badge>
           </div>
@@ -60,7 +75,7 @@ export default async function AdminUserDetails({
 
         {/* Right column: Traces */}
         <div className="md:col-span-3">
-          <h2 className="text-2xl font-semibold mb-6">User Captures</h2>
+          <h2 className="text-2xl font-semibold mb-6">Captures</h2>
           {captures.length === 0 ? (
             <p className="text-muted-foreground">No captures uploaded yet.</p>
           ) : (
@@ -70,7 +85,7 @@ export default async function AdminUserDetails({
                   key={cap.id}
                   className="rounded-md hover:shadow-sm transition"
                 >
-                  <CardHeader className="flex flex-row items-center gap-4 p-4">
+                  <CardHeader className="flex flex-row items-center gap-4">
                     <Image
                       src={cap.app?.metadata?.icon || "/placeholder.png"}
                       alt="App Icon"
@@ -79,15 +94,20 @@ export default async function AdminUserDetails({
                       height={40}
                     />
                     <div className="w-full">
-                      <CardTitle className="text-sm font-medium">
-                        {cap.app?.metadata?.name ?? "Unnamed App"}
-                      </CardTitle>
+                      <div className="flex flex-row items-center gap-2">
+                        <CardTitle className="text-sm font-medium">
+                          {cap.app?.metadata?.name ?? "Unnamed App"}
+                        </CardTitle>
+                        <Badge variant="outline">
+                          {cap.task?.os ?? "Unknown OS"}
+                        </Badge>
+                      </div>
                       <p className="text-sm text-muted-foreground line-clamp-1">
                         {cap.task?.description ?? "No description"}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Platform: {cap.task?.os ?? "Unknown OS"}
-                      </p>
+                    </div>
+                    <div>
+                      <Badge variant="default">{cap.status}</Badge>
                     </div>
                   </CardHeader>
                 </Card>

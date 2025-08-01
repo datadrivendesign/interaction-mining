@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { getCapture, getTraces, updateCapture } from "@/lib/actions";
 import { AuthorizedRoute } from "@/components/authorized";
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CaptureStatus } from "@prisma/client";
 
 export default async function Layout({
   params,
@@ -20,23 +21,22 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const { captureId } = await params;
-  let capture = await getCapture({ id: captureId });
-
+  let captureRes = await getCapture({ id: captureId });
+  const capture = captureRes.data;
   const traces = await getTraces({ captureId: captureId });
 
   // If capture is not found, redirect to 404
-  if (!capture.ok) {
+  if (!captureRes.ok || !capture) {
     notFound();
   } else {
     // If capture has a traceId, redirect to the trace page
-    if (capture.data.traceId) {
+    if (capture.status === CaptureStatus.APPROVED && capture.traceId) {
       return (
         <TraceCreatedRedirect
-          redirectTo={`trace/${capture.data.traceId}/edit`}
+          redirectTo={`app/${capture.appId}/trace/${capture.traceId}`}
         />
       );
     }
-
     // If capture has no traceId and there are traces associated with the captureId, update the capture with the last traceId
     else if (traces.data && traces.data.length > 0) {
       const lastTrace = traces.data?.[traces.data.length - 1];
@@ -44,13 +44,17 @@ export default async function Layout({
         traceId: lastTrace.id,
       });
 
-      return <TraceCreatedRedirect redirectTo={`trace/${lastTrace.id}/edit`} />;
+      return (
+        <TraceCreatedRedirect
+          redirectTo={`app/${lastTrace.appId}/trace/${lastTrace.id}/`}
+        />
+      );
     }
   }
 
   return (
     <>
-      <AuthorizedRoute resourceUserId={capture.data?.userId ?? undefined}>
+      <AuthorizedRoute resourceUserId={capture?.userId ?? undefined}>
         {children}
       </AuthorizedRoute>
     </>

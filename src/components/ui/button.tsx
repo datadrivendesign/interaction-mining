@@ -48,6 +48,7 @@ export interface ButtonProps
   asChild?: boolean;
   tooltip?: React.ReactNode;
   tooltipProps?: React.ComponentProps<typeof Tooltip>;
+  delayDuration?: number;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -62,6 +63,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         side: "bottom",
         sideOffset: 8,
       } as React.ComponentProps<typeof Tooltip>,
+      delayDuration = 700,
       ...props
     },
     ref
@@ -70,7 +72,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <>
         {tooltip ? (
-          <TooltipProvider>
+          <TooltipProvider delayDuration={delayDuration}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Comp
