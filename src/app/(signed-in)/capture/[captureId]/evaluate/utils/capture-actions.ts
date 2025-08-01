@@ -1,3 +1,5 @@
+"use server";
+
 import { Capture, CaptureStatus, Role } from "@prisma/client";
 import { handleTraceSave } from "../../edit/util";
 import { updateCapture } from "@/lib/actions";
