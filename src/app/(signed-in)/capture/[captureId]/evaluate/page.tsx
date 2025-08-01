@@ -23,7 +23,7 @@ export default async function Page({
   // check if captureId matches the user
   const capture = await getCapture({ id: captureId });
   const isOwner = capture.data?.userId === session.user.id;
-  if (!isOwner && !isAdmin) {
+  if (!isOwner || !isAdmin) {
     return <NotAuthorized />;
   }
   return <EvaluationClient isAdmin={isAdmin} />;
