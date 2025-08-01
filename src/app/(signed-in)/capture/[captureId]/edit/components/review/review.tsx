@@ -149,7 +149,7 @@ function SaveTraceGallery() {
               {/* Gesture caption */}
               <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
                 <p className="text-sm text-center dark:text-neutral-300">
-                  {gestures[screen.id].description ?? "Final task state"}
+                  {gestures[screen.id]?.description ?? "Final task state"}
                 </p>
               </div>
             </figure>
