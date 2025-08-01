@@ -23,27 +23,11 @@ export async function approveCapture(
       data: null,
     };
   }
-  // handle update logic
-  try {
-    await handleTraceSave(traceData, capture);
-    const updateRes = await updateCapture(capture.id, {
-      status: CaptureStatus.APPROVED,
-    });
-    if (!updateRes.ok) {
-      throw new Error(updateRes.message ?? "Failed to update capture");
-    }
-    return {
-      ok: true,
-      message: "Capture approved successfully",
-      data: null,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      message: err instanceof Error ? err.message : "Failed to save trace",
-      data: null,
-    };
-  }
+  return {
+    ok: true,
+    message: "Auth check passed",
+    data: null,
+  };
 }
 
 export async function denyCapture(

@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { TraceFormData } from "../edit/components/types";
-import { Capture } from "@prisma/client";
+import { Capture, CaptureStatus } from "@prisma/client";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { approveCapture, denyCapture } from "./utils/capture-actions";
 import { toast } from "sonner";
+import { handleTraceSave } from "../edit/util";
+import { updateCapture } from "@/lib/actions";
 
 export function ReviewPanel({
   traceData,
@@ -28,8 +30,16 @@ export function ReviewPanel({
     if (!res.ok) {
       toast.error(res.message);
     } else {
-      toast.success(res.message);
-      router.push(`/app/${capture.appId}`);
+      await handleTraceSave(traceData, capture);
+      const updateRes = await updateCapture(capture.id, {
+        status: CaptureStatus.APPROVED,
+      });
+      if (!updateRes.ok) {
+        toast.error(updateRes.message ?? "Failed to update capture");
+      } else {
+        toast.success("Capture approved successfully");
+        router.push(`/app/${capture.appId}`);
+      }
     }
     setIsSubmitting(false);
   };
