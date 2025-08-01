@@ -42,7 +42,7 @@ export async function handleReviewSave(data: TraceFormData, capture: Capture) {
   // if old screnens exist if processed folder, list them for deletion
   const prefix = `processed/${capture.id}/screens`;
   const oldFiles = await listFromS3(prefix);
-  const oldFilesToDelete = oldFiles.ok
+  const oldFileKeys = oldFiles.ok
     ? oldFiles.data.map((file) => file.fileKey)
     : [];
   // upload screens as json to s3
@@ -72,10 +72,20 @@ export async function handleReviewSave(data: TraceFormData, capture: Capture) {
     return Promise.reject("Failed to upload screen data.");
   }
 
-  // delete old screens from processed folder
-  if (oldFilesToDelete.length > 0) {
+  // delete old screens from /processed that no longer exist in the new screens
+  if (oldFileKeys.length > 0) {
+    const oldFileKeysToDelete = oldFileKeys.filter(
+      (fileKey) =>
+        !uploadScreenResponse.some(
+          (res) =>
+            "data" in res &&
+            res.data &&
+            res.data.fileKey &&
+            res.data.fileKey === fileKey
+        )
+    );
     const deleteRes = await Promise.all(
-      oldFilesToDelete.map((fileKey) => deleteFromS3(fileKey))
+      oldFileKeysToDelete.map((fileKey) => deleteFromS3(fileKey))
     );
 
     const failedDeletes = deleteRes.filter((res) => !res.ok);
