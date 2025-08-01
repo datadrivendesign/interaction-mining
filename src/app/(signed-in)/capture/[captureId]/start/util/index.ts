@@ -18,12 +18,16 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
     mutate(
       [CaptureSWROperations.UPLOAD_LIST, captureId],
       (prevData: any) => {
-        if (!prevData) { return []; }
+        if (!prevData) {
+          return [];
+        }
         return prevData.filter((file: any) => file.fileKey !== fileKey);
       },
       {
         optimisticData: (prevData: any) => {
-          if (!prevData) { return []; }
+          if (!prevData) {
+            return [];
+          }
           return prevData.filter((file: any) => file.fileKey !== fileKey);
         },
       }
@@ -35,7 +39,7 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
 }
 
 export async function fileFetcher([_, fileKey]: [string, string]) {
-  let res = await listFromS3(fileKey);
+  let res = await listFromS3(fileKey, true);
 
   if (res.ok) {
     return res.data;
@@ -48,16 +52,34 @@ export async function fileFetcher([_, fileKey]: [string, string]) {
 
 export const getSWRConfig = (
   operation: CaptureSWROperations,
-  prefix: string,
-): SWRConfiguration<ListedFiles[]> => (    {
+  prefix: string
+): SWRConfiguration<ListedFiles[]> => ({
   refreshInterval: 5000,
-  onSuccess: (data: ListedFiles[]) => {
-    if (
-      data &&
-      data.some((file: ListedFiles) => isCloudfrontUrlExpired(file.fileUrl))
-    ) {
-      console.log("Detected expired URLs, forcing revalidation");
-      mutate([operation, prefix]);
+  compare: (prevFiles, currFiles) => {
+    if (!prevFiles || !currFiles) {
+      // if one is undefined and the other is not, return false
+      if (!prevFiles && currFiles) {
+        return false;
+      }
+      if (prevFiles && !currFiles) {
+        return false;
+      }
+      return true;
     }
+    // if both are defined, check if the file keys are the same
+    if (prevFiles.length !== currFiles.length) {
+      return false;
+    }
+    // check if file keys are the same
+    const prevFileKeys = prevFiles.map((file) => file.fileKey);
+    const currFileKeys = currFiles.map((file) => file.fileKey);
+    if (prevFileKeys.every((key, index) => key === currFileKeys[index])) {
+      // check if any file urls are expired
+      if (prevFiles.some((file) => isCloudfrontUrlExpired(file.fileUrl))) {
+        return false;
+      }
+      return true;
+    }
+    return false;
   },
 });

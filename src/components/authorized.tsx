@@ -35,10 +35,11 @@ export async function AuthorizedRoute({
     return <NotAuthorized />;
   }
 
-  if (resourceUserId! && session.user.id === resourceUserId) {
+  const isOwner = resourceUserId! && session.user.id === resourceUserId;
+  const isAdmin = session.user.role === Role.ADMIN;
+  if (isOwner || isAdmin) {
     return <>{children}</>;
   }
-
   return <NotAuthorized />;
 }
 

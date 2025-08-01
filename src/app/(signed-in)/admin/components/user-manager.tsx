@@ -135,6 +135,3 @@ export function UserManager({ users }: { users: ManageableUser[] }) {
     </>
   );
 }
-function useCallbadk(arg0: () => number[], arg1: number[]) {
-  throw new Error("Function not implemented.");
-}

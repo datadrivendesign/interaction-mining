@@ -11,6 +11,7 @@ import { getSignedUrl as getSignedCloudfrontUrl } from "@aws-sdk/cloudfront-sign
 import { s3 } from "..";
 import { ActionPayload } from "@/lib/actions/types";
 import { ListedFiles } from "@/lib/actions";
+import { auth } from "@/lib/auth";
 
 /**
  * Generates a presigned URL for uploading a file to S3.
@@ -22,12 +23,14 @@ export async function generatePresignedUploadURL(
   prefix: string,
   fileName: string,
   contentType: string
-): Promise<ActionPayload<{
-  uploadUrl: string;
-  fileKey: string;
-  fileName: string;
-  filePrefix: string;
-}>> {
+): Promise<
+  ActionPayload<{
+    uploadUrl: string;
+    fileKey: string;
+    fileName: string;
+    filePrefix: string;
+  }>
+> {
   const command = new PutObjectCommand({
     Bucket: process.env._AWS_UPLOAD_BUCKET!,
     Key: `${prefix}/${fileName}`,
@@ -43,7 +46,7 @@ export async function generatePresignedUploadURL(
         uploadUrl: url,
         fileKey: `${prefix}/${fileName}`,
         fileName: fileName,
-        filePrefix: prefix, 
+        filePrefix: prefix,
       },
     };
   } catch (err) {
@@ -62,7 +65,8 @@ export async function generatePresignedUploadURL(
  * @returns
  */
 export async function listFromS3(
-  key: string
+  key: string,
+  generateSignedUrl: boolean = true // don't generate signed if not needed
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const command = new ListObjectsV2Command({
@@ -79,31 +83,39 @@ export async function listFromS3(
       };
     }
 
-    const filePayload = files.Contents.map((file: any) => {
-      // use signed cloudfront url to grab file url
-      let fileUrl = ""
-      if (process.env.USE_MINIO_STORE === "true") {
-        fileUrl = `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`
-      } else {
-        const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${file.Key}`
-        if (file.Key.includes("traces/")) { // traces are available publicly
-          fileUrl = cloudfrontUrl
-        } else {  // get signed url for private files
-          const timeToExpire = 1000*60*60*2; // 2 hours
-          fileUrl = getSignedCloudfrontUrl({ 
-            url: cloudfrontUrl,
-            dateLessThan: new Date(Date.now() + timeToExpire),
-            keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID!,
-            privateKey: process.env.CLOUDFRONT_PRIVATE_KEY!,
-          });
+    const filePayload = await Promise.all(
+      files.Contents.map(async (file: any) => {
+        // use signed cloudfront url to grab file url
+        let fileUrl = "";
+        if (process.env.USE_MINIO_STORE === "true") {
+          fileUrl = `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`;
+        } else {
+          const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${file.Key}`;
+          if (file.Key.includes("traces/") || !generateSignedUrl) {
+            // traces are available publicly
+            fileUrl = cloudfrontUrl;
+          } else if (generateSignedUrl) {
+            const signedUrlRes = await generateSignedCloudFrontURL(file.Key);
+            if (signedUrlRes.ok) {
+              fileUrl = signedUrlRes.data.signedUrl;
+            }
+          }
         }
-      }
-      return ({
-        fileKey: file.Key,
-        fileName: file.Key.split("/").pop() || "",
-        fileUrl: fileUrl,
+        return {
+          fileKey: file.Key,
+          fileName: file.Key.split("/").pop() || "",
+          fileUrl: fileUrl,
+        };
       })
-    });
+    );
+
+    if (filePayload.some((file) => file.fileUrl === "")) {
+      return {
+        ok: false,
+        message: "Failed to retrieve file URL for some files",
+        data: null,
+      };
+    }
 
     return {
       ok: true,
@@ -187,13 +199,13 @@ export async function deleteFromS3(fileKey: string) {
 }
 
 /**
- * A server version of uploadToS3. This is needed because Android 
+ * A server version of uploadToS3. This is needed because Android
  * upload API route is running on a server component.
  * @param file Android screen JSON data formed into a File
  * @param prefix S3 bucket prefix
  * @param key S3 bucket key
  * @param contentType MIME type of uploaded content (should be JSON normally)
- * @returns 
+ * @returns
  */
 export async function uploadAndroidAPIDataToS3(
   file: File,
@@ -237,4 +249,44 @@ export async function uploadAndroidAPIDataToS3(
     message: "File uploaded successfully",
     data: uploadData,
   };
+}
+
+export async function generateSignedCloudFrontURL(
+  fileKey: string,
+  expiryHours: number = 2
+): Promise<ActionPayload<{ signedUrl: string }>> {
+  const session = await auth();
+  if (!session || !session.user) {
+    return {
+      ok: false,
+      message: "Unauthorized",
+      data: null,
+    };
+  }
+  try {
+    const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${fileKey}`;
+
+    const privateKey = Buffer.from(
+      process.env._AWS_CLOUDFRONT_PRIVATE_KEY!,
+      "base64"
+    ).toString("utf-8");
+    const signedUrl = getSignedCloudfrontUrl({
+      url: cloudfrontUrl,
+      dateLessThan: new Date(Date.now() + expiryHours * 60 * 60 * 1000),
+      keyPairId: process.env._AWS_CLOUDFRONT_KEY_PAIR_ID!,
+      privateKey: privateKey,
+    });
+
+    return {
+      ok: true,
+      message: "Signed URL generated",
+      data: { signedUrl },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: "Failed to generate signed URL",
+      data: null,
+    };
+  }
 }

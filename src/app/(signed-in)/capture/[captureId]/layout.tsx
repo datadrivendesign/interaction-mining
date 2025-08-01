@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { getCapture, getTraces, updateCapture } from "@/lib/actions";
 import { AuthorizedRoute } from "@/components/authorized";
@@ -30,9 +30,7 @@ export default async function Layout({
     notFound();
   } else {
     // If capture has a traceId, redirect to the trace page
-    if (capture.status === CaptureStatus.APPROVED &&
-      capture.traceId
-    ) {
+    if (capture.status === CaptureStatus.APPROVED && capture.traceId) {
       return (
         <TraceCreatedRedirect
           redirectTo={`app/${capture.appId}/trace/${capture.traceId}`}
@@ -46,9 +44,11 @@ export default async function Layout({
         traceId: lastTrace.id,
       });
 
-      return <TraceCreatedRedirect
-        redirectTo={`app/${lastTrace.appId}/trace/${lastTrace.id}/`}
-      />;
+      return (
+        <TraceCreatedRedirect
+          redirectTo={`app/${lastTrace.appId}/trace/${lastTrace.id}/`}
+        />
+      );
     }
   }
 

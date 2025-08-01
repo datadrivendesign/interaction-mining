@@ -3,27 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth/auth";
 import { CaptureStatus, Role } from "@prisma/client";
 import { AdminTabs } from "./components/admin-tabs";
+import { NotAuthorized } from "@/components/authorized";
 
 export default async function AdminPage() {
   const session = await auth();
 
-  if (!session) {
+  if (!session || !session.user) {
     redirect(`/sign-in?callbackUrl=/admin`);
   }
-
   if (session!.user!.role !== Role.ADMIN) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-red-500 mb-4">
-            Unauthorized Access
-          </h1>
-          <p className="text-lg text-gray-600">
-            You do not have permission to view this page.
-          </p>
-        </div>
-      </div>
-    );
+    return <NotAuthorized />;
   }
 
   let users = await prisma.user.findMany({

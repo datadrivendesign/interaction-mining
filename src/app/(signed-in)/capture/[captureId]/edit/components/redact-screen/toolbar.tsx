@@ -31,7 +31,7 @@ export default function Toolbar({
               <MousePointer2 className="size-5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent asChild side="right" sideOffset={10}>
+          <TooltipContent side="right" sideOffset={10}>
             <div className="flex w-full justify-between items-center gap-2 text-sm">
               <span>Move: Press</span>
               <Kbd className="text-muted-foreground rounded-sm">V</Kbd>
@@ -51,7 +51,7 @@ export default function Toolbar({
               <Pencil className="size-5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent asChild side="right" sideOffset={10}>
+          <TooltipContent side="right" sideOffset={10}>
             <div className="flex w-full justify-between items-center gap-2 text-sm">
               <span>Redact: Press</span>
               <Kbd className="text-muted-foreground rounded-sm">P</Kbd>
@@ -71,7 +71,7 @@ export default function Toolbar({
               <Eraser className="size-5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent asChild side="right" sideOffset={10}>
+          <TooltipContent side="right" sideOffset={10}>
             <div className="flex w-full justify-between items-center gap-2 text-sm">
               <span>Erase: Press</span>
               <Kbd className="text-muted-foreground rounded-sm">E</Kbd>

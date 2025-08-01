@@ -331,7 +331,7 @@ function CaptureCard({
         );
       case CaptureStatus.PROCESSING:
         return (
-          <Link href={`/capture/${capture.id}/edit`}>
+          <Link href={`/capture/${capture.id}/start`}>
             <Button size="sm" variant="default">
               <Pencil className="mr-2 size-3" />
               Process

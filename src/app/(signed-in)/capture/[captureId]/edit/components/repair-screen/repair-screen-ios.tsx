@@ -397,28 +397,25 @@ export function RepairScreenIOS({
         </ResizablePanel>
 
         <ResizableHandle withHandle />
-        <ResizablePanel
-          defaultSize={33}
-          minSize={33}
-          maxSize={50}
-          className="flex flex-col"
-        >
-          <Filmstrip
-            screens={screens}
-            gestures={gestures}
-            redactions={redactions}
-            os={os}
-            handleSetTime={handleSetTime}
-          />
-          <FrameTimeline
-            thumbnails={thumbnails}
-            currentTime={currentTime}
-            videoDuration={videoDuration}
-            isPlaying={isPlaying}
-            handleSetTime={handleSetTime}
-            handlePlayPause={handlePlayPause}
-            handleCapture={handleCaptureFrame}
-          />
+        <ResizablePanel defaultSize={33} minSize={33} maxSize={50}>
+          <div className="flex flex-col h-full">
+            <Filmstrip
+              screens={screens}
+              gestures={gestures}
+              redactions={redactions}
+              os={os}
+              handleSetTime={handleSetTime}
+            />
+            <FrameTimeline
+              thumbnails={thumbnails}
+              currentTime={currentTime}
+              videoDuration={videoDuration}
+              isPlaying={isPlaying}
+              handleSetTime={handleSetTime}
+              handlePlayPause={handlePlayPause}
+              handleCapture={handleCaptureFrame}
+            />
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
