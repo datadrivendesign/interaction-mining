@@ -21,7 +21,6 @@ export default function Review() {
   const { register } = useFormContext<TraceFormData>();
   const [descriptionLen, setDescriptionLen] = useState(0);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  
 
   return (
     <div className="flex w-full h-full">
@@ -53,11 +52,11 @@ export default function Review() {
             <div className="w-full flex flex-col">
               <Progress
                 className="w-full"
-                value={(descriptionLen / descriptionRef.current.maxLength) * 100} 
+                value={
+                  (descriptionLen / descriptionRef.current.maxLength) * 100
+                }
               />
-              <div 
-                className="text-sm flex justify-end text-muted-foreground z-10"
-              > 
+              <div className="text-sm flex justify-end text-muted-foreground z-10">
                 {`${descriptionLen}/${descriptionRef.current.maxLength}`}
               </div>
             </div>
@@ -96,13 +95,13 @@ function SaveTraceGallery() {
                     sizes="100vw"
                   />
 
-                  {gestures[screen.id].type && (
+                  {gestures[screen.id]?.type && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
                           className="cursor-pointer aspect-square w-[12%] absolute z-10 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70"
                           style={{
-                            left: `${(gestures[screen.id].x ?? 0) * 100}%`,
+                            left: `${(gestures[screen.id]?.x ?? 0) * 100}%`,
                             top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
                           }}
                         >
@@ -113,15 +112,19 @@ function SaveTraceGallery() {
                                 ...(option.subGestures ?? []),
                               ])
                               .find(
-                                (option) => option.value === gestures[screen.id].type
+                                (option) =>
+                                  option.value === gestures[screen.id].type
                               )?.icon
                           }
-                        </div >
-                      </TooltipTrigger >
+                        </div>
+                      </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>{gestures[screen.id].description}</p>
+                        <p>
+                          {gestures[screen.id]?.description ??
+                            "No gesture description"}
+                        </p>
                       </TooltipContent>
-                    </Tooltip >
+                    </Tooltip>
                   )}
                   {(redactions[screen.id] || []).map((redaction) => (
                     <Tooltip key={redaction.id}>
@@ -136,11 +139,12 @@ function SaveTraceGallery() {
                           }}
                         />
                       </TooltipTrigger>
-                      <TooltipContent side="bottom">{redaction.annotation}</TooltipContent>
+                      <TooltipContent side="bottom">
+                        {redaction.annotation}
+                      </TooltipContent>
                     </Tooltip>
-                  ))
-                  }
-                </TooltipProvider >
+                  ))}
+                </TooltipProvider>
               </div>
               {/* Gesture caption */}
               <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
@@ -148,10 +152,10 @@ function SaveTraceGallery() {
                   {gestures[screen.id].description ?? "Final task state"}
                 </p>
               </div>
-            </figure >
+            </figure>
           ))}
         </div>
       </div>
-    </section >
+    </section>
   );
 }

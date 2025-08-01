@@ -3,7 +3,7 @@
 import { useEffect, useReducer } from "react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { ArrowRight, CircleCheck, FileVideo, Loader2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -24,10 +24,9 @@ import {
   handleDeleteFile,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { ListedFiles, processCaptureFiles, updateCapture } from "@/lib/actions";
+import { processCaptureFiles, updateCapture } from "@/lib/actions";
 import { cn, Platform } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
-import { isCloudfrontUrlExpired } from "@/lib/aws/s3/client";
 interface CaptureState {
   hasUploads: boolean;
   processingState: "idle" | "pending" | "finished" | "error";

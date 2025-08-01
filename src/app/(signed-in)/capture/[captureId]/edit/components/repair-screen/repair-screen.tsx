@@ -11,6 +11,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { fileFetcher, getSWRConfig } from "./util";
 import { RepairScreenAndroid } from "./repair-screen-android";
 import { RepairScreenIOS } from "./repair-screen-ios";
+import { ListedFiles } from "@/lib/actions";
 
 interface NavigationContextType {
   handleNext: () => void;
@@ -81,9 +82,11 @@ export default function RepairScreen({ capture }: { capture: any }) {
   });
 
   // Fetch file data
-  const { data: files = [], isLoading: isFilesLoading } = useSWR(
+  const { data: files = [] } = useSWR(
     capture.id ? ["Capture files", `processed/${capture.id}`] : null,
-    fileFetcher,
+    (key): Promise<ListedFiles[]> => {
+      return fileFetcher(key, files);
+    },
     getSWRConfig(capture.id)
   );
 

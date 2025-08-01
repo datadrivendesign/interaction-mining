@@ -65,7 +65,8 @@ export async function generatePresignedUploadURL(
  * @returns
  */
 export async function listFromS3(
-  key: string
+  key: string,
+  generateSignedUrl: boolean = true // don't generate signed if not needed
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const command = new ListObjectsV2Command({
@@ -90,15 +91,13 @@ export async function listFromS3(
           fileUrl = `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${file.Key}`;
         } else {
           const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${file.Key}`;
-          if (file.Key.includes("traces/")) {
+          if (file.Key.includes("traces/") || !generateSignedUrl) {
             // traces are available publicly
             fileUrl = cloudfrontUrl;
-          } else {
+          } else if (generateSignedUrl) {
             const signedUrlRes = await generateSignedCloudFrontURL(file.Key);
             if (signedUrlRes.ok) {
               fileUrl = signedUrlRes.data.signedUrl;
-            } else {
-              fileUrl = "";
             }
           }
         }

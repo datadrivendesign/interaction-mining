@@ -43,7 +43,6 @@ import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { useCapture } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { ListedFiles } from "@/lib/actions";
-import { isCloudfrontUrlExpired } from "@/lib/aws";
 
 export default function Page() {
   const params = useParams();
@@ -57,7 +56,7 @@ export default function Page() {
 
   const { data: uploadList } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
-    fileFetcher,
+    (key): Promise<ListedFiles[]> => fileFetcher(key, uploadList),
     getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
   );
 

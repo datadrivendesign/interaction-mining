@@ -18,11 +18,9 @@ export function isCloudfrontUrlExpired(url: string): boolean {
     const urlParams = new URLSearchParams(url.split("?")[1]);
     const expires = urlParams.get("Expires");
     if (!expires) return false;
-
+    // Consider expired if within 5 minutes of expiry
     const expiryTime = parseInt(expires) * 1000; // Convert to milliseconds
     const currentTime = Date.now();
-
-    // Consider expired if within 5 minutes of expiry
     return currentTime >= expiryTime - 5 * 60 * 1000;
   } catch {
     return false;
