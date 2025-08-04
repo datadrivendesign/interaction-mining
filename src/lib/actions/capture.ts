@@ -1,6 +1,6 @@
 "use server";
 
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { CaptureStatus, Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { prisma } from "@/lib/prisma";
@@ -36,11 +36,11 @@ export type CaptureAdminView = Prisma.CaptureGetPayload<{
     task: boolean;
     user: {
       select: {
-        id: true,
-        name: true,
-        email: true,
-      }
-    }
+        id: true;
+        name: true;
+        email: true;
+      };
+    };
   };
 }>;
 
@@ -98,8 +98,11 @@ export const getCapture = unstable_cache(
       return { ok: false, message: "Failed to fetch capture.", data: null };
     }
   },
-  undefined,
-  { revalidate: 10 }
+  ["capture"],
+  {
+    revalidate: 10,
+    tags: ["capture"],
+  }
 );
 
 interface GetCapturesProps {
@@ -191,6 +194,9 @@ export async function updateCapture(
       where: { id },
       data,
     });
+
+    // Revalidate the cache to ensure fresh data
+    revalidateTag("capture");
 
     return { ok: true, message: "Capture updated.", data: capture };
   } catch (err) {

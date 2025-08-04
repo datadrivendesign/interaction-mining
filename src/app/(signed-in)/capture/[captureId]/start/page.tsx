@@ -124,24 +124,23 @@ export default function Page() {
   const { capture, isLoading: isCaptureLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
-  const [captureState, dispatch] = useReducer(captureStateReducer, {
-    hasUploads: false,
-    processingState: "idle",
-    hasCopied: false,
-    hasTranscoded: false,
-  });
   const os: Platform | undefined = capture?.task?.os as Platform | undefined;
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`],
     fileFetcher,
     getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
   );
-
   const { data: processList = [] } = useSWR(
     [CaptureSWROperations.TRANSCODE_LIST, `processed/${captureId}`],
     fileFetcher,
     getSWRConfig(CaptureSWROperations.TRANSCODE_LIST, `processed/${captureId}`)
   );
+  const [captureState, dispatch] = useReducer(captureStateReducer, {
+    hasUploads: false,
+    processingState: "idle",
+    hasCopied: false,
+    hasTranscoded: false,
+  });
 
   const handleProcessFiles = async () => {
     if (uploadList.length === 0) {
@@ -173,7 +172,6 @@ export default function Page() {
       console.error(captureRes.message);
       return;
     }
-    console.log(captureRes.data);
     redirect(`/capture/${captureRes.data.id}/edit`);
   };
 
@@ -298,7 +296,7 @@ export default function Page() {
                   }
                   onClick={handleProcessFiles}
                 >
-                  Submit files
+                  Process files
                 </Button>
               </div>
             )}

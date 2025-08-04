@@ -332,7 +332,7 @@ export default function Page() {
               ref={fileInputRef}
               onChange={handleFileChange}
             />
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || !file}>
               {pending && <Loader2 className="size-4 animate-spin" />}
               Upload
             </Button>
