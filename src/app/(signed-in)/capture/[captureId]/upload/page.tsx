@@ -54,10 +54,13 @@ export default function Page() {
 
   const app = capture?.app;
 
-  const { data: uploadList } = useSWR(
+  const { data: uploadList = [] } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
     (key): Promise<ListedFiles[]> => fileFetcher(key, uploadList),
     getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
+  );
+  const filteredUserUploads = uploadList.filter(
+    (file) => !file.fileKey.includes("/screens")
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -257,11 +260,11 @@ export default function Page() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {uploadList && uploadList.length > 0 && (
+          {filteredUserUploads && filteredUserUploads.length > 0 && (
             <div className="flex flex-col mb-4">
               <h2 className="font-semibold mb-2">Uploaded files</h2>
               <ul className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800">
-                {uploadList.map((file: any, index: number) => (
+                {filteredUserUploads.map((file: any, index: number) => (
                   <li
                     key={index}
                     className="flex justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-none"

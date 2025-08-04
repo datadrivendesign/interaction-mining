@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useReducer } from "react";
+import { useEffect, useState } from "react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
-import { ArrowRight, CircleCheck, FileVideo, Loader2, X } from "lucide-react";
+import { ArrowRight, FileVideo, Loader2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 import {
@@ -24,145 +24,50 @@ import {
   handleDeleteFile,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { processCaptureFiles, updateCapture } from "@/lib/actions";
-import { cn, Platform } from "@/lib/utils";
+import { updateCapture } from "@/lib/actions";
+import { Platform } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
-interface CaptureState {
-  hasUploads: boolean;
-  processingState: "idle" | "pending" | "finished" | "error";
-  hasCopied: boolean;
-  hasTranscoded: boolean;
-  nonVideoUploads?: any[];
-}
 
-function captureStateReducer(
-  state: CaptureState,
-  action:
-    | {
-        type: "UPDATE_PROCESS";
-        nextProcessingState: "idle" | "pending" | "finished" | "error";
-      }
-    | { type: "UPDATE"; uploadList: any[]; processList: any[] }
-): CaptureState {
-  switch (action.type) {
-    case "UPDATE_PROCESS":
-      const { nextProcessingState } = action;
-      let nextState = {
-        ...state,
-        processingState: nextProcessingState,
-      };
-
-      // if we're running the ingestion pipeline again, reset the copied and transcoded states
-      if (nextProcessingState === "pending") {
-        nextState.hasCopied = false;
-        nextState.hasTranscoded = false;
-      }
-
-      return nextState;
-    case "UPDATE":
-      const { uploadList, processList } = action;
-      // track if uploads exist
-      const hasUploads = uploadList.length > 0;
-
-      let hasCopied = false;
-      let hasTranscoded = false;
-
-      if (hasUploads) {
-        if (state.processingState !== "pending") {
-          // determine if all video files have been transcoded
-          const isTranscodeDisabled =
-            !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
-            process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === "";
-          hasTranscoded =
-            isTranscodeDisabled ||
-            (hasUploads &&
-              uploadList.every((upload) => {
-                const segments = upload.fileKey.split("/");
-                const fileName = segments.pop() || "";
-                const baseName = fileName.replace(/\.(mp4|mov)$/, "");
-                return processList.some((t) =>
-                  t.fileKey.includes(`${baseName}.webm`)
-                );
-              }));
-
-          // determine if all non-video files or thumbnails have been copied
-          const nonVideoUploads = uploadList.filter(
-            (upload) =>
-              !/\.(mp4|mov)$/.test(upload.fileKey) &&
-              !upload.fileKey.includes("thumbnails")
-          );
-          // determine if file copying is needed, if not just display transcoding status
-          hasCopied = false;
-          if (nonVideoUploads.length === 0 && !isTranscodeDisabled) {
-            hasCopied = hasTranscoded;
-          } else {
-            hasCopied = nonVideoUploads.every((upload) => {
-              const segments = upload.fileKey.split("/");
-              const fileName = segments.pop() || "";
-              return processList.some((t) => t.fileKey.includes(fileName));
-            });
-            if (processList.length === 0) {
-              hasCopied = false;
-            }
-          }
-        }
-      }
-
-      return {
-        hasUploads: hasUploads,
-        processingState: state.processingState,
-        hasCopied: hasCopied,
-        hasTranscoded: hasTranscoded,
-      };
-    default:
-      return state;
-  }
+enum CaptureState {
+  IDLE = 0,
+  UPLOADED = 1,
 }
 
 export default function Page() {
   const { captureId } = useParams() as { captureId: string };
+
+  const [captureState, setCaptureState] = useState<CaptureState>(
+    CaptureState.IDLE
+  );
   const { capture, isLoading: isCaptureLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
   const os: Platform | undefined = capture?.task?.os as Platform | undefined;
+
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`],
     fileFetcher,
     getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
   );
-  const { data: processList = [] } = useSWR(
-    [CaptureSWROperations.TRANSCODE_LIST, `processed/${captureId}`],
-    fileFetcher,
-    getSWRConfig(CaptureSWROperations.TRANSCODE_LIST, `processed/${captureId}`)
+  const filteredUserUploads = uploadList.filter(
+    (file) => !file.fileKey.includes("/screens")
   );
-  const [captureState, dispatch] = useReducer(captureStateReducer, {
-    hasUploads: false,
-    processingState: "idle",
-    hasCopied: false,
-    hasTranscoded: false,
-  });
 
-  const handleProcessFiles = async () => {
-    if (uploadList.length === 0) {
-      return;
+  useEffect(() => {
+    if (
+      capture &&
+      captureState === CaptureState.IDLE &&
+      filteredUserUploads.length > 0
+    ) {
+      setCaptureState(CaptureState.UPLOADED);
+    } else if (
+      capture &&
+      captureState === CaptureState.UPLOADED &&
+      filteredUserUploads.length === 0
+    ) {
+      setCaptureState(CaptureState.IDLE);
     }
-    dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "pending" });
-    const res = await processCaptureFiles(uploadList[0].fileKey);
-    if (!res.ok) {
-      console.error("Failed to process files:", res.message);
-      dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "error" });
-      return;
-    }
-    console.log(res);
-    dispatch({ type: "UPDATE_PROCESS", nextProcessingState: "finished" });
-  };
-
-  const isReadyToRedirect =
-    (os === Platform.IOS &&
-      captureState.hasTranscoded &&
-      captureState.hasCopied &&
-      ["idle", "finished"].includes(captureState.processingState)) ||
-    (os === Platform.ANDROID && captureState.hasUploads);
+  }, [capture, captureState, filteredUserUploads.length]);
 
   const redirectToTraceProcess = async () => {
     const captureRes = await updateCapture(captureId, {
@@ -174,10 +79,6 @@ export default function Page() {
     }
     redirect(`/capture/${captureRes.data.id}/edit`);
   };
-
-  useEffect(() => {
-    dispatch({ type: "UPDATE", uploadList, processList });
-  }, [uploadList, processList]);
 
   return (
     <main className="relative z-0 flex flex-col w-dvw min-h-dvh items-center justify-start">
@@ -233,15 +134,15 @@ export default function Page() {
                       Loading...
                     </>
                   ) : (
-                    `${uploadList.length} file${
-                      uploadList.length !== 1 ? "s" : ""
+                    `${filteredUserUploads.length} file${
+                      filteredUserUploads.length !== 1 ? "s" : ""
                     } uploaded`
                   )}
                 </span>
               </div>
-              {!isUploadListLoading && uploadList.length > 0 ? (
+              {!isUploadListLoading && filteredUserUploads.length > 0 ? (
                 <ul className="flex flex-col w-full rounded-xl border border-neutral-200 dark:border-neutral-800">
-                  {uploadList.map((file: any, index: number) => (
+                  {filteredUserUploads.map((file: any, index: number) => (
                     <li
                       key={index}
                       className="flex justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-none"
@@ -258,15 +159,8 @@ export default function Page() {
                       </div>
                       <DeleteUploadDialog
                         onContinue={() => {
-                          const processedFile = processList.find((p) =>
-                            p.fileKey.includes(file.fileName)
-                          );
-                          console.log(processedFile);
                           handleDeleteFile(captureId, file.fileKey);
-                          if (processedFile) {
-                            handleDeleteFile(captureId, processedFile.fileKey);
-                          }
-                          dispatch({ type: "UPDATE", uploadList, processList });
+                          setCaptureState(CaptureState.IDLE);
                         }}
                       >
                         <button className="inline-flex items-center cursor-pointer">
@@ -285,127 +179,12 @@ export default function Page() {
                 </div>
               )}
             </div>
-            {os === Platform.IOS && (
-              <div className="flex justify-end mt-4">
-                <Button
-                  disabled={
-                    uploadList.length === 0 ||
-                    processList.length > 0 ||
-                    captureState.processingState === "pending" ||
-                    captureState.processingState === "finished"
-                  }
-                  onClick={handleProcessFiles}
-                >
-                  Process files
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
-        {os === Platform.IOS && (
-          <Card
-            className={cn(
-              "w-full max-w-screen-sm transition-opacity duration-300 ease-in-out",
-              captureState.processingState !== "idle" ||
-                (captureState.hasTranscoded && captureState.hasTranscoded)
-                ? "opacity-100 pointer-events-auto"
-                : "opacity-50 pointer-events-none"
-            )}
-          >
-            <CardHeader>
-              <CardTitle className="text-2xl">Capture processing</CardTitle>
-              <CardDescription>
-                {captureState.hasTranscoded && captureState.hasCopied
-                  ? "Your uploads have been processed and transcoded. You can now proceed to the trace creation editor."
-                  : "We’re processing your capture recordings and setting up the editor. Sit tight, this may take a few minutes."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="flex flex-col w-full rounded-xl border border-muted-background mb-4">
-                <li className="flex justify-between items-center px-4 py-2 border-b border-muted-background last:border-none">
-                  <span className="text-sm font-medium">
-                    {captureState.processingState === "idle" &&
-                      (captureState.hasCopied
-                        ? "File processing complete"
-                        : "Process capture files")}
-
-                    {captureState.processingState === "pending" &&
-                      (captureState.hasCopied
-                        ? "File processing complete"
-                        : "Processing capture files...")}
-
-                    {captureState.processingState === "finished" &&
-                      (captureState.hasCopied
-                        ? "File processing complete"
-                        : "Processing capture files...")}
-                  </span>
-
-                  {captureState.processingState === "idle" &&
-                    captureState.hasCopied && (
-                      <CircleCheck className="size-5 text-blue-500" />
-                    )}
-
-                  {captureState.processingState === "pending" &&
-                    (captureState.hasCopied ? (
-                      <CircleCheck className="size-5 text-blue-500" />
-                    ) : (
-                      <Loader2 className="size-5 text-blue-500 animate-spin" />
-                    ))}
-
-                  {captureState.processingState === "finished" &&
-                    (captureState.hasCopied ? (
-                      <CircleCheck className="size-5 text-blue-500" />
-                    ) : (
-                      <Loader2 className="size-5 text-blue-500 animate-spin" />
-                    ))}
-                </li>
-                {process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA &&
-                  process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA !== "" && (
-                    <li className="flex justify-between items-center px-4 py-2 border-b border-muted-background last:border-none">
-                      <span className="text-sm font-medium">
-                        {captureState.processingState === "idle" &&
-                          (captureState.hasTranscoded
-                            ? "Transcoding complete"
-                            : "Transcode video files")}
-
-                        {captureState.processingState === "pending" &&
-                          (captureState.hasTranscoded
-                            ? "Video transcoding complete"
-                            : "Transcoding video files...")}
-
-                        {captureState.processingState === "finished" &&
-                          (captureState.hasTranscoded
-                            ? "Video transcoding complete"
-                            : "Transcoding video files...")}
-                      </span>
-                      {captureState.processingState === "idle" &&
-                        captureState.hasTranscoded && (
-                          <CircleCheck className="size-5 text-blue-500" />
-                        )}
-
-                      {captureState.processingState === "pending" &&
-                        (captureState.hasTranscoded ? (
-                          <CircleCheck className="size-5 text-blue-500" />
-                        ) : (
-                          <Loader2 className="size-5 text-blue-500 animate-spin" />
-                        ))}
-
-                      {captureState.processingState === "finished" &&
-                        (captureState.hasTranscoded ? (
-                          <CircleCheck className="size-5 text-blue-500" />
-                        ) : (
-                          <Loader2 className="size-5 text-blue-500 animate-spin" />
-                        ))}
-                    </li>
-                  )}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
         <div className="flex w-full max-w-screen-sm justify-end">
           <Button
             onClick={redirectToTraceProcess}
-            disabled={!isReadyToRedirect}
+            disabled={captureState < CaptureState.UPLOADED}
             tooltip={"Navigate to trace creation editor"}
           >
             Go to editor <ArrowRight />

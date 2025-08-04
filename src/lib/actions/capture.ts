@@ -4,11 +4,10 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { CaptureStatus, Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { prisma } from "@/lib/prisma";
-import { listFromS3, lambda, copyFromS3 } from "../aws";
+import { listFromS3 } from "../aws";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth/auth";
 import { updateUser } from "./user";
-import { InvokeCommand } from "@aws-sdk/client-lambda";
 
 export type ListedFiles = {
   fileKey: string;
@@ -214,7 +213,7 @@ export async function getCaptureFiles(
   captureId: string
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
-    const files = await listFromS3(`processed/${captureId}`);
+    const files = await listFromS3(`uploads/${captureId}`);
     return files;
   } catch (err) {
     console.error("Error fetching uploaded files:", err);
@@ -327,80 +326,4 @@ export async function createCaptureTask({
     console.error("Error creating capture/task:", error);
     throw new Error("Failed to create capture and task");
   }
-}
-
-/**
- * @param fileKey
- * @returns
- */
-export async function processCaptureFiles(fileKey: string) {
-  if (
-    !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
-    process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === ""
-  ) {
-    console.log("Lambda transcoding is disabled via env config.");
-    const captureId = fileKey.split("/")[1];
-    const destPathIndex = fileKey.indexOf(captureId);
-    const destPath = fileKey.substring(destPathIndex);
-    const res = await copyFromS3(fileKey, `processed/${destPath}`);
-    if (!res.ok) {
-      console.error("Failed to copy file to processed folder:", res.message);
-      return { ok: false, message: res.message, data: null };
-    }
-    return {
-      ok: true,
-      message: "Processing successfuly, disabled transcode.",
-      data: null,
-    };
-  }
-
-  const cmd = new InvokeCommand({
-    FunctionName: process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA,
-    InvocationType: "RequestResponse",
-    Payload: Buffer.from(
-      JSON.stringify({ bucket: process.env._AWS_UPLOAD_BUCKET!, key: fileKey })
-    ),
-  });
-  const res = await lambda.send(cmd);
-
-  // Parse the Lambda payload into JSON
-  const raw = res.Payload ? new TextDecoder().decode(res.Payload) : "";
-  let response: { statusCode?: number; body?: string; [key: string]: any } = {};
-  try {
-    response = JSON.parse(raw);
-  } catch (err) {
-    console.error("Failed to parse Lambda payload:", raw, err);
-    return { ok: false, message: "Invalid transcoding response", data: null };
-  }
-
-  console.log("Parsed transcoding response:", response);
-
-  // Extract HTTP status and body
-  const { statusCode, body } = response;
-  let result: any = {};
-  try {
-    result = body ? JSON.parse(body) : {};
-  } catch {
-    result = { message: body };
-  }
-
-  if (statusCode !== 200) {
-    console.error(
-      "Transcoding Lambda returned error status:",
-      statusCode,
-      result
-    );
-    return {
-      ok: false,
-      message: result.message || "Transcoding failed",
-      data: null,
-    };
-  }
-
-  // Successful transcoding
-  return {
-    ok: true,
-    message: result.message || "Video transcoded successfully",
-    data: result,
-  };
 }
