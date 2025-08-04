@@ -40,7 +40,7 @@ export async function handleReviewSave(data: TraceFormData, capture: Capture) {
     };
   });
   // if old screnens exist if processed folder, list them for deletion
-  const prefix = `processed/${capture.id}/screens`;
+  const prefix = `uploads/${capture.id}/screens`;
   const oldFiles = await listFromS3(prefix);
   const oldFileKeys = oldFiles.ok
     ? oldFiles.data.map((file) => file.fileKey)

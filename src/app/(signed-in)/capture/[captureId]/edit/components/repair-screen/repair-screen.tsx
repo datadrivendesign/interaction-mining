@@ -83,7 +83,7 @@ export default function RepairScreen({ capture }: { capture: any }) {
 
   // Fetch file data
   const { data: files = [] } = useSWR(
-    capture.id ? ["Capture files", `processed/${capture.id}`] : null,
+    capture.id ? ["Capture files", `uploads/${capture.id}`] : null,
     (key): Promise<ListedFiles[]> => {
       return fileFetcher(key, files);
     },
