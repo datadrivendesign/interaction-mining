@@ -133,7 +133,6 @@ export async function listFromS3(
 }
 
 export async function copyFromS3(fileKey: string, destPath: string) {
-  console.log("Copying from S3");
   try {
     const command = new ListObjectsV2Command({
       Bucket: process.env._AWS_UPLOAD_BUCKET!,

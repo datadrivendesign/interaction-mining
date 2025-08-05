@@ -66,8 +66,8 @@ export default function Page() {
         console.error("Failed to fetch files");
         return;
       }
-      const fetchedScreenFiles =  files.data.filter(
-        (file) => file.fileKey.includes(`${captureId}/screens`)
+      const fetchedScreenFiles = files.data.filter((file) =>
+        file.fileKey.includes(`${captureId}/screens`)
       );
       if (fetchedScreenFiles.length === 0) {
         return;
@@ -79,35 +79,36 @@ export default function Page() {
           const data = await response.json();
           return data;
         })
-      )
+      );
       const screens = screenData
         .map((s) => {
           return { id: s.id, src: s.src, timestamp: s.timestamp };
-        }).sort((a, b) => a.timestamp - b.timestamp);
+        })
+        .sort((a, b) => a.timestamp - b.timestamp);
       if (screens.length > 0) {
         methods.setValue("screens", screens);
       }
-      const vhs = screenData.map((s) => {
-        return s.vh ? { [s.id]: s.vh } : {};
-      }).reduce((acc, curr) =>
-        ({ ...acc, ...curr }), {}
-      );
+      const vhs = screenData
+        .map((s) => {
+          return s.vh ? { [s.id]: s.vh } : {};
+        })
+        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
       if (Object.keys(vhs).length > 0) {
         methods.setValue("vhs", vhs);
       }
-      const gestures = screenData.map((s) => {
-        return { [s.id]: s.gesture };
-      }).reduce((acc, curr) =>
-        ({ ...acc, ...curr }), {}
-      );
+      const gestures = screenData
+        .map((s) => {
+          return { [s.id]: s.gesture };
+        })
+        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
       if (Object.keys(gestures).length > 0) {
         methods.setValue("gestures", gestures);
       }
-      const redactions = screenData.map((s) => {
-        return { [s.id]: s.redactions };
-      }).reduce((acc, curr) =>
-        ({ ...acc, ...curr }), {}
-      );
+      const redactions = screenData
+        .map((s) => {
+          return { [s.id]: s.redactions };
+        })
+        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
       if (Object.keys(redactions).length > 0) {
         methods.setValue("redactions", redactions);
       }
@@ -115,7 +116,7 @@ export default function Page() {
       if (description) {
         methods.setValue("description", description);
       }
-    }
+    };
     fetchFiles();
   }, [captureId, methods]);
 
@@ -124,12 +125,13 @@ export default function Page() {
   const handleNext = async () => {
     if (stepIndex === TraceSteps.Capture) {
       // validate all screen gestures except the last one
-      const allButLastScreenIds = methods.getValues()
+      const allButLastScreenIds = methods
+        .getValues()
         .screens.slice(0, -1)
-        .map((s)=> s.id);
+        .map((s) => s.id);
       const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(methods.getValues().gestures).filter(
-          ([id, _]) => allButLastScreenIds.includes(id)
+        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
+          allButLastScreenIds.includes(id)
         )
       );
       // Validate the "gestures"
@@ -165,40 +167,41 @@ export default function Page() {
     } else {
       setIsSubmitting(true);
       try {
-
-      // validate all screen gestures except the last one
-      const allButLastScreenIds = methods.getValues()
-        .screens.slice(0, -1)
-        .map((s)=> s.id);
-      const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(methods.getValues().gestures).filter(
-          ([id, _]) => allButLastScreenIds.includes(id)
-        )
-      );
-      // Validate the "gestures"
-      const validation = TraceFormSchema.safeParse({
-        ...methods.getValues(),
-        gestures: allButLastScreenGestures,
-      });
-      if (!validation.success) {
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
+        // validate all screen gestures except the last one
+        const allButLastScreenIds = methods
+          .getValues()
+          .screens.slice(0, -1)
+          .map((s) => s.id);
+        const allButLastScreenGestures = Object.fromEntries(
+          Object.entries(methods.getValues().gestures).filter(([id, _]) =>
+            allButLastScreenIds.includes(id)
+          )
+        );
+        // Validate the "gestures"
+        const validation = TraceFormSchema.safeParse({
+          ...methods.getValues(),
+          gestures: allButLastScreenGestures,
         });
-        setIsSubmitting(false);
-        return;
-      }
-      // Submit the form
-      const data = methods.getValues();
-      // save review data to s3 and route to evaluate
-      await handleReviewSave(data, capture!)
-      const updateResult = await updateCapture(captureId, {
-        status: CaptureStatus.REVIEWING
-      })
-      if (!updateResult.ok) {
-        throw new Error(updateResult.message || "Failed to update capture")
-      }
-      router.push(`/capture/${captureId}/evaluate`);
+        if (!validation.success) {
+          const errors = validation.error.issues || "Invalid input";
+          errors.forEach((error) => {
+            toast.error(error.message);
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        // Submit the form
+        const data = methods.getValues();
+        // save review data to s3 and route to evaluate
+        await handleReviewSave(data, capture!);
+        const updateResult = await updateCapture(captureId, {
+          status: CaptureStatus.REVIEWING,
+        });
+        if (!updateResult.ok) {
+          throw new Error(updateResult.message || "Failed to update capture");
+        }
+
+        router.push(`/capture/${captureId}/evaluate`);
       } catch (err) {
         console.error(err);
       } finally {
@@ -269,19 +272,17 @@ export default function Page() {
                       New Trace <ChevronRight className="size-6" />{" "}
                     </span>
                     <span className="inline-flex items-center text-black dark:text-white">
-                      {
-                        Array(stepIndex + 1)
-                          .fill(0)
-                          .map((_, i) => TraceSteps[i])
-                          .map((step, index, array) => (
-                            <Fragment key={index}>
-                              <span>{step}</span>
-                              {index < array.length - 1 && (
-                                <ChevronRight className="size-6" />
-                              )}
-                            </Fragment>
-                          ))
-                      }
+                      {Array(stepIndex + 1)
+                        .fill(0)
+                        .map((_, i) => TraceSteps[i])
+                        .map((step, index, array) => (
+                          <Fragment key={index}>
+                            <span>{step}</span>
+                            {index < array.length - 1 && (
+                              <ChevronRight className="size-6" />
+                            )}
+                          </Fragment>
+                        ))}
                     </span>
                   </h1>
                   <span className="block">
@@ -300,9 +301,9 @@ export default function Page() {
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
                     <Button onClick={handleNext} disabled={isSubmitting}>
-                      {isSubmitting && <Loader2 
-                        className="size-4 animate-spin" 
-                      />}
+                      {isSubmitting && (
+                        <Loader2 className="size-4 animate-spin" />
+                      )}
                       Finish
                     </Button>
                   )}

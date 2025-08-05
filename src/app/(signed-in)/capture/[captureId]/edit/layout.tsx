@@ -26,33 +26,50 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const { captureId } = await params;
-  const captureRes = await getCapture({ id: captureId });
-  const capture = captureRes.data;
+
+  // Add retry logic to handle cache staleness
+  let captureRes = await getCapture({ id: captureId });
+  let capture = captureRes.data;
+
+  // If capture is not found, try once more after a short delay
+  if (!captureRes?.ok || !capture) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    captureRes = await getCapture({ id: captureId });
+    capture = captureRes.data;
+  }
 
   if (!captureRes?.ok || !capture) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.NO_CAPTURE}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.NO_CAPTURE}
+      />
+    );
   } else if (capture?.status === CaptureStatus.CREATED) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.NOT_INITIATED}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.NOT_INITIATED}
+      />
+    );
   } else if (capture?.status === CaptureStatus.REVIEWING) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.IN_REVIEW}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.IN_REVIEW}
+      />
+    );
   } else if (capture?.status === CaptureStatus.APPROVED && capture.appId) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.APPROVED}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.APPROVED}
+      />
+    );
   }
 
   // Check if the capture has any uploaded files
@@ -82,7 +99,7 @@ export default async function Layout({
 function Error({
   captureId,
   capture,
-  errorType
+  errorType,
 }: {
   captureId: string;
   capture: Capture | null;
@@ -93,14 +110,16 @@ function Error({
       case ErrorType.NO_FILES:
         return {
           title: "Waiting for files...",
-          message: "The capture you are looking for does not have any uploaded files. Please upload files to proceed.",
+          message:
+            "The capture you are looking for does not have any uploaded files. Please upload files to proceed.",
           linkText: "Return to upload",
           linkUrl: `/capture/${captureId}/upload`,
         };
       case ErrorType.NOT_INITIATED:
         return {
           title: "Intiate the capture",
-          message: "The capture you are looking for has not been initiated yet or uploaded files. Please upload files and intialize the capture.",
+          message:
+            "The capture you are looking for has not been initiated yet or uploaded files. Please upload files and intialize the capture.",
           linkText: "Return to upload",
           linkUrl: `/capture/${captureId}/upload`,
         };
@@ -114,19 +133,21 @@ function Error({
       case ErrorType.IN_REVIEW:
         return {
           title: "Capture in review",
-          message: "The capture you are looking for is currently in review. Please wait for the review to complete.",
+          message:
+            "The capture you are looking for is currently in review. Please wait for the review to complete.",
           linkText: "Return to review",
           linkUrl: `/capture/${captureId}/evaluate`,
-        }
+        };
       case ErrorType.APPROVED:
         return {
           title: "Capture already approved",
-          message: "This capture has already been approved. You can view the completed trace.",
+          message:
+            "This capture has already been approved. You can view the completed trace.",
           linkText: "View trace",
-          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`
-        }
+          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`,
+        };
     }
-  }
+  };
   const error = getError(errorType);
 
   return (
@@ -134,9 +155,7 @@ function Error({
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>{error.title}</CardTitle>
-          <CardDescription>
-            {error.message}
-          </CardDescription>
+          <CardDescription>{error.message}</CardDescription>
           <Link href={error.linkUrl}>
             <span className="inline-flex items-center underline">
               <ArrowLeft className="w-4 h-4 mr-1 inline-block" />
