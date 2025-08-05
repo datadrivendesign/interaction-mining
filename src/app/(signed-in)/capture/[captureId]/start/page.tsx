@@ -24,7 +24,7 @@ import {
   handleDeleteFile,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { updateCapture } from "@/lib/actions";
+import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
 import { Platform } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
 
@@ -77,6 +77,7 @@ export default function Page() {
       console.error(captureRes.message);
       return;
     }
+    await revalidateCaptureCache();
     redirect(`/capture/${captureRes.data.id}/edit`);
   };
 

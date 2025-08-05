@@ -28,7 +28,11 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { handleReviewSave } from "./util";
-import { getCaptureFiles, updateCapture } from "@/lib/actions";
+import {
+  getCaptureFiles,
+  revalidateCaptureCache,
+  updateCapture,
+} from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 
 enum TraceSteps {
@@ -123,6 +127,8 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
+    setIsSubmitting(true);
+    // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods
@@ -145,6 +151,7 @@ export default function Page() {
         errors.forEach((error) => {
           toast.error(error.message);
         });
+        setIsSubmitting(false);
         return;
       }
     } else if (stepIndex === TraceSteps.Redact) {
@@ -158,57 +165,60 @@ export default function Page() {
         errors.forEach((error) => {
           toast.error(error.message);
         });
+        setIsSubmitting(false);
+        return;
+      }
+    } else if (stepIndex === TraceSteps.Review) {
+      // validate all screen gestures except the last one
+      const allButLastScreenIds = methods
+        .getValues()
+        .screens.slice(0, -1)
+        .map((s) => s.id);
+      const allButLastScreenGestures = Object.fromEntries(
+        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
+          allButLastScreenIds.includes(id)
+        )
+      );
+      // Validate the entire trace form, especially "description"
+      const validation = TraceFormSchema.safeParse({
+        ...methods.getValues(),
+        gestures: allButLastScreenGestures,
+      });
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        setIsSubmitting(false);
         return;
       }
     }
 
-    if (stepIndex < TraceSteps.Review) {
-      setStepIndex(stepIndex + 1);
-    } else {
-      setIsSubmitting(true);
-      try {
-        // validate all screen gestures except the last one
-        const allButLastScreenIds = methods
-          .getValues()
-          .screens.slice(0, -1)
-          .map((s) => s.id);
-        const allButLastScreenGestures = Object.fromEntries(
-          Object.entries(methods.getValues().gestures).filter(([id, _]) =>
-            allButLastScreenIds.includes(id)
-          )
-        );
-        // Validate the "gestures"
-        const validation = TraceFormSchema.safeParse({
-          ...methods.getValues(),
-          gestures: allButLastScreenGestures,
-        });
-        if (!validation.success) {
-          const errors = validation.error.issues || "Invalid input";
-          errors.forEach((error) => {
-            toast.error(error.message);
-          });
-          setIsSubmitting(false);
-          return;
-        }
-        // Submit the form
-        const data = methods.getValues();
-        // save review data to s3 and route to evaluate
-        await handleReviewSave(data, capture!);
+    try {
+      // // upload progress to storage as intermediate state
+      // const data = methods.getValues();
+      // // save review data to s3 and route to evaluate
+      // await handleReviewSave(data, capture!);
+      if (stepIndex < TraceSteps.Review) {
+        setStepIndex(stepIndex + 1);
+      } else {
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
         });
         if (!updateResult.ok) {
           throw new Error(updateResult.message || "Failed to update capture");
         }
-
+        await revalidateCaptureCache();
+        // go to the /evaluate page
         router.push(`/capture/${captureId}/evaluate`);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSubmitting(false);
       }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
   const handlePrevious = () => {
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
@@ -297,16 +307,14 @@ export default function Page() {
                   >
                     Back
                   </Button>
-                  {stepIndex < TraceSteps.Review ? (
-                    <Button onClick={handleNext}>Next</Button>
-                  ) : (
+                  {
                     <Button onClick={handleNext} disabled={isSubmitting}>
                       {isSubmitting && (
                         <Loader2 className="size-4 animate-spin" />
                       )}
-                      Finish
+                      {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
                     </Button>
-                  )}
+                  }
                 </div>
               </nav>
             </>

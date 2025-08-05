@@ -9,7 +9,7 @@ import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.share
 import { approveCapture, denyCapture } from "./utils/capture-actions";
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
-import { updateCapture } from "@/lib/actions";
+import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
 
 export function ReviewPanel({
   traceData,
@@ -37,6 +37,7 @@ export function ReviewPanel({
       if (!updateRes.ok) {
         toast.error(updateRes.message ?? "Failed to update capture");
       } else {
+        await revalidateCaptureCache();
         toast.success("Capture approved successfully");
         router.push(`/app/${capture.appId}`);
       }
@@ -50,6 +51,7 @@ export function ReviewPanel({
     if (!res.ok) {
       toast.error(res.message);
     } else {
+      await revalidateCaptureCache();
       toast.success(res.message);
       router.push(`/capture/${capture.id}/edit`);
     }

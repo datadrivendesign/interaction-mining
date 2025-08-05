@@ -194,14 +194,18 @@ export async function updateCapture(
       data,
     });
 
-    // Revalidate the cache to ensure fresh data
-    revalidateTag("capture");
-
     return { ok: true, message: "Capture updated.", data: capture };
   } catch (err) {
     console.error("Error updating capture:", err);
     return { ok: false, message: "Failed to update capture.", data: null };
   }
+}
+
+/**
+ * Handle revalidation of capture cache in getCapture.
+ */
+export async function revalidateCaptureCache() {
+  revalidateTag("capture");
 }
 
 /**
