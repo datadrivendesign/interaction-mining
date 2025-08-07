@@ -218,6 +218,13 @@ export async function getCaptureFiles(
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`uploads/${captureId}`);
+    if (!files.ok) {
+      return {
+        ok: false,
+        message: "Failed to fetch uploaded files.",
+        data: null,
+      };
+    }
     return files;
   } catch (err) {
     console.error("Error fetching uploaded files:", err);

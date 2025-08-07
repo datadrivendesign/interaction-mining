@@ -10,9 +10,9 @@ import { useCapture } from "@/lib/hooks";
 import { toast } from "sonner";
 
 import {
+  DraftTraceFormData,
   RedactionSchema,
   ScreenGestureSchema,
-  ScreenReviewData,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
@@ -27,12 +27,8 @@ import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { handleReviewSave } from "./util";
-import {
-  getCaptureFiles,
-  revalidateCaptureCache,
-  updateCapture,
-} from "@/lib/actions";
+import { getDraftFiles, handleDraftSave } from "./util";
+import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 
 enum TraceSteps {
@@ -62,64 +58,54 @@ export default function Page() {
     },
     resolver: zodResolver(TraceFormSchema),
   });
+
   // populate form with saved capture data if there is any
   useEffect(() => {
     const fetchFiles = async () => {
-      const files = await getCaptureFiles(captureId);
-      if (!files.ok) {
+      const draftFilesRes = await getDraftFiles(captureId);
+      if (!draftFilesRes.ok) {
         console.error("Failed to fetch files");
         return;
       }
-      const fetchedScreenFiles = files.data.filter((file) =>
-        file.fileKey.includes(`${captureId}/screens`)
-      );
-      if (fetchedScreenFiles.length === 0) {
+      if (draftFilesRes.data.length === 0) {
         return;
       }
       // grab json file from the fileKey
-      const screenData: ScreenReviewData[] = await Promise.all(
-        fetchedScreenFiles.map(async (file) => {
-          const response = await fetch(file.fileUrl);
-          const data = await response.json();
-          return data;
-        })
+      const draftFileKeys = draftFilesRes.data.filter((file) =>
+        file.fileKey.includes(`${captureId}/drafts`)
       );
-      const screens = screenData
-        .map((s) => {
-          return { id: s.id, src: s.src, timestamp: s.timestamp };
-        })
-        .sort((a, b) => a.timestamp - b.timestamp);
-      if (screens.length > 0) {
-        methods.setValue("screens", screens);
-      }
-      const vhs = screenData
-        .map((s) => {
-          return s.vh ? { [s.id]: s.vh } : {};
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      if (Object.keys(vhs).length > 0) {
-        methods.setValue("vhs", vhs);
-      }
-      const gestures = screenData
-        .map((s) => {
-          return { [s.id]: s.gesture };
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      if (Object.keys(gestures).length > 0) {
-        methods.setValue("gestures", gestures);
-      }
-      const redactions = screenData
-        .map((s) => {
-          return { [s.id]: s.redactions };
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      if (Object.keys(redactions).length > 0) {
-        methods.setValue("redactions", redactions);
-      }
-      const description = screenData[0].description;
-      if (description) {
-        methods.setValue("description", description);
-      }
+      // sort draft files by version
+      const regexFileVersionRule = /draft-v(\d+)\.json$/;
+      draftFileKeys.sort((a, b) => {
+        const versionA = a.fileKey.match(regexFileVersionRule);
+        const versionB = b.fileKey.match(regexFileVersionRule);
+        if (versionA && versionB) {
+          return parseInt(versionA[1]) - parseInt(versionB[1]);
+        }
+        return 0;
+      });
+      const draftFile = draftFileKeys[draftFileKeys.length - 1];
+      const draftFileUrl = draftFile.fileUrl;
+      const draftFileResponse = await fetch(draftFileUrl);
+      const draftFormData: DraftTraceFormData = await draftFileResponse.json();
+      methods.setValue("gestures", draftFormData.gestures);
+      methods.setValue("redactions", draftFormData.redactions);
+      methods.setValue("description", draftFormData.description);
+      // grab screens from videoRef
+      methods.setValue(
+        "screens",
+        draftFormData.screens.map((screen) => ({
+          id: screen.id,
+          src: "",
+          timestamp: screen.timestamp,
+        }))
+      );
+      // grab vh from android screens
+      const draftVHs: { [key: string]: any } = {};
+      draftFormData.screens.forEach((screen) => {
+        draftVHs[screen.id] = null;
+      });
+      methods.setValue("vhs", draftVHs);
     };
     fetchFiles();
   }, [captureId, methods]);
@@ -195,13 +181,16 @@ export default function Page() {
     }
 
     try {
-      // // upload progress to storage as intermediate state
-      // const data = methods.getValues();
-      // // save review data to s3 and route to evaluate
-      // await handleReviewSave(data, capture!);
       if (stepIndex < TraceSteps.Review) {
         setStepIndex(stepIndex + 1);
       } else {
+        // upload progress to storage as intermediate state
+        const data = methods.getValues();
+        // save review data to s3 and route to evaluate
+        const saveRes = await handleDraftSave(data, capture!);
+        if (!saveRes.ok) {
+          throw new Error(saveRes.message || "Failed to save draft");
+        }
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
         });
@@ -213,6 +202,9 @@ export default function Page() {
         router.push(`/capture/${captureId}/evaluate`);
       }
     } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
       console.error(err);
     } finally {
       setIsSubmitting(false);

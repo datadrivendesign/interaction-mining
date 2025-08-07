@@ -25,37 +25,51 @@ export function ReviewPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleApprove = async () => {
-    setIsSubmitting(true);
-    const res = await approveCapture(traceData, capture);
-    if (!res.ok) {
-      toast.error(res.message);
-    } else {
-      await handleTraceSave(traceData, capture);
+    try {
+      setIsSubmitting(true);
+      const approveRes = await approveCapture(traceData, capture);
+      if (!approveRes.ok) {
+        throw new Error(approveRes.message);
+      }
+      const saveRes = await handleTraceSave(traceData, capture);
+      if (!saveRes.ok) {
+        throw new Error(saveRes.message);
+      }
       const updateRes = await updateCapture(capture.id, {
         status: CaptureStatus.APPROVED,
       });
       if (!updateRes.ok) {
-        toast.error(updateRes.message ?? "Failed to update capture");
-      } else {
-        await revalidateCaptureCache();
-        toast.success("Capture approved successfully");
-        router.push(`/app/${capture.appId}`);
+        throw new Error(updateRes.message);
       }
+      await revalidateCaptureCache();
+      toast.success("Capture approved successfully");
+      router.push(`/app/${capture.appId}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   const handleDeny = async () => {
-    setIsSubmitting(true);
-    const res = await denyCapture(capture);
-    if (!res.ok) {
-      toast.error(res.message);
-    } else {
+    try {
+      setIsSubmitting(true);
+      const denyRes = await denyCapture(capture);
+      if (!denyRes.ok) {
+        throw new Error(denyRes.message);
+      }
       await revalidateCaptureCache();
-      toast.success(res.message);
+      toast.success("Capture denied successfully");
       router.push(`/capture/${capture.id}/edit`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (

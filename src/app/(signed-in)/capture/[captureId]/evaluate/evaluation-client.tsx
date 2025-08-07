@@ -32,6 +32,8 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
       const fetchedScreenFiles = files.data.filter((file) =>
         file.fileKey.includes(`${captureId}/screens`)
       );
+
+      fetchedScreenFiles.forEach((f) => console.log(f.fileUrl));
       // grab json file from the fileKey
       const screenData: ScreenReviewData[] = await Promise.all(
         fetchedScreenFiles.map(async (file) => {
@@ -40,6 +42,7 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
           return data;
         })
       );
+      console.log("screenData", screenData);
       const screens = screenData.map((s) => {
         return { id: s.id, src: s.src, timestamp: s.timestamp };
       });
@@ -53,6 +56,7 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
           return { [s.id]: s.gesture };
         })
         .reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      console.log("gestures", gestures);
       const redactions = screenData
         .map((s) => {
           return { [s.id]: s.redactions };

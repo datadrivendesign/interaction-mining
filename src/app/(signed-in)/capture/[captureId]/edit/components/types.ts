@@ -7,6 +7,12 @@ export type FrameData = {
   timestamp: number;
 };
 
+// Draft frame data type with no src to lower overhead when storing remotely
+export type DraftFrameData = {
+  id: string;
+  timestamp: number;
+};
+
 export interface Redaction {
   id: string;
   x: number;
@@ -24,6 +30,14 @@ export type TraceFormData = {
   description: string;
 };
 
+// Draft trace form data with no vhs for lower overhead when storing remotely
+export type DraftTraceFormData = {
+  screens: DraftFrameData[];
+  gestures: { [key: string]: ScreenGesture };
+  redactions: { [key: string]: Redaction[] };
+  description: string;
+};
+
 export type ScreenReviewData = {
   id: string;
   src: string;
@@ -32,7 +46,7 @@ export type ScreenReviewData = {
   redactions: Redaction[];
   vh: string;
   description: string;
-}
+};
 
 export const ScreenSchema = z
   .array(
@@ -72,7 +86,7 @@ export const ScreenGestureSchema = z
     (data) => {
       // Check all screens except the last one have gestures
       return data.screens.slice(0, -1).every((screen) => {
-        return data.gestures[screen.id];;
+        return data.gestures[screen.id];
       });
     },
     { message: "Each screen except the last one must have a gesture" }
