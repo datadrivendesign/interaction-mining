@@ -61,6 +61,29 @@ export function RepairScreenIOS({
   const THUMB_HEIGHT = 128;
   const frameStep = 1 / MAX_THUMBS;
 
+  const populateDraftScreens = useCallback(
+    async (video: HTMLVideoElement) => {
+      const frames = await Promise.all(
+        screens.map((s) => {
+          if (!s.src) {
+            return extractVideoFrame(video, s.timestamp)
+              .then((f) => {
+                s.src = f.src;
+                return s;
+              })
+              .catch((e) => {
+                console.error("Error extracting frame:", e);
+                return null;
+              });
+          }
+          return s;
+        })
+      );
+      return frames.filter((f) => f !== null);
+    },
+    [screens]
+  );
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || videoDuration === 0) {
@@ -73,17 +96,12 @@ export function RepairScreenIOS({
       }
     );
     // set src field for screens for those not set
-    screens.forEach((s) => {
-      if (!s.src) {
-        extractVideoFrame(video, s.timestamp).then((frame) => {
-          s.src = frame.src;
-        });
-      }
+    populateDraftScreens(video).then((frames) => {
+      setValue(
+        "screens",
+        frames.sort((a, b) => a.timestamp - b.timestamp)
+      );
     });
-    setValue(
-      "screens",
-      screens.sort((a, b) => a.timestamp - b.timestamp)
-    );
     // adding screens to dependency array can cause infinite re-renders
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoRef, videoDuration, setValue]);

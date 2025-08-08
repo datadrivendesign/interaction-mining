@@ -3,7 +3,7 @@ import { z, ZodType } from "zod";
 
 export type FrameData = {
   id: string;
-  src: string;
+  src: string | null;
   timestamp: number;
 };
 

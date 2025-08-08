@@ -96,7 +96,7 @@ export default function Page() {
         "screens",
         draftFormData.screens.map((screen) => ({
           id: screen.id,
-          src: "",
+          src: null,
           timestamp: screen.timestamp,
         }))
       );
