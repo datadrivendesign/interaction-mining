@@ -129,7 +129,7 @@ export async function extractVideoThumbnails(
   return thumbsRes.map((f, index) => ({
     fileKey: "thumbs/",
     fileName: `frame-${index}.png`,
-    fileUrl: f.src,
+    fileUrl: f.src!,
   }));
 }
 

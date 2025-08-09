@@ -63,23 +63,15 @@ export function RepairScreenIOS({
 
   const populateDraftScreens = useCallback(
     async (video: HTMLVideoElement) => {
-      const frames = await Promise.all(
-        screens.map((s) => {
-          if (!s.src) {
-            return extractVideoFrame(video, s.timestamp)
-              .then((f) => {
-                s.src = f.src;
-                return s;
-              })
-              .catch((e) => {
-                console.error("Error extracting frame:", e);
-                return null;
-              });
-          }
-          return s;
-        })
-      );
-      return frames.filter((f) => f !== null);
+      const frames: FrameData[] = [];
+      for (const s of screens) {
+        if (!s.src) {
+          const f = await extractVideoFrame(video, s.timestamp);
+          s.src = f.src;
+        }
+        frames.push(s);
+      }
+      return frames;
     },
     [screens]
   );
