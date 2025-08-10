@@ -11,11 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { CirclePlay } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  extractThumbnails,
-  extractVideoFrame,
-  extractVideoThumbnails,
-} from "./util";
+import { extractThumbnails, extractVideoFrame } from "./util";
 import { toast } from "sonner";
 import { FrameData, Redaction, TraceFormData } from "../types";
 import { ListedFiles } from "@/lib/actions";

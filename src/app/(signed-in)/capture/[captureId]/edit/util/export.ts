@@ -39,7 +39,7 @@ export async function handleDraftSave(
   };
   // upload draft trace data to s3
   const prefix = `uploads/${capture.id}/drafts`;
-  const fileName = `${capture.id}.json`;
+  const fileName = `draft-${Date.now()}.json`;
   const file = new File([JSON.stringify(draftTraceData)], fileName, {
     type: "application/json",
   });
@@ -257,7 +257,7 @@ export async function handleTraceSave(
                 console.error("Error loading image:", err);
                 reject(new Error("Failed to load image"));
               };
-              image.src = screen.src;
+              image.src = screen.src!;
             });
             imgWidth = image.width;
             imgHeight = image.height;

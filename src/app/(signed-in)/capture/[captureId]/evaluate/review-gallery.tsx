@@ -25,14 +25,16 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                 {/* Image container */}
                 <div className="relative w-full">
                   <TooltipProvider delayDuration={100}>
-                    <Image
-                      src={screen.src}
-                      alt={screen.id}
-                      width={0}
-                      height={0}
-                      sizes="100vw"
-                      className="relative z-0 w-full h-full rounded-lg object-contain border-blue-500 border-2"
-                    />
+                    {screen.src.length > 0 && (
+                      <Image
+                        src={screen.src}
+                        alt={screen.id}
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                        className="relative z-0 w-full h-full rounded-lg object-contain border-blue-500 border-2"
+                      />
+                    )}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         {traceData.gestures[screen.id].type && (

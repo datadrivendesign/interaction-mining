@@ -2,27 +2,98 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { TraceFormData } from "../edit/components/types";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { FrameData, TraceFormData } from "../edit/components/types";
 import { Capture, CaptureStatus } from "@prisma/client";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { approveCapture, denyCapture } from "./utils/capture-actions";
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
 import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
+import { fetchVideoFile } from "./utils/file-fetch";
+import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
 
 export function ReviewPanel({
   traceData,
+  setTraceData,
   capture,
   router,
   isAdmin,
 }: {
   traceData: TraceFormData;
+  setTraceData: Dispatch<SetStateAction<TraceFormData | undefined>>;
   capture: Capture;
   router: AppRouterInstance;
   isAdmin: boolean;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    fetchVideoFile(`uploads/${capture.id}`).then((videoFiles) => {
+      const loadVideoBlob = async () => {
+        if (videoFiles.length > 0 && videoRef.current) {
+          try {
+            const response = await fetch(videoFiles[0].fileUrl);
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            videoRef.current.src = objectUrl;
+          } catch (e) {
+            console.error("Error loading video blob:", e);
+            toast.error("Error loading video for frame extraction");
+          }
+        }
+      };
+      loadVideoBlob();
+    });
+  }, [capture.id, videoRef]);
+
+  const populateDraftScreens = useCallback(
+    async (video: HTMLVideoElement, screens: FrameData[]) => {
+      const frames: FrameData[] = [];
+      // Before the loop, do a "warm-up" seek to ensure video is loaded:
+      await extractVideoFrame(video, 0.1);
+      for (const s of screens) {
+        if (!s.src) {
+          const f = await extractVideoFrame(video, s.timestamp);
+          s.src = f.src;
+        }
+        frames.push(s);
+      }
+      return frames;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!videoRef || !videoRef.current) {
+      console.log("end early no video ref");
+      return;
+    }
+    // end early if all screens have src
+    if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
+      console.log("end early all screens have src");
+      return;
+    }
+    populateDraftScreens(videoRef.current, traceData.screens).then((frames) => {
+      setTraceData((prevData) => {
+        if (!prevData) {
+          return prevData;
+        }
+        return {
+          ...prevData,
+          screens: frames.sort((a, b) => a.timestamp - b.timestamp),
+        };
+      });
+    });
+  }, [populateDraftScreens, setTraceData, videoRef, traceData.screens]);
 
   const handleApprove = async () => {
     try {
@@ -84,6 +155,16 @@ export function ReviewPanel({
           </p>
         </article>
       </Badge>
+
+      <div className="flex flex-col justify-center items-center w-3/4 h-full gap-4">
+        <video
+          ref={videoRef}
+          crossOrigin="anonymous"
+          preload="auto"
+          className="max-w-full max-h-full rounded-lg object-contain"
+          controls={true}
+        />
+      </div>
       {isAdmin && (
         <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
           <Button

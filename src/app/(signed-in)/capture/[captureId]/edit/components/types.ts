@@ -3,7 +3,7 @@ import { z, ZodType } from "zod";
 
 export type FrameData = {
   id: string;
-  src: string | null;
+  src: string;
   timestamp: number;
 };
 
@@ -35,16 +35,6 @@ export type DraftTraceFormData = {
   screens: DraftFrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [key: string]: Redaction[] };
-  description: string;
-};
-
-export type ScreenReviewData = {
-  id: string;
-  src: string;
-  timestamp: number;
-  gesture: ScreenGesture;
-  redactions: Redaction[];
-  vh: string;
   description: string;
 };
 

@@ -75,7 +75,7 @@ export default function Page() {
         file.fileKey.includes(`${captureId}/drafts`)
       );
       // sort draft files by version
-      const regexFileVersionRule = /draft-v(\d+)\.json$/;
+      const regexFileVersionRule = /draft-(\d+)\.json$/;
       draftFileKeys.sort((a, b) => {
         const versionA = a.fileKey.match(regexFileVersionRule);
         const versionB = b.fileKey.match(regexFileVersionRule);
@@ -91,12 +91,12 @@ export default function Page() {
       methods.setValue("gestures", draftFormData.gestures);
       methods.setValue("redactions", draftFormData.redactions);
       methods.setValue("description", draftFormData.description);
-      // grab screens from videoRef
+      // grab screens
       methods.setValue(
         "screens",
         draftFormData.screens.map((screen) => ({
           id: screen.id,
-          src: null,
+          src: "",
           timestamp: screen.timestamp,
         }))
       );

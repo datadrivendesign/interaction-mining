@@ -63,7 +63,7 @@ export async function extractVideoFrame(
 export async function fileFetcher(
   [_, fileKey]: [string, string],
   cachedData?: ListedFiles[]
-) {
+): Promise<ListedFiles[]> {
   let res = await listFromS3(fileKey, false);
   if (!res.ok) {
     console.error("Failed to fetch uploaded files", res.message);
