@@ -28,7 +28,7 @@ import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import { getDraftFiles, handleDraftSave } from "./util";
-import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
+import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 
 enum TraceSteps {
@@ -198,7 +198,7 @@ export default function Page() {
         if (!updateResult.ok) {
           throw new Error(updateResult.message || "Failed to update capture");
         }
-        await revalidateCaptureCache();
+        await revalidateCaptureCaches();
         // go to the /dashboard page
         router.push(`/dashboard`);
       }

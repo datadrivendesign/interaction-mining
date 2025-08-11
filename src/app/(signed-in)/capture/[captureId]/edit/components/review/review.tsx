@@ -84,7 +84,7 @@ function SaveTraceGallery() {
             >
               {/* Image container */}
               <div className="relative w-full">
-                <TooltipProvider>
+                <TooltipProvider delayDuration={100}>
                   <Image
                     className="relative z-0 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
                     src={screen.src}

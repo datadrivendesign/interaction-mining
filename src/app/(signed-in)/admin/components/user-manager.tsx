@@ -38,7 +38,7 @@ export function UserManager({ users }: { users: ManageableUser[] }) {
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     return validUsers.slice(start, end);
-  }, [validUsers, currentPage, setCurrentPage]);
+  }, [validUsers, currentPage]);
 
   const getPageNumbers = useCallback(() => {
     const pages = [];

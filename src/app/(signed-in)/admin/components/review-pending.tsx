@@ -37,7 +37,7 @@ export function ReviewPending({ captures }: { captures: CaptureAdminView[] }) {
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     return validCaptures.slice(start, end);
-  }, [validCaptures, currentPage, setCurrentPage]);
+  }, [validCaptures, currentPage]);
 
   const getPageNumbers = useCallback(() => {
     const pages = [];
