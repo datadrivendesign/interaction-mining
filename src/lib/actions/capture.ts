@@ -168,8 +168,8 @@ export const getCaptures = unstable_cache(
       return { ok: false, message: "Failed to fetch captures.", data: null };
     }
   },
-  undefined,
-  { revalidate: 10 }
+  ["captures"],
+  { revalidate: 10, tags: ["captures"] }
 );
 
 /**
@@ -193,6 +193,7 @@ export async function updateCapture(
       where: { id },
       data,
     });
+    revalidateTag("captures");
 
     return { ok: true, message: "Capture updated.", data: capture };
   } catch (err) {

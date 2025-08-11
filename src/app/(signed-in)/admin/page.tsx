@@ -15,31 +15,32 @@ export default async function AdminPage() {
     return <NotAuthorized />;
   }
 
-  let users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-    },
-  });
-
-  let captures = await prisma.capture.findMany({
-    where: {
-      status: CaptureStatus.REVIEWING,
-    },
-    include: {
-      task: true,
-      app: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  const [users, captures] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    }),
+    prisma.capture.findMany({
+      where: {
+        status: CaptureStatus.REVIEWING,
+      },
+      include: {
+        task: true,
+        app: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   return (
     <div className="flex flex-col w-full h-full items-center justify-center">

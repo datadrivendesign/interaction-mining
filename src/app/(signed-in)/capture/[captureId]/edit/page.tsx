@@ -199,8 +199,8 @@ export default function Page() {
           throw new Error(updateResult.message || "Failed to update capture");
         }
         await revalidateCaptureCache();
-        // go to the /evaluate page
-        router.push(`/capture/${captureId}/evaluate`);
+        // go to the /dashboard page
+        router.push(`/dashboard`);
       }
     } catch (err) {
       toast.error(
@@ -316,7 +316,7 @@ export default function Page() {
                     <Sheet title={"Instructions"}>{docRender()}</Sheet>
                   </span>
                   <Button
-                    className="ml-8"
+                    className="ml-8 hover:cursor-pointer"
                     variant="destructive"
                     onClick={handleClickBackToUpload}
                     disabled={isSubmitting}
@@ -326,7 +326,7 @@ export default function Page() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    className="mr-8"
+                    className="mr-8 hover:cursor-pointer"
                     variant="outline"
                     onClick={handleClickSaveDraft}
                     disabled={isSubmitting}
@@ -334,6 +334,7 @@ export default function Page() {
                     Save Draft
                   </Button>
                   <Button
+                    className="hover:cursor-pointer"
                     variant="outline"
                     onClick={handlePrevious}
                     disabled={stepIndex === 0}

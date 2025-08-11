@@ -258,7 +258,7 @@ export function RepairScreenIOS({
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel
               defaultSize={33}
-              minSize={25}
+              minSize={33}
               maxSize={50}
               className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
             >
@@ -295,7 +295,7 @@ export function RepairScreenIOS({
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={67}>
+            <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
               <Card
                 key="task"
                 className={

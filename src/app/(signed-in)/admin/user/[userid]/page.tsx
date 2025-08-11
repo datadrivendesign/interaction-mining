@@ -1,12 +1,15 @@
-import { getCaptures, getUser } from "@/lib/actions";
+import { getUser } from "@/lib/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
-import { Role } from "@prisma/client";
+import { CaptureStatus, Role } from "@prisma/client";
 import { NotAuthorized } from "@/components/authorized";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function AdminUserDetails({
   params,
@@ -30,13 +33,18 @@ export default async function AdminUserDetails({
 
   const [userRes, capturesRes] = await Promise.all([
     getUser(userid),
-    getCaptures({
-      userId: userid,
-      includes: {
+    prisma.capture.findMany({
+      where: {
+        userId: userid,
+        status: {
+          not: CaptureStatus.APPROVED,
+        },
+      },
+      include: {
         app: true,
         task: true,
       },
-    }) ?? [],
+    }),
   ]);
 
   if (!userRes.ok) {
@@ -44,7 +52,7 @@ export default async function AdminUserDetails({
   }
 
   const user = userRes.data;
-  const captures = capturesRes.ok ? capturesRes.data : [];
+  const captures = capturesRes;
 
   return (
     <div className="p-32 max-w-7xl mx-auto">
@@ -108,6 +116,19 @@ export default async function AdminUserDetails({
                     </div>
                     <div>
                       <Badge variant="default">{cap.status}</Badge>
+                    </div>
+                    <div>
+                      <Button variant="link" asChild>
+                        <Link
+                          href={
+                            cap.status !== CaptureStatus.REVIEWING
+                              ? `/capture/${cap.id}/start`
+                              : `/capture/${cap.id}/evaluate`
+                          }
+                        >
+                          Go
+                        </Link>
+                      </Button>
                     </div>
                   </CardHeader>
                 </Card>

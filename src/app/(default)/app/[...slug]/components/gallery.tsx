@@ -13,11 +13,7 @@ import {
 import Image from "next/image";
 import clsx from "clsx";
 import { motion } from "motion/react";
-import {
-  ArrowLeft,
-  Search,
-  Download,
-} from "lucide-react";
+import { ArrowLeft, Search, Download } from "lucide-react";
 
 import { prettyTime } from "@/lib/utils/date";
 import { Screen } from "@prisma/client";
@@ -34,9 +30,9 @@ import { Trace } from "@/lib/actions";
 
 const GalleryContext = createContext({
   data: [] as Trace[],
-  setData: (_: Trace[]) => { },
+  setData: (_: Trace[]) => {},
   inspectData: null as Trace | null,
-  setInspectData: (_: Trace | null) => { },
+  setInspectData: (_: Trace | null) => {},
 });
 
 export function GalleryRoot({
@@ -96,7 +92,7 @@ export function Gallery() {
       <aside
         className={clsx(
           inspectData ? "hidden md:flex" : "flex",
-          "flex-col shrink-0 basis-full md:basis-[320px] h-full min-h-0 border-r border-muted-background divide-y divide-dimmed-background overflow-auto",
+          "flex-col shrink-0 basis-full md:basis-[320px] h-full min-h-0 border-r border-muted-background divide-y divide-dimmed-background overflow-auto"
         )}
       >
         {data.map((data, index) => (
@@ -133,7 +129,7 @@ export function Gallery() {
           </div>
         )}
       </div>
-    </div >
+    </div>
   );
 }
 
@@ -144,8 +140,6 @@ export function InspectView({ data }: { data: Trace }) {
   const handleImageLoad = useCallback(() => {
     setLoading({ status: "loaded" });
   }, []);
-
-
 
   const handleDownload = useCallback(() => {
     downloadTrace(data);
@@ -193,79 +187,85 @@ export function InspectView({ data }: { data: Trace }) {
         <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
           <div className="flex min-w-full gap-2">
             {data?.screens.map((screen: Screen, index: number) => (
-              <figure
-                key={screen.id}
-                className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden"
-              >
-                <motion.div
-                  animate={{ opacity: loading.status === "loading" ? 1 : 0 }}
-                  className="absolute z-10 flex w-full h-full"
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="w-full h-full bg-neutral-100 dark:bg-neutral-900 animate-pulse"></div>
-                </motion.div>
-                <Image
-                  src={screen?.src}
-                  alt={`screen-${screen?.id}`}
-                  className={clsx(
-                    loading.status === "loading" ? "invisible" : "visible",
-                    "relative z-0 object-contain w-full h-auto"
-                  )}
-                  width={0}
-                  height={0}
-                  sizes="100vw"
-                  priority
-                  onLoad={handleImageLoad}
-                />
-                <TooltipProvider>
-                  {screen.gesture.x !== null && screen.gesture.y !== null && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div
-                          className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
-                          style={{
-                            left: `${(screen.gesture.x ?? 0) * 100}%`,
-                            top: `${(screen.gesture.y ?? 0) * 100}%`,
-                          }}
-                        >
-                          {
-                            gestureOptions
-                              .flatMap((option) => [
-                                option,
-                                ...(option.subGestures ?? []),
-                              ])
-                              .find(
-                                (option) =>
-                                  option.value ===
-                                  screen.gesture.type?.toLowerCase()
-                              )?.icon
-                          }
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="z-50">
-                        <p>{screen.gesture.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {(screen.redactions || []).map((redaction, i) => (
-                  <Tooltip key={`${redaction.annotation}-${i}`}>
-                    <TooltipTrigger asChild>
-                      <div className="absolute z-10 cursor-pointer"
-                        style={{
-                          left: `${redaction.x * 100}%`,
-                          top: `${redaction.y * 100}%`,
-                          width: `${redaction.width * 100}%`,
-                          height: `${redaction.height * 100}%`,
-                        }}>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" sideOffset={10}>
-                      <p>{redaction.annotation}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-                </TooltipProvider>
-              </figure>
+              <div key={screen.id}>
+                <figure className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden">
+                  <motion.div
+                    animate={{ opacity: loading.status === "loading" ? 1 : 0 }}
+                    className="absolute z-10 flex w-full h-full"
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-900 animate-pulse"></div>
+                  </motion.div>
+                  <Image
+                    src={screen?.src}
+                    alt={`screen-${screen?.id}`}
+                    className={clsx(
+                      loading.status === "loading" ? "invisible" : "visible",
+                      "relative z-0 object-contain w-full h-auto"
+                    )}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    priority
+                    onLoad={handleImageLoad}
+                  />
+                  <TooltipProvider delayDuration={100}>
+                    {screen.gesture.x !== null && screen.gesture.y !== null && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
+                            style={{
+                              left: `${(screen.gesture.x ?? 0) * 100}%`,
+                              top: `${(screen.gesture.y ?? 0) * 100}%`,
+                            }}
+                          >
+                            {
+                              gestureOptions
+                                .flatMap((option) => [
+                                  option,
+                                  ...(option.subGestures ?? []),
+                                ])
+                                .find(
+                                  (option) =>
+                                    option.value ===
+                                    screen.gesture.type?.toLowerCase()
+                                )?.icon
+                            }
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="z-50">
+                          <p>{screen.gesture.type}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {(screen.redactions || []).map((redaction, i) => (
+                      <Tooltip key={`${redaction.annotation}-${i}`}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="absolute z-10 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                            style={{
+                              left: `${redaction.x * 100}%`,
+                              top: `${redaction.y * 100}%`,
+                              width: `${redaction.width * 100}%`,
+                              height: `${redaction.height * 100}%`,
+                            }}
+                          ></div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" sideOffset={10}>
+                          <p>{redaction.annotation}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </TooltipProvider>
+                </figure>
+                {/* Gesture caption */}
+                <div className="prose prose-neutral dark:prose-invert leading-snug font-xs font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
+                  <p className="text-xs text-center dark:text-neutral-300">
+                    {screen.gesture.description ?? ""}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>

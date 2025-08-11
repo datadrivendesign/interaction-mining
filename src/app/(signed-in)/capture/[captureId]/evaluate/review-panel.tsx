@@ -11,12 +11,12 @@ import {
   useState,
 } from "react";
 import { FrameData, TraceFormData } from "../edit/components/types";
-import { Capture, CaptureStatus } from "@prisma/client";
+import { CaptureStatus } from "@prisma/client";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { approveCapture, denyCapture } from "./utils/capture-actions";
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
-import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
+import { Capture, revalidateCaptureCache, updateCapture } from "@/lib/actions";
 import { fetchVideoFile } from "./utils/file-fetch";
 import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
 
@@ -74,12 +74,10 @@ export function ReviewPanel({
 
   useEffect(() => {
     if (!videoRef || !videoRef.current) {
-      console.log("end early no video ref");
       return;
     }
     // end early if all screens have src
     if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
-      console.log("end early all screens have src");
       return;
     }
     populateDraftScreens(videoRef.current, traceData.screens).then((frames) => {
@@ -149,14 +147,14 @@ export function ReviewPanel({
         {isAdmin ? "Admin Review" : "Owner Review"}
       </Badge>
       <Badge variant="default" className="bg-gray-500 mt-5">
-        <article className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
+        <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
-            {traceData.description ?? "No description provided."}
+            Task: {capture.task.description ?? "No task provided."}
           </p>
         </article>
       </Badge>
 
-      <div className="flex flex-col justify-center items-center w-3/4 h-full gap-4">
+      <div className="flex flex-col justify-center items-center w-3/4 h-full">
         <video
           ref={videoRef}
           crossOrigin="anonymous"

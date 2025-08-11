@@ -241,8 +241,9 @@ export default function FrameTimeline({
           onClick={handleCapture}
           tooltip={
             <div className="flex w-full justify-between items-center gap-2 text-sm">
-              <span>Click</span>
+              <span>Tap</span>
               <Kbd className="text-muted-foreground rounded-sm">C</Kbd>
+              <span>to Capture</span>
             </div>
           }
           delayDuration={0}
