@@ -47,3 +47,5 @@ mongo_db/*
 # scripts (for now)
 prisma/scripts/reorg-s3-dirs.mjs
 prisma/scripts/add-capture-task.mjs
+prisma/scripts/add-ios-app-to-db.mjs
+prisma/scripts/delete-trace.mjs

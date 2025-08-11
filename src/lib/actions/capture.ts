@@ -168,8 +168,8 @@ export const getCaptures = unstable_cache(
       return { ok: false, message: "Failed to fetch captures.", data: null };
     }
   },
-  undefined,
-  { revalidate: 10 }
+  ["captures"],
+  { revalidate: 10, tags: ["captures"] }
 );
 
 /**
@@ -193,15 +193,20 @@ export async function updateCapture(
       where: { id },
       data,
     });
-
-    // Revalidate the cache to ensure fresh data
-    revalidateTag("capture");
+    revalidateTag("captures");
 
     return { ok: true, message: "Capture updated.", data: capture };
   } catch (err) {
     console.error("Error updating capture:", err);
     return { ok: false, message: "Failed to update capture.", data: null };
   }
+}
+
+/**
+ * Handle revalidation of capture cache in getCapture.
+ */
+export async function revalidateCaptureCache() {
+  revalidateTag("capture");
 }
 
 /**
@@ -214,6 +219,13 @@ export async function getCaptureFiles(
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`uploads/${captureId}`);
+    if (!files.ok) {
+      return {
+        ok: false,
+        message: "Failed to fetch uploaded files.",
+        data: null,
+      };
+    }
     return files;
   } catch (err) {
     console.error("Error fetching uploaded files:", err);

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { CirclePlay } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { extractVideoFrame } from "./util";
+import { extractThumbnails, extractVideoFrame } from "./util";
 import { toast } from "sonner";
 import { FrameData, Redaction, TraceFormData } from "../types";
 import { ListedFiles } from "@/lib/actions";
@@ -38,13 +38,9 @@ export function RepairScreenIOS({
   const vhs = watchVHs as { [key: string]: any };
   const gestures = watchGestures as { [key: string]: ScreenGesture };
   const redactions = watchRedactions as { [key: string]: Redaction[] };
-
   // video controls
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
-
-  const MAX_THUMBS = 30;
-  const frameStep = 1 / MAX_THUMBS;
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -56,98 +52,50 @@ export function RepairScreenIOS({
       height: number;
     }[]
   >([]);
+  // constants
+  const MAX_THUMBS = 30;
+  const THUMB_HEIGHT = 128;
+  const frameStep = 1 / MAX_THUMBS;
 
-  // Load thumbnails
-  const extractVideoThumbnails = useCallback(
-    async (
-      video: HTMLVideoElement,
-      videoDuration: number
-    ): Promise<ListedFiles[]> => {
-      const thumbVideo = document.createElement("video");
-      thumbVideo.crossOrigin = "anonymous";
-      thumbVideo.preload = "metadata";
-      thumbVideo.src = video.src;
-      await new Promise<void>((res) =>
-        thumbVideo.addEventListener("loadedmetadata", () => res(), {
-          once: true,
-        })
-      );
-      // determine how many thumbnails to extract
-      const duration = videoDuration;
-      const fps = 60;
-      // extract MAX_THUMBS thumbnails or every two frames, whichever is smaller
-      const thumbnailCount = Math.min(
-        Math.floor(duration * fps) / 2,
-        MAX_THUMBS
-      );
-      const THUMB_HEIGHT = 128;
-      const scale = THUMB_HEIGHT / thumbVideo.videoHeight;
-      // need to do sequentially, parallel messes up seeking
-      const thumbsRes: FrameData[] = [];
-      // Before the loop, do a "warm-up" seek to ensure video is loaded:
-      await extractVideoFrame(thumbVideo, 0.1, scale);
-      for (let i = 0; i < thumbnailCount; i++) {
-        let t = (videoDuration / thumbnailCount) * i;
-        const frame = await extractVideoFrame(thumbVideo, t, scale);
-        thumbsRes.push(frame);
+  const populateDraftScreens = useCallback(
+    async (video: HTMLVideoElement) => {
+      const frames: FrameData[] = [];
+      for (const s of screens) {
+        if (!s.src) {
+          const f = await extractVideoFrame(video, s.timestamp);
+          s.src = f.src;
+        }
+        frames.push(s);
       }
-      return thumbsRes.map((f, index) => ({
-        fileKey: "thumbs/",
-        fileName: `frame-${index}.png`,
-        fileUrl: f.src,
-      }));
+      return frames;
     },
-    []
+    [screens]
   );
 
-  // useEffect to manually load thumbnails if video transcoding is disabled
-  useEffect(() => {
-    const extractThumbnails = async () => {
-      const video = videoRef.current;
-      const isTranscodeDisabled =
-        !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
-        process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === "";
-      if (!isTranscodeDisabled || !video || videoDuration === 0) {
-        return;
-      }
-      const thumbnailFiles = await extractVideoThumbnails(video, videoDuration);
-      const thumbs = thumbnailFiles.map((f, index) => ({
-        src: f.fileUrl,
-        timestamp: (videoDuration / thumbnailFiles.length) * index,
-        width: video.videoWidth,
-        height: video.videoHeight,
-      }));
-      setThumbnails(thumbs);
-    };
-    extractThumbnails();
-  }, [videoRef, videoDuration, extractVideoThumbnails]);
-
-  // useEffect to load thumbnails if video transcoding is enabled
   useEffect(() => {
     const video = videoRef.current;
-    const isTranscodeDisabled =
-      !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
-      process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === "";
-    if (isTranscodeDisabled || !video || videoDuration === 0) {
+    if (!video || videoDuration === 0) {
       return;
     }
-    const thumbnailFiles = files.filter((f) =>
-      f.fileKey.includes("thumbnails/")
+    // manually load and extract thumbnails
+    extractThumbnails(video, videoDuration, MAX_THUMBS, THUMB_HEIGHT).then(
+      (thumbs) => {
+        setThumbnails(thumbs);
+      }
     );
-    const thumbs = thumbnailFiles.map((f, index) => ({
-      src: f.fileUrl,
-      timestamp: (videoDuration / thumbnailFiles.length) * index,
-      width: video.videoWidth,
-      height: video.videoHeight,
-    }));
-    setThumbnails(thumbs);
-  }, [files, videoRef, videoDuration]);
+    // set src field for screens for those not set
+    populateDraftScreens(video).then((frames) => {
+      setValue(
+        "screens",
+        frames.sort((a, b) => a.timestamp - b.timestamp)
+      );
+    });
+    // adding screens to dependency array can cause infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoRef, videoDuration, setValue]);
 
   const videoFiles = useMemo(() => {
-    const isTranscodeDisabled =
-      !process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA ||
-      process.env.NEXT_PUBLIC_TRANSCODE_LAMBDA === "";
-    const regexRule = isTranscodeDisabled ? /\.(mp4|mov)$/ : /\.(webm)$/;
+    const regexRule = /\.(mp4|mov)$/;
     // iOS screen recordings capitalize file extension, so we lowercase here
     return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
@@ -168,6 +116,30 @@ export function RepairScreenIOS({
     };
     loadVideoBlob();
   }, [videoFiles]);
+
+  // RAF to update currentTime
+  useEffect(() => {
+    // Start a loop to update currentTime on each animation frame while playing
+    if (isPlaying) {
+      const loop = () => {
+        if (videoRef.current) {
+          setCurrentTime(videoRef.current.currentTime);
+        }
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      rafRef.current = requestAnimationFrame(loop);
+      return () => {
+        cancelAnimationFrame(rafRef.current);
+      };
+    }
+  }, [isPlaying]);
+
+  // Play/Pause toggle
+  const handlePlayPause = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.paused ? await video.play() : video.pause();
+  };
 
   const handleSetTime = useCallback(
     (t: number) => {
@@ -202,30 +174,6 @@ export function RepairScreenIOS({
       [...screens, f].sort((a, b) => a.timestamp - b.timestamp)
     );
   };
-
-  // Play/Pause toggle
-  const handlePlayPause = async () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.paused ? await video.play() : video.pause();
-  };
-
-  // RAF to update currentTime
-  useEffect(() => {
-    // Start a loop to update currentTime on each animation frame while playing
-    if (isPlaying) {
-      const loop = () => {
-        if (videoRef.current) {
-          setCurrentTime(videoRef.current.currentTime);
-        }
-        rafRef.current = requestAnimationFrame(loop);
-      };
-      rafRef.current = requestAnimationFrame(loop);
-      return () => {
-        cancelAnimationFrame(rafRef.current);
-      };
-    }
-  }, [isPlaying]);
 
   // Workspace keybinds
   useHotkeys("space", async (e) => {
@@ -310,7 +258,7 @@ export function RepairScreenIOS({
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel
               defaultSize={33}
-              minSize={25}
+              minSize={33}
               maxSize={50}
               className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
             >
@@ -347,7 +295,7 @@ export function RepairScreenIOS({
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={67}>
+            <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
               <Card
                 key="task"
                 className={

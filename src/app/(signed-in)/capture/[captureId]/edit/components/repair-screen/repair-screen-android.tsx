@@ -45,118 +45,97 @@ export function RepairScreenAndroid({
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
   const redactions = watchRedactions as { [key: string]: Redaction[] };
 
-  useEffect(() => {
-    const populateFrameData = async (
-      files: ListedFiles[]
-    ): Promise<{
-      frames: FrameData[];
-      vhs: { [key: string]: any };
-      gestures: { [key: string]: ScreenGesture };
-    }> => {
-      function createScreenGesture(gesture: ScreenGesture): ScreenGesture {
-        const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
-        const screenGesture: ScreenGesture = {
-          type: type,
-          x,
-          y,
-          scrollDeltaX,
-          scrollDeltaY,
-          description: "",
+  const populateFrameData = async (
+    files: ListedFiles[]
+  ): Promise<{
+    frames: FrameData[];
+    vhs: { [key: string]: any };
+    gestures: { [key: string]: ScreenGesture };
+  }> => {
+    const frameData: FrameData[] = [];
+    const frameVHs: { [key: string]: any } = {};
+    const frameGestures: { [key: string]: ScreenGesture } = {};
+    for (const [i, c] of files.entries()) {
+      try {
+        const frameResponse = await fetch(c.fileUrl);
+        const frameJson: CaptureScreenFile = await frameResponse.json();
+        const b64img = `data:image/png;base64,${frameJson.img}`.trim();
+        const frame: FrameData = {
+          id: frameJson.created + i.toString(),
+          src: b64img,
+          timestamp: Date.parse(frameJson.created),
         };
-
-        function translateTypeAndroidToODIM(
-          androidType: string,
-          scrollDeltaX: number | null,
-          scrollDeltaY: number | null
-        ): string {
-          if (
-            androidType === "TYPE_VIEW_CLICKED" ||
-            androidType == "TYPE_VIEW_SELECTED"
-          ) {
-            return "tap";
-          } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
-            return "touch and hold";
-          } else if (androidType === "TYPE_VIEW_SCROLLED") {
-            if (scrollDeltaX !== null && scrollDeltaY !== null) {
-              // get direction of scroll/swipe w. dominant delta direction
-              if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
-                return "swipe right";
-              } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
-                return "swipe left";
-              } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
-                return "swipe up";
-              } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
-                return "swipe down";
-              } else {
-                return "other";
-              }
-            }
-          }
-          // fall through case, don't know what will reach
-          return "";
+        frameData.push(frame);
+        if (frameJson.vh) {
+          frameVHs[frame.id] = JSON.parse(frameJson.vh);
         }
-
-        if (!type || type === "") {
-          screenGesture.type = null;
-        } else {
-          screenGesture.type = translateTypeAndroidToODIM(
-            type,
-            scrollDeltaX,
-            scrollDeltaY
-          );
+        if (frameJson.gesture) {
+          frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
         }
-        return screenGesture;
+      } catch (e) {
+        console.error("Error fetching frame data:", e);
+        toast.error("Error fetching frame data");
       }
-
-      const frameData: FrameData[] = [];
-      const frameVHs: { [key: string]: any } = {};
-      const frameGestures: { [key: string]: ScreenGesture } = {};
-      for (const [i, c] of files.entries()) {
-        try {
-          const frameResponse = await fetch(c.fileUrl);
-          const frameJson: CaptureScreenFile = await frameResponse.json();
-          const b64img = `data:image/png;base64,${frameJson.img}`.trim();
-          const frame: FrameData = {
-            id: frameJson.created + i.toString(),
-            src: b64img,
-            timestamp: Date.parse(frameJson.created),
-          };
-          frameData.push(frame);
-          if (frameJson.vh) {
-            frameVHs[frame.id] = JSON.parse(frameJson.vh);
-          }
-          if (frameJson.gesture) {
-            frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
-          }
-        } catch (e) {
-          console.error("Error fetching frame data:", e);
-          toast.error("Error fetching frame data");
-        }
-      }
-      return {
-        frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
-        vhs: frameVHs,
-        gestures: frameGestures,
-      };
+    }
+    return {
+      frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
+      vhs: frameVHs,
+      gestures: frameGestures,
     };
+  };
 
+  useEffect(() => {
     populateFrameData(files).then(({ frames, vhs, gestures }) => {
       originalScreens.current = [...frames];
       originalVHs.current = { ...vhs };
       originalGestures.current = { ...gestures };
-
-      // Only populate data if the form state is empty
-      if (
-        currScreens.length === 0 &&
-        Object.keys(currVHs).length === 0 &&
-        Object.keys(currGestures).length === 0
-      ) {
+      // populate form state if empty
+      if (currScreens.length === 0) {
         setValue("screens", frames);
+      } else {
+        // check if currScreens from draft and populate src field
+        currScreens.forEach((screen) => {
+          if (!screen.src) {
+            const originalScreen = frames.find((s) => s.id === screen.id);
+            if (originalScreen) {
+              screen.src = originalScreen.src;
+            }
+          }
+        });
+        setValue(
+          "screens",
+          currScreens.sort((a, b) => a.timestamp - b.timestamp)
+        );
+      }
+      if (Object.keys(currVHs).length === 0) {
         setValue("vhs", vhs);
+      } else {
+        // check if currVHs from draft and populate vhs field
+        Object.keys(currVHs).forEach((id) => {
+          if (!currVHs[id]) {
+            const originalVH = vhs[id];
+            if (originalVH) {
+              currVHs[id] = originalVH as any;
+            }
+          }
+        });
+        setValue("vhs", currVHs);
+      }
+      if (Object.keys(currGestures).length === 0) {
         setValue("gestures", gestures);
       }
     });
+    // adding curr vars to dependency array can cause infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currScreens.length, files, setValue]);
+
+  const resetFormState = () => {
+    if (originalScreens.current.length !== currScreens.length) {
+      setValue("screens", originalScreens.current);
+      setValue("vhs", originalVHs.current);
+      setValue("gestures", originalGestures.current);
+    }
+  };
 
   return (
     <div className="w-full h-full">
@@ -182,15 +161,7 @@ export function RepairScreenAndroid({
                   </CardHeader>
                 </Card>
 
-                <Button
-                  onClick={() => {
-                    if (originalScreens.current.length !== currScreens.length) {
-                      setValue("screens", originalScreens.current);
-                      setValue("vhs", originalVHs.current);
-                      setValue("gestures", originalGestures.current);
-                    }
-                  }}
-                >
+                <Button onClick={resetFormState}>
                   <ListRestart /> Reset Screens
                 </Button>
               </div>
@@ -229,4 +200,21 @@ export function RepairScreenAndroid({
       </ResizablePanelGroup>
     </div>
   );
+}
+function createScreenGesture(gesture: {
+  type: string | null;
+  scrollDeltaX: number | null;
+  scrollDeltaY: number | null;
+  x: number | null;
+  y: number | null;
+  description: string | null;
+}): {
+  type: string | null;
+  scrollDeltaX: number | null;
+  scrollDeltaY: number | null;
+  x: number | null;
+  y: number | null;
+  description: string | null;
+} {
+  throw new Error("Function not implemented.");
 }

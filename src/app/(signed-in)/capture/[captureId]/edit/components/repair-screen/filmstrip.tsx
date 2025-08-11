@@ -238,17 +238,19 @@ function FilmstripItem({
             )}
           >
             {/* {children} */}
-            <Image
-              ref={imageRef}
-              key={screen.id}
-              src={screen.src}
-              alt="gallery"
-              draggable={false}
-              className="h-full w-auto object-contain"
-              width={0}
-              height={0}
-              sizes="100vw"
-            />
+            {screen.src && (
+              <Image
+                ref={imageRef}
+                key={screen.id}
+                src={screen.src}
+                alt="gallery"
+                draggable={false}
+                className="h-full w-auto object-contain"
+                width={0}
+                height={0}
+                sizes="100vw"
+              />
+            )}
             {/* Render redaction overlays using the natural dimensions and scale factors */}
             {imgDimensions.width > 0 &&
               redactions.map((rect, idx) => (

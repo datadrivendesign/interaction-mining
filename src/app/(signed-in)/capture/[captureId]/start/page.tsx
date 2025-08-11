@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
@@ -24,7 +24,7 @@ import {
   handleDeleteFile,
 } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
-import { updateCapture } from "@/lib/actions";
+import { revalidateCaptureCache, updateCapture } from "@/lib/actions";
 import { Platform } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
 
@@ -39,6 +39,7 @@ export default function Page() {
   const [captureState, setCaptureState] = useState<CaptureState>(
     CaptureState.IDLE
   );
+  const [deleteDrafts, setDeleteDrafts] = useState<boolean>(true);
   const { capture, isLoading: isCaptureLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
@@ -49,8 +50,18 @@ export default function Page() {
     fileFetcher,
     getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
   );
-  const filteredUserUploads = uploadList.filter(
-    (file) => !file.fileKey.includes("/screens")
+  const filteredUserUploads = useMemo(
+    () =>
+      uploadList.filter(
+        (file) =>
+          !file.fileKey.includes("/drafts") &&
+          !file.fileKey.includes("/screens")
+      ),
+    [uploadList]
+  );
+  const numFilteredDrafts = useMemo(
+    () => uploadList.filter((file) => file.fileKey.includes("/drafts")),
+    [uploadList]
   );
 
   useEffect(() => {
@@ -77,7 +88,25 @@ export default function Page() {
       console.error(captureRes.message);
       return;
     }
+    await revalidateCaptureCache();
     redirect(`/capture/${captureRes.data.id}/edit`);
+  };
+
+  /**
+   * Delete the upload and all auto-saves (if user selected) for the file
+   * @param captureId - The ID of the capture
+   * @param fileKey - The key of the file to delete
+   */
+  const handleDeleteUpload = (captureId: string, fileKey: string) => {
+    handleDeleteFile(captureId, fileKey);
+    if (deleteDrafts) {
+      // delete all auto-saves for the file
+      const draftFiles = numFilteredDrafts.map((draft) => draft.fileKey);
+      draftFiles.forEach((draft) => {
+        handleDeleteFile(captureId, draft);
+      });
+    }
+    setCaptureState(CaptureState.IDLE);
   };
 
   return (
@@ -134,9 +163,14 @@ export default function Page() {
                       Loading...
                     </>
                   ) : (
-                    `${filteredUserUploads.length} file${
-                      filteredUserUploads.length !== 1 ? "s" : ""
-                    } uploaded`
+                    <>
+                      {filteredUserUploads.length} file
+                      {filteredUserUploads.length !== 1 ? "s" : ""} uploaded
+                      {numFilteredDrafts.length > 0 &&
+                        `, ${numFilteredDrafts.length} auto-save${
+                          numFilteredDrafts.length !== 1 ? "s" : ""
+                        }`}
+                    </>
                   )}
                 </span>
               </div>
@@ -158,9 +192,10 @@ export default function Page() {
                         </Link>
                       </div>
                       <DeleteUploadDialog
+                        deleteDrafts={deleteDrafts}
+                        setDeleteDrafts={setDeleteDrafts}
                         onContinue={() => {
-                          handleDeleteFile(captureId, file.fileKey);
-                          setCaptureState(CaptureState.IDLE);
+                          handleDeleteUpload(captureId, file.fileKey);
                         }}
                       >
                         <button className="inline-flex items-center cursor-pointer">

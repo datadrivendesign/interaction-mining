@@ -61,7 +61,6 @@ export default function AddAppForm({
     if (!newAppId) return;
     // TODO: db check breaks for ios because we lookup id instead of appId
     if (platform === Platform.ANDROID) {
-      console.log("Check if app exists in Android app DB");
       const existing = await checkIfAppExists(newAppId, platform);
       if (existing) {
         toast.success("App already exists!");
@@ -74,13 +73,11 @@ export default function AddAppForm({
       }
     }
 
-    console.log("Scraping app data from store...");
     const result =
       platform === Platform.ANDROID
         ? await getAndroidApp({ appId: newAppId })
         : await getIosApp({ id: newAppId });
 
-    console.log("Scraper result:", result);
     if (!result || !result.ok) {
       toast.error("Failed to fetch app from store.");
       return;
@@ -88,7 +85,6 @@ export default function AddAppForm({
 
     // need to do post-scrape check, now we switch to id from appId
     if (platform === Platform.IOS) {
-      console.log("Check if app exists in iOS app DB");
       const existing = await checkIfAppExists(result.data?.appId, platform);
       if (existing) {
         toast.success("App already exists!");
@@ -101,9 +97,7 @@ export default function AddAppForm({
       }
     }
 
-    console.log("Saving app to DB...");
     const saved = await saveApp(convertToPrismaApp(result.data));
-
     if (saved.ok) {
       toast.success("App added!");
       setTimeout(() => {

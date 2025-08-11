@@ -5,13 +5,13 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { getCaptureFiles } from "@/lib/actions";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ScreenReviewData, TraceFormData } from "../edit/components/types";
+import { DraftTraceFormData, TraceFormData } from "../edit/components/types";
 import { useCapture } from "@/lib/hooks/capture";
 import { ReviewPanel } from "./review-panel";
 import { ReviewGallery } from "./review-gallery";
+import { getDraftFiles } from "../edit/util";
 
 export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -23,45 +23,34 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchFiles = async () => {
-      const files = await getCaptureFiles(captureId);
+    const fetchDraftFiles = async () => {
+      const files = await getDraftFiles(captureId);
       if (!files.ok) {
         console.error("Failed to fetch files");
         return;
       }
-      const fetchedScreenFiles = files.data.filter((file) =>
-        file.fileKey.includes(`${captureId}/screens`)
-      );
-      // grab json file from the fileKey
-      const screenData: ScreenReviewData[] = await Promise.all(
-        fetchedScreenFiles.map(async (file) => {
-          const response = await fetch(file.fileUrl);
-          const data = await response.json();
-          return data;
-        })
-      );
-      const screens = screenData.map((s) => {
-        return { id: s.id, src: s.src, timestamp: s.timestamp };
+      if (files.data.length === 0) {
+        console.error("No draft files found");
+        return;
+      }
+      const latestDraftFile = files.data[files.data.length - 1];
+      const draftFileUrl = latestDraftFile.fileUrl;
+      const draftFileResponse = await fetch(draftFileUrl);
+      const draftFormData: DraftTraceFormData = await draftFileResponse.json();
+      const screens = draftFormData.screens.map((s) => {
+        return { id: s.id, src: "", timestamp: s.timestamp };
       });
-      const vhs = screenData
+      const vhs = draftFormData.screens
         .map((s) => {
-          return s.vh ? { [s.id]: s.vh } : {};
+          return { [s.id]: {} };
         })
         .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      const gestures = screenData
-        .map((s) => {
-          return { [s.id]: s.gesture };
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      const redactions = screenData
-        .map((s) => {
-          return { [s.id]: s.redactions };
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      const description = screenData[0].description;
+      const gestures = draftFormData.gestures;
+      const redactions = draftFormData.redactions;
+      const description = draftFormData.description;
       setTraceData({ screens, vhs, gestures, redactions, description });
     };
-    fetchFiles();
+    fetchDraftFiles();
   }, [captureId]);
 
   return (
@@ -77,6 +66,7 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
             {traceData && capture && (
               <ReviewPanel
                 traceData={traceData}
+                setTraceData={setTraceData}
                 capture={capture}
                 router={router}
                 isAdmin={isAdmin}

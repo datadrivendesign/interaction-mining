@@ -4,7 +4,6 @@ import React, { useState, useMemo } from "react";
 import {
   Play,
   Pause,
-  Camera,
   RotateCcw,
   RotateCw,
   ArrowLeft,
@@ -18,11 +17,11 @@ import Kbd from "@/components/ui/kbd";
 import useMeasure from "@/lib/hooks/useMeasure";
 import { spring } from "@/lib/motion";
 import { DateTime } from "luxon";
-import { 
-  Tooltip, 
-  TooltipTrigger, 
-  TooltipContent, 
-  TooltipProvider 
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
 } from "@/components/ui/tooltip";
 
 export type FrameTimelineProps = {
@@ -225,7 +224,7 @@ export default function FrameTimeline({
               </TooltipTrigger>
               <TooltipContent>
                 <div className="flex w-full justify-between items-center gap-4 text-sm">
-                <span>Drag yellow bar to scrub</span>
+                  <span>Drag yellow bar to scrub</span>
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -242,13 +241,13 @@ export default function FrameTimeline({
           onClick={handleCapture}
           tooltip={
             <div className="flex w-full justify-between items-center gap-2 text-sm">
-              <span>Capture screen</span>
+              <span>Tap</span>
               <Kbd className="text-muted-foreground rounded-sm">C</Kbd>
+              <span>to Capture</span>
             </div>
           }
           delayDuration={0}
         >
-          {/* <Camera className="size-4" /> */}
           Capture
           <Kbd className="text-muted-foreground rounded-sm">C</Kbd>
         </Button>
