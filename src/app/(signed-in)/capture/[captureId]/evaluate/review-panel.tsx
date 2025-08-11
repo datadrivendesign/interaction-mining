@@ -16,7 +16,7 @@ import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.share
 import { approveCapture, denyCapture } from "./utils/capture-actions";
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
-import { Capture, revalidateCaptureCache, updateCapture } from "@/lib/actions";
+import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { fetchVideoFile } from "./utils/file-fetch";
 import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
 
@@ -110,7 +110,7 @@ export function ReviewPanel({
       if (!updateRes.ok) {
         throw new Error(updateRes.message);
       }
-      await revalidateCaptureCache();
+      await revalidateCaptureCaches();
       toast.success("Capture approved successfully");
       router.push(`/app/${capture.appId}`);
     } catch (err) {
@@ -129,7 +129,7 @@ export function ReviewPanel({
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
       }
-      await revalidateCaptureCache();
+      await revalidateCaptureCaches();
       toast.success("Capture denied successfully");
       router.push(`/capture/${capture.id}/edit`);
     } catch (err) {

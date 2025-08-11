@@ -97,12 +97,19 @@ export const getCapture = unstable_cache(
       return { ok: false, message: "Failed to fetch capture.", data: null };
     }
   },
-  ["capture"],
+  ["capture-single"],
   {
     revalidate: 10,
-    tags: ["capture"],
+    tags: ["capture", "capture-single"],
   }
 );
+
+/**
+ * Handle revalidation of capture cache in getCapture.
+ */
+export async function revalidateCaptureCaches() {
+  revalidateTag("capture");
+}
 
 interface GetCapturesProps {
   userId?: string;
@@ -168,8 +175,8 @@ export const getCaptures = unstable_cache(
       return { ok: false, message: "Failed to fetch captures.", data: null };
     }
   },
-  ["captures"],
-  { revalidate: 10, tags: ["captures"] }
+  ["captures-list"],
+  { revalidate: 10, tags: ["capture", "captures-list"] }
 );
 
 /**
@@ -193,20 +200,12 @@ export async function updateCapture(
       where: { id },
       data,
     });
-    revalidateTag("captures");
 
     return { ok: true, message: "Capture updated.", data: capture };
   } catch (err) {
     console.error("Error updating capture:", err);
     return { ok: false, message: "Failed to update capture.", data: null };
   }
-}
-
-/**
- * Handle revalidation of capture cache in getCapture.
- */
-export async function revalidateCaptureCache() {
-  revalidateTag("capture");
 }
 
 /**
