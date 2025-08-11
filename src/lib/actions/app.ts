@@ -13,25 +13,25 @@ export type AppItemList = {
 };
 
 export type AppInput = {
-  packageName: string,
+  packageName: string;
   category: {
-    id: string,
-    name: string,
-  } | null,
+    id: string;
+    name: string;
+  } | null;
   metadata: {
-    company: string,
-    name: string,
-    cover: string,
-    description: string,
-    icon: string,
-    rating: number,
-    reviews: number,
-    genre: string[],
-    downloads: string,
-    url: string,
-  },
-  os: Platform
-}
+    company: string;
+    name: string;
+    cover: string;
+    description: string;
+    icon: string;
+    rating: number;
+    reviews: number;
+    genre: string[];
+    downloads: string;
+    url: string;
+  };
+  os: Platform;
+};
 
 export interface GetAppsParams {
   /** Simple full-text search (name, description, etc.) */
@@ -108,7 +108,7 @@ export async function getAllApps(): Promise<AppItemList[]> {
       id: app.id,
       package: app.packageName,
       name: app.metadata.name,
-      os: app.os
+      os: app.os,
     }));
   } catch (error) {
     console.error("Failed to fetch apps:", error);
@@ -136,7 +136,7 @@ export async function getAppByPackageName(
 }
 
 export async function checkIfAppExists(
-  packageName: string, 
+  packageName: string,
   os: Platform
 ): Promise<App | null> {
   if (!packageName) return null;
@@ -144,7 +144,7 @@ export async function checkIfAppExists(
   try {
     const app = await prisma.app.findUnique({
       where: {
-        packageName_os: { packageName, os }
+        packageName_os: { packageName, os },
       },
     });
 
@@ -164,12 +164,11 @@ export async function saveApp(
     const existingApp = await prisma.app.findFirst({
       where: {
         packageName: appData.packageName,
-        os: appData.os
+        os: appData.os,
       },
     });
 
     if (existingApp) {
-      console.log("App already exists:", existingApp.packageName);
       return { ok: true, data: existingApp };
     }
 

@@ -106,7 +106,6 @@ export default function Page() {
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-      console.log(event.dataTransfer.files[0]);
       setFile(event.dataTransfer.files[0]);
       if (fileInputRef.current) {
         fileInputRef.current.files = event.dataTransfer.files;
