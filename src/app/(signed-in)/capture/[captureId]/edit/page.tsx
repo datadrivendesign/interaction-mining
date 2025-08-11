@@ -180,17 +180,18 @@ export default function Page() {
       }
     }
 
+    // do logic for moving to next step
     try {
+      // upload progress to storage as intermediate state
+      const data = methods.getValues();
+      // save review data to s3 and route to evaluate
+      const saveRes = await handleDraftSave(data, capture!);
+      if (!saveRes.ok) {
+        throw new Error(saveRes.message || "Failed to save draft");
+      }
       if (stepIndex < TraceSteps.Review) {
         setStepIndex(stepIndex + 1);
       } else {
-        // upload progress to storage as intermediate state
-        const data = methods.getValues();
-        // save review data to s3 and route to evaluate
-        const saveRes = await handleDraftSave(data, capture!);
-        if (!saveRes.ok) {
-          throw new Error(saveRes.message || "Failed to save draft");
-        }
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
         });
@@ -211,10 +212,34 @@ export default function Page() {
     }
   };
 
+  const handleClickSaveDraft = async (
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const data = methods.getValues();
+    const saveRes = await handleDraftSave(data, capture!);
+    if (saveRes.ok) {
+      toast.success("Draft saved");
+    } else {
+      toast.error(saveRes.message || "Failed to save draft");
+    }
+    setIsSubmitting(false);
+  };
+
   const handlePrevious = () => {
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
     }
+  };
+
+  const handleClickBackToUpload = () => {
+    setIsSubmitting(true);
+    toast("Redirecting to upload page...", {
+      description: "You can continue editing your trace later",
+    });
+    router.push(`/capture/${captureId}/start`);
+    setIsSubmitting(false);
   };
 
   const docRender = () => {
@@ -290,8 +315,24 @@ export default function Page() {
                   <span className="block">
                     <Sheet title={"Instructions"}>{docRender()}</Sheet>
                   </span>
+                  <Button
+                    className="ml-8"
+                    variant="destructive"
+                    onClick={handleClickBackToUpload}
+                    disabled={isSubmitting}
+                  >
+                    Back to Upload
+                  </Button>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    className="mr-8"
+                    variant="outline"
+                    onClick={handleClickSaveDraft}
+                    disabled={isSubmitting}
+                  >
+                    Save Draft
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={handlePrevious}

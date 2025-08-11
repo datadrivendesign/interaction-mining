@@ -59,7 +59,6 @@ export async function generatePresignedUploadURL(
   }
 }
 
-// TODO: determine if need to generate signed url for cloudfront or s3
 /*
  * Fetches a list of files from S3.
  * @param key The S3 object key to fetch.

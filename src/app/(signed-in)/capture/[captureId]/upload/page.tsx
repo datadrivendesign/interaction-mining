@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useRef, useState } from "react";
+import { useActionState, useCallback, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -59,12 +59,23 @@ export default function Page() {
     (key): Promise<ListedFiles[]> => fileFetcher(key, uploadList),
     getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
   );
-  const filteredUserUploads = uploadList.filter(
-    (file) => !file.fileKey.includes("/screens")
+  const filteredUserUploads = useMemo(
+    () =>
+      uploadList.filter(
+        (file) =>
+          !file.fileKey.includes("/drafts") &&
+          !file.fileKey.includes("/screens")
+      ),
+    [uploadList]
+  );
+  const numFilteredDrafts = useMemo(
+    () => uploadList.filter((file) => file.fileKey.includes("/drafts")),
+    [uploadList]
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [deleteDrafts, setDeleteDrafts] = useState<boolean>(true);
 
   const handleSubmit = useCallback(
     async (_: any, formData: FormData) => {
@@ -78,16 +89,44 @@ export default function Page() {
 
   const [state, formAction, pending] = useActionState(handleSubmit, null);
 
+  /**
+   * Handle the change event for the file input
+   * @param event - The change event
+   */
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setFile(event.target.files[0]);
     }
   };
 
+  /**
+   * Handle the drop event for the file upload area
+   * @param event - The drag event
+   */
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (event.dataTransfer.files && event.dataTransfer.files[0]) {
+      console.log(event.dataTransfer.files[0]);
       setFile(event.dataTransfer.files[0]);
+      if (fileInputRef.current) {
+        fileInputRef.current.files = event.dataTransfer.files;
+      }
+    }
+  };
+
+  /**
+   * Delete the upload and all auto-saves (if user selected) for the file
+   * @param captureId - The ID of the capture
+   * @param fileKey - The key of the file to delete
+   */
+  const handleDeleteUpload = (captureId: string, fileKey: string) => {
+    handleDeleteFile(captureId, fileKey);
+    if (deleteDrafts) {
+      // delete all auto-saves for the file
+      const draftFiles = numFilteredDrafts.map((draft) => draft.fileKey);
+      draftFiles.forEach((draft) => {
+        handleDeleteFile(captureId, draft);
+      });
     }
   };
 
@@ -263,6 +302,23 @@ export default function Page() {
           {filteredUserUploads && filteredUserUploads.length > 0 && (
             <div className="flex flex-col mb-4">
               <h2 className="font-semibold mb-2">Uploaded files</h2>
+              <span className="inline-flex items-center text-sm text-muted-foreground">
+                {isDataLoading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin mr-1.5" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    {filteredUserUploads.length} file
+                    {filteredUserUploads.length !== 1 ? "s" : ""} uploaded
+                    {numFilteredDrafts.length > 0 &&
+                      `, ${numFilteredDrafts.length} auto-save${
+                        numFilteredDrafts.length !== 1 ? "s" : ""
+                      }`}
+                  </>
+                )}
+              </span>
               <ul className="flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800">
                 {filteredUserUploads.map((file: any, index: number) => (
                   <li
@@ -280,8 +336,10 @@ export default function Page() {
                       </Link>
                     </div>
                     <DeleteUploadDialog
+                      deleteDrafts={deleteDrafts}
+                      setDeleteDrafts={setDeleteDrafts}
                       onContinue={() =>
-                        handleDeleteFile(captureId, file.fileKey)
+                        handleDeleteUpload(captureId, file.fileKey)
                       }
                     >
                       <button className="inline-flex items-center cursor-pointer">
@@ -307,6 +365,18 @@ export default function Page() {
             )}
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <span className="inline-flex flex-col items-center text-center text-sm">
               {file ? (
