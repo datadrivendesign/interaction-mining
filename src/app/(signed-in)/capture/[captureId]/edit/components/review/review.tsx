@@ -86,7 +86,7 @@ function SaveTraceGallery() {
               <div className="relative w-full">
                 <TooltipProvider delayDuration={100}>
                   <Image
-                    className="relative z-0 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
+                    className="relative z-10 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
                     src={screen.src}
                     alt={`Extracted frame at ${screen.timestamp}`}
                     draggable={false}
@@ -99,7 +99,7 @@ function SaveTraceGallery() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
-                          className="cursor-pointer aspect-square w-[12%] absolute z-10 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70"
+                          className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70"
                           style={{
                             left: `${(gestures[screen.id]?.x ?? 0) * 100}%`,
                             top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
@@ -119,10 +119,7 @@ function SaveTraceGallery() {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>
-                          {gestures[screen.id]?.description ??
-                            "No gesture description"}
-                        </p>
+                        <p>{gestures[screen.id]?.type ?? "No gesture type"}</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
@@ -130,7 +127,7 @@ function SaveTraceGallery() {
                     <Tooltip key={redaction.id}>
                       <TooltipTrigger asChild>
                         <div
-                          className="absolute z-10 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                          className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
                           style={{
                             left: `${redaction.x * 100}%`,
                             top: `${redaction.y * 100}%`,
