@@ -84,7 +84,7 @@ function SaveTraceGallery() {
             >
               {/* Image container */}
               <div className="relative w-full">
-                <TooltipProvider>
+                <TooltipProvider delayDuration={100}>
                   <Image
                     className="relative z-0 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
                     src={screen.src}
@@ -130,7 +130,7 @@ function SaveTraceGallery() {
                     <Tooltip key={redaction.id}>
                       <TooltipTrigger asChild>
                         <div
-                          className="absolute z-0 bg-black"
+                          className="absolute z-10 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
                           style={{
                             left: `${redaction.x * 100}%`,
                             top: `${redaction.y * 100}%`,
@@ -149,7 +149,7 @@ function SaveTraceGallery() {
               {/* Gesture caption */}
               <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
                 <p className="text-sm text-center dark:text-neutral-300">
-                  {gestures[screen.id]?.description ?? "Final task state"}
+                  {gestures[screen.id]?.description ?? ""}
                 </p>
               </div>
             </figure>

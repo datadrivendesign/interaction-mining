@@ -10,9 +10,9 @@ import { useCapture } from "@/lib/hooks";
 import { toast } from "sonner";
 
 import {
+  DraftTraceFormData,
   RedactionSchema,
   ScreenGestureSchema,
-  ScreenReviewData,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
@@ -27,8 +27,8 @@ import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { handleReviewSave } from "./util";
-import { getCaptureFiles, updateCapture } from "@/lib/actions";
+import { getDraftFiles, handleDraftSave } from "./util";
+import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 
 enum TraceSteps {
@@ -58,64 +58,54 @@ export default function Page() {
     },
     resolver: zodResolver(TraceFormSchema),
   });
+
   // populate form with saved capture data if there is any
   useEffect(() => {
     const fetchFiles = async () => {
-      const files = await getCaptureFiles(captureId);
-      if (!files.ok) {
+      const draftFilesRes = await getDraftFiles(captureId);
+      if (!draftFilesRes.ok) {
         console.error("Failed to fetch files");
         return;
       }
-      const fetchedScreenFiles = files.data.filter((file) =>
-        file.fileKey.includes(`${captureId}/screens`)
-      );
-      if (fetchedScreenFiles.length === 0) {
+      if (draftFilesRes.data.length === 0) {
         return;
       }
       // grab json file from the fileKey
-      const screenData: ScreenReviewData[] = await Promise.all(
-        fetchedScreenFiles.map(async (file) => {
-          const response = await fetch(file.fileUrl);
-          const data = await response.json();
-          return data;
-        })
+      const draftFileKeys = draftFilesRes.data.filter((file) =>
+        file.fileKey.includes(`${captureId}/drafts`)
       );
-      const screens = screenData
-        .map((s) => {
-          return { id: s.id, src: s.src, timestamp: s.timestamp };
-        })
-        .sort((a, b) => a.timestamp - b.timestamp);
-      if (screens.length > 0) {
-        methods.setValue("screens", screens);
-      }
-      const vhs = screenData
-        .map((s) => {
-          return s.vh ? { [s.id]: s.vh } : {};
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      if (Object.keys(vhs).length > 0) {
-        methods.setValue("vhs", vhs);
-      }
-      const gestures = screenData
-        .map((s) => {
-          return { [s.id]: s.gesture };
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      if (Object.keys(gestures).length > 0) {
-        methods.setValue("gestures", gestures);
-      }
-      const redactions = screenData
-        .map((s) => {
-          return { [s.id]: s.redactions };
-        })
-        .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-      if (Object.keys(redactions).length > 0) {
-        methods.setValue("redactions", redactions);
-      }
-      const description = screenData[0].description;
-      if (description) {
-        methods.setValue("description", description);
-      }
+      // sort draft files by version
+      const regexFileVersionRule = /draft-(\d+)\.json$/;
+      draftFileKeys.sort((a, b) => {
+        const versionA = a.fileKey.match(regexFileVersionRule);
+        const versionB = b.fileKey.match(regexFileVersionRule);
+        if (versionA && versionB) {
+          return parseInt(versionA[1]) - parseInt(versionB[1]);
+        }
+        return 0;
+      });
+      const draftFile = draftFileKeys[draftFileKeys.length - 1];
+      const draftFileUrl = draftFile.fileUrl;
+      const draftFileResponse = await fetch(draftFileUrl);
+      const draftFormData: DraftTraceFormData = await draftFileResponse.json();
+      methods.setValue("gestures", draftFormData.gestures);
+      methods.setValue("redactions", draftFormData.redactions);
+      methods.setValue("description", draftFormData.description);
+      // grab screens
+      methods.setValue(
+        "screens",
+        draftFormData.screens.map((screen) => ({
+          id: screen.id,
+          src: "",
+          timestamp: screen.timestamp,
+        }))
+      );
+      // grab vh from android screens
+      const draftVHs: { [key: string]: any } = {};
+      draftFormData.screens.forEach((screen) => {
+        draftVHs[screen.id] = null;
+      });
+      methods.setValue("vhs", draftVHs);
     };
     fetchFiles();
   }, [captureId, methods]);
@@ -123,6 +113,8 @@ export default function Page() {
   const [stepIndex, setStepIndex] = useState(0);
 
   const handleNext = async () => {
+    setIsSubmitting(true);
+    // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
       // validate all screen gestures except the last one
       const allButLastScreenIds = methods
@@ -145,6 +137,7 @@ export default function Page() {
         errors.forEach((error) => {
           toast.error(error.message);
         });
+        setIsSubmitting(false);
         return;
       }
     } else if (stepIndex === TraceSteps.Redact) {
@@ -158,61 +151,95 @@ export default function Page() {
         errors.forEach((error) => {
           toast.error(error.message);
         });
+        setIsSubmitting(false);
+        return;
+      }
+    } else if (stepIndex === TraceSteps.Review) {
+      // validate all screen gestures except the last one
+      const allButLastScreenIds = methods
+        .getValues()
+        .screens.slice(0, -1)
+        .map((s) => s.id);
+      const allButLastScreenGestures = Object.fromEntries(
+        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
+          allButLastScreenIds.includes(id)
+        )
+      );
+      // Validate the entire trace form, especially "description"
+      const validation = TraceFormSchema.safeParse({
+        ...methods.getValues(),
+        gestures: allButLastScreenGestures,
+      });
+      if (!validation.success) {
+        const errors = validation.error.issues || "Invalid input";
+        errors.forEach((error) => {
+          toast.error(error.message);
+        });
+        setIsSubmitting(false);
         return;
       }
     }
 
-    if (stepIndex < TraceSteps.Review) {
-      setStepIndex(stepIndex + 1);
-    } else {
-      setIsSubmitting(true);
-      try {
-        // validate all screen gestures except the last one
-        const allButLastScreenIds = methods
-          .getValues()
-          .screens.slice(0, -1)
-          .map((s) => s.id);
-        const allButLastScreenGestures = Object.fromEntries(
-          Object.entries(methods.getValues().gestures).filter(([id, _]) =>
-            allButLastScreenIds.includes(id)
-          )
-        );
-        // Validate the "gestures"
-        const validation = TraceFormSchema.safeParse({
-          ...methods.getValues(),
-          gestures: allButLastScreenGestures,
-        });
-        if (!validation.success) {
-          const errors = validation.error.issues || "Invalid input";
-          errors.forEach((error) => {
-            toast.error(error.message);
-          });
-          setIsSubmitting(false);
-          return;
-        }
-        // Submit the form
-        const data = methods.getValues();
-        // save review data to s3 and route to evaluate
-        await handleReviewSave(data, capture!);
+    // do logic for moving to next step
+    try {
+      // upload progress to storage as intermediate state
+      const data = methods.getValues();
+      // save review data to s3 and route to evaluate
+      const saveRes = await handleDraftSave(data, capture!);
+      if (!saveRes.ok) {
+        throw new Error(saveRes.message || "Failed to save draft");
+      }
+      if (stepIndex < TraceSteps.Review) {
+        setStepIndex(stepIndex + 1);
+      } else {
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
         });
         if (!updateResult.ok) {
           throw new Error(updateResult.message || "Failed to update capture");
         }
-
-        router.push(`/capture/${captureId}/evaluate`);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSubmitting(false);
+        await revalidateCaptureCaches();
+        // go to the /dashboard page
+        router.push(`/dashboard`);
       }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const handleClickSaveDraft = async (
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const data = methods.getValues();
+    const saveRes = await handleDraftSave(data, capture!);
+    if (saveRes.ok) {
+      toast.success("Draft saved");
+    } else {
+      toast.error(saveRes.message || "Failed to save draft");
+    }
+    setIsSubmitting(false);
+  };
+
   const handlePrevious = () => {
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
     }
+  };
+
+  const handleClickBackToUpload = () => {
+    setIsSubmitting(true);
+    toast("Redirecting to upload page...", {
+      description: "You can continue editing your trace later",
+    });
+    router.push(`/capture/${captureId}/start`);
+    setIsSubmitting(false);
   };
 
   const docRender = () => {
@@ -288,25 +315,40 @@ export default function Page() {
                   <span className="block">
                     <Sheet title={"Instructions"}>{docRender()}</Sheet>
                   </span>
+                  <Button
+                    className="ml-8 hover:cursor-pointer"
+                    variant="destructive"
+                    onClick={handleClickBackToUpload}
+                    disabled={isSubmitting}
+                  >
+                    Back to Upload
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    className="mr-8 hover:cursor-pointer"
+                    variant="outline"
+                    onClick={handleClickSaveDraft}
+                    disabled={isSubmitting}
+                  >
+                    Save Draft
+                  </Button>
+                  <Button
+                    className="hover:cursor-pointer"
                     variant="outline"
                     onClick={handlePrevious}
                     disabled={stepIndex === 0}
                   >
                     Back
                   </Button>
-                  {stepIndex < TraceSteps.Review ? (
-                    <Button onClick={handleNext}>Next</Button>
-                  ) : (
+                  {
                     <Button onClick={handleNext} disabled={isSubmitting}>
                       {isSubmitting && (
                         <Loader2 className="size-4 animate-spin" />
                       )}
-                      Finish
+                      {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
                     </Button>
-                  )}
+                  }
                 </div>
               </nav>
             </>

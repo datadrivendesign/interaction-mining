@@ -59,7 +59,7 @@ export async function generatePresignedUploadURL(
   }
 }
 
-/**
+/*
  * Fetches a list of files from S3.
  * @param key The S3 object key to fetch.
  * @returns

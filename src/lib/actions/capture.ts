@@ -97,12 +97,19 @@ export const getCapture = unstable_cache(
       return { ok: false, message: "Failed to fetch capture.", data: null };
     }
   },
-  ["capture"],
+  ["capture-single"],
   {
     revalidate: 10,
-    tags: ["capture"],
+    tags: ["capture", "capture-single"],
   }
 );
+
+/**
+ * Handle revalidation of capture cache in getCapture.
+ */
+export async function revalidateCaptureCaches() {
+  revalidateTag("capture");
+}
 
 interface GetCapturesProps {
   userId?: string;
@@ -168,8 +175,8 @@ export const getCaptures = unstable_cache(
       return { ok: false, message: "Failed to fetch captures.", data: null };
     }
   },
-  undefined,
-  { revalidate: 10 }
+  ["captures-list"],
+  { revalidate: 10, tags: ["capture", "captures-list"] }
 );
 
 /**
@@ -194,9 +201,6 @@ export async function updateCapture(
       data,
     });
 
-    // Revalidate the cache to ensure fresh data
-    revalidateTag("capture");
-
     return { ok: true, message: "Capture updated.", data: capture };
   } catch (err) {
     console.error("Error updating capture:", err);
@@ -214,6 +218,13 @@ export async function getCaptureFiles(
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`uploads/${captureId}`);
+    if (!files.ok) {
+      return {
+        ok: false,
+        message: "Failed to fetch uploaded files.",
+        data: null,
+      };
+    }
     return files;
   } catch (err) {
     console.error("Error fetching uploaded files:", err);
