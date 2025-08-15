@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ListRestart } from "lucide-react";
+import { Badge, ListRestart } from "lucide-react";
 import { FocusView } from "./focus-view";
 import { Filmstrip } from "./filmstrip";
 import { toast } from "sonner";
@@ -154,10 +154,22 @@ export function RepairScreenAndroid({
                   className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
                 >
                   <CardHeader className="flex flex-col items-center p-2">
-                    <CardTitle className="font-medium">Task</CardTitle>
-                    <CardDescription>
-                      {capture.task?.description ?? "No description"}
-                    </CardDescription>
+                    <Badge>
+                      <article className="prose prose-neutral dark:prose-invert leading-snug text-xs font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
+                        <p>
+                          Task:{" "}
+                          {capture?.task?.description ?? "No task provided."}
+                        </p>
+                      </article>
+                    </Badge>
+                    {capture?.feedback && capture?.feedback !== "" && (
+                      <div className="text-sm mt-3">
+                        <strong>Feedback:</strong>
+                        <p className="text-xs">
+                          {capture?.feedback ?? "No feedback provided."}
+                        </p>
+                      </div>
+                    )}
                   </CardHeader>
                 </Card>
 

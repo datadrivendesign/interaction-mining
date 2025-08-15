@@ -17,7 +17,7 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
       <Badge variant="default" className="bg-black my-5">
         <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
-            Task: {traceData.description ?? "No description provided."}
+            Description: {traceData.description ?? "No description provided."}
           </p>
         </article>
       </Badge>

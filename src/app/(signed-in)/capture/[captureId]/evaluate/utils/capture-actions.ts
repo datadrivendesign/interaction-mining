@@ -30,7 +30,8 @@ export async function approveCapture(
 }
 
 export async function denyCapture(
-  capture: Capture
+  capture: Capture,
+  feedback: string
 ): Promise<ActionPayload<null>> {
   // server side auth check
   const session = await auth();
@@ -48,6 +49,7 @@ export async function denyCapture(
   try {
     const updateRes = await updateCapture(capture.id, {
       status: CaptureStatus.PROCESSING,
+      feedback,
     });
     if (!updateRes.ok) {
       throw new Error(updateRes.message ?? "Failed to update capture");

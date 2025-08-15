@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -109,6 +109,33 @@ export default function Page() {
     };
     fetchFiles();
   }, [captureId, methods]);
+
+  const isAutosavingRef = useRef(false);
+  useEffect(() => {
+    if (!capture) return;
+
+    const autosave = async () => {
+      if (isSubmitting || isAutosavingRef.current) return;
+      
+      isAutosavingRef.current = true;
+      try {
+        const data = methods.getValues();
+        const saveRes = await handleDraftSave(data, capture);
+        if (saveRes.ok) {
+          toast.success("Draft autosaved", { duration: 2000 });
+        }
+      } catch (error) {
+        console.error("Autosave failed:", error);
+      } finally {
+        isAutosavingRef.current = false;
+      }
+    };
+
+    const intervalId = setInterval(autosave, 2 * 60 * 1000); // 2 minutes
+    return () => clearInterval(intervalId);
+    // run once capture is ready, refactor to not have to remove dep array?
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capture]);
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -329,9 +356,16 @@ export default function Page() {
                     className="mr-8 hover:cursor-pointer"
                     variant="outline"
                     onClick={handleClickSaveDraft}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isAutosavingRef.current}
                   >
-                    Save Draft
+                    {isAutosavingRef.current ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        Autosaving...
+                      </>
+                    ) : (
+                      "Save Draft"
+                    )}
                   </Button>
                   <Button
                     className="hover:cursor-pointer"

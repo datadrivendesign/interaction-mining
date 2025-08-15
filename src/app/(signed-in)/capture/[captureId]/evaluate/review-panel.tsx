@@ -19,6 +19,7 @@ import { handleTraceSave } from "../edit/util";
 import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { fetchVideoFile } from "./utils/file-fetch";
 import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
+import { Textarea } from "@/components/ui/textarea";
 
 export function ReviewPanel({
   traceData,
@@ -35,37 +36,30 @@ export function ReviewPanel({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    fetchVideoFile(`uploads/${capture.id}`).then((videoFiles) => {
-      const loadVideoBlob = async () => {
-        if (videoFiles.length > 0 && videoRef.current) {
-          try {
-            const response = await fetch(videoFiles[0].fileUrl);
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            videoRef.current.src = objectUrl;
-          } catch (e) {
-            console.error("Error loading video blob:", e);
-            toast.error("Error loading video for frame extraction");
-          }
-        }
-      };
-      loadVideoBlob();
-    });
-  }, [capture.id, videoRef]);
+  const [feedback, setFeedback] = useState(capture.feedback ?? "");
+  const isProcessingRef = useRef(false);
 
   const populateDraftScreens = useCallback(
     async (video: HTMLVideoElement, screens: FrameData[]) => {
       const frames: FrameData[] = [];
-      // Before the loop, do a "warm-up" seek to ensure video is loaded:
-      await extractVideoFrame(video, 0.1);
-      for (const s of screens) {
-        if (!s.src) {
-          const f = await extractVideoFrame(video, s.timestamp);
-          s.src = f.src;
+      try {
+        // Create a copy of screens to avoid mutation issues
+        const screensCopy = screens.map((screen) => ({ ...screen }));
+
+        // Before the loop, do a "warm-up" seek to ensure video is loaded:
+        await extractVideoFrame(video, 0.1);
+        let i = 0;
+        for (const s of screensCopy) {
+          if (!s.src) {
+            const f = await extractVideoFrame(video, s.timestamp);
+            s.src = f.src; // Safe to mutate the copy
+          }
+          i++;
+          frames.push(s);
         }
-        frames.push(s);
+      } catch (error) {
+        console.error(error);
+        toast.error("Error extracting video frames");
       }
       return frames;
     },
@@ -73,25 +67,77 @@ export function ReviewPanel({
   );
 
   useEffect(() => {
-    if (!videoRef || !videoRef.current) {
-      return;
-    }
-    // end early if all screens have src
-    if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
-      return;
-    }
-    populateDraftScreens(videoRef.current, traceData.screens).then((frames) => {
-      setTraceData((prevData) => {
-        if (!prevData) {
-          return prevData;
+    const loadVideoAndPopulateScreens = async () => {
+      if (isProcessingRef.current) {
+        // video is already being processed
+        return;
+      }
+
+      try {
+        // start load video
+        isProcessingRef.current = true;
+        const videoFiles = await fetchVideoFile(`uploads/${capture.id}`);
+        if (videoFiles.length === 0 || !videoRef.current) {
+          // video files not found or video ref not found
+          return;
         }
-        return {
-          ...prevData,
-          screens: frames.sort((a, b) => a.timestamp - b.timestamp),
-        };
-      });
-    });
-  }, [populateDraftScreens, setTraceData, videoRef, traceData.screens]);
+        const response = await fetch(videoFiles[0].fileUrl);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const video = videoRef.current;
+        video.src = objectUrl;
+        // wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Video load timeout"));
+          }, 30000); // 30 second timeout
+
+          const onLoadedData = () => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadeddata", onLoadedData);
+            video.removeEventListener("error", onError);
+            resolve();
+          };
+
+          const onError = (e: any) => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadeddata", onLoadedData);
+            video.removeEventListener("error", onError);
+            reject(e);
+          };
+
+          video.addEventListener("loadeddata", onLoadedData, { once: true });
+          video.addEventListener("error", onError, { once: true });
+          // Check if already loaded
+          if (video.readyState >= 2) {
+            onLoadedData();
+          }
+        });
+        // check if need to populate data
+        if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
+          // All screens already have src, skip frame extraction
+          return;
+        }
+        const frames = await populateDraftScreens(video, traceData.screens);
+        setTraceData((prevData) => {
+          if (!prevData) {
+            return prevData;
+          }
+          return {
+            ...prevData,
+            screens: frames.sort((a, b) => a.timestamp - b.timestamp),
+          };
+        });
+      } catch (error) {
+        console.error(error);
+        toast.error("Error loading video");
+      } finally {
+        isProcessingRef.current = false;
+      }
+    };
+
+    loadVideoAndPopulateScreens();
+  }, [capture.id, traceData.screens, populateDraftScreens]);
 
   const handleApprove = async () => {
     try {
@@ -125,7 +171,7 @@ export function ReviewPanel({
   const handleDeny = async () => {
     try {
       setIsSubmitting(true);
-      const denyRes = await denyCapture(capture);
+      const denyRes = await denyCapture(capture, feedback);
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
       }
@@ -154,33 +200,41 @@ export function ReviewPanel({
         </article>
       </Badge>
 
-      <div className="flex flex-col justify-center items-center w-3/4 h-full">
+      <div className="flex flex-col justify-center items-center w-full h-full gap-4 mt-5">
         <video
           ref={videoRef}
           crossOrigin="anonymous"
           preload="auto"
-          className="max-w-full max-h-full rounded-lg object-contain"
+          className="w-1/2 max-h-full rounded-lg object-contain"
           controls={true}
         />
       </div>
       {isAdmin && (
-        <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
-          <Button
-            variant="outline"
-            className="bg-green-600 text-white hover:bg-green-700 dark:bg-white dark:text-black"
-            onClick={handleApprove}
-            disabled={isSubmitting}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="outline"
-            className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-500 dark:text-white"
-            onClick={handleDeny}
-            disabled={isSubmitting}
-          >
-            Deny
-          </Button>
+        <div className="flex flex-col justify-center items-center w-full h-full gap-5 mb-5">
+          <Textarea
+            className="w-3/4"
+            placeholder="Enter feedback for the capture"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+          />
+          <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
+            <Button
+              variant="outline"
+              className="bg-green-600 text-white hover:bg-green-700 dark:bg-white dark:text-black"
+              onClick={handleApprove}
+              disabled={isSubmitting}
+            >
+              Approve
+            </Button>
+            <Button
+              variant="outline"
+              className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-500 dark:text-white"
+              onClick={handleDeny}
+              disabled={isSubmitting}
+            >
+              Deny
+            </Button>
+          </div>
         </div>
       )}
     </aside>

@@ -18,50 +18,13 @@ import { Progress } from "@/components/ui/progress";
 import mergeRefs from "@/lib/utils/merge-refs";
 
 export default function Review() {
-  const { register } = useFormContext<TraceFormData>();
-  const [descriptionLen, setDescriptionLen] = useState(0);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-
   return (
     <div className="flex w-full h-full">
       <div className="flex w-2/3 h-full overflow-auto border-r border-neutral-200 dark:border-neutral-800">
         <SaveTraceGallery />
       </div>
       <div className="sticky top-0 flex flex-col shrink-0 grow-0 justify-center items-center w-1/3 h-full p-8">
-        <div className="flex flex-col w-full grow justify-start">
-          <Label htmlFor="description" className="mb-2">
-            Trace Description
-          </Label>
-          <Textarea
-            {...register("description")}
-            id="description"
-            maxLength={75}
-            onChange={(e) => {
-              register("description").onChange?.(e);
-              setDescriptionLen(e.target.value.length);
-            }}
-            ref={
-              mergeRefs(
-                register("description").ref,
-                descriptionRef
-              ) as React.MutableRefObject<HTMLTextAreaElement | null>
-            }
-            placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens."
-          />
-          {descriptionRef.current && (
-            <div className="w-full flex flex-col">
-              <Progress
-                className="w-full"
-                value={
-                  (descriptionLen / descriptionRef.current.maxLength) * 100
-                }
-              />
-              <div className="text-sm flex justify-end text-muted-foreground z-10">
-                {`${descriptionLen}/${descriptionRef.current.maxLength}`}
-              </div>
-            </div>
-          )}
-        </div>
+        <SaveTracePanel />
       </div>
     </div>
   );
@@ -154,5 +117,46 @@ function SaveTraceGallery() {
         </div>
       </div>
     </section>
+  );
+}
+
+function SaveTracePanel() {
+  const { register } = useFormContext<TraceFormData>();
+  const [descriptionLen, setDescriptionLen] = useState(0);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  return (
+    <div className="flex flex-col w-full grow justify-start">
+      <Label htmlFor="description" className="mb-2">
+        Trace Description
+      </Label>
+      <Textarea
+        {...register("description")}
+        id="description"
+        maxLength={75}
+        onChange={(e) => {
+          register("description").onChange?.(e);
+          setDescriptionLen(e.target.value.length);
+        }}
+        ref={
+          mergeRefs(
+            register("description").ref,
+            descriptionRef
+          ) as React.MutableRefObject<HTMLTextAreaElement | null>
+        }
+        placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens."
+      />
+      {descriptionRef.current && (
+        <div className="w-full flex flex-col">
+          <Progress
+            className="w-full"
+            value={(descriptionLen / descriptionRef.current.maxLength) * 100}
+          />
+          <div className="text-sm flex justify-end text-muted-foreground z-10">
+            {`${descriptionLen}/${descriptionRef.current.maxLength}`}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
