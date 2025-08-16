@@ -109,20 +109,22 @@ model Screen {
 }
 
 model Trace {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int?     @default(0) @map("__v")
-  appId       String   @map("app") @db.ObjectId
-  app         App      @relation(fields: [appId], references: [id])
-  captureId   String?  @map("capture") @db.ObjectId
-  created     DateTime @default(now()) @db.Date
-  name        String? // deprecated in favor of description
-  description String
-  screens     Screen[]
-  taskId      String   @default("") @map("task") @db.ObjectId
-  task        Task     @relation(fields: [taskId], references: [id])
-  worker      String // deprecated in favor of users
-  userId      String?  @map("user") @db.ObjectId
-  user        User?    @relation(fields: [userId], references: [id])
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  v             Int?     @default(0) @map("__v")
+  appId         String   @map("app") @db.ObjectId
+  app           App      @relation(fields: [appId], references: [id])
+  captureId     String?  @map("capture") @db.ObjectId
+  created       DateTime @default(now()) @db.Date
+  name          String? // deprecated in favor of description
+  description   String
+  screens       Screen[]
+  taskId        String   @default("") @map("task") @db.ObjectId
+  task          Task     @relation(fields: [taskId], references: [id])
+  worker        String // deprecated in favor of users
+  userId        String?  @map("user") @db.ObjectId
+  user          User?    @relation(fields: [userId], references: [id])
+  iOSVersion    String?
+  iPhoneVersion String?
 
   @@map("traces")
 }

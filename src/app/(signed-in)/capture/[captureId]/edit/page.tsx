@@ -30,6 +30,7 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 import { getDraftFiles, handleDraftSave } from "./util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
+import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 
 enum TraceSteps {
   Capture = 0,
@@ -55,6 +56,8 @@ export default function Page() {
       gestures: {},
       redactions: {},
       description: "",
+      iOSVersion: "",
+      iPhoneVersion: "",
     },
     resolver: zodResolver(TraceFormSchema),
   });
@@ -70,13 +73,10 @@ export default function Page() {
       if (draftFilesRes.data.length === 0) {
         return;
       }
-      // grab json file from the fileKey
-      const draftFileKeys = draftFilesRes.data.filter((file) =>
-        file.fileKey.includes(`${captureId}/drafts`)
-      );
       // sort draft files by version
+      const draftFiles = draftFilesRes.data;
       const regexFileVersionRule = /draft-(\d+)\.json$/;
-      draftFileKeys.sort((a, b) => {
+      draftFiles.sort((a, b) => {
         const versionA = a.fileKey.match(regexFileVersionRule);
         const versionB = b.fileKey.match(regexFileVersionRule);
         if (versionA && versionB) {
@@ -84,13 +84,24 @@ export default function Page() {
         }
         return 0;
       });
-      const draftFile = draftFileKeys[draftFileKeys.length - 1];
-      const draftFileUrl = draftFile.fileUrl;
-      const draftFileResponse = await fetch(draftFileUrl);
+      const latestDraftFile = draftFiles[draftFiles.length - 1];
+      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+        latestDraftFile.fileKey
+      );
+      if (!signedLatestDraftFileRes.ok) {
+        console.error("Failed to generate signed URL");
+        return;
+      }
+      const draftFileResponse = await fetch(
+        signedLatestDraftFileRes.data.signedUrl
+      );
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
       methods.setValue("gestures", draftFormData.gestures);
       methods.setValue("redactions", draftFormData.redactions);
       methods.setValue("description", draftFormData.description);
+      // get iOS and iPhone versions for apple apps
+      methods.setValue("iOSVersion", draftFormData.iOSVersion);
+      methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
       // grab screens
       methods.setValue(
         "screens",
@@ -116,7 +127,7 @@ export default function Page() {
 
     const autosave = async () => {
       if (isSubmitting || isAutosavingRef.current) return;
-      
+
       isAutosavingRef.current = true;
       try {
         const data = methods.getValues();
@@ -289,7 +300,7 @@ export default function Page() {
       case 1:
         return <RedactScreen />;
       case 2:
-        return <Review />;
+        return <Review capture={capture} />;
       default:
         return null;
     }
