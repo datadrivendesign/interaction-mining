@@ -12,6 +12,7 @@ import { useCapture } from "@/lib/hooks/capture";
 import { ReviewPanel } from "./review-panel";
 import { ReviewGallery } from "./review-gallery";
 import { getDraftFiles } from "../edit/util";
+import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 
 export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -33,9 +34,28 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
         console.error("No draft files found");
         return;
       }
-      const latestDraftFile = files.data[files.data.length - 1];
-      const draftFileUrl = latestDraftFile.fileUrl;
-      const draftFileResponse = await fetch(draftFileUrl);
+      // grab json file from the fileKey
+      const regexFileVersionRule = /draft-(\d+)\.json$/;
+      const draftFiles = files.data;
+      files.data.sort((a, b) => {
+        const versionA = a.fileKey.match(regexFileVersionRule);
+        const versionB = b.fileKey.match(regexFileVersionRule);
+        if (versionA && versionB) {
+          return parseInt(versionA[1]) - parseInt(versionB[1]);
+        }
+        return 0;
+      });
+      const latestDraftFile = draftFiles[draftFiles.length - 1];
+      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+        latestDraftFile.fileKey
+      );
+      if (!signedLatestDraftFileRes.ok) {
+        console.error("Failed to generate signed URL");
+        return;
+      }
+      const draftFileResponse = await fetch(
+        signedLatestDraftFileRes.data.signedUrl
+      );
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
       const screens = draftFormData.screens.map((s) => {
         return { id: s.id, src: "", timestamp: s.timestamp };
@@ -48,7 +68,17 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
       const gestures = draftFormData.gestures;
       const redactions = draftFormData.redactions;
       const description = draftFormData.description;
-      setTraceData({ screens, vhs, gestures, redactions, description });
+      const iOSVersion = draftFormData.iOSVersion ?? undefined;
+      const iPhoneVersion = draftFormData.iPhoneVersion ?? undefined;
+      setTraceData({
+        screens,
+        vhs,
+        gestures,
+        redactions,
+        description,
+        iOSVersion,
+        iPhoneVersion,
+      });
     };
     fetchDraftFiles();
   }, [captureId]);

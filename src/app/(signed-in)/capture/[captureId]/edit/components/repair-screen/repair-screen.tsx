@@ -11,7 +11,8 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { fileFetcher, getSWRConfig } from "./util";
 import { RepairScreenAndroid } from "./repair-screen-android";
 import { RepairScreenIOS } from "./repair-screen-ios";
-import { ListedFiles } from "@/lib/actions";
+import { Capture, ListedFiles } from "@/lib/actions";
+import { Prisma } from "@prisma/client";
 
 interface NavigationContextType {
   handleNext: () => void;
@@ -43,7 +44,18 @@ export const useNavigation = () => {
   return context;
 };
 
-export default function RepairScreen({ capture }: { capture: any }) {
+export default function RepairScreen({
+  capture,
+}: {
+  capture:
+    | Prisma.CaptureGetPayload<{
+        include: {
+          app: true;
+          task: true;
+        };
+      }>
+    | undefined;
+}) {
   const [watchScreens] = useWatch({
     name: ["screens"],
   });
@@ -83,11 +95,11 @@ export default function RepairScreen({ capture }: { capture: any }) {
 
   // Fetch file data
   const { data: files = [] } = useSWR(
-    capture.id ? ["Capture files", `uploads/${capture.id}`] : null,
+    capture?.id ? ["Capture files", `uploads/${capture.id}`] : null,
     (key): Promise<ListedFiles[]> => {
       return fileFetcher(key, files);
     },
-    getSWRConfig(capture.id)
+    getSWRConfig(capture?.id ?? "")
   );
 
   return (

@@ -4,9 +4,9 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, UseFormRegister } from "react-hook-form";
 import { FrameData, Redaction, TraceFormData } from "../types";
-import { ScreenGesture } from "@prisma/client";
+import { Prisma, ScreenGesture } from "@prisma/client";
 import {
   Tooltip,
   TooltipTrigger,
@@ -16,11 +16,28 @@ import {
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import { Progress } from "@/components/ui/progress";
 import mergeRefs from "@/lib/utils/merge-refs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { iosOptions, iphoneOptions } from "@/lib/utils/ios-options";
 
-export default function Review() {
-  const { register } = useFormContext<TraceFormData>();
-  const [descriptionLen, setDescriptionLen] = useState(0);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+export default function Review({
+  capture,
+}: {
+  capture:
+    | Prisma.CaptureGetPayload<{
+        include: {
+          app: true;
+          task: true;
+        };
+      }>
+    | undefined;
+}) {
+  const os = capture?.task ? capture.task.os : "none";
 
   return (
     <div className="flex w-full h-full">
@@ -28,40 +45,7 @@ export default function Review() {
         <SaveTraceGallery />
       </div>
       <div className="sticky top-0 flex flex-col shrink-0 grow-0 justify-center items-center w-1/3 h-full p-8">
-        <div className="flex flex-col w-full grow justify-start">
-          <Label htmlFor="description" className="mb-2">
-            Trace Description
-          </Label>
-          <Textarea
-            {...register("description")}
-            id="description"
-            maxLength={75}
-            onChange={(e) => {
-              register("description").onChange?.(e);
-              setDescriptionLen(e.target.value.length);
-            }}
-            ref={
-              mergeRefs(
-                register("description").ref,
-                descriptionRef
-              ) as React.MutableRefObject<HTMLTextAreaElement | null>
-            }
-            placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens."
-          />
-          {descriptionRef.current && (
-            <div className="w-full flex flex-col">
-              <Progress
-                className="w-full"
-                value={
-                  (descriptionLen / descriptionRef.current.maxLength) * 100
-                }
-              />
-              <div className="text-sm flex justify-end text-muted-foreground z-10">
-                {`${descriptionLen}/${descriptionRef.current.maxLength}`}
-              </div>
-            </div>
-          )}
-        </div>
+        <SaveTracePanel os={os} />
       </div>
     </div>
   );
@@ -86,7 +70,7 @@ function SaveTraceGallery() {
               <div className="relative w-full">
                 <TooltipProvider delayDuration={100}>
                   <Image
-                    className="relative z-0 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
+                    className="relative z-10 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
                     src={screen.src}
                     alt={`Extracted frame at ${screen.timestamp}`}
                     draggable={false}
@@ -99,7 +83,7 @@ function SaveTraceGallery() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
-                          className="cursor-pointer aspect-square w-[12%] absolute z-10 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70"
+                          className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70"
                           style={{
                             left: `${(gestures[screen.id]?.x ?? 0) * 100}%`,
                             top: `${(gestures[screen.id]?.y ?? 0) * 100}%`,
@@ -119,10 +103,7 @@ function SaveTraceGallery() {
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>
-                          {gestures[screen.id]?.description ??
-                            "No gesture description"}
-                        </p>
+                        <p>{gestures[screen.id]?.type ?? "No gesture type"}</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
@@ -130,7 +111,7 @@ function SaveTraceGallery() {
                     <Tooltip key={redaction.id}>
                       <TooltipTrigger asChild>
                         <div
-                          className="absolute z-10 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                          className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
                           style={{
                             left: `${redaction.x * 100}%`,
                             top: `${redaction.y * 100}%`,
@@ -157,5 +138,114 @@ function SaveTraceGallery() {
         </div>
       </div>
     </section>
+  );
+}
+
+function SaveTracePanel({ os }: { os: string }) {
+  return (
+    <div className="flex flex-col w-full grow justify-start">
+      {os === "ios" && (
+        <div className="flex flex-row gap-2 mb-5">
+          <VersionSelect
+            label="iPhone Version"
+            formKey="iPhoneVersion"
+            options={iphoneOptions}
+            placeholder="Select iPhone version"
+          />
+          <VersionSelect
+            label="iOS Version"
+            formKey="iOSVersion"
+            options={iosOptions}
+            placeholder="Select iOS version"
+          />
+        </div>
+      )}
+
+      <DescriptionField />
+    </div>
+  );
+}
+
+function VersionSelect({
+  label,
+  formKey,
+  options,
+  placeholder,
+}: {
+  label: string;
+  formKey: "iOSVersion" | "iPhoneVersion";
+  options: { value: string; label: string }[];
+  placeholder: string;
+}) {
+  const { watch, setValue } = useFormContext<TraceFormData>();
+
+  return (
+    <div className="flex flex-col">
+      <Label htmlFor={formKey} className="mb-2">
+        {label}
+      </Label>
+      <Select
+        onValueChange={(value) => {
+          setValue(formKey, value);
+        }}
+        value={watch(formKey)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function DescriptionField() {
+  const { register } = useFormContext<TraceFormData>();
+  const { onChange, ref, onBlur, name } = register("description");
+  const descriptionTextAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [descriptionLen, setDescriptionLen] = useState(0);
+
+  return (
+    <>
+      <Label htmlFor="description" className="mb-2">
+        Trace Description
+      </Label>
+      <Textarea
+        id="description"
+        onBlur={onBlur}
+        name={name}
+        maxLength={75}
+        onChange={(e) => {
+          onChange(e);
+          setDescriptionLen(e.target.value.length);
+        }}
+        ref={
+          mergeRefs(
+            ref,
+            descriptionTextAreaRef
+          ) as React.MutableRefObject<HTMLTextAreaElement | null>
+        }
+        placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens."
+      />
+      {descriptionTextAreaRef.current && (
+        <div className="w-full flex flex-col">
+          <Progress
+            className="w-full"
+            value={
+              (descriptionLen / descriptionTextAreaRef.current.maxLength) * 100
+            }
+          />
+          <div className="text-sm flex justify-end text-muted-foreground z-10">
+            {`${descriptionLen}/${descriptionTextAreaRef.current.maxLength}`}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -17,7 +17,7 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
       <Badge variant="default" className="bg-black my-5">
         <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
-            Task: {traceData.description ?? "No description provided."}
+            Description: {traceData.description ?? "No description provided."}
           </p>
         </article>
       </Badge>
@@ -47,7 +47,7 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                       <TooltipTrigger asChild>
                         {traceData.gestures[screen.id].type && (
                           <div
-                            className="cursor-pointer aspect-square w-[12%] absolute z-10 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-85"
+                            className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-85"
                             style={{
                               left: `${(traceData.gestures[screen.id].x ?? 0) * 100}%`,
                               top: `${(traceData.gestures[screen.id].y ?? 0) * 100}%`,
@@ -81,7 +81,7 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                         <Tooltip key={`${redaction.id}`}>
                           <TooltipTrigger asChild>
                             <div
-                              className="absolute z-10 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                              className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
                               style={{
                                 left: `${redaction.x * 100}%`,
                                 top: `${redaction.y * 100}%`,

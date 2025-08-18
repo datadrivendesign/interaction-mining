@@ -299,7 +299,7 @@ export function RepairScreenIOS({
               <Card
                 key="task"
                 className={
-                  "right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"
+                  "right-4 absolute top-0 w-60 h-60 p-0 z-10 shadow-md bg-background border rounded-md"
                 }
               >
                 <CardHeader className="flex flex-col items-center p-2">
@@ -307,21 +307,31 @@ export function RepairScreenIOS({
                     <Badge>
                       <article className="prose prose-neutral dark:prose-invert leading-snug text-sm font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
                         <p>
-                          {capture?.task?.description ??
-                            "No task description provided."}
+                          Task:{" "}
+                          <span className="text-xs">
+                            {capture?.task?.description ?? "No task provided."}
+                          </span>
                         </p>
                       </article>
                     </Badge>
-                    <p className="mt-1 text-sm font-semibold">
+                    <p className="mt-1 text-xs font-semibold">
                       1. Capture screens from video.
                     </p>
-                    <p className="text-sm font-semibold">
+                    <p className="text-xs font-semibold">
                       2. Add gestures to screens
                     </p>
-                    <p className="text-sm">
+                    <p className="text-xs">
                       <strong>Add screen gestures on this side.</strong> Start
                       gesture description with a verb, no full sentences.
                     </p>
+                    {capture?.feedback && capture?.feedback !== "" && (
+                      <div className="text-sm mt-3">
+                        <strong>Feedback:</strong>
+                        <p className="text-xs">
+                          {capture?.feedback ?? "No feedback provided."}
+                        </p>
+                      </div>
+                    )}
                   </CardDescription>
                 </CardHeader>
               </Card>
