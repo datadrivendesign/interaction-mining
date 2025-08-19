@@ -60,6 +60,8 @@ export function RepairScreenIOS({
   const populateDraftScreens = useCallback(
     async (video: HTMLVideoElement) => {
       const frames: FrameData[] = [];
+      // Before the loop, do a "warm-up" seek to ensure video is loaded:
+      await extractVideoFrame(video, 0.1);
       for (const s of screens) {
         if (!s.src) {
           const f = await extractVideoFrame(video, s.timestamp);
@@ -104,10 +106,11 @@ export function RepairScreenIOS({
     const loadVideoBlob = async () => {
       if (videoFiles.length > 0 && videoRef.current) {
         try {
-          const response = await fetch(videoFiles[0].fileUrl);
-          const blob = await response.blob();
-          const objectUrl = URL.createObjectURL(blob);
-          videoRef.current.src = objectUrl;
+          videoRef.current.src = videoFiles[0].fileUrl;
+          // const response = await fetch(videoFiles[0].fileUrl);
+          // const blob = await response.blob();
+          // const objectUrl = URL.createObjectURL(blob);
+          // videoRef.current.src = objectUrl;
         } catch (e) {
           console.error("Error loading video blob:", e);
           toast.error("Error loading video for frame extraction");

@@ -2,17 +2,9 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { FrameData, TraceFormData } from "../edit/components/types";
+import { useState } from "react";
+import { TraceFormData } from "../edit/components/types";
 import { CaptureStatus } from "@prisma/client";
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import {
   validateApprovePermissions,
   denyCapture,
@@ -20,127 +12,24 @@ import {
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
 import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import { fetchVideoFile } from "./utils/file-fetch";
-import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
 
 export function ReviewPanel({
   traceData,
-  setTraceData,
   capture,
-  router,
   isAdmin,
+  videoRef,
 }: {
   traceData: TraceFormData;
-  setTraceData: Dispatch<SetStateAction<TraceFormData | undefined>>;
   capture: Capture;
-  router: AppRouterInstance;
   isAdmin: boolean;
+  videoRef: React.RefObject<HTMLVideoElement>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [feedback, setFeedback] = useState(capture.feedback ?? "");
-  const isProcessingRef = useRef(false);
 
-  const populateDraftScreens = useCallback(
-    async (video: HTMLVideoElement, screens: FrameData[]) => {
-      const frames: FrameData[] = [];
-      try {
-        // Create a copy of screens to avoid mutation issues
-        const screensCopy = screens.map((screen) => ({ ...screen }));
-
-        // Before the loop, do a "warm-up" seek to ensure video is loaded:
-        await extractVideoFrame(video, 0.1);
-        let i = 0;
-        for (const s of screensCopy) {
-          if (!s.src) {
-            const f = await extractVideoFrame(video, s.timestamp);
-            s.src = f.src; // Safe to mutate the copy
-          }
-          i++;
-          frames.push(s);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Error extracting video frames");
-      }
-      return frames;
-    },
-    []
-  );
-
-  useEffect(() => {
-    const loadVideoAndPopulateScreens = async () => {
-      if (isProcessingRef.current) {
-        // video is already being processed
-        return;
-      }
-
-      try {
-        // start load video
-        isProcessingRef.current = true;
-        const videoFiles = await fetchVideoFile(`uploads/${capture.id}`);
-        if (videoFiles.length === 0 || !videoRef.current) {
-          // video files not found or video ref not found
-          return;
-        }
-        const response = await fetch(videoFiles[0].fileUrl);
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const video = videoRef.current;
-        video.src = objectUrl;
-        // wait for video to be ready
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error("Video load timeout"));
-          }, 30000); // 30 second timeout
-
-          const onLoadedData = () => {
-            clearTimeout(timeout);
-            video.removeEventListener("loadeddata", onLoadedData);
-            video.removeEventListener("error", onError);
-            resolve();
-          };
-
-          const onError = (e: any) => {
-            clearTimeout(timeout);
-            video.removeEventListener("loadeddata", onLoadedData);
-            video.removeEventListener("error", onError);
-            reject(e);
-          };
-
-          video.addEventListener("loadeddata", onLoadedData, { once: true });
-          video.addEventListener("error", onError, { once: true });
-          // Check if already loaded
-          if (video.readyState >= 2) {
-            onLoadedData();
-          }
-        });
-        // check if need to populate data
-        if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
-          // All screens already have src, skip frame extraction
-          return;
-        }
-        const frames = await populateDraftScreens(video, traceData.screens);
-        setTraceData((prevData) => {
-          if (!prevData) {
-            return prevData;
-          }
-          return {
-            ...prevData,
-            screens: frames.sort((a, b) => a.timestamp - b.timestamp),
-          };
-        });
-      } catch (error) {
-        console.error(error);
-        toast.error("Error loading video");
-      } finally {
-        isProcessingRef.current = false;
-      }
-    };
-
-    loadVideoAndPopulateScreens();
-  }, [capture.id, traceData.screens, populateDraftScreens]);
+  const router = useRouter();
 
   const handleApprove = async () => {
     try {

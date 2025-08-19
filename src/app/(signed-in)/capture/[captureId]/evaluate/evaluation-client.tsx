@@ -5,14 +5,20 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { DraftTraceFormData, TraceFormData } from "../edit/components/types";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DraftTraceFormData,
+  FrameData,
+  TraceFormData,
+} from "../edit/components/types";
 import { useCapture } from "@/lib/hooks/capture";
 import { ReviewPanel } from "./review-panel";
 import { ReviewGallery } from "./review-gallery";
 import { getDraftFiles } from "../edit/util";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
+import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
+import { fetchVideoFile } from "./utils/file-fetch";
 
 export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -21,7 +27,110 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
-  const router = useRouter();
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isProcessingRef = useRef(false);
+
+  const populateDraftScreens = useCallback(
+    async (video: HTMLVideoElement, screens: FrameData[]) => {
+      const frames: FrameData[] = [];
+      try {
+        // Create a copy of screens to avoid mutation issues
+        const screensCopy = screens.map((screen) => ({ ...screen }));
+
+        // Before the loop, do a "warm-up" seek to ensure video is loaded:
+        await extractVideoFrame(video, 0.1);
+        let i = 0;
+        for (const s of screensCopy) {
+          if (!s.src) {
+            const f = await extractVideoFrame(video, s.timestamp);
+            s.src = f.src; // Safe to mutate the copy
+          }
+          i++;
+          frames.push(s);
+        }
+      } catch (error) {
+        console.error(`Error extracting video frames: ${error}`);
+      }
+      return frames;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!capture || !traceData) {
+      return;
+    }
+
+    const loadVideoAndPopulateScreens = async () => {
+      if (isProcessingRef.current) {
+        // video is already being processed
+        return;
+      }
+      try {
+        // start load video
+        isProcessingRef.current = true;
+        const videoFiles = await fetchVideoFile(`uploads/${capture.id}`);
+        if (videoFiles.length === 0 || !videoRef.current) {
+          // video files not found or video ref not found
+          return;
+        }
+        // const response = await fetch(videoFiles[0].fileUrl);
+        // const blob = await response.blob();
+        // const objectUrl = URL.createObjectURL(blob);
+        const video = videoRef.current;
+        video.src = videoFiles[0].fileUrl;
+        // wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Video load timeout"));
+          }, 30000); // 30 second timeout
+
+          const onLoadedData = () => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadeddata", onLoadedData);
+            video.removeEventListener("error", onError);
+            resolve();
+          };
+
+          const onError = (e: any) => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadeddata", onLoadedData);
+            video.removeEventListener("error", onError);
+            reject(e);
+          };
+
+          video.addEventListener("loadeddata", onLoadedData, { once: true });
+          video.addEventListener("error", onError, { once: true });
+          // Check if already loaded
+          if (video.readyState >= 2) {
+            onLoadedData();
+          }
+        });
+        // check if need to populate data
+        if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
+          // All screens already have src, skip frame extraction
+          return;
+        }
+        const frames = await populateDraftScreens(video, traceData.screens);
+        setTraceData((prevData) => {
+          if (!prevData) {
+            return prevData;
+          }
+          return {
+            ...prevData,
+            screens: frames.sort((a, b) => a.timestamp - b.timestamp),
+          };
+        });
+      } catch (error) {
+        console.error(`Error loading video: ${error}`);
+      } finally {
+        isProcessingRef.current = false;
+      }
+    };
+
+    loadVideoAndPopulateScreens();
+  }, [capture?.id, traceData?.screens, populateDraftScreens]);
 
   useEffect(() => {
     const fetchDraftFiles = async () => {
@@ -96,10 +205,9 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
             {traceData && capture && (
               <ReviewPanel
                 traceData={traceData}
-                setTraceData={setTraceData}
                 capture={capture}
-                router={router}
                 isAdmin={isAdmin}
+                videoRef={videoRef}
               />
             )}
           </ResizablePanel>
@@ -110,7 +218,9 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
             maxSize={75}
             className="bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full"
           >
-            {traceData && <ReviewGallery traceData={traceData} />}
+            {traceData && (
+              <ReviewGallery traceData={traceData} videoRef={videoRef} />
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
       )}

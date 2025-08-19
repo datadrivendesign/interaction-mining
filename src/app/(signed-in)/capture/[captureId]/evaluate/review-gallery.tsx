@@ -11,7 +11,13 @@ import Image from "next/image";
 import { TraceFormData } from "../edit/components/types";
 import { Badge } from "@/components/ui/badge";
 
-export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
+export function ReviewGallery({
+  traceData,
+  videoRef,
+}: {
+  traceData: TraceFormData;
+  videoRef: React.RefObject<HTMLVideoElement>;
+}) {
   return (
     <section className="block w-full h-full p-5">
       <Badge variant="default" className="bg-black my-5">
@@ -31,7 +37,14 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                 className="relative flex flex-col shrink-0 shadow-xs w-1/4"
               >
                 {/* Image container */}
-                <div className="relative w-full">
+                <div
+                  className="relative w-full cursor-pointer"
+                  onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.currentTime = screen.timestamp;
+                    }
+                  }}
+                >
                   <TooltipProvider delayDuration={100}>
                     {screen.src.length > 0 && (
                       <Image
