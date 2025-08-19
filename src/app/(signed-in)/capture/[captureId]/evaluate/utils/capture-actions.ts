@@ -6,10 +6,9 @@ import { TraceFormData } from "../../edit/components/types";
 import { ActionPayload } from "@/lib/actions/types";
 import { auth } from "@/lib/auth";
 
-export async function approveCapture(
-  traceData: TraceFormData,
-  capture: Capture
-): Promise<ActionPayload<null>> {
+export async function validateApprovePermissions(): Promise<
+  ActionPayload<null>
+> {
   // server side auth check
   const session = await auth();
   if (!session?.user) {

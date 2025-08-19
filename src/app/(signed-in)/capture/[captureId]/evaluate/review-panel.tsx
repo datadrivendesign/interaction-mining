@@ -13,7 +13,10 @@ import {
 import { FrameData, TraceFormData } from "../edit/components/types";
 import { CaptureStatus } from "@prisma/client";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { approveCapture, denyCapture } from "./utils/capture-actions";
+import {
+  validateApprovePermissions,
+  denyCapture,
+} from "./utils/capture-actions";
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
 import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
@@ -142,7 +145,7 @@ export function ReviewPanel({
   const handleApprove = async () => {
     try {
       setIsSubmitting(true);
-      const approveRes = await approveCapture(traceData, capture);
+      const approveRes = await validateApprovePermissions();
       if (!approveRes.ok) {
         throw new Error(approveRes.message);
       }

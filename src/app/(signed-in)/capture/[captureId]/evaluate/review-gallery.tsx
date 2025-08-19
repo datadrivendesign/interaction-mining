@@ -45,7 +45,7 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                     )}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        {traceData.gestures[screen.id].type && (
+                        {traceData.gestures[screen.id] && (
                           <div
                             className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-85"
                             style={{
@@ -68,13 +68,15 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                           </div>
                         )}
                       </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        sideOffset={5}
-                        className="z-50"
-                      >
-                        <p>{traceData.gestures[screen.id].type}</p>
-                      </TooltipContent>
+                      {traceData.gestures[screen.id] && (
+                        <TooltipContent
+                          side="top"
+                          sideOffset={5}
+                          className="z-50"
+                        >
+                          <p>{traceData.gestures[screen.id].type}</p>
+                        </TooltipContent>
+                      )}
                     </Tooltip>
                     {(traceData.redactions[screen.id] || []).map(
                       (redaction, i) => (
@@ -99,11 +101,13 @@ export function ReviewGallery({ traceData }: { traceData: TraceFormData }) {
                   </TooltipProvider>
                 </div>
                 {/* Gesture caption */}
-                <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
-                  <p className="text-sm text-center dark:text-neutral-300">
-                    {traceData.gestures[screen.id].description ?? ""}
-                  </p>
-                </div>
+                {traceData.gestures[screen.id] && (
+                  <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
+                    <p className="text-sm text-center dark:text-neutral-300">
+                      {traceData.gestures[screen.id].description ?? ""}
+                    </p>
+                  </div>
+                )}
               </figure>
             ))}
         </div>
