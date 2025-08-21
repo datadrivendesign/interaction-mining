@@ -39,7 +39,7 @@ export const FeedbackDialog = ({
           </DialogDescription>
         </DialogHeader>
         <DialogHeader>
-          <DialogTitle>Summarize Feedback</DialogTitle>
+          <DialogTitle>Description Feedback</DialogTitle>
           <DialogDescription className="whitespace-pre-wrap">
             {summarizeFeedback || "No feedback provided"}
           </DialogDescription>

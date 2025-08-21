@@ -143,7 +143,7 @@ export function ReviewPanel({
               <Textarea
                 className="w-full h-full"
                 id="summarizeFeedback"
-                placeholder="Summarize feedback"
+                placeholder="Description feedback"
                 value={summarizeFeedback}
                 onChange={(e) => setSummarizeFeedback(e.target.value)}
               />
