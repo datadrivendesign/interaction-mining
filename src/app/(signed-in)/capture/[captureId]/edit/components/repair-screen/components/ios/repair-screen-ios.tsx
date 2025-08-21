@@ -7,7 +7,6 @@ import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
 import { FocusView } from "../focus-view";
 import { Card, CardDescription, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CirclePlay } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,7 +36,6 @@ export function RepairScreenIOS({
   const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
     name: ["screens", "vhs", "gestures", "redactions"],
   });
-  console.log("watchScreens", watchScreens.length);
 
   const screens = watchScreens as FrameData[];
   const vhs = watchVHs as { [key: string]: any };
@@ -103,14 +101,11 @@ export function RepairScreenIOS({
         // video files not found or video ref not found
         return;
       }
-      console.log("isDraftLoading", isDraftLoading);
       if (isDraftLoading) {
-        console.log("Wait for draft to load");
         return;
       }
       try {
         isProcessingRef.current = true;
-        console.log("Loading video and populating");
         const video = videoRef.current;
         video.src = videoFiles[0].fileUrl;
         // wait for video to be ready
@@ -153,16 +148,12 @@ export function RepairScreenIOS({
           MAX_THUMBS,
           THUMB_HEIGHT
         );
-        console.log("Extracted thumbnails", thumbs.length);
         setThumbnails(thumbs);
-        console.log("screens", watchScreens.length);
         const draftScreens = await populateDraftScreens(video);
-        console.log("Populated draft screens", draftScreens.length);
         setValue(
           "screens",
           draftScreens.sort((a, b) => a.timestamp - b.timestamp)
         );
-        console.log("Video loaded and populated");
       } catch (e) {
         console.error("Error loading video blob:", e);
         toast.error("Error loading video for frame extraction");
