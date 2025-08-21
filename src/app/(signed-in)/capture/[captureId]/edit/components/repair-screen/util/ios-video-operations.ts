@@ -83,6 +83,11 @@ export async function fileFetcher(
           return { ...file, fileUrl: cachedFile.fileUrl };
         }
       }
+      // skip if file is a draft
+      // TODO: this is a hack, should find better way to handle this...
+      if (file.fileKey.includes("/drafts/")) {
+        return file;
+      }
       // Generate new signed URL
       const signedUrlRes = await generateSignedCloudFrontURL(file.fileKey);
       if (signedUrlRes.ok) {

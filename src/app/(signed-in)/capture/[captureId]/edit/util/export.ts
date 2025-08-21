@@ -1,7 +1,7 @@
 "use client";
 import Konva from "konva";
 import { toast } from "sonner";
-import { Capture, Trace } from "@prisma/client";
+import { Capture, Prisma, Trace } from "@prisma/client";
 import plimit from "p-limit";
 
 import { createTrace, ListedFiles, updateTrace } from "@/lib/actions";
@@ -37,6 +37,13 @@ export async function handleDraftSave(
     redactions: data.redactions,
     description: data.description,
   };
+  // add iOS and iPhone versions if they exist
+  if (data.iPhoneVersion) {
+    draftTraceData.iPhoneVersion = data.iPhoneVersion;
+  }
+  if (data.iOSVersion) {
+    draftTraceData.iOSVersion = data.iOSVersion;
+  }
   // upload draft trace data to s3
   const prefix = `uploads/${capture.id}/drafts`;
   const fileName = `draft-${Date.now()}.json`;
@@ -62,7 +69,7 @@ export async function getDraftFiles(
   captureId: string
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
-    const files = await listFromS3(`uploads/${captureId}/drafts`);
+    const files = await listFromS3(`uploads/${captureId}/drafts`, false);
     if (!files.ok) {
       return {
         ok: false,
@@ -86,7 +93,7 @@ export async function handleTraceSave(
   capture: Capture
 ): Promise<ActionPayload<Trace>> {
   // create a new trace without screens
-  const traceRes = await createTrace({
+  const traceInput: Prisma.TraceCreateWithoutUserInput = {
     name: "New Trace",
     description: data.description,
     app: {
@@ -101,7 +108,15 @@ export async function handleTraceSave(
       },
     },
     worker: "web",
-  });
+  };
+  if (data.iOSVersion) {
+    traceInput.iOSVersion = data.iOSVersion;
+  }
+  if (data.iPhoneVersion) {
+    traceInput.iPhoneVersion = data.iPhoneVersion;
+  }
+
+  const traceRes = await createTrace(traceInput);
   if (!traceRes.ok) {
     return {
       ok: false,
@@ -109,7 +124,7 @@ export async function handleTraceSave(
       data: null,
     };
   }
-  const trace = traceRes.data;
+  const initTrace = traceRes.data;
   // Transpose gestures on to screens
   let screens = data.screens.map((screen: FrameData) => {
     const gesture = data.gestures[screen.id] ?? {
@@ -171,7 +186,7 @@ export async function handleTraceSave(
             type: "image/png",
           });
 
-          const prefix = `traces/${trace.id}/screens`;
+          const prefix = `traces/${initTrace.id}/screens`;
           const fileName = `${screen.id}.png`;
           const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
           if (!uploadRes.ok) {
@@ -190,7 +205,7 @@ export async function handleTraceSave(
           const file = new File([blob], `${screen.id}.png`, {
             type: "image/png",
           });
-          const prefix = `traces/${trace.id}/screens`;
+          const prefix = `traces/${initTrace.id}/screens`;
           const fileName = `${screen.id}.png`;
           const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
           if (!uploadRes || !uploadRes.ok) {
@@ -278,7 +293,7 @@ export async function handleTraceSave(
           const file = new File([blob], `${screen.id}.json`, {
             type: "application/json",
           });
-          const prefix = `traces/${trace.id}/vhs`;
+          const prefix = `traces/${initTrace.id}/vhs`;
           const fileName = `${screen.id}.json`;
           const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
           if (!uploadRes.ok) {
@@ -305,7 +320,7 @@ export async function handleTraceSave(
   }
   // update trace with screens and view hierarchies
   const updateTraceRes = await updateTrace(
-    trace.id,
+    initTrace.id,
     {
       screens: {
         create: screens,
@@ -328,7 +343,7 @@ export async function handleTraceSave(
   return {
     ok: true,
     message: "Trace created successfully. Redirecting...",
-    data: trace,
+    data: updateTraceRes.data,
   };
 }
 

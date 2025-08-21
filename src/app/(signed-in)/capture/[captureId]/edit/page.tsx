@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -30,6 +30,8 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 import { getDraftFiles, handleDraftSave } from "./util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
+import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
+import { FeedbackDialog } from "./components/repair-screen/components/feedback-dialog";
 
 enum TraceSteps {
   Capture = 0,
@@ -44,7 +46,7 @@ export default function Page() {
     includes: { app: true, task: true },
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [isDraftLoading, setIsDraftLoading] = useState(true);
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
 
@@ -55,6 +57,8 @@ export default function Page() {
       gestures: {},
       redactions: {},
       description: "",
+      iOSVersion: "",
+      iPhoneVersion: "",
     },
     resolver: zodResolver(TraceFormSchema),
   });
@@ -64,19 +68,18 @@ export default function Page() {
     const fetchFiles = async () => {
       const draftFilesRes = await getDraftFiles(captureId);
       if (!draftFilesRes.ok) {
+        setIsDraftLoading(false);
         console.error("Failed to fetch files");
         return;
       }
       if (draftFilesRes.data.length === 0) {
+        setIsDraftLoading(false);
         return;
       }
-      // grab json file from the fileKey
-      const draftFileKeys = draftFilesRes.data.filter((file) =>
-        file.fileKey.includes(`${captureId}/drafts`)
-      );
       // sort draft files by version
+      const draftFiles = draftFilesRes.data;
       const regexFileVersionRule = /draft-(\d+)\.json$/;
-      draftFileKeys.sort((a, b) => {
+      draftFiles.sort((a, b) => {
         const versionA = a.fileKey.match(regexFileVersionRule);
         const versionB = b.fileKey.match(regexFileVersionRule);
         if (versionA && versionB) {
@@ -84,13 +87,25 @@ export default function Page() {
         }
         return 0;
       });
-      const draftFile = draftFileKeys[draftFileKeys.length - 1];
-      const draftFileUrl = draftFile.fileUrl;
-      const draftFileResponse = await fetch(draftFileUrl);
+      const latestDraftFile = draftFiles[draftFiles.length - 1];
+      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+        latestDraftFile.fileKey
+      );
+      if (!signedLatestDraftFileRes.ok) {
+        setIsDraftLoading(false);
+        console.error("Failed to generate signed URL");
+        return;
+      }
+      const draftFileResponse = await fetch(
+        signedLatestDraftFileRes.data.signedUrl
+      );
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
       methods.setValue("gestures", draftFormData.gestures);
       methods.setValue("redactions", draftFormData.redactions);
       methods.setValue("description", draftFormData.description);
+      // get iOS and iPhone versions for apple apps
+      methods.setValue("iOSVersion", draftFormData.iOSVersion);
+      methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
       // grab screens
       methods.setValue(
         "screens",
@@ -106,9 +121,37 @@ export default function Page() {
         draftVHs[screen.id] = null;
       });
       methods.setValue("vhs", draftVHs);
+      setIsDraftLoading(false);
     };
     fetchFiles();
   }, [captureId, methods]);
+
+  const isAutosavingRef = useRef(false);
+  useEffect(() => {
+    if (!capture) return;
+
+    const autosave = async () => {
+      if (isSubmitting || isAutosavingRef.current) return;
+
+      isAutosavingRef.current = true;
+      try {
+        const data = methods.getValues();
+        const saveRes = await handleDraftSave(data, capture);
+        if (saveRes.ok) {
+          toast.success("Draft autosaved");
+        }
+      } catch (error) {
+        console.error("Autosave failed:", error);
+      } finally {
+        isAutosavingRef.current = false;
+      }
+    };
+
+    const intervalId = setInterval(autosave, 3 * 60 * 1000); // 3 minutes
+    return () => clearInterval(intervalId);
+    // run once capture is ready, refactor to not have to remove dep array?
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capture]);
 
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -182,16 +225,16 @@ export default function Page() {
 
     // do logic for moving to next step
     try {
-      // upload progress to storage as intermediate state
-      const data = methods.getValues();
-      // save review data to s3 and route to evaluate
-      const saveRes = await handleDraftSave(data, capture!);
-      if (!saveRes.ok) {
-        throw new Error(saveRes.message || "Failed to save draft");
-      }
       if (stepIndex < TraceSteps.Review) {
         setStepIndex(stepIndex + 1);
       } else {
+        // upload progress to storage as draft state
+        const data = methods.getValues();
+        // save review data to s3 and route to evaluate
+        const saveRes = await handleDraftSave(data, capture!);
+        if (!saveRes.ok) {
+          throw new Error(saveRes.message || "Failed to save draft");
+        }
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
         });
@@ -258,11 +301,13 @@ export default function Page() {
   const editorRender = () => {
     switch (stepIndex) {
       case 0:
-        return <RepairScreen capture={capture} />;
+        return (
+          <RepairScreen capture={capture} isDraftLoading={isDraftLoading} />
+        );
       case 1:
         return <RedactScreen />;
       case 2:
-        return <Review />;
+        return <Review capture={capture} />;
       default:
         return null;
     }
@@ -324,15 +369,32 @@ export default function Page() {
                     Back to Upload
                   </Button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-4 items-center">
                   <Button
                     className="mr-8 hover:cursor-pointer"
                     variant="outline"
                     onClick={handleClickSaveDraft}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isAutosavingRef.current}
                   >
-                    Save Draft
+                    {isAutosavingRef.current ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        Autosaving...
+                      </>
+                    ) : (
+                      "Save Draft"
+                    )}
                   </Button>
+
+                  <FeedbackDialog
+                    annotateFeedback={capture?.annotateFeedback ?? ""}
+                    redactFeedback={capture?.redactFeedback ?? ""}
+                    summarizeFeedback={capture?.summarizeFeedback ?? ""}
+                  >
+                    <Button variant="default">Feedback</Button>
+                  </FeedbackDialog>
+                </div>
+                <div className="flex gap-4 items-center">
                   <Button
                     className="hover:cursor-pointer"
                     variant="outline"

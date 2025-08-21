@@ -6,10 +6,9 @@ import { TraceFormData } from "../../edit/components/types";
 import { ActionPayload } from "@/lib/actions/types";
 import { auth } from "@/lib/auth";
 
-export async function approveCapture(
-  traceData: TraceFormData,
-  capture: Capture
-): Promise<ActionPayload<null>> {
+export async function validateApprovePermissions(): Promise<
+  ActionPayload<null>
+> {
   // server side auth check
   const session = await auth();
   if (!session?.user) {
@@ -30,7 +29,10 @@ export async function approveCapture(
 }
 
 export async function denyCapture(
-  capture: Capture
+  capture: Capture,
+  annotateFeedback: string,
+  redactFeedback: string,
+  summarizeFeedback: string
 ): Promise<ActionPayload<null>> {
   // server side auth check
   const session = await auth();
@@ -48,6 +50,9 @@ export async function denyCapture(
   try {
     const updateRes = await updateCapture(capture.id, {
       status: CaptureStatus.PROCESSING,
+      annotateFeedback,
+      redactFeedback,
+      summarizeFeedback,
     });
     if (!updateRes.ok) {
       throw new Error(updateRes.message ?? "Failed to update capture");

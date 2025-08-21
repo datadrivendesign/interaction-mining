@@ -28,6 +28,8 @@ export type TraceFormData = {
   gestures: { [key: string]: ScreenGesture };
   redactions: { [key: string]: Redaction[] };
   description: string;
+  iPhoneVersion?: string;
+  iOSVersion?: string;
 };
 
 // Draft trace form data with no vhs for lower overhead when storing remotely
@@ -36,6 +38,8 @@ export type DraftTraceFormData = {
   gestures: { [key: string]: ScreenGesture };
   redactions: { [key: string]: Redaction[] };
   description: string;
+  iPhoneVersion?: string;
+  iOSVersion?: string;
 };
 
 export const ScreenSchema = z
@@ -119,6 +123,8 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
     description: z.string().nonempty({
       message: "A description is required",
     }),
+    iPhoneVersion: z.string().optional(),
+    iOSVersion: z.string().optional(),
   })
   .refine(
     (data) => {

@@ -1,8 +1,8 @@
 import { CaptureScreenFile, ListedFiles } from "@/lib/actions";
 import { Platform } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useNavigation } from "./repair-screen";
-import { FrameData, Redaction, TraceFormData } from "../types";
+import { useNavigation } from "../../repair-screen";
+import { FrameData, Redaction, TraceFormData } from "../../../types";
 import { useEffect, useRef } from "react";
 import { ScreenGesture } from "@prisma/client";
 import {
@@ -17,10 +17,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ListRestart } from "lucide-react";
-import { FocusView } from "./focus-view";
-import { Filmstrip } from "./filmstrip";
+import { Badge, ListRestart } from "lucide-react";
+import { FocusView } from "../focus-view";
+import { Filmstrip } from "../filmstrip";
 import { toast } from "sonner";
+import { InstructionCardAndroid } from "../instruction-card";
 
 export function RepairScreenAndroid({
   capture,
@@ -149,18 +150,7 @@ export function RepairScreenAndroid({
               className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
             >
               <div className="flex flex-col justify-center items-center w-full h-full gap-4">
-                <Card
-                  key="task"
-                  className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
-                >
-                  <CardHeader className="flex flex-col items-center p-2">
-                    <CardTitle className="font-medium">Task</CardTitle>
-                    <CardDescription>
-                      {capture.task?.description ?? "No description"}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-
+                <InstructionCardAndroid capture={capture} />
                 <Button onClick={resetFormState}>
                   <ListRestart /> Reset Screens
                 </Button>

@@ -243,7 +243,7 @@ export function InspectView({ data }: { data: Trace }) {
                       <Tooltip key={`${redaction.annotation}-${i}`}>
                         <TooltipTrigger asChild>
                           <div
-                            className="absolute z-10 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                            className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
                             style={{
                               left: `${redaction.x * 100}%`,
                               top: `${redaction.y * 100}%`,

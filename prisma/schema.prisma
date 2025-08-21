@@ -56,19 +56,29 @@ type AppMetadata {
   url         String?
 }
 
-model App {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int           @default(0) @map("__v")
-  os          String
-  category    AppsCategory?
-  packageName String
-  metadata    AppMetadata
-  Capture     Capture[]
-  Trace       Trace[]
+model App { 
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  v                 Int           @default(0) @map("__v")
+  os                String
+  category          AppsCategory?
+  packageName       String
+  metadata          AppMetadata
+  Capture           Capture[]
+  Trace             Trace[]
+  CandidateTaskApp  CandidateTaskApp?
 
   @@unique([packageName, os])
   @@fulltext([metadata.name])
   @@map("apps")
+}
+
+model CandidateTaskApp {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  appId           String @unique @map("app") @db.ObjectId
+  app             App    @relation(fields: [appId], references: [id])
+  candidateTasks  String[]
+  isTaken         Boolean
+  @@map("candidate_task_apps")
 }
 
 model Redaction {
@@ -99,20 +109,22 @@ model Screen {
 }
 
 model Trace {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  v           Int?     @default(0) @map("__v")
-  appId       String   @map("app") @db.ObjectId
-  app         App      @relation(fields: [appId], references: [id])
-  captureId   String?  @map("capture") @db.ObjectId
-  created     DateTime @default(now()) @db.Date
-  name        String? // deprecated in favor of description
-  description String
-  screens     Screen[]
-  taskId      String   @default("") @map("task") @db.ObjectId
-  task        Task     @relation(fields: [taskId], references: [id])
-  worker      String // deprecated in favor of users
-  userId      String?  @map("user") @db.ObjectId
-  user        User?    @relation(fields: [userId], references: [id])
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  v             Int?     @default(0) @map("__v")
+  appId         String   @map("app") @db.ObjectId
+  app           App      @relation(fields: [appId], references: [id])
+  captureId     String?  @map("capture") @db.ObjectId
+  created       DateTime @default(now()) @db.Date
+  name          String? // deprecated in favor of description
+  description   String
+  screens       Screen[]
+  taskId        String   @default("") @map("task") @db.ObjectId
+  task          Task     @relation(fields: [taskId], references: [id])
+  worker        String // deprecated in favor of users
+  userId        String?  @map("user") @db.ObjectId
+  user          User?    @relation(fields: [userId], references: [id])
+  iOSVersion    String?
+  iPhoneVersion String?
 
   @@map("traces")
 }
@@ -132,17 +144,20 @@ model Task {
 }
 
 model Capture {
-  id      String        @id @default(auto()) @map("_id") @db.ObjectId
-  appId   String        @map("app") @db.ObjectId
-  app     App           @relation(fields: [appId], references: [id])
-  userId  String?       @map("user") @db.ObjectId
-  user    User?         @relation(fields: [userId], references: [id])
-  traceId String?       @map("trace") @db.ObjectId
-  taskId  String        @map("task") @db.ObjectId
-  task    Task          @relation(fields: [taskId], references: [id])
-  otp     String
-  src     String
-  status  CaptureStatus @default(CREATED)
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  appId             String        @map("app") @db.ObjectId
+  app               App           @relation(fields: [appId], references: [id])
+  userId            String?       @map("user") @db.ObjectId
+  user              User?         @relation(fields: [userId], references: [id])
+  traceId           String?       @map("trace") @db.ObjectId
+  taskId            String        @map("task") @db.ObjectId
+  task              Task          @relation(fields: [taskId], references: [id])
+  annotateFeedback  String?       @map("annotate_feedback")
+  redactFeedback    String?       @map("redact_feedback")
+  summarizeFeedback String?       @map("summarize_feedback")
+  otp               String
+  src               String
+  status            CaptureStatus @default(CREATED)
   @@map("captures")
 }
 
