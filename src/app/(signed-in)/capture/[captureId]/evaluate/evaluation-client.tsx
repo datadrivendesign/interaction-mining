@@ -40,13 +40,11 @@ export default function EvaluationClient({ isAdmin }: { isAdmin: boolean }) {
 
         // Before the loop, do a "warm-up" seek to ensure video is loaded:
         await extractVideoFrame(video, 0.1);
-        let i = 0;
         for (const s of screensCopy) {
           if (!s.src) {
             const f = await extractVideoFrame(video, s.timestamp);
             s.src = f.src; // Safe to mutate the copy
           }
-          i++;
           frames.push(s);
         }
       } catch (error) {

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 
 import { Platform } from "@/lib/utils";
 import RepairScreenCanvas from "./repair-screen-canvas";
-import { FrameData, TraceFormData } from "../types";
+import { FrameData, TraceFormData } from "../../types";
 import { ScreenGesture } from "@prisma/client";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 

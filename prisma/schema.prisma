@@ -144,18 +144,20 @@ model Task {
 }
 
 model Capture {
-  id       String        @id @default(auto()) @map("_id") @db.ObjectId
-  appId    String        @map("app") @db.ObjectId
-  app      App           @relation(fields: [appId], references: [id])
-  userId   String?       @map("user") @db.ObjectId
-  user     User?         @relation(fields: [userId], references: [id])
-  traceId  String?       @map("trace") @db.ObjectId
-  taskId   String        @map("task") @db.ObjectId
-  task     Task          @relation(fields: [taskId], references: [id])
-  feedback String?
-  otp      String
-  src      String
-  status   CaptureStatus @default(CREATED)
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  appId             String        @map("app") @db.ObjectId
+  app               App           @relation(fields: [appId], references: [id])
+  userId            String?       @map("user") @db.ObjectId
+  user              User?         @relation(fields: [userId], references: [id])
+  traceId           String?       @map("trace") @db.ObjectId
+  taskId            String        @map("task") @db.ObjectId
+  task              Task          @relation(fields: [taskId], references: [id])
+  annotateFeedback  String?       @map("annotate_feedback")
+  redactFeedback    String?       @map("redact_feedback")
+  summarizeFeedback String?       @map("summarize_feedback")
+  otp               String
+  src               String
+  status            CaptureStatus @default(CREATED)
   @@map("captures")
 }
 

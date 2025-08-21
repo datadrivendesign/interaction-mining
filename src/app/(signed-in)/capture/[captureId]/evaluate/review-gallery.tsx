@@ -31,7 +31,7 @@ export function ReviewGallery({
         <div className="flex min-w-full gap-5">
           {traceData.screens
             .sort((a, b) => a.timestamp - b.timestamp)
-            .map((screen) => (
+            .map((screen, index) => (
               <figure
                 key={screen.id}
                 className="relative flex flex-col shrink-0 shadow-xs w-1/4"
@@ -45,6 +45,10 @@ export function ReviewGallery({
                     }
                   }}
                 >
+                  {/* Index overlay - add this before the TooltipProvider */}
+                  <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+                    {index + 1}
+                  </div>
                   <TooltipProvider delayDuration={100}>
                     {screen.src.length > 0 && (
                       <Image

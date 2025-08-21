@@ -14,6 +14,7 @@ import { handleTraceSave } from "../edit/util";
 import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 
 export function ReviewPanel({
   traceData,
@@ -27,7 +28,15 @@ export function ReviewPanel({
   videoRef: React.RefObject<HTMLVideoElement>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState(capture.feedback ?? "");
+  const [annotateFeedback, setAnnotateFeedback] = useState(
+    capture.annotateFeedback ?? ""
+  );
+  const [redactFeedback, setRedactFeedback] = useState(
+    capture.redactFeedback ?? ""
+  );
+  const [summarizeFeedback, setSummarizeFeedback] = useState(
+    capture.summarizeFeedback ?? ""
+  );
 
   const router = useRouter();
 
@@ -63,7 +72,12 @@ export function ReviewPanel({
   const handleDeny = async () => {
     try {
       setIsSubmitting(true);
-      const denyRes = await denyCapture(capture, feedback);
+      const denyRes = await denyCapture(
+        capture,
+        annotateFeedback,
+        redactFeedback,
+        summarizeFeedback
+      );
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
       }
@@ -97,18 +111,44 @@ export function ReviewPanel({
           ref={videoRef}
           crossOrigin="anonymous"
           preload="auto"
-          className="w-1/2 max-h-full rounded-lg object-contain"
+          className="w-1/2 h-auto rounded-lg object-contain"
           controls={true}
         />
       </div>
       {isAdmin && (
-        <div className="flex flex-col justify-center items-center w-full h-full gap-5 mb-5">
-          <Textarea
-            className="w-3/4"
-            placeholder="Enter feedback for the capture"
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-          />
+        <div className="flex flex-col justify-center items-center w-full h-full gap-3 my-3">
+          <div className="flex flex-col gap-3 items-center w-full">
+            <div className="flex flex-col gap-3 px-3 items-start w-full">
+              <Label htmlFor="annotateFeedback">Annotate:</Label>
+              <Textarea
+                className="w-full h-full"
+                id="annotateFeedback"
+                placeholder="Annotate feedback"
+                value={annotateFeedback}
+                onChange={(e) => setAnnotateFeedback(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-3 px-3 items-start w-full">
+              <Label htmlFor="redactFeedback">Redact:</Label>
+              <Textarea
+                className="w-full h-full"
+                id="redactFeedback"
+                placeholder="Redact feedback"
+                value={redactFeedback}
+                onChange={(e) => setRedactFeedback(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-3 px-3 items-start w-full">
+              <Label htmlFor="summarizeFeedback">Summarize:</Label>
+              <Textarea
+                className="w-full h-full"
+                id="summarizeFeedback"
+                placeholder="Summarize feedback"
+                value={summarizeFeedback}
+                onChange={(e) => setSummarizeFeedback(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
             <Button
               variant="outline"

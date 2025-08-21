@@ -44,12 +44,14 @@ import {
 import clsx from "clsx";
 import mergeRefs from "@/lib/utils/merge-refs";
 import { Textarea } from "@/components/ui/textarea";
-import { FrameData } from "../types";
+import { FrameData } from "../../types";
 import { GestureOption } from "@/lib/utils/gesture-options";
-import BoundingBoxOverlay, { FocusedElementTab } from "./bounding-box-overlay";
+import BoundingBoxOverlay, {
+  FocusedElementTab,
+} from "./android/bounding-box-overlay";
 import { Platform } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
-import { useNavigation } from "./repair-screen";
+import { useNavigation } from "../repair-screen";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
