@@ -29,6 +29,10 @@ export function SaveTraceGallery() {
             >
               {/* Image container */}
               <div className="relative w-full">
+                {/* Index overlay */}
+                <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+                  {index + 1}
+                </div>
                 <TooltipProvider delayDuration={100}>
                   <Image
                     className="relative z-10 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
