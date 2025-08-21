@@ -115,7 +115,6 @@ export async function handleTraceSave(
   if (data.iPhoneVersion) {
     traceInput.iPhoneVersion = data.iPhoneVersion;
   }
-  console.log(traceInput);
 
   const traceRes = await createTrace(traceInput);
   if (!traceRes.ok) {

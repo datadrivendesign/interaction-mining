@@ -1,7 +1,7 @@
 import { cn, Platform, prettyNumber } from "@/lib/utils";
-import { FrameData, Redaction, TraceFormData } from "../types";
+import { FrameData, Redaction, TraceFormData } from "../../types";
 import { ScreenGesture } from "@prisma/client";
-import { useNavigation } from "./repair-screen";
+import { useNavigation } from "../repair-screen";
 import { useFormContext } from "react-hook-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +14,7 @@ import {
 import { CircleAlert, X } from "lucide-react";
 import Kbd from "@/components/ui/kbd";
 import Image from "next/image";
-import { card } from "./util";
+import { card } from "../util";
 import { spring } from "@/lib/motion";
 
 export function Filmstrip({
@@ -194,6 +194,10 @@ function FilmstripItem({
           ref={containerRef}
           className="relative h-[calc(100%-1rem)] rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
         >
+          {/* Index overlay */}
+          <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+            {index + 1}
+          </div>
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>

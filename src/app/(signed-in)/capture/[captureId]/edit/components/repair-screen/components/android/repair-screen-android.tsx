@@ -1,8 +1,8 @@
 import { CaptureScreenFile, ListedFiles } from "@/lib/actions";
 import { Platform } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useNavigation } from "./repair-screen";
-import { FrameData, Redaction, TraceFormData } from "../types";
+import { useNavigation } from "../../repair-screen";
+import { FrameData, Redaction, TraceFormData } from "../../../types";
 import { useEffect, useRef } from "react";
 import { ScreenGesture } from "@prisma/client";
 import {
@@ -18,9 +18,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, ListRestart } from "lucide-react";
-import { FocusView } from "./focus-view";
-import { Filmstrip } from "./filmstrip";
+import { FocusView } from "../focus-view";
+import { Filmstrip } from "../filmstrip";
 import { toast } from "sonner";
+import { InstructionCardAndroid } from "../instruction-card";
 
 export function RepairScreenAndroid({
   capture,
@@ -149,30 +150,7 @@ export function RepairScreenAndroid({
               className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
             >
               <div className="flex flex-col justify-center items-center w-full h-full gap-4">
-                <Card
-                  key="task"
-                  className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
-                >
-                  <CardHeader className="flex flex-col items-center p-2">
-                    <Badge>
-                      <article className="prose prose-neutral dark:prose-invert leading-snug text-xs font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
-                        <p>
-                          Task:{" "}
-                          {capture?.task?.description ?? "No task provided."}
-                        </p>
-                      </article>
-                    </Badge>
-                    {capture?.feedback && capture?.feedback !== "" && (
-                      <div className="text-sm mt-3">
-                        <strong>Feedback:</strong>
-                        <p className="text-xs">
-                          {capture?.feedback ?? "No feedback provided."}
-                        </p>
-                      </div>
-                    )}
-                  </CardHeader>
-                </Card>
-
+                <InstructionCardAndroid capture={capture} />
                 <Button onClick={resetFormState}>
                   <ListRestart /> Reset Screens
                 </Button>

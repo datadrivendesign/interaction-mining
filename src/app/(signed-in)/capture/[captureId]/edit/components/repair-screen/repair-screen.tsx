@@ -9,8 +9,8 @@ import { FrameData } from "../types";
 import useSWR from "swr";
 import { useHotkeys } from "react-hotkeys-hook";
 import { fileFetcher, getSWRConfig } from "./util";
-import { RepairScreenAndroid } from "./repair-screen-android";
-import { RepairScreenIOS } from "./repair-screen-ios";
+import { RepairScreenAndroid } from "./components/android/repair-screen-android";
+import { RepairScreenIOS } from "./components/ios/repair-screen-ios";
 import { Capture, ListedFiles } from "@/lib/actions";
 import { Prisma } from "@prisma/client";
 
@@ -46,6 +46,7 @@ export const useNavigation = () => {
 
 export default function RepairScreen({
   capture,
+  isDraftLoading,
 }: {
   capture:
     | Prisma.CaptureGetPayload<{
@@ -55,6 +56,7 @@ export default function RepairScreen({
         };
       }>
     | undefined;
+  isDraftLoading: boolean;
 }) {
   const [watchScreens] = useWatch({
     name: ["screens"],
@@ -114,7 +116,12 @@ export default function RepairScreen({
       {(os.toLowerCase() as Platform) === Platform.ANDROID ? (
         <RepairScreenAndroid capture={capture} files={files} os={os} />
       ) : (
-        <RepairScreenIOS capture={capture} files={files} os={os} />
+        <RepairScreenIOS
+          capture={capture}
+          files={files}
+          os={os}
+          isDraftLoading={isDraftLoading}
+        />
       )}
     </NavigationProvider>
   );

@@ -3,37 +3,42 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Filmstrip } from "./filmstrip";
+import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
-import { FocusView } from "./focus-view";
+import { FocusView } from "../focus-view";
 import { Card, CardDescription, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CirclePlay } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { extractThumbnails, extractVideoFrame } from "./util";
+import { extractThumbnails, extractVideoFrame } from "../../util";
 import { toast } from "sonner";
-import { FrameData, Redaction, TraceFormData } from "../types";
+import { FrameData, Redaction, TraceFormData } from "../../../types";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenGesture } from "@prisma/client";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useNavigation } from "./repair-screen";
+import { useNavigation } from "../../repair-screen";
 import { Platform } from "@/lib/utils";
+import { InstructionCardIOS } from "../instruction-card";
 
 export function RepairScreenIOS({
   capture,
   files,
   os,
+  isDraftLoading,
 }: {
   capture: any;
   files: ListedFiles[];
   os: Platform;
+  isDraftLoading: boolean;
 }) {
   const { focusViewIndex } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
   const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
     name: ["screens", "vhs", "gestures", "redactions"],
   });
+  console.log("watchScreens", watchScreens.length);
+
   const screens = watchScreens as FrameData[];
   const vhs = watchVHs as { [key: string]: any };
   const gestures = watchGestures as { [key: string]: ScreenGesture };
@@ -41,6 +46,7 @@ export function RepairScreenIOS({
   // video controls
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number>(0);
+  const isProcessingRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -57,15 +63,30 @@ export function RepairScreenIOS({
   const THUMB_HEIGHT = 128;
   const frameStep = 1 / MAX_THUMBS;
 
+  const videoFiles = useMemo(() => {
+    const regexRule = /\.(mp4|mov)$/;
+    // iOS screen recordings capitalize file extension, so we lowercase here
+    return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
+  }, [files]);
+
   const populateDraftScreens = useCallback(
     async (video: HTMLVideoElement) => {
       const frames: FrameData[] = [];
-      for (const s of screens) {
-        if (!s.src) {
-          const f = await extractVideoFrame(video, s.timestamp);
-          s.src = f.src;
+      try {
+        // Create a copy of screens to avoid mutation issues
+        const screensCopy = screens.map((screen) => ({ ...screen }));
+
+        // Before the loop, do a "warm-up" seek to ensure video is loaded:
+        await extractVideoFrame(video, 0.1);
+        for (const s of screensCopy) {
+          if (!s.src) {
+            const f = await extractVideoFrame(video, s.timestamp);
+            s.src = f.src; // Safe to mutate the copy
+          }
+          frames.push(s);
         }
-        frames.push(s);
+      } catch (error) {
+        console.error(`Error extracting video frames: ${error}`);
       }
       return frames;
     },
@@ -73,49 +94,84 @@ export function RepairScreenIOS({
   );
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || videoDuration === 0) {
-      return;
-    }
-    // manually load and extract thumbnails
-    extractThumbnails(video, videoDuration, MAX_THUMBS, THUMB_HEIGHT).then(
-      (thumbs) => {
-        setThumbnails(thumbs);
+    const loadVideoAndPopulate = async () => {
+      if (isProcessingRef.current) {
+        // video is already being processed
+        return;
       }
-    );
-    // set src field for screens for those not set
-    populateDraftScreens(video).then((frames) => {
-      setValue(
-        "screens",
-        frames.sort((a, b) => a.timestamp - b.timestamp)
-      );
-    });
-    // adding screens to dependency array can cause infinite re-renders
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoRef, videoDuration, setValue]);
+      if (videoFiles.length === 0 || !videoRef.current) {
+        // video files not found or video ref not found
+        return;
+      }
+      console.log("isDraftLoading", isDraftLoading);
+      if (isDraftLoading) {
+        console.log("Wait for draft to load");
+        return;
+      }
+      try {
+        isProcessingRef.current = true;
+        console.log("Loading video and populating");
+        const video = videoRef.current;
+        video.src = videoFiles[0].fileUrl;
+        // wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Video load timeout"));
+          }, 30000); // 30 second timeout
 
-  const videoFiles = useMemo(() => {
-    const regexRule = /\.(mp4|mov)$/;
-    // iOS screen recordings capitalize file extension, so we lowercase here
-    return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
-  }, [files]);
+          const onLoadedMetadata = () => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            video.removeEventListener("error", onError);
+            setVideoDuration(video.duration);
+            resolve();
+          };
 
-  useEffect(() => {
-    const loadVideoBlob = async () => {
-      if (videoFiles.length > 0 && videoRef.current) {
-        try {
-          const response = await fetch(videoFiles[0].fileUrl);
-          const blob = await response.blob();
-          const objectUrl = URL.createObjectURL(blob);
-          videoRef.current.src = objectUrl;
-        } catch (e) {
-          console.error("Error loading video blob:", e);
-          toast.error("Error loading video for frame extraction");
+          const onError = (e: any) => {
+            clearTimeout(timeout);
+            video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            video.removeEventListener("error", onError);
+            reject(e);
+          };
+
+          video.addEventListener("loadedmetadata", onLoadedMetadata, {
+            once: true,
+          });
+          video.addEventListener("error", onError, { once: true });
+          // Check if already loaded
+          if (video.readyState >= 2 && video.duration > 0) {
+            onLoadedMetadata();
+          }
+        });
+        // Now videoDuration should be set, but double-check
+        if (video.duration === 0) {
+          throw new Error("Video duration not available");
         }
+        const thumbs = await extractThumbnails(
+          video,
+          video.duration,
+          MAX_THUMBS,
+          THUMB_HEIGHT
+        );
+        console.log("Extracted thumbnails", thumbs.length);
+        setThumbnails(thumbs);
+        console.log("screens", watchScreens.length);
+        const draftScreens = await populateDraftScreens(video);
+        console.log("Populated draft screens", draftScreens.length);
+        setValue(
+          "screens",
+          draftScreens.sort((a, b) => a.timestamp - b.timestamp)
+        );
+        console.log("Video loaded and populated");
+      } catch (e) {
+        console.error("Error loading video blob:", e);
+        toast.error("Error loading video for frame extraction");
+      } finally {
+        isProcessingRef.current = false;
       }
     };
-    loadVideoBlob();
-  }, [videoFiles]);
+    loadVideoAndPopulate();
+  }, [videoFiles, videoRef, setValue, videoDuration, isDraftLoading]);
 
   // RAF to update currentTime
   useEffect(() => {
@@ -287,54 +343,12 @@ export function RepairScreenIOS({
                   controls={false}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
-                  onLoadedMetadata={(e) => {
-                    const video = e.currentTarget;
-                    setVideoDuration(video.duration);
-                  }}
                 />
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
-              <Card
-                key="task"
-                className={
-                  "right-4 absolute top-0 w-60 h-60 p-0 z-10 shadow-md bg-background border rounded-md"
-                }
-              >
-                <CardHeader className="flex flex-col items-center p-2">
-                  <CardDescription>
-                    <Badge>
-                      <article className="prose prose-neutral dark:prose-invert leading-snug text-sm font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
-                        <p>
-                          Task:{" "}
-                          <span className="text-xs">
-                            {capture?.task?.description ?? "No task provided."}
-                          </span>
-                        </p>
-                      </article>
-                    </Badge>
-                    <p className="mt-1 text-xs font-semibold">
-                      1. Capture screens from video.
-                    </p>
-                    <p className="text-xs font-semibold">
-                      2. Add gestures to screens
-                    </p>
-                    <p className="text-xs">
-                      <strong>Add screen gestures on this side.</strong> Start
-                      gesture description with a verb, no full sentences.
-                    </p>
-                    {capture?.feedback && capture?.feedback !== "" && (
-                      <div className="text-sm mt-3">
-                        <strong>Feedback:</strong>
-                        <p className="text-xs">
-                          {capture?.feedback ?? "No feedback provided."}
-                        </p>
-                      </div>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <InstructionCardIOS capture={capture} />
               {focusViewIndex > -1 && focusViewIndex < screens.length ? (
                 <FocusView
                   key={focusViewIndex}
@@ -355,7 +369,7 @@ export function RepairScreenIOS({
         </ResizablePanel>
 
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={33} minSize={33} maxSize={50}>
+        <ResizablePanel defaultSize={30} minSize={30} maxSize={50}>
           <div className="flex flex-col h-full">
             <Filmstrip
               screens={screens}

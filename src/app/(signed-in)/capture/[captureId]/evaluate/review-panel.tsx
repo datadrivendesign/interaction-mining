@@ -2,147 +2,48 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { FrameData, TraceFormData } from "../edit/components/types";
+import { useState } from "react";
+import { TraceFormData } from "../edit/components/types";
 import { CaptureStatus } from "@prisma/client";
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { approveCapture, denyCapture } from "./utils/capture-actions";
+import {
+  validateApprovePermissions,
+  denyCapture,
+} from "./utils/capture-actions";
 import { toast } from "sonner";
 import { handleTraceSave } from "../edit/util";
 import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import { fetchVideoFile } from "./utils/file-fetch";
-import { extractVideoFrame } from "../edit/components/repair-screen/util/ios-video-operations";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 
 export function ReviewPanel({
   traceData,
-  setTraceData,
   capture,
-  router,
   isAdmin,
+  videoRef,
 }: {
   traceData: TraceFormData;
-  setTraceData: Dispatch<SetStateAction<TraceFormData | undefined>>;
   capture: Capture;
-  router: AppRouterInstance;
   isAdmin: boolean;
+  videoRef: React.RefObject<HTMLVideoElement>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [feedback, setFeedback] = useState(capture.feedback ?? "");
-  const isProcessingRef = useRef(false);
-
-  const populateDraftScreens = useCallback(
-    async (video: HTMLVideoElement, screens: FrameData[]) => {
-      const frames: FrameData[] = [];
-      try {
-        // Create a copy of screens to avoid mutation issues
-        const screensCopy = screens.map((screen) => ({ ...screen }));
-
-        // Before the loop, do a "warm-up" seek to ensure video is loaded:
-        await extractVideoFrame(video, 0.1);
-        let i = 0;
-        for (const s of screensCopy) {
-          if (!s.src) {
-            const f = await extractVideoFrame(video, s.timestamp);
-            s.src = f.src; // Safe to mutate the copy
-          }
-          i++;
-          frames.push(s);
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Error extracting video frames");
-      }
-      return frames;
-    },
-    []
+  const [annotateFeedback, setAnnotateFeedback] = useState(
+    capture.annotateFeedback ?? ""
+  );
+  const [redactFeedback, setRedactFeedback] = useState(
+    capture.redactFeedback ?? ""
+  );
+  const [summarizeFeedback, setSummarizeFeedback] = useState(
+    capture.summarizeFeedback ?? ""
   );
 
-  useEffect(() => {
-    const loadVideoAndPopulateScreens = async () => {
-      if (isProcessingRef.current) {
-        // video is already being processed
-        return;
-      }
-
-      try {
-        // start load video
-        isProcessingRef.current = true;
-        const videoFiles = await fetchVideoFile(`uploads/${capture.id}`);
-        if (videoFiles.length === 0 || !videoRef.current) {
-          // video files not found or video ref not found
-          return;
-        }
-        const response = await fetch(videoFiles[0].fileUrl);
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const video = videoRef.current;
-        video.src = objectUrl;
-        // wait for video to be ready
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error("Video load timeout"));
-          }, 30000); // 30 second timeout
-
-          const onLoadedData = () => {
-            clearTimeout(timeout);
-            video.removeEventListener("loadeddata", onLoadedData);
-            video.removeEventListener("error", onError);
-            resolve();
-          };
-
-          const onError = (e: any) => {
-            clearTimeout(timeout);
-            video.removeEventListener("loadeddata", onLoadedData);
-            video.removeEventListener("error", onError);
-            reject(e);
-          };
-
-          video.addEventListener("loadeddata", onLoadedData, { once: true });
-          video.addEventListener("error", onError, { once: true });
-          // Check if already loaded
-          if (video.readyState >= 2) {
-            onLoadedData();
-          }
-        });
-        // check if need to populate data
-        if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
-          // All screens already have src, skip frame extraction
-          return;
-        }
-        const frames = await populateDraftScreens(video, traceData.screens);
-        setTraceData((prevData) => {
-          if (!prevData) {
-            return prevData;
-          }
-          return {
-            ...prevData,
-            screens: frames.sort((a, b) => a.timestamp - b.timestamp),
-          };
-        });
-      } catch (error) {
-        console.error(error);
-        toast.error("Error loading video");
-      } finally {
-        isProcessingRef.current = false;
-      }
-    };
-
-    loadVideoAndPopulateScreens();
-  }, [capture.id, traceData.screens, populateDraftScreens]);
+  const router = useRouter();
 
   const handleApprove = async () => {
     try {
       setIsSubmitting(true);
-      const approveRes = await approveCapture(traceData, capture);
+      const approveRes = await validateApprovePermissions();
       if (!approveRes.ok) {
         throw new Error(approveRes.message);
       }
@@ -171,7 +72,12 @@ export function ReviewPanel({
   const handleDeny = async () => {
     try {
       setIsSubmitting(true);
-      const denyRes = await denyCapture(capture, feedback);
+      const denyRes = await denyCapture(
+        capture,
+        annotateFeedback,
+        redactFeedback,
+        summarizeFeedback
+      );
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
       }
@@ -205,18 +111,44 @@ export function ReviewPanel({
           ref={videoRef}
           crossOrigin="anonymous"
           preload="auto"
-          className="w-1/2 max-h-full rounded-lg object-contain"
+          className="w-1/2 h-auto rounded-lg object-contain"
           controls={true}
         />
       </div>
       {isAdmin && (
-        <div className="flex flex-col justify-center items-center w-full h-full gap-5 mb-5">
-          <Textarea
-            className="w-3/4"
-            placeholder="Enter feedback for the capture"
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-          />
+        <div className="flex flex-col justify-center items-center w-full h-full gap-3 my-3">
+          <div className="flex flex-col gap-3 items-center w-full">
+            <div className="flex flex-col gap-3 px-3 items-start w-full">
+              <Label htmlFor="annotateFeedback">Annotate:</Label>
+              <Textarea
+                className="w-full h-full"
+                id="annotateFeedback"
+                placeholder="Annotate feedback"
+                value={annotateFeedback}
+                onChange={(e) => setAnnotateFeedback(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-3 px-3 items-start w-full">
+              <Label htmlFor="redactFeedback">Redact:</Label>
+              <Textarea
+                className="w-full h-full"
+                id="redactFeedback"
+                placeholder="Redact feedback"
+                value={redactFeedback}
+                onChange={(e) => setRedactFeedback(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-3 px-3 items-start w-full">
+              <Label htmlFor="summarizeFeedback">Summarize:</Label>
+              <Textarea
+                className="w-full h-full"
+                id="summarizeFeedback"
+                placeholder="Summarize feedback"
+                value={summarizeFeedback}
+                onChange={(e) => setSummarizeFeedback(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
             <Button
               variant="outline"
