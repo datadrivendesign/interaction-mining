@@ -42,6 +42,7 @@ export function Filmstrip({
   };
 
   const handleDeleteFrame = (index: number) => {
+    const screenId = screens[index].id;
     // reset focus view index
     setFocusViewIndex(-1);
     // remove frame from view
@@ -50,12 +51,12 @@ export function Filmstrip({
     setFrameData(newFrameData);
     // remove frame from gestures
     const updatedGestures = Object.fromEntries(
-      Object.entries(gestures).filter(([key]) => key !== screens[index].id)
+      Object.entries(gestures).filter(([key]) => key !== screenId)
     );
     setGestureData(updatedGestures);
     // remove frame from redactions
     const updatedRedactions = Object.fromEntries(
-      Object.entries(redactions).filter(([key]) => key !== screens[index].id)
+      Object.entries(redactions).filter(([key]) => key !== screenId)
     );
     setRedactionData(updatedRedactions);
   };
