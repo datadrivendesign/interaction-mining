@@ -1,9 +1,8 @@
 "use client";
 import { Rect } from "react-konva";
-import { Redaction } from "../types";
+import { Redaction } from "../../types";
 import { useEffect, useRef } from "react";
 import Konva from "konva";
-
 
 import React from "react";
 import { Circle, Line, Group } from "react-konva";
@@ -25,11 +24,11 @@ const CloseButton = ({
   const offset = lineLength / 2;
 
   return (
-    <Group 
+    <Group
       id={`redaction-${redactId}-close`}
-      x={x} 
-      y={y} 
-      onClick={onClick} 
+      x={x}
+      y={y}
+      onClick={onClick}
       listening
     >
       <Circle
@@ -69,9 +68,9 @@ export default function RedactRectangle({
   selectRedaction,
   handleRectClick,
   handleTransform,
-  handleRectDelete
+  handleRectDelete,
 }: {
-  type?: "black-box"
+  type?: "black-box";
   redaction: Redaction;
   displayWidth: number;
   displayHeight: number;
@@ -134,11 +133,11 @@ export default function RedactRectangle({
         onDragMove={(e) => handleTransform(e, redaction.id)}
         onDragEnd={onTransformEnd}
       />
-      <CloseButton 
+      <CloseButton
         x={redaction.x * displayWidth + offsetX}
-        y={redaction.y * displayHeight + offsetY}  
+        y={redaction.y * displayHeight + offsetY}
         redactId={`${redaction.id}`}
-        radius={8}    
+        radius={8}
         onClick={(e) => handleRectDelete(e, redaction.id)}
       />
     </Group>
