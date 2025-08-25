@@ -21,7 +21,7 @@ import useImage from "use-image";
 import { useGesture } from "@use-gesture/react";
 import { useMeasure } from "@uidotdev/usehooks";
 
-import { FrameData, Redaction } from "../types";
+import { FrameData, Redaction } from "../../types";
 import AnnotationCard from "./annotation-card";
 import { cn } from "@/lib/utils";
 import {

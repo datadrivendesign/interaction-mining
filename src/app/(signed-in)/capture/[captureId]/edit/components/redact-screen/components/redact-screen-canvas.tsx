@@ -3,12 +3,10 @@
 import { useState, useRef, createContext, useCallback, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import CanvasComponent, { CanvasRef } from "./canvas";
-import { TraceFormData } from "../types";
-import { FrameData } from "../types";
+import { TraceFormData, FrameData, Redaction } from "../../types";
 import Toolbar from "./toolbar";
 import Layers from "./layers";
 
-import { Redaction } from "../types";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
 
@@ -48,25 +46,25 @@ export const RedactCanvasContext = createContext<{
   updateRedaction: (id: string, updatedRedaction: Partial<Redaction>) => void;
 }>({
   mode: "select",
-  setMode: () => { },
+  setMode: () => {},
   redactions: [] as Redaction[],
   selected: {} as Redaction,
-  deleteRedaction: () => { },
-  selectRedaction: () => { },
-  createRedaction: () => { },
-  updateRedaction: () => { },
+  deleteRedaction: () => {},
+  selectRedaction: () => {},
+  createRedaction: () => {},
+  updateRedaction: () => {},
 });
 
 export default function RedactScreenCanvas({
   screen,
   vh,
   copied,
-  setCopied
+  setCopied,
 }: {
-  screen: FrameData,
-  vh: any,
-  copied: Redaction | null,
-  setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>
+  screen: FrameData;
+  vh: any;
+  copied: Redaction | null;
+  setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
   const [watchRedactions] = useWatch({
@@ -231,8 +229,10 @@ export default function RedactScreenCanvas({
 
   // copy and paste redaction to other screens
   useHotkeys("ctrl+c,meta+c", (e) => {
-    e.preventDefault()
-    if (e.repeat) { return; }
+    e.preventDefault();
+    if (e.repeat) {
+      return;
+    }
     if (mode === "select") {
       if (selected) {
         setCopied(selected);
@@ -244,8 +244,10 @@ export default function RedactScreenCanvas({
   });
 
   useHotkeys("ctrl+v,meta+v", (e) => {
-    e.preventDefault()
-    if (e.repeat) { return; }
+    e.preventDefault();
+    if (e.repeat) {
+      return;
+    }
     if (!copied) {
       toast.error("No redaction to paste");
       return;
@@ -259,7 +261,7 @@ export default function RedactScreenCanvas({
         height: copied!.height,
         annotation: copied!.annotation,
       }),
-      toast.success("Redaction pasted to screen");
+        toast.success("Redaction pasted to screen");
     }
   });
 
@@ -323,9 +325,9 @@ export default function RedactScreenCanvas({
     >
       <div className="relative flex items-center w-full h-full bg-neutral-50 dark:bg-neutral-950">
         <Toolbar mode={mode} setMode={setMode} />
-        <Layers 
-          redactions={redactionsOnScreen} 
-          deleteRedaction={deleteRedaction} 
+        <Layers
+          redactions={redactionsOnScreen}
+          deleteRedaction={deleteRedaction}
         />
         <CanvasComponent
           key={screen.id} // Force re-render when screen changes
