@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Plus, Clock, Play, Eye, CheckCircle } from "lucide-react";
+import { Plus, Clock, Play, Eye, CheckCircle, Search } from "lucide-react";
 import { User, CaptureStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -71,18 +71,25 @@ export default async function Page() {
 
         {/* Main Content */}
         <section className="flex flex-col flex-1">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
               <p className="text-muted-foreground">
                 Manage your captures and traces
               </p>
             </div>
-            <Link href="/capture/new">
-              <Button>
-                <Plus className="mr-2 size-4" /> New Capture
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/capture/new">
+                <Button>
+                  <Plus className="mr-2 size-4" /> New Capture
+                </Button>
+              </Link>
+              <Link href="/candidates">
+                <Button>
+                  <Search className="mr-2 size-4" /> Candidate Tasks
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <Tabs defaultValue="captures" className="w-full">
