@@ -9,3 +9,4 @@ export * from "@/lib/actions/task";
 export * from "@/lib/actions/session";
 export * from "@/lib/actions/admin";
 export * from "@/lib/actions/user";
+export * from "@/lib/actions/candidate-task-apps";
