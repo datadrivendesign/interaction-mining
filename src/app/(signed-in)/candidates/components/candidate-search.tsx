@@ -1,4 +1,3 @@
-import { CandidateTaskApp } from "@/lib/actions";
 import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
 import { Filter, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -43,19 +42,21 @@ enum ButtonClickState {
 export const CandidateTaskSearch = ({
   search,
   setSearch,
-  filteredCount,
+  totalCount,
   selectedGenres,
   setSelectedGenres,
   excludeGenres,
   setExcludeGenres,
+  resetFilters,
 }: {
   search: string;
   setSearch: (search: string) => void;
-  filteredCount: number;
+  totalCount: number;
   selectedGenres: string[];
   setSelectedGenres: (genres: string[]) => void;
   excludeGenres: string[];
   setExcludeGenres: (genres: string[]) => void;
+  resetFilters: () => void;
 }) => {
   const [buttonClickStates, setButtonClickStates] = useState<{
     [genre: string]: ButtonClickState;
@@ -98,8 +99,7 @@ export const CandidateTaskSearch = ({
         iosAppGenres.map((genre) => [genre, ButtonClickState.NotSelected])
       )
     );
-    setSelectedGenres([]);
-    setExcludeGenres([]);
+    resetFilters();
   };
 
   return (
@@ -119,7 +119,7 @@ export const CandidateTaskSearch = ({
           />
         </InputRoot>
         <Badge variant="secondary" className="h-full px-3">
-          {filteredCount} apps
+          {totalCount} apps
         </Badge>
       </div>
       <div className="flex flex-wrap gap-2 items-center">
@@ -136,11 +136,11 @@ export const CandidateTaskSearch = ({
             variant="secondary"
             className={`h-full ${
               selectedGenres.includes(genre)
-                ? "bg-green-500/50 hover:bg-green-600/50"
+                ? "bg-green-500/50 hover:bg-green-600/50 dark:bg-green-400/50 dark:hover:bg-green-500/50"
                 : ""
             } ${
               excludeGenres.includes(genre)
-                ? "bg-red-500/50 hover:bg-red-600/50"
+                ? "bg-red-500/50 hover:bg-red-600/50 dark:bg-red-400/50 dark:hover:bg-red-500/50"
                 : ""
             }`}
             onClick={() => handleButtonClick(genre)}

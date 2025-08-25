@@ -16,7 +16,7 @@ export type CandidateTaskApp = Prisma.CandidateTaskAppGetPayload<{
  * @returns ActionPayload<CandidateTaskApp[]>
  */
 export const getCandidateTaskApps = async ({
-  isTaken,
+  isTaken = false,
   page = 1,
   pageSize = 100,
   search = "",
@@ -38,61 +38,50 @@ export const getCandidateTaskApps = async ({
   }>
 > => {
   try {
-    const startIndex = (page - 1) * pageSize;
-    const candidateTaskApps = await prisma.candidateTaskApp.findMany({
-      where: {
-        isTaken,
-        ...(search.trim()
-          ? {
-              app: {
-                metadata: {
-                  name: {
-                    contains: search,
-                  },
+    const skip = (page - 1) * pageSize;
+    const where: Prisma.CandidateTaskAppWhereInput = {
+      isTaken: isTaken,
+      app: {
+        is: {
+          metadata: {
+            is: {
+              name: {
+                contains: search.trim(),
+                mode: "insensitive",
+              },
+              genre: {
+                hasEvery: selectedGenres,
+              },
+              NOT: {
+                genre: {
+                  hasSome: excludeGenres,
                 },
               },
-            }
-          : {}),
-        ...(excludeGenres.length > 0
-          ? {
-              app: {
-                metadata: {
-                  genre: {
-                    notIn: excludeGenres,
-                  },
-                },
-              },
-            }
-          : {}),
-        ...(selectedGenres.length > 0
-          ? {
-              app: {
-                metadata: {
-                  genre: {
-                    in: selectedGenres,
-                  },
-                },
-              },
-            }
-          : {}),
+            },
+          },
+        },
       },
-      include: {
-        app: true,
-      },
-    });
+    };
 
-    if (!candidateTaskApps) {
-      return {
-        ok: false,
-        message: "No candidate task apps found",
-        data: null,
-      };
-    }
+    const totalCount = await prisma.candidateTaskApp.count({ where });
+
+    const candidateTaskApps = await prisma.candidateTaskApp.findMany({
+      where,
+      skip,
+      take: pageSize,
+      include: { app: true },
+      orderBy: { id: "asc" },
+    });
 
     return {
       ok: true,
       message: "Candidate task apps fetched successfully",
-      data: candidateTaskApps,
+      data: {
+        candidateTaskApps,
+        totalCount,
+        hasMore: skip + pageSize < totalCount,
+        currentPage: page,
+      },
     };
   } catch (error) {
     console.error("Error fetching candidate task apps:", error);

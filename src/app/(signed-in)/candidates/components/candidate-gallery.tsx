@@ -9,15 +9,32 @@ import {
 } from "@/components/ui/collapsible";
 import { Separator } from "@radix-ui/react-dropdown-menu";
 import { Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const CandidateTaskGallery = ({
   filteredApps,
   search,
+  isLoadingMore,
+  hasMore,
+  onLoadMore,
+  isLoading,
 }: {
   filteredApps: CandidateTaskApp[];
   search: string;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  isLoading: boolean;
 }) => {
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="flex w-dvw min-h-dvh justify-center items-start p-8 md:p-16">
+        <div className="text-muted-foreground">Loading apps...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 p-4 lg:p-6">
@@ -32,6 +49,17 @@ export const CandidateTaskGallery = ({
         ))
       ) : (
         <CandidateGalleryNoApps search={search} />
+      )}
+      {hasMore && (
+        <div className="flex justify-center p-4">
+          <Button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            variant="outline"
+          >
+            {isLoadingMore ? "Loading..." : "Load More"}
+          </Button>
+        </div>
       )}
     </div>
   );
