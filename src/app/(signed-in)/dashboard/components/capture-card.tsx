@@ -1,6 +1,7 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Eye, Edit, Pencil } from "lucide-react";
+import { Play, Eye, Edit, Pencil, Trash} from "lucide-react";
 import { CaptureStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,11 @@ import { statusConfig } from "./config";
 export function CaptureCard({
   capture,
   status,
+  onClear,
 }: {
   capture: any;
   status: CaptureStatus;
+  onClear?: (id: string) => void; 
 }) {
   const config = statusConfig[status];
   const Icon = config.icon;
@@ -22,12 +25,17 @@ export function CaptureCard({
     switch (status) {
       case CaptureStatus.CREATED:
         return (
-          <Link href={`/capture/${capture.id}/start`}>
-            <Button size="sm" variant="default">
-              <Play className="mr-2 size-3" />
-              Start
+          <div className = "flex gap-2">
+            <Link href={`/capture/${capture.id}/start`}>
+              <Button size="sm" variant="default">
+                <Play className="mr-2 size-3" />
+                Start
+              </Button>
+            </Link>
+            <Button size="sm" variant="default" onClick={() => onClear?.(capture.id)}>
+              <Trash className="mr-0.5 size-3" />
             </Button>
-          </Link>
+          </div>
         );
       case CaptureStatus.PROCESSING:
         return (

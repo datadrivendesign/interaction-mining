@@ -1,3 +1,5 @@
+"use client"; 
+import { useState } from "react"; 
 import Link from "next/link";
 import { Plus, AlertCircle, Upload } from "lucide-react";
 import { CaptureStatus } from "@prisma/client";
@@ -10,18 +12,27 @@ import { Capture } from "@/lib/actions";
 import { statusConfig } from "./config";
 import { CaptureCard } from "./capture-card";
 
+
+
 export function CaptureCardColumns({
   capturesByStatus,
 }: {
   capturesByStatus: Record<CaptureStatus, Capture[]>;
 }) {
+  const [localCaptures, setLocalCaptures] = useState(capturesByStatus);
+  const handleClear = (id: string, status: CaptureStatus) => {
+    setLocalCaptures((prev) => ({
+      ...prev,
+      [status]: prev[status].filter((c) => c.id !== id),
+    }));
+  };
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {Object.entries(statusConfig)
         .filter(([status]) => status !== CaptureStatus.APPROVED)
         .map(([status, config]) => {
           const statusCaptures =
-            capturesByStatus[status as CaptureStatus] || [];
+            localCaptures[status as CaptureStatus] || [];
           const Icon = config.icon;
           return (
             <Card key={status} className="overflow-hidden">
@@ -47,6 +58,7 @@ export function CaptureCardColumns({
                         key={capture.id}
                         capture={capture}
                         status={status as CaptureStatus}
+                        onClear={(id) => handleClear(id, status as CaptureStatus)}
                       />
                     ))}
                   </div>
