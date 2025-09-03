@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"NODE_OPTIONS='--inspect' next dev --turbopack\" \"prisma generate --watch\"",
+    "dev": "concurrently \"cross-env NODE_OPTIONS=--inspect next dev --turbopack\" \"prisma generate --watch\"",
     "build": "npx prisma generate && next build",
     "build:analyze": "ANALYZE=true npx prisma generate && next build",
     "start": "next start",
