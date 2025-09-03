@@ -3,26 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { createCaptureTask } from "@/lib/actions";
+import { createCaptureTask, revalidateCaptureCaches } from "@/lib/actions";
 import { Platform, prettyOS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 import AddAppForm from "./add-app-form";
 import AppGallery from "./app-gallery";
 import { Loader2, Plus, Minus } from "lucide-react";
-
-type Task = { id: string; text: string };
-
-const newId = () =>
-  typeof crypto?.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `t_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-const makeTask = (text = ""): Task => ({ id: newId(), text });
+import AddTaskInputs, { TaskCandidate } from "./add-task-inputs";
 
 export default function CaptureNewPage() {
   const { data: session } = useSession();
@@ -34,10 +25,21 @@ export default function CaptureNewPage() {
   const [app, setApp] = useState({ name: "", id: "" });
 
   // Multi-row description → later collapsed to a single string for capture
-  const [tasks, setTasks] = useState<Task[]>([makeTask("")]);
+  const [tasks, setTasks] = useState<TaskCandidate[]>([
+    {
+      id: `id_${Date.now()}_${Math.random().toString(16)}`,
+      description: "",
+    },
+  ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddApp, setShowAddApp] = useState(false);
+
+  // Validation: all tasks must be non-empty (trimmed)
+  const allFilled = tasks.every((t) => t.description.trim().length > 0);
+
+  // Stepper state (purely visual)
+  const step = !platform ? 0 : !app.id ? 1 : !allFilled ? 2 : 3;
 
   // ---- focus/scroll handling for newly added task
   const taskRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
@@ -55,39 +57,6 @@ export default function CaptureNewPage() {
     }
     setLastAddedId(null);
   }, [tasks, lastAddedId]);
-  // ----
-
-  // Validation: all tasks must be non-empty (trimmed)
-  const allFilled = tasks.every((t) => t.text.trim().length > 0);
-
-  // Stepper state (purely visual)
-  const step = !platform ? 0 : !app.id ? 1 : !allFilled ? 2 : 3;
-
-  const updateTask = (id: string, value: string) =>
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, text: value.slice(0, maxLength) } : t))
-    );
-
-  const addTaskAfter = (id: string) =>
-    setTasks((prev) => {
-      const idx = prev.findIndex((t) => t.id === id);
-      if (idx === -1) return prev;
-      const next = [...prev];
-      const newTask = makeTask("");
-      next.splice(idx + 1, 0, newTask);
-      setLastAddedId(newTask.id); // trigger scroll + focus
-      return next;
-    });
-
-  const removeTask = (id: string) =>
-    setTasks((prev) => {
-      if (prev.length <= 1) return prev; // keep at least one row
-      const idx = prev.findIndex((t) => t.id === id);
-      if (idx === -1) return prev;
-      const next = [...prev];
-      next.splice(idx, 1);
-      return next;
-    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,29 +66,27 @@ export default function CaptureNewPage() {
       return;
     }
 
-    const description = tasks
-      .map((t) => t.text.trim())
-      .map((t, i) => `${i + 1}. ${t}`)
-      .join("\n");
-
     setIsSubmitting(true);
     try {
-      const result = await createCaptureTask({
-        appId: app.id,
-        os: platform,
-        description, // <- single string like the original code
-      });
+      for (const task of tasks) {
+        const result = await createCaptureTask({
+          appId: app.id,
+          os: platform,
+          description: task.description,
+        });
 
-      if (result.ok) {
-        toast.success("Capture task created! Redirecting...");
-        router.push(`/capture/${result.data?.captureId}/start`);
-      } else {
-        throw new Error(`Failed to create capture task: ${result.message}`);
+        if (!result.ok) {
+          throw new Error(`Failed to create capture task: ${result.message}`);
+        }
       }
     } catch (err) {
       toast.error("Failed to create capture task. Please try again.");
       console.error(err);
+    } finally {
+      toast.success("Capture tasks created! Redirecting...");
       setIsSubmitting(false);
+      await revalidateCaptureCaches();
+      router.push(`/dashboard`);
     }
   };
 
@@ -135,7 +102,9 @@ export default function CaptureNewPage() {
                 : ""
             }`}
           >
-            <div className="text-lg font-bold">{step > index ? "☑" : index + 1}</div>
+            <div className="text-lg font-bold">
+              {step > index ? "☑" : index + 1}
+            </div>
             <div>{label}</div>
           </li>
         ))}
@@ -202,85 +171,17 @@ export default function CaptureNewPage() {
 
         {/* Tasks */}
         <div className="space-y-3 dark:text-white">
-          <Label className="font-bold">3. Describe what task you&apos;ll perform</Label>
+          <Label className="font-bold">
+            3. Describe what task you&apos;ll perform
+          </Label>
 
-          {/* Single row */}
-          {tasks.length === 1 ? (
-            <div className="grid grid-cols-[1fr_auto] gap-2 items-center mt-3">
-              <Textarea
-                className="min-h-10"
-                ref={setTaskRef(tasks[0].id)}
-                value={tasks[0].text}
-                onChange={(e) => updateTask(tasks[0].id, e.target.value)}
-                maxLength={maxLength}
-                placeholder="e.g. Create a new message and attach a photo"
-                required
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Add task"
-                onClick={() => addTaskAfter(tasks[0].id)}
-                className="self-center h-10"
-              >
-                <Plus className="size-4" />
-              </Button>
-              <div className="col-span-2 text-right text-xs text-muted-foreground">
-                {tasks[0].text.length}/{maxLength}
-              </div>
-            </div>
-          ) : (
-            // 2+ rows
-            <div className="space-y-3">
-              {tasks.map((t, i) => (
-                <div
-                  key={t.id}
-                  className="grid grid-cols-[auto_1fr_auto] gap-2 items-center"
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label="Remove task"
-                    onClick={() => removeTask(t.id)}
-                    className="self-center h-10"
-                  >
-                    <Minus className="size-4" />
-                  </Button>
-
-                  <Textarea
-                    className="min-h-24"
-                    ref={setTaskRef(t.id)}
-                    value={t.text}
-                    onChange={(e) => updateTask(t.id, e.target.value)}
-                    maxLength={maxLength}
-                    placeholder={
-                      i === 0
-                        ? "e.g. Create a new message and attach a photo"
-                        : "Add another task…"
-                    }
-                    required
-                  />
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label="Add task after"
-                    onClick={() => addTaskAfter(t.id)}
-                    className="self-center h-10"
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-
-                  <div className="col-span-3 text-right text-xs text-muted-foreground">
-                    {t.text.length}/{maxLength}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <AddTaskInputs
+            setTasks={setTasks}
+            tasks={tasks}
+            maxLength={maxLength}
+            setLastAddedId={setLastAddedId}
+            setTaskRef={setTaskRef}
+          />
         </div>
 
         <Button
