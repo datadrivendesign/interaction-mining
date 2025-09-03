@@ -25,7 +25,7 @@ export default function RedactScreen() {
   const redactions = watchRedactions || {};
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
-  const [copied, setCopied] = useState<Redaction | null>(null);
+  const [copied, setCopied] = useState<Redaction[]>([]);
 
   const handlePrevious = useCallback(() => {
     const wrappedIndex = (focusViewIndex - 1 + screens.length) % screens.length;

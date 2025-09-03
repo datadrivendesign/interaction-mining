@@ -4,7 +4,7 @@ import { ScreenGesture } from "@prisma/client";
 import { useNavigation } from "../repair-screen";
 import { useFormContext } from "react-hook-form";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -41,25 +41,39 @@ export function Filmstrip({
     setValue("redactions", value);
   };
 
-  const handleDeleteFrame = (index: number) => {
-    const screenId = screens[index].id;
-    // reset focus view index
-    setFocusViewIndex(-1);
-    // remove frame from view
-    const newFrameData = [...screens];
-    newFrameData.splice(index, 1);
-    setFrameData(newFrameData);
-    // remove frame from gestures
-    const updatedGestures = Object.fromEntries(
-      Object.entries(gestures).filter(([key]) => key !== screenId)
-    );
-    setGestureData(updatedGestures);
-    // remove frame from redactions
-    const updatedRedactions = Object.fromEntries(
-      Object.entries(redactions).filter(([key]) => key !== screenId)
-    );
-    setRedactionData(updatedRedactions);
-  };
+  const handleDeleteFrame = useCallback(
+    (index: number) => {
+      // Reset focus view to -1 upon deletion
+      setFocusViewIndex(-1);
+      // remove frame from view
+      const newFrameData = [...screens];
+      newFrameData.splice(index, 1);
+      // remove frame from gestures and redactions
+      const updatedGestures: { [key: string]: ScreenGesture } = {};
+      const updatedRedactions: { [key: string]: Redaction[] } = {};
+      for (const frame of newFrameData) {
+        if (gestures[frame.id]) {
+          updatedGestures[frame.id] = gestures[frame.id];
+        }
+        if (redactions[frame.id]) {
+          updatedRedactions[frame.id] = redactions[frame.id];
+        }
+      }
+      // update frame data, gestures, and redactions
+      setFrameData(newFrameData);
+      setGestureData(updatedGestures);
+      setRedactionData(updatedRedactions);
+    },
+    [
+      screens,
+      gestures,
+      redactions,
+      setFrameData,
+      setGestureData,
+      setRedactionData,
+      setFocusViewIndex,
+    ]
+  );
 
   return (
     <AnimatePresence mode="popLayout">
@@ -127,34 +141,42 @@ function FilmstripItem({
     scaleY: number;
   }>({ width: 0, height: 0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
 
-  const updateSize = () => {
+  const updateSize = useCallback(() => {
     if (containerRef.current && imageRef.current) {
       const containerRect = containerRef.current.getBoundingClientRect();
       const imageRect = imageRef.current.getBoundingClientRect();
       const naturalWidth = imageRef.current.naturalWidth;
       const naturalHeight = imageRef.current.naturalHeight;
-      // Calculate the scale factor between the natural and displayed size:
-      const scaleX = imageRect.width / naturalWidth;
-      const scaleY = imageRect.height / naturalHeight;
-      // Compute offsets in case the image is letterboxed inside its container:
-      const offsetX = (containerRect.width - imageRect.width) / 2;
-      const offsetY = (containerRect.height - imageRect.height) / 2;
-      setImgDimensions({
-        width: imageRect.width,
-        height: imageRect.height,
-        offsetX,
-        offsetY,
-        scaleX,
-        scaleY,
-      });
+
+      // Only update if image is loaded (naturalWidth/Height > 0)
+      if (naturalWidth > 0 && naturalHeight > 0) {
+        // Calculate the scale factor between the natural and displayed size:
+        const scaleX = imageRect.width / naturalWidth;
+        const scaleY = imageRect.height / naturalHeight;
+        // Compute offsets in case the image is letterboxed inside its container:
+        const offsetX = (containerRect.width - imageRect.width) / 2;
+        const offsetY = (containerRect.height - imageRect.height) / 2;
+        setImgDimensions({
+          width: imageRect.width,
+          height: imageRect.height,
+          offsetX,
+          offsetY,
+          scaleX,
+          scaleY,
+        });
+      }
     }
-  };
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    // Small delay to ensure image is fully rendered
+    setTimeout(updateSize, 0);
+  }, [updateSize]);
 
   useEffect(() => {
-    updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  }, [updateSize]);
 
   return (
     <motion.div
@@ -184,7 +206,11 @@ function FilmstripItem({
             </span>
           </div>
           <button
-            onClick={() => handleDeleteFrame(index)}
+            onClick={(e) => {
+              // Prevent bubbling to parent click handlers that set focus/time
+              e.stopPropagation();
+              handleDeleteFrame(index);
+            }}
             className="inline-flex self-end items-center cursor-pointer"
             title="Delete snapshot"
           >
@@ -254,6 +280,7 @@ function FilmstripItem({
                 width={0}
                 height={0}
                 sizes="100vw"
+                onLoad={handleImageLoad}
               />
             )}
             {/* Render redaction overlays using the natural dimensions and scale factors */}

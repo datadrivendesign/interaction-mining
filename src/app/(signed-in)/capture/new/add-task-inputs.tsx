@@ -1,0 +1,111 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Minus, Plus } from "lucide-react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+
+export type TaskCandidate = { id: string; description: string };
+
+export default function AddTaskInputs({
+  setTasks,
+  tasks,
+  maxLength,
+  setLastAddedId,
+  setTaskRef,
+  //   updateTask,
+}: {
+  setTasks: Dispatch<SetStateAction<TaskCandidate[]>>;
+  tasks: TaskCandidate[];
+  maxLength: number;
+  setLastAddedId: Dispatch<SetStateAction<string | null>>;
+  setTaskRef: (id: string) => (el: HTMLTextAreaElement | null) => void;
+  // updateTask: (id: string, value: string) => void;
+}) {
+  const makeTaskCandidate = (description = ""): TaskCandidate => ({
+    id: `id_${Date.now()}_${Math.random().toString(16)}`,
+    description,
+  });
+
+  const showMinusButton = tasks.length > 1;
+
+  const addTaskAfter = (id: string) =>
+    setTasks((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      const newTask = makeTaskCandidate("");
+      next.splice(idx + 1, 0, newTask);
+      setLastAddedId(newTask.id); // trigger scroll + focus
+      return next;
+    });
+
+  const removeTask = (id: string) =>
+    setTasks((prev) => {
+      if (prev.length <= 1) return prev; // keep at least one row
+      const idx = prev.findIndex((t) => t.id === id);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
+
+  const updateTask = (id: string, value: string) => {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, description: value.slice(0, maxLength) } : t
+      )
+    );
+  };
+
+  return (
+    <div className="space-y-3 w-full">
+      {tasks.map((t, i) => (
+        <div
+          key={t.id}
+          className={`grid gap-2 items-center ${showMinusButton ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[1fr_auto]"}`}
+        >
+          {showMinusButton && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Remove task"
+              onClick={() => removeTask(t.id)}
+              className="self-center h-10"
+            >
+              <Minus className="size-4" />
+            </Button>
+          )}
+
+          <Textarea
+            className="min-h-20"
+            ref={setTaskRef(t.id)}
+            value={t.description}
+            onChange={(e) => updateTask(t.id, e.target.value)}
+            maxLength={maxLength}
+            placeholder={
+              i === 0
+                ? "e.g. Create a new message and attach a photo"
+                : "Add another task…"
+            }
+            required
+          />
+
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Add task after"
+            onClick={() => addTaskAfter(t.id)}
+            className="self-center h-10"
+          >
+            <Plus className="size-4" />
+          </Button>
+
+          <div className="col-span-3 text-right text-xs text-muted-foreground">
+            {t.description.length}/{maxLength}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

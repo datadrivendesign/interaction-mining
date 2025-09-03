@@ -34,24 +34,22 @@ export const RedactCanvasContext = createContext<{
   mode: RedactCanvasMode;
   setMode: (mode: RedactCanvasMode) => void;
   redactions: Redaction[];
-  selected: Redaction | null;
-  deleteRedaction: (id: string) => void;
-  selectRedaction: (id: string | null) => void;
-  createRedaction: (
-    newRedaction: Redaction,
-    options?: {
-      select?: boolean;
-    }
+  selected: Redaction[];
+  deleteRedaction: (ids: string[]) => void;
+  selectRedaction: (id: string | null, addToList: boolean) => void;
+  createRedactions: (
+    newRedactions: Redaction[],
+    options?: { select?: boolean }
   ) => void;
   updateRedaction: (id: string, updatedRedaction: Partial<Redaction>) => void;
 }>({
   mode: "select",
   setMode: () => {},
   redactions: [] as Redaction[],
-  selected: {} as Redaction,
+  selected: [] as Redaction[],
   deleteRedaction: () => {},
   selectRedaction: () => {},
-  createRedaction: () => {},
+  createRedactions: () => {},
   updateRedaction: () => {},
 });
 
@@ -63,8 +61,8 @@ export default function RedactScreenCanvas({
 }: {
   screen: FrameData;
   vh: any;
-  copied: Redaction | null;
-  setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>;
+  copied: Redaction[];
+  setCopied: React.Dispatch<React.SetStateAction<Redaction[]>>;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
   const [watchRedactions] = useWatch({
@@ -76,15 +74,15 @@ export default function RedactScreenCanvas({
     [redactions, screen.id]
   );
 
-  const [selected, setSelected] = useState<Redaction | null>(null);
+  const [selected, setSelected] = useState<Redaction[]>([]);
   const [mode, setMode] = useState<"pencil" | "eraser" | "select">("select");
 
   const canvasRef = useRef<CanvasRef>(null);
 
-  const deleteRedaction = (id: string) => {
-    const newRedactions = redactionsOnScreen.filter((r) => r.id !== id);
-    if (selected?.id === id) {
-      setSelected(null);
+  const deleteRedaction = (ids: string[]) => {
+    const newRedactions = redactionsOnScreen.filter((r) => !ids.includes(r.id));
+    if (selected.some((r) => ids.includes(r.id))) {
+      setSelected([]);
     }
     setValue("redactions", {
       ...redactions,
@@ -92,27 +90,35 @@ export default function RedactScreenCanvas({
     });
   };
 
-  const selectRedaction = (id: string | null) => {
+  const selectRedaction = (id: string | null, addToList: boolean = true) => {
     if (id === null) {
-      setSelected(null);
+      setSelected([]);
       return;
     }
-    setSelected(redactionsOnScreen.find((r) => r.id === id) || null);
+    const selectedRedaction =
+      redactionsOnScreen.find((r) => r.id === id) || null;
+    if (!selectedRedaction) {
+      setSelected([]);
+    } else if (addToList) {
+      setSelected([...selected, selectedRedaction]);
+    } else {
+      setSelected([selectedRedaction]);
+    }
   };
 
-  const createRedaction = (
-    newRedaction: Redaction,
+  const createRedactions = (
+    newRedactions: Redaction[],
     option?: {
       select?: boolean;
     }
   ) => {
-    const newRedactions = [...redactionsOnScreen, newRedaction];
+    const updatedRedactions = [...redactionsOnScreen, ...newRedactions];
     setValue("redactions", {
       ...redactions,
-      [screen.id]: newRedactions,
+      [screen.id]: updatedRedactions,
     });
     if (option?.select) {
-      setSelected(newRedaction);
+      setSelected(newRedactions);
     }
   };
 
@@ -218,12 +224,13 @@ export default function RedactScreenCanvas({
 
   useHotkeys("esc", () => {
     setMode("select");
-    setSelected(null);
+    setSelected([]);
   });
 
   useHotkeys("backspace", () => {
     if (mode === "select") {
-      deleteRedaction(selected?.id || "");
+      const redactionIds = selected.map((r) => r.id);
+      deleteRedaction(redactionIds);
     }
   });
 
@@ -253,15 +260,19 @@ export default function RedactScreenCanvas({
       return;
     }
     if (mode === "select") {
-      createRedaction({
-        id: `${Date.now()}`, // unique enough id for redaction
-        x: copied!.x,
-        y: copied!.y,
-        width: copied!.width,
-        height: copied!.height,
-        annotation: copied!.annotation,
-      }),
-        toast.success("Redaction pasted to screen");
+      const copyRedactions: Redaction[] = [];
+      copied.forEach((r, i) => {
+        copyRedactions.push({
+          id: `${Date.now()}-${i}`, // unique enough id for redaction
+          x: r.x,
+          y: r.y,
+          width: r.width,
+          height: r.height,
+          annotation: r.annotation,
+        });
+      });
+      createRedactions(copyRedactions);
+      toast.success("Redaction pasted to screen");
     }
   });
 
@@ -319,7 +330,7 @@ export default function RedactScreenCanvas({
         selected,
         deleteRedaction,
         selectRedaction,
-        createRedaction,
+        createRedactions,
         updateRedaction,
       }}
     >
