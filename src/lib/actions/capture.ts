@@ -338,3 +338,43 @@ export async function createCaptureTask({
     throw new Error("Failed to create capture and task");
   }
 }
+
+export async function deleteCaptureTask(captureId: string) {
+  try {
+    const session = await requireAuth();
+    if (!session || !session.user || !session.user.id) {
+      return { ok: false, message: "User not authenticated.", data: null };
+    }
+
+    const findCapture = await prisma.capture.findUnique({
+      where: { id: captureId },
+    });
+    // error cases if capture not found or user not authorized
+    if (!findCapture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+    if (findCapture.userId !== session.user.id) {
+      return { ok: false, message: "User not authorized.", data: null };
+    }
+    // delete capture and task
+    const deleteCapture = await prisma.capture.delete({
+      where: { id: captureId },
+    });
+    await prisma.task.delete({
+      where: { id: deleteCapture.taskId },
+    });
+    // return deleted capture metadata
+    return {
+      ok: true,
+      message: "Capture and task deleted.",
+      data: deleteCapture,
+    };
+  } catch (error) {
+    console.error("Error deleting capture/task:", error);
+    return {
+      ok: false,
+      message: "Failed to delete capture and task",
+      data: null,
+    };
+  }
+}

@@ -1,5 +1,5 @@
-"use client"; 
-import { useState } from "react"; 
+"use client";
+import { useState } from "react";
 import Link from "next/link";
 import { Plus, AlertCircle, Upload } from "lucide-react";
 import { CaptureStatus } from "@prisma/client";
@@ -8,23 +8,22 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import { Capture } from "@/lib/actions";
+import {
+  Capture,
+  deleteCaptureTask,
+  revalidateCaptureCaches,
+} from "@/lib/actions";
 import { statusConfig } from "./config";
 import { CaptureCard } from "./capture-card";
-
-
 
 export function CaptureCardColumns({
   capturesByStatus,
 }: {
   capturesByStatus: Record<CaptureStatus, Capture[]>;
 }) {
-  const [localCaptures, setLocalCaptures] = useState(capturesByStatus);
-  const handleClear = (id: string, status: CaptureStatus) => {
-    setLocalCaptures((prev) => ({
-      ...prev,
-      [status]: prev[status].filter((c) => c.id !== id),
-    }));
+  const handleDelete = (id: string) => {
+    deleteCaptureTask(id);
+    revalidateCaptureCaches();
   };
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -32,7 +31,7 @@ export function CaptureCardColumns({
         .filter(([status]) => status !== CaptureStatus.APPROVED)
         .map(([status, config]) => {
           const statusCaptures =
-            localCaptures[status as CaptureStatus] || [];
+            capturesByStatus[status as CaptureStatus] || [];
           const Icon = config.icon;
           return (
             <Card key={status} className="overflow-hidden">
@@ -58,7 +57,7 @@ export function CaptureCardColumns({
                         key={capture.id}
                         capture={capture}
                         status={status as CaptureStatus}
-                        onClear={(id) => handleClear(id, status as CaptureStatus)}
+                        onDelete={(id) => handleDelete(id)}
                       />
                     ))}
                   </div>
