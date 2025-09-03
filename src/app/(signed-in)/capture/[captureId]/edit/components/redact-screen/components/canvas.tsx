@@ -416,10 +416,16 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           }
         }
         const selectedNodes = stage.find(selectors);
-        // const selectedNode = selectedNodes[0];
         transformer.nodes(selectedNodes);
+        if (selectedNodes.length > 1) {
+          transformer.resizeEnabled(false);
+          transformer.rotateEnabled(false);
+        } else {
+          transformer.resizeEnabled(true);
+          transformer.rotateEnabled(true);
+        }
         transformer.getLayer()?.batchDraw();
-        if (selectedRedactions.length === 1) {
+        if (selectedNodes.length === 1) {
           setOverlay((prev: any) => [
             ...prev.filter((o: any) => o.type !== `annotation`),
             {
@@ -438,9 +444,13 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               ),
             },
           ]);
+        } else if (selectedNodes.length > 1) {
+          setOverlay((prev: any) =>
+            prev.filter((o: any) => o.type !== `annotation`)
+          );
         } else {
           console.warn(
-            `No node found for selected redaction with id: ${selectedRedactions[0].id}`
+            `No node found for selected redaction with id: ${selectedNodes[0].id}`
           );
         }
       } else {

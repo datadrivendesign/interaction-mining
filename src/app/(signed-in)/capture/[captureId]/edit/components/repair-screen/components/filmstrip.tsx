@@ -63,7 +63,6 @@ export function Filmstrip({
       setFrameData(newFrameData);
       setGestureData(updatedGestures);
       setRedactionData(updatedRedactions);
-      console.log("focusViewIndex:", focusViewIndex);
     },
     [
       screens,
