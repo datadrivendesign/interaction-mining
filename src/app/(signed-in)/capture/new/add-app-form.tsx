@@ -116,7 +116,7 @@ export default function AddAppForm({
   return (
     <div className="flex flex-col gap-2">
       <Button
-        className="text-sm p-2 dark:text-white"
+        className="text-sm p-2 dark:text-black"
         onClick={(e) => {
           e.preventDefault();
           setShowAddApp(!showAddApp);

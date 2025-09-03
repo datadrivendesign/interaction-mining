@@ -128,7 +128,7 @@ export default function RedactRectangle({
         onTap={(e) => handleRectClick(e, redaction.id)}
         onTransformStart={onTransformStart}
         onTransform={(e) => handleTransform(e, redaction.id)}
-        onTransofrmEnd={onTransformEnd}
+        onTransformEnd={onTransformEnd}
         onDragStart={onTransformStart}
         onDragMove={(e) => handleTransform(e, redaction.id)}
         onDragEnd={onTransformEnd}

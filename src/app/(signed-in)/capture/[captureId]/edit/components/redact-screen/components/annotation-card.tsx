@@ -1,18 +1,22 @@
 "use client";
 
-import React, { 
+import React, {
   ChangeEvent,
-  KeyboardEvent, 
-  useCallback, 
-  useContext, 
-  useEffect, 
-  useRef, 
-  useState 
+  KeyboardEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ChevronsUpDown } from "lucide-react";
 import { Command, CommandItem, CommandList } from "@/components/ui/command";
@@ -35,7 +39,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const [labelValue, setLabelValue] = useState(annotation);
   const [customInput, setCustomInput] = useState(annotation);
   const maxLength = 30;
-  const  { selectRedaction } = useContext(RedactCanvasContext);
+  const { selectRedaction } = useContext(RedactCanvasContext);
 
   useEffect(() => {
     if (labelValue === "") {
@@ -43,26 +47,30 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
     }
   }, [labelValue, setOpen]);
 
-  const handleLabelSelect = useCallback((selectedValue: string) => {
-    // Focus the textarea if it requires custom input
-    if (requiresCustomInput(selectedValue)) {
-      setTimeout(() => annotateRef.current?.focus(), 100);
-    } else {
-      setAnnotation(selectedValue);
-      selectRedaction(null);
-    }
-    setLabelValue(selectedValue);
-    setOpen(false);
-  }, [selectRedaction, setAnnotation, setLabelValue, setOpen]);
+  const handleLabelSelect = useCallback(
+    (selectedValue: string) => {
+      // Focus the textarea if it requires custom input
+      if (requiresCustomInput(selectedValue)) {
+        setTimeout(() => annotateRef.current?.focus(), 100);
+      } else {
+        setAnnotation(selectedValue);
+        selectRedaction(null, false);
+      }
+      setLabelValue(selectedValue);
+      setOpen(false);
+    },
+    [selectRedaction, setAnnotation, setLabelValue, setOpen]
+  );
 
-  const handleEnter = useCallback((
-    e: KeyboardEvent<HTMLTextAreaElement>
-  ) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      selectRedaction(null);
-    }
-  }, [selectRedaction]);
+  const handleEnter = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        selectRedaction(null, false);
+      }
+    },
+    [selectRedaction]
+  );
 
   const handleTextareaChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -77,18 +85,24 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
     <div className="absolute">
       <Card className="flex flex-col items-start p-3 shadow-lg">
         <div className="text-sm font-semibold flex flex-col gap-1">
-            <div className="flex w-full justify-start items-center gap-1 text-sm">
-              <span>Copy:</span>
-              <Kbd className="text-muted-foreground rounded-sm">Ctrl+C</Kbd>/<Kbd className="text-muted-foreground rounded-sm">Cmd+C</Kbd>
-            </div>
-            <div className="flex w-full justify-start items-center gap-1 text-sm">
-              <span>Paste:</span>
-              <Kbd className="text-muted-foreground rounded-sm">Ctrl+V</Kbd>/<Kbd className="text-muted-foreground rounded-sm">Cmd+V</Kbd>
-            </div>
-            <div className="flex w-full justify-start items-center gap-1 text-sm">
-              <span>Close:</span>
-              <Kbd className="text-muted-foreground rounded-sm">Esc</Kbd>
-            </div>
+          <div className="flex w-full justify-start items-center gap-1 text-sm">
+            <span>Multi-Select:</span>
+            Hold <Kbd className="text-muted-foreground rounded-sm">Shift</Kbd> +
+            Click
+          </div>
+          <div className="flex w-full justify-start items-center gap-1 text-sm">
+            <span>Copy/Paste:</span>
+            <Kbd className="text-muted-foreground rounded-sm">Ctrl+C</Kbd> and
+            <Kbd className="text-muted-foreground rounded-sm">Ctrl+V</Kbd>
+          </div>
+          <div className="flex w-full justify-start items-center gap-1 text-sm">
+            <span>Delete:</span>
+            <Kbd className="text-muted-foreground rounded-sm">Backspace</Kbd>
+          </div>
+          <div className="flex w-full justify-start items-center gap-1 text-sm">
+            <span>Close:</span>
+            <Kbd className="text-muted-foreground rounded-sm">Esc</Kbd>
+          </div>
         </div>
         <div className="flex flex-row items-center justify-stretch gap-2">
           <Label className="text-sm font-semibold">Label</Label>
@@ -99,11 +113,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent
-              className="w-50 p-0"
-              align="start"
-              side="bottom"
-            >
+            <PopoverContent className="w-50 p-0" align="start" side="bottom">
               <Command>
                 <CommandList>
                   {redactLabels.map((label) => (
@@ -134,11 +144,9 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             <div className="w-45 flex flex-col">
               <Progress
                 className="w-full"
-                value={(customInput.length/maxLength) * 100} 
+                value={(customInput.length / maxLength) * 100}
               />
-              <div 
-                className="text-sm flex justify-end text-muted-foreground z-10"
-              > 
+              <div className="text-sm flex justify-end text-muted-foreground z-10">
                 {`${customInput.length}/${maxLength}`}
               </div>
             </div>

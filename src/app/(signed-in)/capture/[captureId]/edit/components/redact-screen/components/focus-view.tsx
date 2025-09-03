@@ -11,8 +11,8 @@ export function FocusView({
 }: {
   screen: FrameData;
   vh: any;
-  copied: Redaction | null;
-  setCopied: React.Dispatch<React.SetStateAction<Redaction | null>>;
+  copied: Redaction[];
+  setCopied: React.Dispatch<React.SetStateAction<Redaction[]>>;
 }) {
   return (
     <>
