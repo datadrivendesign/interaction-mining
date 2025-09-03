@@ -139,7 +139,6 @@ export default function CaptureNewPage() {
             className="w-full"
           >
             <ToggleGroupItem
-              disabled
               value={Platform.ANDROID}
               className="w-full dark:text-neutral-200 cursor-pointer"
             >
