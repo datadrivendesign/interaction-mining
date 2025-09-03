@@ -20,10 +20,8 @@ export default function AddTaskInputs({
   setTaskRef: (id: string) => (el: HTMLTextAreaElement | null) => void;
   // updateTask: (id: string, value: string) => void;
 }) {
-  const newId = () => `id_${Date.now()}_${Math.random().toString(16)}`;
-
   const makeTaskCandidate = (description = ""): TaskCandidate => ({
-    id: newId(),
+    id: `id_${Date.now()}_${Math.random().toString(16)}`,
     description,
   });
 
