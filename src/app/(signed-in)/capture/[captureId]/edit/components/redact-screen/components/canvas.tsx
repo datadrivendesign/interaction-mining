@@ -66,13 +66,14 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     const {
       mode,
       setMode,
-      selected: selectedRedaction,
+      selected: selectedRedactions,
       selectRedaction,
-      createRedaction,
+      createRedactions,
       updateRedaction,
       deleteRedaction,
     } = useContext(RedactCanvasContext);
 
+    const [shiftDown, setShiftDown] = useState(false);
     const [newRect, setNewRect] = useState<Redaction | null>(null);
     const [stageScale, setStageScale] = useState(1);
     const [overlay, setOverlay] = useState<Array<Overlay>>([]);
@@ -262,29 +263,29 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
             newRect.height = minNormH;
           }
 
-          createRedaction(newRect, { select: true });
+          createRedactions([newRect], { select: true });
           setMode("select");
           setNewRect(null);
         }
       },
-      [newRect, createRedaction, mode, setMode, displayWidth, displayHeight]
+      [newRect, createRedactions, mode, setMode, displayWidth, displayHeight]
     );
 
     // function to update the rectangle properties
     const updateRect = useCallback(
       (id: string, rect: Partial<Redaction>) => {
-        if (selectedRedaction) {
+        if (selectedRedactions) {
           updateRedaction(id, rect);
         }
       },
-      [selectedRedaction, updateRedaction]
+      [selectedRedactions, updateRedaction]
     );
 
     const handleBackgroundClick = (e: KonvaEventObject<MouseEvent>) => {
       if (e.target === e.target.getStage()) {
         if (mode === "select") {
           // deselect redaction and clear annotation card overlay
-          selectRedaction(null);
+          selectRedaction(null, false);
         }
       }
     };
@@ -292,9 +293,9 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     // handler for when user clicks a rectangle
     const handleRectClick = (_: any, id: string) => {
       if (mode === "eraser") {
-        deleteRedaction(id);
+        deleteRedaction([id]);
       } else if (mode === "select") {
-        selectRedaction(id);
+        selectRedaction(id, shiftDown);
       }
     };
 
@@ -330,6 +331,8 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           height: rawH,
         };
         // clamp using our boundBoxFunc
+        const selectedRedaction = selectedRedactions.find((r) => r.id === id);
+        if (!selectedRedaction) return;
         const clamped = boundBoxFunc(selectedRedaction, rawBox);
         // convert to normalized coordinates
         const newX = (clamped.x - offsetX) / displayWidth;
@@ -354,15 +357,34 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         offsetY,
         displayWidth,
         displayHeight,
-        selectedRedaction,
+        selectedRedactions,
         updateRect,
         boundBoxFunc,
       ]
     );
 
     const handleRectDelete = (e: any, id: string) => {
-      deleteRedaction(id);
+      deleteRedaction([id]);
     };
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Shift") {
+          setShiftDown(true);
+        }
+      };
+      const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.key === "Shift") {
+          setShiftDown(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+      };
+    }, []);
 
     useEffect(() => {
       if (!stageRef.current) {
@@ -374,7 +396,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       if (!stage || !transformer) return;
 
       if (mode !== "select") {
-        selectRedaction(null);
+        selectRedaction(null, false);
         setOverlay((prev: any) =>
           prev.filter((o: any) => o.type !== `annotation`)
         );
@@ -384,26 +406,31 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         return;
       }
 
-      if (selectedRedaction) {
-        const selectedNode = stage.findOne(
-          `#redaction-${selectedRedaction.id}`
-        );
-
-        if (selectedNode) {
-          transformer.nodes([selectedNode]);
-          transformer.getLayer()?.batchDraw();
-
+      if (selectedRedactions.length > 0) {
+        let selectors = "";
+        for (let i = 0; i < selectedRedactions.length; i++) {
+          const selectedRedaction = selectedRedactions[i];
+          selectors += `#redaction-${selectedRedaction.id}`;
+          if (i !== selectedRedactions.length - 1) {
+            selectors += ", ";
+          }
+        }
+        const selectedNodes = stage.find(selectors);
+        // const selectedNode = selectedNodes[0];
+        transformer.nodes(selectedNodes);
+        transformer.getLayer()?.batchDraw();
+        if (selectedRedactions.length === 1) {
           setOverlay((prev: any) => [
             ...prev.filter((o: any) => o.type !== `annotation`),
             {
               type: "annotation",
-              nodeId: `#redaction-${selectedRedaction.id}`,
+              nodeId: `#redaction-${selectedRedactions[0].id}`,
               render: () => (
                 <AnnotationCard
-                  key={`annotation-${selectedRedaction.id}`}
-                  annotation={selectedRedaction.annotation}
+                  key={`annotation-${selectedRedactions[0].id}`}
+                  annotation={selectedRedactions[0].annotation}
                   setAnnotation={(value) => {
-                    updateRect(selectedRedaction.id, {
+                    updateRect(selectedRedactions[0].id, {
                       annotation: value,
                     });
                   }}
@@ -413,7 +440,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           ]);
         } else {
           console.warn(
-            `No node found for selected redaction with id: ${selectedRedaction.id}`
+            `No node found for selected redaction with id: ${selectedRedactions[0].id}`
           );
         }
       } else {
@@ -423,7 +450,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           prev.filter((o: any) => o.type !== `annotation`)
         );
       }
-    }, [selectedRedaction, mode, selectRedaction, updateRect]);
+    }, [selectedRedactions, mode, selectRedaction, updateRect]);
 
     useImperativeHandle(ref, () => ({
       getStage: () => stageRef.current,
@@ -510,7 +537,9 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
                           offsetX={offsetX}
                           offsetY={offsetY}
                           mode={mode}
-                          selectRedaction={selectRedaction}
+                          selectRedaction={(id) =>
+                            selectRedaction(id, shiftDown)
+                          }
                           handleRectClick={handleRectClick}
                           handleTransform={handleTransform}
                           handleRectDelete={handleRectDelete}
