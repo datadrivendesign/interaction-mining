@@ -4,7 +4,7 @@ import { ScreenGesture } from "@prisma/client";
 import { useNavigation } from "../repair-screen";
 import { useFormContext } from "react-hook-form";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -41,25 +41,40 @@ export function Filmstrip({
     setValue("redactions", value);
   };
 
-  const handleDeleteFrame = (index: number) => {
-    const screenId = screens[index].id;
-    // reset focus view index
-    setFocusViewIndex(-1);
-    // remove frame from view
-    const newFrameData = [...screens];
-    newFrameData.splice(index, 1);
-    setFrameData(newFrameData);
-    // remove frame from gestures
-    const updatedGestures = Object.fromEntries(
-      Object.entries(gestures).filter(([key]) => key !== screenId)
-    );
-    setGestureData(updatedGestures);
-    // remove frame from redactions
-    const updatedRedactions = Object.fromEntries(
-      Object.entries(redactions).filter(([key]) => key !== screenId)
-    );
-    setRedactionData(updatedRedactions);
-  };
+  const handleDeleteFrame = useCallback(
+    (index: number) => {
+      // Reset focus view to -1 upon deletion
+      setFocusViewIndex(-1);
+      // remove frame from view
+      const newFrameData = [...screens];
+      newFrameData.splice(index, 1);
+      // remove frame from gestures and redactions
+      const updatedGestures: { [key: string]: ScreenGesture } = {};
+      const updatedRedactions: { [key: string]: Redaction[] } = {};
+      for (const frame of newFrameData) {
+        if (gestures[frame.id]) {
+          updatedGestures[frame.id] = gestures[frame.id];
+        }
+        if (redactions[frame.id]) {
+          updatedRedactions[frame.id] = redactions[frame.id];
+        }
+      }
+      // update frame data, gestures, and redactions
+      setFrameData(newFrameData);
+      setGestureData(updatedGestures);
+      setRedactionData(updatedRedactions);
+      console.log("focusViewIndex:", focusViewIndex);
+    },
+    [
+      screens,
+      gestures,
+      redactions,
+      setFrameData,
+      setGestureData,
+      setRedactionData,
+      setFocusViewIndex,
+    ]
+  );
 
   return (
     <AnimatePresence mode="popLayout">
@@ -184,7 +199,11 @@ function FilmstripItem({
             </span>
           </div>
           <button
-            onClick={() => handleDeleteFrame(index)}
+            onClick={(e) => {
+              // Prevent bubbling to parent click handlers that set focus/time
+              e.stopPropagation();
+              handleDeleteFrame(index);
+            }}
             className="inline-flex self-end items-center cursor-pointer"
             title="Delete snapshot"
           >
