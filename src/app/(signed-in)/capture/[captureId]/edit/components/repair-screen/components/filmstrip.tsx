@@ -141,34 +141,42 @@ function FilmstripItem({
     scaleY: number;
   }>({ width: 0, height: 0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
 
-  const updateSize = () => {
+  const updateSize = useCallback(() => {
     if (containerRef.current && imageRef.current) {
       const containerRect = containerRef.current.getBoundingClientRect();
       const imageRect = imageRef.current.getBoundingClientRect();
       const naturalWidth = imageRef.current.naturalWidth;
       const naturalHeight = imageRef.current.naturalHeight;
-      // Calculate the scale factor between the natural and displayed size:
-      const scaleX = imageRect.width / naturalWidth;
-      const scaleY = imageRect.height / naturalHeight;
-      // Compute offsets in case the image is letterboxed inside its container:
-      const offsetX = (containerRect.width - imageRect.width) / 2;
-      const offsetY = (containerRect.height - imageRect.height) / 2;
-      setImgDimensions({
-        width: imageRect.width,
-        height: imageRect.height,
-        offsetX,
-        offsetY,
-        scaleX,
-        scaleY,
-      });
+
+      // Only update if image is loaded (naturalWidth/Height > 0)
+      if (naturalWidth > 0 && naturalHeight > 0) {
+        // Calculate the scale factor between the natural and displayed size:
+        const scaleX = imageRect.width / naturalWidth;
+        const scaleY = imageRect.height / naturalHeight;
+        // Compute offsets in case the image is letterboxed inside its container:
+        const offsetX = (containerRect.width - imageRect.width) / 2;
+        const offsetY = (containerRect.height - imageRect.height) / 2;
+        setImgDimensions({
+          width: imageRect.width,
+          height: imageRect.height,
+          offsetX,
+          offsetY,
+          scaleX,
+          scaleY,
+        });
+      }
     }
-  };
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    // Small delay to ensure image is fully rendered
+    setTimeout(updateSize, 0);
+  }, [updateSize]);
 
   useEffect(() => {
-    updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  }, [updateSize]);
 
   return (
     <motion.div
@@ -272,6 +280,7 @@ function FilmstripItem({
                 width={0}
                 height={0}
                 sizes="100vw"
+                onLoad={handleImageLoad}
               />
             )}
             {/* Render redaction overlays using the natural dimensions and scale factors */}
