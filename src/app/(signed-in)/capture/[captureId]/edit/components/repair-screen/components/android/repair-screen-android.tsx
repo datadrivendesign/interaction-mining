@@ -3,34 +3,30 @@ import { Platform } from "@/lib/utils";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useNavigation } from "../../repair-screen";
 import { FrameData, Redaction, TraceFormData } from "../../../types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScreenGesture } from "@prisma/client";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge, ListRestart } from "lucide-react";
-import { FocusView } from "../focus-view";
+import { ListRestart } from "lucide-react";
+import { FocusViewAndroid } from "./focus-view-android";
 import { Filmstrip } from "../filmstrip";
 import { toast } from "sonner";
-import { InstructionCardAndroid } from "../instruction-card";
+import { DraftFetchResults } from "../../../../util";
 
 export function RepairScreenAndroid({
-  capture,
+  taskDescription,
   files,
   os,
+  draftFetchResult,
 }: {
-  capture: any;
+  taskDescription: string | undefined;
   files: ListedFiles[];
   os: Platform;
+  draftFetchResult: DraftFetchResults;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
   const { focusViewIndex } = useNavigation();
@@ -41,103 +37,131 @@ export function RepairScreenAndroid({
   const originalScreens = useRef<FrameData[]>([]);
   const originalVHs = useRef<{ [key: string]: any }>({});
   const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
+  const originalRedactions = useRef<{ [key: string]: Redaction[] }>({});
   const currScreens = watchScreens as FrameData[];
   const currVHs = watchVHs as { [key: string]: any };
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
-  const redactions = watchRedactions as { [key: string]: Redaction[] };
+  const currRedactions = watchRedactions as { [key: string]: Redaction[] };
 
   const populateFrameData = async (
     files: ListedFiles[]
-  ): Promise<{
-    frames: FrameData[];
-    vhs: { [key: string]: any };
-    gestures: { [key: string]: ScreenGesture };
-  }> => {
-    const frameData: FrameData[] = [];
-    const frameVHs: { [key: string]: any } = {};
-    const frameGestures: { [key: string]: ScreenGesture } = {};
-    for (const [i, c] of files.entries()) {
+  ): Promise<{ [key: string]: CaptureScreenFile }> => {
+    const regexRule =
+      /(\d{4})-(\d{2})-(\d{2}) (\d{2})\:(\d{2})\:(\d{2})\.(\d{3})(.+)\.(json)$/;
+    // iOS screen recordings capitalize file extension, so we lowercase here
+    const frameFiles = files.filter((f) =>
+      regexRule.test(f.fileName.toLowerCase())
+    );
+    const frames: { [key: string]: CaptureScreenFile } = {};
+    for (const [i, c] of frameFiles.entries()) {
       try {
         const frameResponse = await fetch(c.fileUrl);
         const frameJson: CaptureScreenFile = await frameResponse.json();
-        const b64img = `data:image/png;base64,${frameJson.img}`.trim();
-        const frame: FrameData = {
-          id: frameJson.created + i.toString(),
-          src: b64img,
-          timestamp: Date.parse(frameJson.created),
-        };
-        frameData.push(frame);
-        if (frameJson.vh) {
-          frameVHs[frame.id] = JSON.parse(frameJson.vh);
-        }
-        if (frameJson.gesture) {
-          frameGestures[frame.id] = createScreenGesture(frameJson.gesture);
-        }
+        const id = frameJson.id;
+        frames[id] = frameJson;
       } catch (e) {
         console.error("Error fetching frame data:", e);
         toast.error("Error fetching frame data");
       }
     }
-    return {
-      frames: frameData.sort((a, b) => a.timestamp - b.timestamp),
-      vhs: frameVHs,
-      gestures: frameGestures,
-    };
+    return frames;
   };
 
-  useEffect(() => {
-    populateFrameData(files).then(({ frames, vhs, gestures }) => {
-      originalScreens.current = [...frames];
-      originalVHs.current = { ...vhs };
-      originalGestures.current = { ...gestures };
-      // populate form state if empty
-      if (currScreens.length === 0) {
-        setValue("screens", frames);
-      } else {
-        // check if currScreens from draft and populate src field
-        currScreens.forEach((screen) => {
-          if (!screen.src) {
-            const originalScreen = frames.find((s) => s.id === screen.id);
-            if (originalScreen) {
-              screen.src = originalScreen.src;
-            }
+  const populateOriginalData = async (
+    files: ListedFiles[]
+  ): Promise<{
+    screens: FrameData[];
+    vhs: { [key: string]: any };
+    gestures: { [key: string]: ScreenGesture };
+    redactions: { [key: string]: Redaction[] };
+  }> => {
+    const originalMetadataFile = files.find((f) =>
+      f.fileName.toLowerCase().includes("original-metadata.json")
+    );
+    if (originalMetadataFile) {
+      const originalMetadataFileResponse = await fetch(
+        originalMetadataFile.fileUrl
+      );
+      const originalMetadataFileJson =
+        await originalMetadataFileResponse.json();
+      originalScreens.current = originalMetadataFileJson.screens;
+      originalGestures.current = originalMetadataFileJson.gestures;
+      originalRedactions.current = originalMetadataFileJson.redactions;
+      originalVHs.current = {};
+      const frames = await populateFrameData(files);
+      originalScreens.current.forEach((screen) => {
+        if (!screen.src) {
+          const frame = frames[screen.id];
+          if (frame.img) {
+            screen.src = `data:image/png;base64,${frame.img}`.trim();
           }
-        });
-        setValue(
-          "screens",
-          currScreens.sort((a, b) => a.timestamp - b.timestamp)
-        );
-      }
-      if (Object.keys(currVHs).length === 0) {
-        setValue("vhs", vhs);
-      } else {
-        // check if currVHs from draft and populate vhs field
-        Object.keys(currVHs).forEach((id) => {
-          if (!currVHs[id]) {
-            const originalVH = vhs[id];
-            if (originalVH) {
-              currVHs[id] = originalVH as any;
-            }
+          if (frame.vh) {
+            originalVHs.current[screen.id] = JSON.parse(frame.vh);
           }
-        });
-        setValue("vhs", currVHs);
-      }
-      if (Object.keys(currGestures).length === 0) {
-        setValue("gestures", gestures);
-      }
-    });
-    // adding curr vars to dependency array can cause infinite re-renders
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currScreens.length, files, setValue]);
+        }
+      });
+    }
+    return {
+      screens: originalScreens.current,
+      vhs: originalVHs.current,
+      gestures: originalGestures.current,
+      redactions: originalRedactions.current,
+    };
+  };
 
   const resetFormState = () => {
     if (originalScreens.current.length !== currScreens.length) {
       setValue("screens", originalScreens.current);
       setValue("vhs", originalVHs.current);
       setValue("gestures", originalGestures.current);
+      setValue("redactions", originalRedactions.current);
     }
   };
 
+  useEffect(() => {
+    if (draftFetchResult === DraftFetchResults.LOADING) {
+      return;
+    } else if (draftFetchResult !== DraftFetchResults.SUCCESS) {
+      // if draft fetch result not success, populate from original file
+      populateOriginalData(files).then(
+        ({ screens, vhs, gestures, redactions }) => {
+          setValue(
+            "screens",
+            screens.sort((a, b) => a.timestamp - b.timestamp)
+          );
+          setValue("vhs", vhs);
+          setValue("gestures", gestures);
+          setValue("redactions", redactions);
+        }
+      );
+    } else if (draftFetchResult === DraftFetchResults.SUCCESS) {
+      populateOriginalData(files);
+      populateFrameData(files).then((frames) => {
+        const screensCopy = currScreens.map((screen) => ({ ...screen }));
+        const vhCopy = { ...currVHs };
+        screensCopy.forEach((screen) => {
+          if (!screen.src) {
+            const frame = frames[screen.id];
+            if (frame) {
+              screen.src = `data:image/png;base64,${frame.img}`.trim();
+            }
+            if (frame.vh) {
+              vhCopy[screen.id] = JSON.parse(frame.vh);
+            }
+          }
+        });
+        setValue(
+          "screens",
+          screensCopy.sort((a, b) => a.timestamp - b.timestamp)
+        );
+        setValue("vhs", vhCopy);
+      });
+    }
+    // adding curr vars to dependency array can cause infinite re-renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currScreens.length, files, setValue, draftFetchResult]);
+
+  console.log("currScreens", currScreens);
   return (
     <div className="w-full h-full">
       <ResizablePanelGroup direction="vertical">
@@ -150,7 +174,6 @@ export function RepairScreenAndroid({
               className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
             >
               <div className="flex flex-col justify-center items-center w-full h-full gap-4">
-                <InstructionCardAndroid capture={capture} />
                 <Button onClick={resetFormState}>
                   <ListRestart /> Reset Screens
                 </Button>
@@ -159,12 +182,12 @@ export function RepairScreenAndroid({
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={75}>
               {focusViewIndex > -1 && focusViewIndex < currScreens.length ? (
-                <FocusView
+                <FocusViewAndroid
                   key={focusViewIndex}
                   vh={currVHs[currScreens[focusViewIndex].id]}
                   screen={currScreens[focusViewIndex]}
                   isLastScreen={focusViewIndex === currScreens.length - 1}
-                  os={os}
+                  taskDescription={taskDescription}
                 />
               ) : (
                 <div className="flex justify-center items-center w-full h-full">
@@ -180,9 +203,10 @@ export function RepairScreenAndroid({
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
           <Filmstrip
+            key={`filmstrip-${currScreens.length}-${currScreens.filter((s) => s.src && s.src.length > 0).length}`}
             screens={currScreens}
             gestures={currGestures}
-            redactions={redactions}
+            redactions={currRedactions}
             os={os}
             handleSetTime={(_: number) => {}} // empty function
           />
@@ -190,21 +214,4 @@ export function RepairScreenAndroid({
       </ResizablePanelGroup>
     </div>
   );
-}
-function createScreenGesture(gesture: {
-  type: string | null;
-  scrollDeltaX: number | null;
-  scrollDeltaY: number | null;
-  x: number | null;
-  y: number | null;
-  description: string | null;
-}): {
-  type: string | null;
-  scrollDeltaX: number | null;
-  scrollDeltaY: number | null;
-  x: number | null;
-  y: number | null;
-  description: string | null;
-} {
-  throw new Error("Function not implemented.");
 }

@@ -1,9 +1,13 @@
 import { Card, CardDescription, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
-export const InstructionCardIOS = ({ capture }: { capture: any }) => {
+export const InstructionCardIOS = ({
+  taskDescription,
+}: {
+  taskDescription: string | undefined;
+}) => {
   return (
     <Card
       key="task"
@@ -18,7 +22,7 @@ export const InstructionCardIOS = ({ capture }: { capture: any }) => {
               <p>
                 Task:{" "}
                 <span className="text-xs">
-                  {capture?.task?.description ?? "No task provided."}
+                  {taskDescription ?? "No task provided."}
                 </span>
               </p>
             </article>
@@ -37,18 +41,49 @@ export const InstructionCardIOS = ({ capture }: { capture: any }) => {
   );
 };
 
-export const InstructionCardAndroid = ({ capture }: { capture: any }) => {
+export const InstructionCardAndroid = ({
+  taskDescription,
+  showBoxes,
+  setShowBoxes,
+}: {
+  taskDescription: string | undefined;
+  showBoxes: boolean;
+  setShowBoxes: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
   return (
     <Card
       key="task"
-      className="absolute top-4 left-4 w-56 h-32 p-3 z-10 shadow-md bg-background border rounded-md"
+      className={
+        "right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"
+      }
     >
       <CardHeader className="flex flex-col items-center p-2">
-        <Badge>
-          <article className="prose prose-neutral dark:prose-invert leading-snug text-xs font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
-            <p>Task: {capture?.task?.description ?? "No task provided."}</p>
-          </article>
-        </Badge>
+        <CardDescription>
+          <Badge>
+            <article className="prose prose-neutral dark:prose-invert leading-snug text-sm font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
+              <p>
+                Task:{" "}
+                <span className="text-xs">
+                  {taskDescription ?? "No task provided."}
+                </span>
+              </p>
+            </article>
+          </Badge>
+          <p className="mt-2 text-xs font-semibold">Add gestures to screens</p>
+          <p className="mt-2 text-xs">
+            <strong>Add screen gestures on this side.</strong> Start gesture
+            description with a verb, no full sentences.
+          </p>
+          <div className="space-y-1 my-5">
+            <Switch
+              checked={showBoxes}
+              onCheckedChange={(checked) => {
+                setShowBoxes(checked);
+              }}
+            />
+            <span className="pl-3">Show Bounding Boxes</span>
+          </div>
+        </CardDescription>
       </CardHeader>
     </Card>
   );

@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -27,7 +27,7 @@ import ReviewDoc from "./components/review/doc.mdx";
 import RedactScreen from "./components/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { getDraftFiles, handleDraftSave } from "./util";
+import { DraftFetchResults, getDraftFiles, handleDraftSave } from "./util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
@@ -46,7 +46,9 @@ export default function Page() {
     includes: { app: true, task: true },
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDraftLoading, setIsDraftLoading] = useState(true);
+  const [draftFetchResult, setDraftFetchResult] = useState<DraftFetchResults>(
+    DraftFetchResults.LOADING
+  );
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
 
@@ -65,15 +67,19 @@ export default function Page() {
 
   // populate form with saved capture data if there is any
   useEffect(() => {
+    if (draftFetchResult !== DraftFetchResults.LOADING) {
+      return; // Prevent multiple runs
+    }
+
     const fetchFiles = async () => {
       const draftFilesRes = await getDraftFiles(captureId);
       if (!draftFilesRes.ok) {
-        setIsDraftLoading(false);
+        setDraftFetchResult(DraftFetchResults.ERROR);
         console.error("Failed to fetch files");
         return;
       }
       if (draftFilesRes.data.length === 0) {
-        setIsDraftLoading(false);
+        setDraftFetchResult(DraftFetchResults.NO_DRAFTS);
         return;
       }
       // sort draft files by version
@@ -92,7 +98,7 @@ export default function Page() {
         latestDraftFile.fileKey
       );
       if (!signedLatestDraftFileRes.ok) {
-        setIsDraftLoading(false);
+        setDraftFetchResult(DraftFetchResults.ERROR);
         console.error("Failed to generate signed URL");
         return;
       }
@@ -100,31 +106,57 @@ export default function Page() {
         signedLatestDraftFileRes.data.signedUrl
       );
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
-      methods.setValue("gestures", draftFormData.gestures);
-      methods.setValue("redactions", draftFormData.redactions);
-      methods.setValue("description", draftFormData.description);
-      // get iOS and iPhone versions for apple apps
-      methods.setValue("iOSVersion", draftFormData.iOSVersion);
-      methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
-      // grab screens
-      methods.setValue(
-        "screens",
-        draftFormData.screens.map((screen) => ({
-          id: screen.id,
-          src: "",
-          timestamp: screen.timestamp,
-        }))
+
+      // Check if we already have screens with src data to avoid overwriting
+      const currentScreens = methods.getValues("screens");
+      const hasScreensWithSrc = currentScreens.some(
+        (screen) => screen.src && screen.src.length > 0
       );
-      // grab vh from android screens
-      const draftVHs: { [key: string]: any } = {};
-      draftFormData.screens.forEach((screen) => {
-        draftVHs[screen.id] = null;
-      });
-      methods.setValue("vhs", draftVHs);
-      setIsDraftLoading(false);
+
+      if (!hasScreensWithSrc) {
+        // set form data
+        methods.setValue("gestures", draftFormData.gestures);
+        methods.setValue("redactions", draftFormData.redactions);
+        methods.setValue("description", draftFormData.description);
+        // get iOS and iPhone versions for apple apps
+        if (draftFormData.iOSVersion) {
+          methods.setValue("iOSVersion", draftFormData.iOSVersion);
+        }
+        if (draftFormData.iPhoneVersion) {
+          methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
+        }
+        // grab screens
+        console.log("populate screens from draft files");
+        methods.setValue(
+          "screens",
+          draftFormData.screens.map((screen) => ({
+            id: screen.id,
+            src: "",
+            timestamp: screen.timestamp,
+          }))
+        );
+        // grab vh from android screens
+        const draftVHs: { [key: string]: any } = {};
+        draftFormData.screens.forEach((screen) => {
+          draftVHs[screen.id] = null;
+        });
+        methods.setValue("vhs", draftVHs);
+      } else {
+        // Still set other form data that doesn't conflict
+        methods.setValue("gestures", draftFormData.gestures);
+        methods.setValue("redactions", draftFormData.redactions);
+        methods.setValue("description", draftFormData.description);
+        if (draftFormData.iOSVersion) {
+          methods.setValue("iOSVersion", draftFormData.iOSVersion);
+        }
+        if (draftFormData.iPhoneVersion) {
+          methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
+        }
+      }
+      setDraftFetchResult(DraftFetchResults.SUCCESS);
     };
     fetchFiles();
-  }, [captureId, methods]);
+  }, [captureId, draftFetchResult, methods]);
 
   const isAutosavingRef = useRef(false);
   useEffect(() => {
@@ -302,7 +334,7 @@ export default function Page() {
     switch (stepIndex) {
       case 0:
         return (
-          <RepairScreen capture={capture} isDraftLoading={isDraftLoading} />
+          <RepairScreen capture={capture} draftFetchResult={draftFetchResult} />
         );
       case 1:
         return <RedactScreen />;

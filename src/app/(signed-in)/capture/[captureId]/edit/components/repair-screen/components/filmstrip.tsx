@@ -33,13 +33,20 @@ export function Filmstrip({
   const { focusViewIndex, setFocusViewIndex } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
 
-  const setFrameData = (value: FrameData[]) => setValue("screens", value);
-  const setGestureData = (value: { [key: string]: ScreenGesture }) => {
-    setValue("gestures", value);
-  };
-  const setRedactionData = (value: { [key: string]: Redaction[] }) => {
-    setValue("redactions", value);
-  };
+  const setFrameData = useCallback(
+    (value: FrameData[]) => () => setValue("screens", value),
+    [setValue]
+  );
+  const setGestureData = useCallback(
+    (value: { [key: string]: ScreenGesture }) => () =>
+      setValue("gestures", value),
+    [setValue]
+  );
+  const setRedactionData = useCallback(
+    (value: { [key: string]: Redaction[] }) => () =>
+      setValue("redactions", value),
+    [setValue]
+  );
 
   const handleDeleteFrame = useCallback(
     (index: number) => {
@@ -269,7 +276,7 @@ function FilmstripItem({
             )}
           >
             {/* {children} */}
-            {screen.src && (
+            {screen.src ? (
               <Image
                 ref={imageRef}
                 key={screen.id}
@@ -281,7 +288,14 @@ function FilmstripItem({
                 height={0}
                 sizes="100vw"
                 onLoad={handleImageLoad}
+                onError={() => {
+                  console.warn(`Failed to load image for screen ${screen.id}`);
+                }}
               />
+            ) : (
+              <div className="flex items-center justify-center h-full w-full bg-muted/20">
+                <div className="text-xs text-muted-foreground">Loading...</div>
+              </div>
             )}
             {/* Render redaction overlays using the natural dimensions and scale factors */}
             {imgDimensions.width > 0 &&
