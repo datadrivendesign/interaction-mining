@@ -54,7 +54,7 @@ export const InstructionCardAndroid = ({
     <Card
       key="task"
       className={
-        "right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"
+        "right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
       }
     >
       <CardHeader className="flex flex-col items-center p-2">

@@ -23,7 +23,7 @@ export default async function Page({
   }
   const isAdmin = session.user.role === Role.ADMIN;
   // check if captureId matches the user
-  const capture = await getCapture({ id: captureId });
+  const capture = await getCapture({ id: captureId, includes: { app: true } });
   const isOwner = capture.data?.userId === session.user.id;
   if ((!isOwner && !isAdmin) || !capture.data) {
     return <NotAuthorized />;

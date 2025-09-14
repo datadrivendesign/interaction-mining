@@ -153,7 +153,8 @@ export function CaptureCard({
           <div className="size-10 rounded-lg bg-muted-background animate-pulse" />
         )}
         <h4 className="font-medium text-sm">
-          {capture.app?.metadata?.name ?? "Unnamed App"}
+          {capture.app?.metadata?.name?.slice(0, 10)}
+          {`${capture.app?.metadata?.name?.length > 10 ? "..." : ""}`}
         </h4>
       </div>
       <div className="flex flex-col h-full justify-evenly content-evenly items-center text-center ml-2">
