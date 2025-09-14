@@ -1,22 +1,21 @@
 import { useFormContext } from "react-hook-form";
 import { useState, useEffect } from "react";
 
-import { Platform } from "@/lib/utils";
-import RepairScreenCanvas from "./repair-screen-canvas";
-import { FrameData, TraceFormData } from "../../types";
+import { FrameData, TraceFormData } from "../../../types";
 import { ScreenGesture } from "@prisma/client";
 import { gestureOptions } from "@/lib/utils/gesture-options";
+import RepairScreenCanvasAndroid from "./repair-screen-canvas-android";
 
-export function FocusView({
+export function FocusViewAndroid({
   screen,
   vh,
-  os,
   isLastScreen,
+  taskDescription,
 }: {
   screen: FrameData;
   vh: any;
-  os: Platform;
   isLastScreen: boolean;
+  taskDescription: string | undefined;
 }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
@@ -49,14 +48,14 @@ export function FocusView({
   return (
     <>
       <div className="flex justify-center w-full h-full overflow-hidden">
-        <RepairScreenCanvas
+        <RepairScreenCanvasAndroid
           key={screen.id}
           screen={screen}
           vh={vh}
+          taskDescription={taskDescription}
           gesture={gesture}
           setGesture={setGesture}
           gestureOptions={gestureOptions}
-          os={os}
           isLastScreen={isLastScreen}
         />
       </div>

@@ -18,6 +18,66 @@ import { redactVH } from "./vh-parse";
 import { listFromS3 } from "@/lib/aws/s3/server";
 import { ActionPayload } from "@/lib/actions/types";
 
+export enum DraftFetchResults {
+  LOADING = "loading",
+  SUCCESS = "success",
+  NO_DRAFTS = "no_drafts",
+  ERROR = "error",
+}
+
+export async function getDraftFiles(
+  captureId: string
+): Promise<ActionPayload<ListedFiles[]>> {
+  try {
+    const files = await listFromS3(`uploads/${captureId}/drafts`, false);
+    if (!files.ok) {
+      return {
+        ok: false,
+        message: "Failed to fetch draft files.",
+        data: null,
+      };
+    }
+    return files;
+  } catch (err) {
+    console.error("Error fetching draft files:", err);
+    return {
+      ok: false,
+      message: "Failed to fetch draft files.",
+      data: null,
+    };
+  }
+}
+
+export async function getCaptureFiles(
+  captureId: string
+): Promise<ActionPayload<ListedFiles[]>> {
+  try {
+    const files = await listFromS3(`uploads/${captureId}`, false);
+    if (!files.ok) {
+      return {
+        ok: false,
+        message: "Failed to fetch capture files.",
+        data: null,
+      };
+    }
+    const captureFiles = files.data.filter(
+      (file) => !file.fileKey.includes(`${captureId}/drafts`)
+    );
+    return {
+      ok: true,
+      message: "Capture files fetched successfully.",
+      data: captureFiles,
+    };
+  } catch (err) {
+    console.error("Error fetching capture files:", err);
+    return {
+      ok: false,
+      message: "Failed to fetch capture files.",
+      data: null,
+    };
+  }
+}
+
 export async function handleDraftSave(
   data: TraceFormData,
   capture: Capture
@@ -63,29 +123,6 @@ export async function handleDraftSave(
     message: "Draft trace data uploaded successfully.",
     data: draftTraceData,
   };
-}
-
-export async function getDraftFiles(
-  captureId: string
-): Promise<ActionPayload<ListedFiles[]>> {
-  try {
-    const files = await listFromS3(`uploads/${captureId}/drafts`, false);
-    if (!files.ok) {
-      return {
-        ok: false,
-        message: "Failed to fetch draft files.",
-        data: null,
-      };
-    }
-    return files;
-  } catch (err) {
-    console.error("Error fetching draft files:", err);
-    return {
-      ok: false,
-      message: "Failed to fetch draft files.",
-      data: null,
-    };
-  }
 }
 
 export async function handleTraceSave(

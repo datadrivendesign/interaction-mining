@@ -14,7 +14,10 @@ export default function Page() {
           <GettingStarted />
         </article>
       </section>
-      <Tabs defaultValue="record-trace" className="w-full max-w-(--breakpoint-xl) p-4">
+      <Tabs
+        defaultValue="record-trace"
+        className="w-full max-w-(--breakpoint-xl) p-4"
+      >
         <TabsList className="sticky left-10">
           <TabsTrigger value="record-trace">
             Create a Mobile Task Flow

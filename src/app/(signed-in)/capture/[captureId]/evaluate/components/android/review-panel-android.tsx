@@ -3,29 +3,27 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { TraceFormData } from "../edit/components/types";
+import { TraceFormData } from "../../../edit/components/types";
 import { CaptureStatus } from "@prisma/client";
 import {
   validateApprovePermissions,
   denyCapture,
-} from "./utils/capture-actions";
+} from "../../utils/capture-actions";
 import { toast } from "sonner";
-import { handleTraceSave } from "../edit/util";
+import { handleTraceSave } from "../../../edit/util";
 import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 
-export function ReviewPanel({
+export function ReviewPanelAndroid({
   traceData,
   capture,
   isAdmin,
-  videoRef,
 }: {
   traceData: TraceFormData;
   capture: Capture;
   isAdmin: boolean;
-  videoRef: React.RefObject<HTMLVideoElement>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [annotateFeedback, setAnnotateFeedback] = useState(
@@ -106,15 +104,6 @@ export function ReviewPanel({
         </article>
       </Badge>
 
-      <div className="flex flex-col justify-center items-center w-full h-full gap-4 mt-5">
-        <video
-          ref={videoRef}
-          crossOrigin="anonymous"
-          preload="auto"
-          className="w-1/2 h-auto rounded-lg object-contain"
-          controls={true}
-        />
-      </div>
       {isAdmin && (
         <div className="flex flex-col justify-center items-center w-full h-full gap-3 my-3">
           <div className="flex flex-col gap-3 items-center w-full">
