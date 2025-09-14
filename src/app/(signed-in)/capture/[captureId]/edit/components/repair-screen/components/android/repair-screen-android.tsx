@@ -161,7 +161,6 @@ export function RepairScreenAndroid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currScreens.length, files, setValue, draftFetchResult]);
 
-  console.log("currScreens", currScreens);
   return (
     <div className="w-full h-full">
       <ResizablePanelGroup direction="vertical">
