@@ -125,7 +125,12 @@ export function CaptureCard({
           </div>
         );
       case CaptureStatus.PROCESSING:
-        return <ProcessButton captureId={capture.id} />;
+        return (
+          <div className="flex gap-2">
+            <ProcessButton captureId={capture.id} />
+            <DeleteDialog captureId={capture.id} onDelete={onDelete} />
+          </div>
+        );
       case CaptureStatus.REVIEWING:
         return <ReviewButton captureId={capture.id} />;
       default:
