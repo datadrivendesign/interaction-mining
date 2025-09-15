@@ -21,12 +21,14 @@ export function Filmstrip({
   screens,
   gestures,
   redactions,
+  vhs,
   os,
   handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
+  vhs?: { [key: string]: any };
   os: Platform;
   handleSetTime: (t: number) => void;
 }) {
@@ -34,17 +36,19 @@ export function Filmstrip({
   const { setValue } = useFormContext<TraceFormData>();
 
   const setFrameData = useCallback(
-    (value: FrameData[]) => () => setValue("screens", value),
+    (value: FrameData[]) => setValue("screens", value),
     [setValue]
   );
   const setGestureData = useCallback(
-    (value: { [key: string]: ScreenGesture }) => () =>
-      setValue("gestures", value),
+    (value: { [key: string]: ScreenGesture }) => setValue("gestures", value),
     [setValue]
   );
   const setRedactionData = useCallback(
-    (value: { [key: string]: Redaction[] }) => () =>
-      setValue("redactions", value),
+    (value: { [key: string]: Redaction[] }) => setValue("redactions", value),
+    [setValue]
+  );
+  const setVHData = useCallback(
+    (value: { [key: string]: any }) => setValue("vhs", value),
     [setValue]
   );
 
@@ -58,6 +62,7 @@ export function Filmstrip({
       // remove frame from gestures and redactions
       const updatedGestures: { [key: string]: ScreenGesture } = {};
       const updatedRedactions: { [key: string]: Redaction[] } = {};
+      const updatedVHS: { [key: string]: any } = {};
       for (const frame of newFrameData) {
         if (gestures[frame.id]) {
           updatedGestures[frame.id] = gestures[frame.id];
@@ -65,20 +70,28 @@ export function Filmstrip({
         if (redactions[frame.id]) {
           updatedRedactions[frame.id] = redactions[frame.id];
         }
+        if (vhs && vhs[frame.id]) {
+          updatedVHS[frame.id] = vhs[frame.id];
+        }
       }
       // update frame data, gestures, and redactions
       setFrameData(newFrameData);
       setGestureData(updatedGestures);
       setRedactionData(updatedRedactions);
+      if (vhs) {
+        setVHData(updatedVHS);
+      }
     },
     [
       screens,
       gestures,
       redactions,
+      vhs,
       setFrameData,
       setGestureData,
       setRedactionData,
       setFocusViewIndex,
+      setVHData,
     ]
   );
 

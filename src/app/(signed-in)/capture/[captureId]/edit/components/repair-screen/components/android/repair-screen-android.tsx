@@ -144,9 +144,9 @@ export function RepairScreenAndroid({
             const frame = frames[screen.id];
             if (frame) {
               screen.src = `data:image/png;base64,${frame.img}`.trim();
-            }
-            if (frame.vh) {
-              vhCopy[screen.id] = JSON.parse(frame.vh);
+              if (frame.vh) {
+                vhCopy[screen.id] = JSON.parse(frame.vh);
+              }
             }
           }
         });
@@ -206,6 +206,7 @@ export function RepairScreenAndroid({
             screens={currScreens}
             gestures={currGestures}
             redactions={currRedactions}
+            vhs={currVHs}
             os={os}
             handleSetTime={(_: number) => {}} // empty function
           />

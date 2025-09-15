@@ -113,20 +113,19 @@ export default function Page() {
         (screen) => screen.src && screen.src.length > 0
       );
 
+      // Set form data that doesn't conflict with existing screens
+      methods.setValue("gestures", draftFormData.gestures);
+      methods.setValue("redactions", draftFormData.redactions);
+      methods.setValue("description", draftFormData.description);
+      if (draftFormData.iOSVersion) {
+        methods.setValue("iOSVersion", draftFormData.iOSVersion);
+      }
+      if (draftFormData.iPhoneVersion) {
+        methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
+      }
+
       if (!hasScreensWithSrc) {
-        // set form data
-        methods.setValue("gestures", draftFormData.gestures);
-        methods.setValue("redactions", draftFormData.redactions);
-        methods.setValue("description", draftFormData.description);
-        // get iOS and iPhone versions for apple apps
-        if (draftFormData.iOSVersion) {
-          methods.setValue("iOSVersion", draftFormData.iOSVersion);
-        }
-        if (draftFormData.iPhoneVersion) {
-          methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
-        }
         // grab screens
-        console.log("populate screens from draft files");
         methods.setValue(
           "screens",
           draftFormData.screens.map((screen) => ({
@@ -141,17 +140,6 @@ export default function Page() {
           draftVHs[screen.id] = null;
         });
         methods.setValue("vhs", draftVHs);
-      } else {
-        // Still set other form data that doesn't conflict
-        methods.setValue("gestures", draftFormData.gestures);
-        methods.setValue("redactions", draftFormData.redactions);
-        methods.setValue("description", draftFormData.description);
-        if (draftFormData.iOSVersion) {
-          methods.setValue("iOSVersion", draftFormData.iOSVersion);
-        }
-        if (draftFormData.iPhoneVersion) {
-          methods.setValue("iPhoneVersion", draftFormData.iPhoneVersion);
-        }
       }
       setDraftFetchResult(DraftFetchResults.SUCCESS);
     };
