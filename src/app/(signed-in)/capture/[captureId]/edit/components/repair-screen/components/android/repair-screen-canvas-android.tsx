@@ -232,7 +232,7 @@ export default function RepairScreenCanvasAndroid({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair "} w-auto h-full rounded-lg select-none`}
+                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair "} w-auto h-full rounded-lg select-none z-50`}
                   width={0}
                   height={0}
                   sizes="100vw"
@@ -253,6 +253,7 @@ export default function RepairScreenCanvasAndroid({
                   width={width}
                   boxes={boxes}
                   rootBounds={rootBounds}
+                  onBoxClick={handleImageClick}
                 />
               </DroppableArea>
             </div>
