@@ -163,8 +163,6 @@ const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
     return { boxes, rootBounds };
   }, [vh]);
 
-  console.log(boxes, rootBounds);
-  console.log(screen);
   return (
     <div className="w-full h-full">
       <Image
