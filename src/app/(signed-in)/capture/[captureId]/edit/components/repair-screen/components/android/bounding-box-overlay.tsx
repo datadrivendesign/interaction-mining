@@ -12,6 +12,7 @@ export default function BoundingBoxOverlay({
   width,
   boxes,
   rootBounds,
+  onBoxClick,
 }: {
   showBoxes: boolean;
   mergedRef: MutableRefObject<HTMLImageElement | null>;
@@ -19,6 +20,7 @@ export default function BoundingBoxOverlay({
   width: number | null;
   boxes: any[];
   rootBounds: any;
+  onBoxClick?: (e: React.MouseEvent<SVGRectElement>) => void;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [tooltip, setTooltip] = useState<{
@@ -55,7 +57,7 @@ export default function BoundingBoxOverlay({
   }
 
   return (
-    <div>
+    <div className="z-30">
       {showBoxes && (
         <>
           <svg
@@ -86,6 +88,7 @@ export default function BoundingBoxOverlay({
                 onMouseLeave={() => {
                   setTooltip((prev) => ({ ...prev, visible: false }));
                 }}
+                onClick={onBoxClick}
               />
             ))}
           </svg>
@@ -96,7 +99,7 @@ export default function BoundingBoxOverlay({
               <Tooltip open={tooltip.visible}>
                 <TooltipContent
                   side="top"
-                  className="z-50 opacity-70"
+                  className="z-30 opacity-70"
                   style={{
                     position: "fixed",
                     left: mousePosition.x + 10,
@@ -123,6 +126,7 @@ function BoundingBox({
   onMouseEnter,
   onMouseMove,
   onMouseLeave,
+  onClick,
 }: {
   x: number;
   y: number;
@@ -131,6 +135,7 @@ function BoundingBox({
   onMouseEnter?: (e: React.MouseEvent<SVGRectElement>) => void;
   onMouseMove?: (e: React.MouseEvent<SVGRectElement>) => void;
   onMouseLeave?: () => void;
+  onClick?: (e: React.MouseEvent<SVGRectElement>) => void;
 }) {
   return (
     <rect
@@ -145,6 +150,7 @@ function BoundingBox({
       onMouseEnter={onMouseEnter}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
+      onClick={onClick}
     />
   );
 }
