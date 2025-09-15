@@ -17,15 +17,15 @@ export default function RecordTrace() {
   return (
     <div className="relative flex flex-col md:flex-col w-full max-w-(--breakpoint-xl) p-4 md:p-8 gap-4 md:gap-4">
       <section className="flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) gap-16 md:gap-16">
-          <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
-            <TraceIntroSection />
-            <TraceAppSection />
-          </article>
+        <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
+          <TraceIntroSection />
+          <TraceAppSection />
+        </article>
 
         <div className="flex flex-row md:flex-col justify-center content-center items-center">
           <aside className="top-20 flex flex-col w-full gap-2 max-w-xs">
             <Link
-              href={`https://dhyjzbfmbeej1.cloudfront.net/assets/apk/odim-1.0.apk`}
+              href={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/apk/odim-1.0.apk`}
               target="_blank"
             >
               <Button className="w-full">
@@ -36,10 +36,17 @@ export default function RecordTrace() {
           </aside>
           <div className="flex justify-between justify-center content-center items-center gap-8 mt-8">
             <div className="w-full max-w-xs mx-auto text-center">
-              <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/accessibility.mp4`} className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+              <video
+                src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`}
+                className="not-prose w-3/4 h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8"
+                autoPlay
+                loop
+                playsInline
+                muted
+              ></video>
             </div>
           </div>
-        </div>          
+        </div>
       </section>
 
       <section className="flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) gap-16 md:gap-16">
@@ -54,15 +61,32 @@ export default function RecordTrace() {
         </article>
         <div className="flex flex-row justify-between items-center gap-8 mt-8">
           <div className="w-full max-w-xs mx-auto text-center mr-8">
-            <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/accessibility.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video
+              src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/accessibility.mp4`}
+              className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8"
+              autoPlay
+              loop
+              playsInline
+              muted
+            ></video>
           </div>
           <div className="w-full max-w-xs mx-auto text-center">
-            <video src={`https://dhyjzbfmbeej1.cloudfront.net/assets/traces.mp4`} className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8" autoPlay loop playsInline muted></video>
+            <video
+              src={`${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/assets/traces.mp4`}
+              className="not-prose w-full h-auto rounded-lg focus:outline-hidden focus:ring-0 mb-8"
+              autoPlay
+              loop
+              playsInline
+              muted
+            ></video>
           </div>
         </div>
       </section>
 
-      <Tabs defaultValue="postprocess-web" className="w-full max-w-(--breakpoint-xl) p-4">
+      <Tabs
+        defaultValue="postprocess-web"
+        className="w-full max-w-(--breakpoint-xl) p-4"
+      >
         <TabsList className="sticky left-10">
           <TabsTrigger value="postprocess-web">
             Post-Process on Web App
@@ -83,5 +107,5 @@ export default function RecordTrace() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

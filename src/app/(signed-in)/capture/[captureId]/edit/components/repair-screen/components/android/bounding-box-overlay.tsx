@@ -1,130 +1,9 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { MutableRefObject, useRef, useEffect } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { FocusedBox } from "../repair-screen-canvas";
-
-export function FocusedElementTab({
-  showBoxes,
-  setShowBoxes,
-  focusedBox,
-}: {
-  showBoxes: boolean;
-  setShowBoxes: React.Dispatch<React.SetStateAction<boolean>>;
-  focusedBox: FocusedBox;
-}) {
-  return (
-    <Card className="absolute right-0 top-0 mr-5 mt-5 w-auto h-auto">
-      <CardHeader>
-        <CardTitle>Gesture Interaction Element</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-1 mb-5">
-          <Switch
-            checked={showBoxes}
-            onCheckedChange={(checked) => {
-              setShowBoxes(checked);
-            }}
-          />
-          <span className="pl-3">Show Bounding Boxes</span>
-        </div>
-        {showBoxes ? (
-          <>
-            <div className="space-y-1 flex flex-row mb-5">
-              <div className="w-15 flex flex-col justify-center items-center">
-                <Label
-                  htmlFor="x0"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  x0
-                </Label>
-                <Input
-                  id="x0"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={focusedBox.x ?? -1}
-                />
-              </div>
-              <div className="w-15 flex flex-col justify-center items-center mr-3">
-                <Label
-                  htmlFor="y0"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  y0
-                </Label>
-                <Input
-                  id="y0"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={focusedBox.y ?? -1}
-                />
-              </div>
-              <div className="w-15 flex flex-col justify-center items-center">
-                <Label
-                  htmlFor="x1"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  x1
-                </Label>
-                <Input
-                  id="x1"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)}
-                />
-              </div>
-              <div className="w-15 flex flex-col justify-center items-center">
-                <Label
-                  htmlFor="y1"
-                  className="text-sm font-bold leading-none mb-1"
-                >
-                  y1
-                </Label>
-                <Input
-                  id="y1"
-                  className="text-sm font-normal text-muted-foreground"
-                  readOnly={true}
-                  value={(focusedBox.y ?? -1) + (focusedBox.height ?? -1)}
-                />
-              </div>
-            </div>
-            <div className="space-y-1 mb-5">
-              <Label
-                htmlFor="elemId"
-                className="text-base font-bold leading-none"
-              >
-                Element Id
-              </Label>
-              <Input
-                id="elemId"
-                className="text-sm font-normal text-muted-foreground"
-                readOnly={true}
-                value={focusedBox.id ?? ""}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label
-                className="text-base font-bold leading-none"
-                htmlFor="elemClass"
-              >
-                Element Class
-              </Label>
-              <Input
-                id="elemClass"
-                className="text-sm font-normal text-muted-foreground"
-                readOnly={true}
-                value={focusedBox.class ?? ""}
-              />
-            </div>
-          </>
-        ) : (
-          <></>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+import { MutableRefObject, useRef, useEffect, useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 export default function BoundingBoxOverlay({
   showBoxes,
@@ -142,6 +21,17 @@ export default function BoundingBoxOverlay({
   rootBounds: any;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean;
+    content: string;
+  }>({
+    visible: false,
+    content: "",
+  });
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -167,22 +57,59 @@ export default function BoundingBoxOverlay({
   return (
     <div>
       {showBoxes && (
-        <svg
-          ref={svgRef}
-          viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
-          preserveAspectRatio="xMinYMin meet"
-          className="pointer-events-none top-0 left-0 absolute cursor-crosshair"
-        >
-          {boxes.map((box: any, index: number) => (
-            <BoundingBox
-              key={box.id + index}
-              x={box.x}
-              y={box.y}
-              width={box.width}
-              height={box.height}
-            />
-          ))}
-        </svg>
+        <>
+          <svg
+            ref={svgRef}
+            viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
+            preserveAspectRatio="xMinYMin meet"
+            className="pointer-events-none top-0 left-0 absolute"
+          >
+            {boxes.map((box: any, index: number) => (
+              <BoundingBox
+                key={box.id + index}
+                x={box.x}
+                y={box.y}
+                width={box.width}
+                height={box.height}
+                onMouseEnter={(e) => {
+                  setTooltip({
+                    visible: true,
+                    content: box.class || "Unknown element",
+                  });
+                }}
+                onMouseMove={(e) => {
+                  setMousePosition({
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
+                }}
+                onMouseLeave={() => {
+                  setTooltip((prev) => ({ ...prev, visible: false }));
+                }}
+              />
+            ))}
+          </svg>
+
+          {/* Custom tooltip */}
+          {tooltip.visible && (
+            <TooltipProvider delayDuration={10}>
+              <Tooltip open={tooltip.visible}>
+                <TooltipContent
+                  side="top"
+                  className="z-50 opacity-70"
+                  style={{
+                    position: "fixed",
+                    left: mousePosition.x + 10,
+                    top: mousePosition.y - 10,
+                    transform: "none",
+                  }}
+                >
+                  {tooltip.content}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </>
       )}
     </div>
   );
@@ -193,11 +120,17 @@ function BoundingBox({
   y,
   width,
   height,
+  onMouseEnter,
+  onMouseMove,
+  onMouseLeave,
 }: {
   x: number;
   y: number;
   width: number;
   height: number;
+  onMouseEnter?: (e: React.MouseEvent<SVGRectElement>) => void;
+  onMouseMove?: (e: React.MouseEvent<SVGRectElement>) => void;
+  onMouseLeave?: () => void;
 }) {
   return (
     <rect
@@ -208,7 +141,10 @@ function BoundingBox({
       fill={"transparent"}
       stroke="red"
       strokeWidth="1"
-      className="pointer-events-none"
+      className="pointer-events-auto cursor-crosshair"
+      onMouseEnter={onMouseEnter}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
     />
   );
 }

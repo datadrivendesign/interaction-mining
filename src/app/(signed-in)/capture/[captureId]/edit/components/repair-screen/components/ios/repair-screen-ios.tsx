@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/resizable";
 import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
-import { FocusView } from "../focus-view";
+import { FocusViewIOS } from "./focus-view-ios";
 import { Card, CardDescription, CardHeader } from "@/components/ui/card";
 import { CirclePlay } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -19,26 +19,26 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useNavigation } from "../../repair-screen";
 import { Platform } from "@/lib/utils";
 import { InstructionCardIOS } from "../instruction-card";
+import { DraftFetchResults } from "../../../../util";
 
 export function RepairScreenIOS({
-  capture,
+  taskDescription,
   files,
   os,
-  isDraftLoading,
+  draftFetchResult,
 }: {
-  capture: any;
+  taskDescription: string | undefined;
   files: ListedFiles[];
   os: Platform;
-  isDraftLoading: boolean;
+  draftFetchResult: DraftFetchResults;
 }) {
   const { focusViewIndex } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
-    name: ["screens", "vhs", "gestures", "redactions"],
+  const [watchScreens, watchGestures, watchRedactions] = useWatch({
+    name: ["screens", "gestures", "redactions"],
   });
 
   const screens = watchScreens as FrameData[];
-  const vhs = watchVHs as { [key: string]: any };
   const gestures = watchGestures as { [key: string]: ScreenGesture };
   const redactions = watchRedactions as { [key: string]: Redaction[] };
   // video controls
@@ -101,7 +101,7 @@ export function RepairScreenIOS({
         // video files not found or video ref not found
         return;
       }
-      if (isDraftLoading) {
+      if (draftFetchResult === DraftFetchResults.LOADING) {
         return;
       }
       try {
@@ -162,7 +162,7 @@ export function RepairScreenIOS({
       }
     };
     loadVideoAndPopulate();
-  }, [videoFiles, videoRef, setValue, videoDuration, isDraftLoading]);
+  }, [videoFiles, videoRef, setValue, videoDuration, draftFetchResult]);
 
   // RAF to update currentTime
   useEffect(() => {
@@ -339,14 +339,12 @@ export function RepairScreenIOS({
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
-              <InstructionCardIOS capture={capture} />
+              <InstructionCardIOS taskDescription={taskDescription} />
               {focusViewIndex > -1 && focusViewIndex < screens.length ? (
-                <FocusView
+                <FocusViewIOS
                   key={focusViewIndex}
-                  vh={vhs[screens[focusViewIndex].id]}
                   screen={screens[focusViewIndex]}
                   isLastScreen={focusViewIndex === screens.length - 1}
-                  os={os}
                 />
               ) : (
                 <div className="flex justify-center items-center w-full h-full">

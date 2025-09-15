@@ -1,5 +1,13 @@
 import { ScreenGesture } from "@prisma/client";
 
+type AndroidGesture = {
+  type: string;
+  scrollDeltaX: number | null;
+  scrollDeltaY: number | null;
+  x: number | null;
+  y: number | null;
+};
+
 export function translateTypeAndroidToODIM(
   androidType: string,
   scrollDeltaX: number | null,
@@ -24,7 +32,8 @@ export function translateTypeAndroidToODIM(
       } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
         return "swipe down";
       } else {
-        return "other";
+        // set as empty because we don't know what the gesture is
+        return "";
       }
     }
   }
@@ -32,10 +41,10 @@ export function translateTypeAndroidToODIM(
   return "";
 }
 
-function createScreenGesture(gesture: ScreenGesture): ScreenGesture {
+export function createScreenGesture(gesture: AndroidGesture): ScreenGesture {
   const { x, y, scrollDeltaX, scrollDeltaY, type } = gesture;
   const screenGesture: ScreenGesture = {
-    type: type,
+    type,
     x,
     y,
     scrollDeltaX,

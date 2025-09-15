@@ -8,10 +8,10 @@ import {
 } from "@/components/ui/tooltip";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import Image from "next/image";
-import { TraceFormData } from "../edit/components/types";
+import { TraceFormData } from "../../../edit/components/types";
 import { Badge } from "@/components/ui/badge";
 
-export function ReviewGallery({
+export function ReviewGalleryIOS({
   traceData,
   videoRef,
 }: {

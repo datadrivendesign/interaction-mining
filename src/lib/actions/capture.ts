@@ -16,6 +16,7 @@ export type ListedFiles = {
 };
 
 export type CaptureScreenFile = {
+  id: string;
   vh: string;
   img: string;
   created: string;

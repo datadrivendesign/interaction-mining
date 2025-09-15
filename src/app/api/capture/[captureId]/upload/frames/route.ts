@@ -1,6 +1,6 @@
-// app/api/capture/[captureId]/upload/route.ts
+// app/api/capture/[captureId]/upload/frames/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { handleAndroidScreenUpload, updateCapture } from "@/lib/actions";
+import { handleAndroidScreenUpload } from "@/lib/actions";
 
 export async function POST(
   request: NextRequest,
@@ -11,12 +11,12 @@ export async function POST(
     const body = await request.json();
 
     // Handle Android screen upload
-    if (body.vh && body.img && body.created && body.gesture) {
+    if (body.vh && body.img && body.created && body.id) {
       const result = await handleAndroidScreenUpload({
         vh: body.vh,
         img: body.img,
         created: body.created,
-        gesture: body.gesture,
+        id: body.id,
         captureId: captureId,
       });
 
@@ -24,15 +24,12 @@ export async function POST(
         return NextResponse.json({ error: result.message }, { status: 400 });
       }
 
-      await updateCapture(captureId, {
-        src: result.data.fileKey,
-      });
-
       return NextResponse.json(
         { message: "Upload successful" },
         { status: 200 }
       );
     }
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(

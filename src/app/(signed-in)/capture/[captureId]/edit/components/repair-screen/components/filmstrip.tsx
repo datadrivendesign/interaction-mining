@@ -21,25 +21,36 @@ export function Filmstrip({
   screens,
   gestures,
   redactions,
+  vhs,
   os,
   handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
+  vhs?: { [key: string]: any };
   os: Platform;
   handleSetTime: (t: number) => void;
 }) {
   const { focusViewIndex, setFocusViewIndex } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
 
-  const setFrameData = (value: FrameData[]) => setValue("screens", value);
-  const setGestureData = (value: { [key: string]: ScreenGesture }) => {
-    setValue("gestures", value);
-  };
-  const setRedactionData = (value: { [key: string]: Redaction[] }) => {
-    setValue("redactions", value);
-  };
+  const setFrameData = useCallback(
+    (value: FrameData[]) => setValue("screens", value),
+    [setValue]
+  );
+  const setGestureData = useCallback(
+    (value: { [key: string]: ScreenGesture }) => setValue("gestures", value),
+    [setValue]
+  );
+  const setRedactionData = useCallback(
+    (value: { [key: string]: Redaction[] }) => setValue("redactions", value),
+    [setValue]
+  );
+  const setVHData = useCallback(
+    (value: { [key: string]: any }) => setValue("vhs", value),
+    [setValue]
+  );
 
   const handleDeleteFrame = useCallback(
     (index: number) => {
@@ -51,6 +62,7 @@ export function Filmstrip({
       // remove frame from gestures and redactions
       const updatedGestures: { [key: string]: ScreenGesture } = {};
       const updatedRedactions: { [key: string]: Redaction[] } = {};
+      const updatedVHS: { [key: string]: any } = {};
       for (const frame of newFrameData) {
         if (gestures[frame.id]) {
           updatedGestures[frame.id] = gestures[frame.id];
@@ -58,20 +70,28 @@ export function Filmstrip({
         if (redactions[frame.id]) {
           updatedRedactions[frame.id] = redactions[frame.id];
         }
+        if (vhs && vhs[frame.id]) {
+          updatedVHS[frame.id] = vhs[frame.id];
+        }
       }
       // update frame data, gestures, and redactions
       setFrameData(newFrameData);
       setGestureData(updatedGestures);
       setRedactionData(updatedRedactions);
+      if (vhs) {
+        setVHData(updatedVHS);
+      }
     },
     [
       screens,
       gestures,
       redactions,
+      vhs,
       setFrameData,
       setGestureData,
       setRedactionData,
       setFocusViewIndex,
+      setVHData,
     ]
   );
 
@@ -269,7 +289,7 @@ function FilmstripItem({
             )}
           >
             {/* {children} */}
-            {screen.src && (
+            {screen.src ? (
               <Image
                 ref={imageRef}
                 key={screen.id}
@@ -281,7 +301,14 @@ function FilmstripItem({
                 height={0}
                 sizes="100vw"
                 onLoad={handleImageLoad}
+                onError={() => {
+                  console.warn(`Failed to load image for screen ${screen.id}`);
+                }}
               />
+            ) : (
+              <div className="flex items-center justify-center h-full w-full bg-muted/20">
+                <div className="text-xs text-muted-foreground">Loading...</div>
+              </div>
             )}
             {/* Render redaction overlays using the natural dimensions and scale factors */}
             {imgDimensions.width > 0 &&
