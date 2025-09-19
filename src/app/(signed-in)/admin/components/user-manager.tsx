@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { UserRoleSelector } from "@/components/ui/roleselector";
 import {
   Table,
   TableHeader,
@@ -72,9 +71,7 @@ export function UserManager({ users }: { users: ManageableUser[] }) {
               <TableRow key={user.id} className="hover:bg-muted/10 border-0">
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <UserRoleSelector userId={user.id} currentRole={user.role} />
-                </TableCell>
+                <TableCell>{user.role}</TableCell>
                 <TableCell>
                   <Link href={`/admin/user/${user.id}`}>
                     <Button className="hover">

@@ -1,8 +1,9 @@
 import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
-import { Filter, Search } from "lucide-react";
+import { Filter, RefreshCcw, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useCandidateTask } from "../page";
 
 const iosAppGenres = [
   "Books",
@@ -39,25 +40,19 @@ enum ButtonClickState {
   Excluded = 2,
 }
 
-export const CandidateTaskSearch = ({
-  search,
-  setSearch,
-  totalCount,
-  selectedGenres,
-  setSelectedGenres,
-  excludeGenres,
-  setExcludeGenres,
-  resetFilters,
-}: {
-  search: string;
-  setSearch: (search: string) => void;
-  totalCount: number;
-  selectedGenres: string[];
-  setSelectedGenres: (genres: string[]) => void;
-  excludeGenres: string[];
-  setExcludeGenres: (genres: string[]) => void;
-  resetFilters: () => void;
-}) => {
+export const CandidateTaskSearch = () => {
+  const {
+    search,
+    setSearch,
+    totalCount,
+    selectedGenres,
+    setSelectedGenres,
+    excludeGenres,
+    setExcludeGenres,
+    resetFilters,
+    showTaken,
+  } = useCandidateTask();
+
   const [buttonClickStates, setButtonClickStates] = useState<{
     [genre: string]: ButtonClickState;
   }>(
@@ -119,7 +114,7 @@ export const CandidateTaskSearch = ({
           />
         </InputRoot>
         <Badge variant="secondary" className="h-full px-3">
-          {totalCount} apps
+          {totalCount} Apps {showTaken ? "Taken" : "Left"}
         </Badge>
       </div>
       <div className="flex flex-wrap gap-2 items-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";;
+import Link from "next/link";
 
 import {
   createContext,
@@ -11,45 +11,59 @@ import {
   SetStateAction,
 } from "react";
 import Image from "next/image";
-import { Prisma } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { Search } from "lucide-react";
 
 import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAppSearch } from "@/lib/hooks/app";
 import { MobileIcon } from "@radix-ui/react-icons";
 import { TitleMarquee } from "@/components/marquee";
 import { Platform, prettyOS } from "@/lib/utils";
+import { useSession } from "next-auth/react";
+import { isProduction } from "@/lib/utils/env";
 
 const GalleryContext = createContext<{
   search: {
     query: string;
     where?: Prisma.AppWhereInput;
   };
-  setSearch?: React.Dispatch<SetStateAction<{ query: string; where: Prisma.AppWhereInput; }>>;
+  setSearch?: React.Dispatch<
+    SetStateAction<{ query: string; where: Prisma.AppWhereInput }>
+  >;
+  platform: Platform;
+  setPlatform: React.Dispatch<SetStateAction<Platform>>;
 }>({
   search: {
     query: "",
     where: { Trace: { some: {} } } as Prisma.AppWhereInput,
   },
-  setSearch: () => { },
+  setSearch: () => {},
+  platform: Platform.ANDROID,
+  setPlatform: () => {},
 });
 
-export function GalleryRoot({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function GalleryRoot({ children }: { children: React.ReactNode }) {
   const [search, setSearch] = useState({
     query: "",
     where: { Trace: { some: {} } } as Prisma.AppWhereInput,
   });
-
+  const [platform, setPlatform] = useState(Platform.ANDROID);
   return (
     <GalleryContext.Provider
       value={{
         search,
-        setSearch
+        setSearch,
+        platform,
+        setPlatform,
       }}
     >
       {children}
@@ -58,7 +72,12 @@ export function GalleryRoot({
 }
 
 export function GallerySearch() {
-  const { search, setSearch } = useContext(GalleryContext);
+  const { search, setSearch, setPlatform } = useContext(GalleryContext);
+  // FIXME: disable UI selection of iOS in prod for now, still in testing
+  const { data: session } = useSession();
+  const isProd = isProduction();
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const isIOSDisabled = isProd && !isAdmin;
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,15 +91,9 @@ export function GallerySearch() {
 
   const handleSetOS = useCallback(
     (os: Platform) => {
-      setSearch?.({
-        query: search.query,
-        where: {
-          ...search.where,
-          os: os,
-        },
-      });
+      setPlatform(os);
     },
-    [setSearch, search.query, search.where]
+    [setPlatform]
   );
 
   return (
@@ -89,25 +102,30 @@ export function GallerySearch() {
         <InputIcon>
           <Search className="text-muted-foreground" />
         </InputIcon>
-        <Input placeholder="Search for apps"
+        <Input
+          placeholder="Search for apps"
           value={search.query}
           onChange={handleSearchChange}
           className="w-full"
         />
       </InputRoot>
-      <Select defaultValue="android" onValueChange={handleSetOS}>
+      <Select defaultValue={Platform.ANDROID} onValueChange={handleSetOS}>
         <SelectTrigger className="w-full max-w-32 h-full!">
           <SelectValue placeholder="Select a platform" />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
             <SelectLabel>Platforms</SelectLabel>
-            <SelectItem value={Platform.IOS}>
-              <MobileIcon />{prettyOS(Platform.IOS)}
-            </SelectItem>
             <SelectItem value={Platform.ANDROID}>
-              <MobileIcon />{prettyOS(Platform.ANDROID)}
+              <MobileIcon />
+              {prettyOS(Platform.ANDROID)}
             </SelectItem>
+            {!isIOSDisabled && (
+              <SelectItem value={Platform.IOS}>
+                <MobileIcon />
+                {prettyOS(Platform.IOS)}
+              </SelectItem>
+            )}
           </SelectGroup>
         </SelectContent>
       </Select>
@@ -116,50 +134,63 @@ export function GallerySearch() {
 }
 
 export function Gallery() {
-  const { search } = useContext(GalleryContext);
-  const params = useMemo(() => ({
-    query: search.query,
-    where: search.where,
-    limit: 500,
-    page: 1,
-  }), [search]);
+  const { search, platform } = useContext(GalleryContext);
+  const params = useMemo(
+    () => ({
+      query: search.query,
+      where: {
+        ...search.where,
+        os: platform,
+      },
+      limit: 500,
+      page: 1,
+    }),
+    [search, platform]
+  );
 
   const { apps = [], loading: isAppsLoading } = useAppSearch(params);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 p-4 lg:p-6">
-      {apps.length > 0 ? (apps.map((app: any, index: number) => (
-        <Link
-          key={index}
-          href={`/app/${app.id}`}
-          className="flex w-full min-w-0 overflow-hidden"
-        >
-          <Image
-            src={app.metadata.icon}
-            alt={`${app.metadata.name} icon`}
-            width={0}
-            height={0}
-            sizes="100vw"
-            className="flex grow-0 shrink-0 basis-12 rounded-xl mr-4 aspect-square drop-shadow-md"
-          />
-          <div className="flex flex-col grow min-w-0 justify-center">
-            <TitleMarquee mode="hover" title={app.metadata.name} className="min-w-0">
-              <h2 className="text-sm font-medium leading-tight tracking-tight">{app.metadata.name}</h2>
-            </TitleMarquee>
-            <span className="text-sm text-muted-foreground line-clamp-1 leading-tight truncate">
-              {app.metadata.company || "Unknown Company"}
-            </span>
-          </div>
-        </Link>
-      ))) : (
-        isAppsLoading ? (
-          <div className="col-span-full text-center text-muted-foreground">
-            Loading apps...
-          </div>) : (
-          <div className="col-span-full text-center text-muted-foreground">
-            No apps found matching your search criteria.
-          </div>
-        )
+      {apps.length > 0 ? (
+        apps.map((app: any, index: number) => (
+          <Link
+            key={index}
+            href={`/app/${app.id}`}
+            className="flex w-full min-w-0 overflow-hidden"
+          >
+            <Image
+              src={app.metadata.icon}
+              alt={`${app.metadata.name} icon`}
+              width={0}
+              height={0}
+              sizes="100vw"
+              className="flex grow-0 shrink-0 basis-12 rounded-xl mr-4 aspect-square drop-shadow-md"
+            />
+            <div className="flex flex-col grow min-w-0 justify-center">
+              <TitleMarquee
+                mode="hover"
+                title={app.metadata.name}
+                className="min-w-0"
+              >
+                <h2 className="text-sm font-medium leading-tight tracking-tight">
+                  {app.metadata.name}
+                </h2>
+              </TitleMarquee>
+              <span className="text-sm text-muted-foreground line-clamp-1 leading-tight truncate">
+                {app.metadata.company || "Unknown Company"}
+              </span>
+            </div>
+          </Link>
+        ))
+      ) : isAppsLoading ? (
+        <div className="col-span-full text-center text-muted-foreground">
+          Loading apps...
+        </div>
+      ) : (
+        <div className="col-span-full text-center text-muted-foreground">
+          No apps found matching your search criteria.
+        </div>
       )}
     </div>
   );
