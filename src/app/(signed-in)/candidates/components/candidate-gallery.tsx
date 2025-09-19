@@ -9,18 +9,12 @@ import {
 import { Separator } from "@radix-ui/react-dropdown-menu";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCandidateTask } from "../page";
+import { useCandidateTask } from "@/app/(signed-in)/candidates/components/candidate-task-context";
 import { CandidateTaskApp } from "@/lib/actions";
 
 export const CandidateTaskGallery = () => {
-  const {
-    candidateTaskApps,
-    isLoading,
-    hasMore,
-    loadMore,
-    isLoadingMore,
-    handleSetAppTaken,
-  } = useCandidateTask();
+  const { candidateTaskApps, isLoading, hasMore, loadMore, isLoadingMore } =
+    useCandidateTask();
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
   if (isLoading) {

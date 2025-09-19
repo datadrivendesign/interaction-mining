@@ -3,7 +3,7 @@ import { Filter, RefreshCcw, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { useCandidateTask } from "../page";
+import { useCandidateTask } from "@/app/(signed-in)/candidates/components/candidate-task-context";
 
 const iosAppGenres = [
   "Books",
