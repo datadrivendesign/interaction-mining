@@ -1,29 +1,68 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { CandidateTaskApp, getCandidateTaskApps } from "@/lib/actions";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  CandidateTaskApp,
+  setCandidateTaskAppTakenStatus,
+  getCandidateTaskApps,
+} from "@/lib/actions";
+import { toast } from "sonner";
+import { useDebounce } from "@uidotdev/usehooks";
 import { CandidateTaskGallery } from "./components/candidate-gallery";
 import { CandidateTaskSearch } from "./components/candidate-search";
-import { useDebounce } from "@uidotdev/usehooks";
 
-export default function Page() {
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 500);
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [excludeGenres, setExcludeGenres] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
-  const pageSize = 100;
+interface CandidateTaskContextType {
+  // State
+  candidateTaskApps: CandidateTaskApp[];
+  totalCount: number;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  search: string;
+  selectedGenres: string[];
+  excludeGenres: string[];
+  showTaken: boolean;
+  // Actions
+  setSearch: (search: string) => void;
+  setSelectedGenres: (genres: string[]) => void;
+  setExcludeGenres: (genres: string[]) => void;
+  setShowTaken: (show: boolean) => void;
+  handleSetAppTaken: (id: string, isTaken: boolean) => Promise<void>;
+  loadMore: () => void;
+  resetFilters: () => void;
+  fetchCandidateTaskApps: () => void;
+}
+
+const CandidateTaskContext = createContext<CandidateTaskContextType | null>(
+  null
+);
+
+function CandidateTaskProvider({ children }: { children: ReactNode }) {
   const [candidateTaskApps, setCandidateTaskApps] = useState<
     CandidateTaskApp[]
   >([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [excludeGenres, setExcludeGenres] = useState<string[]>([]);
+  const [showTaken, setShowTaken] = useState(false);
+  const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    fetchCandidateTaskApps();
-  }, [debouncedSearch, selectedGenres, excludeGenres]);
+  const debouncedSearch = useDebounce(search, 500);
+  const pageSize = 100;
 
   // Fetch with current filters
   const fetchCandidateTaskApps = async (isLoadMore = false) => {
@@ -32,11 +71,11 @@ export default function Page() {
         setIsLoadingMore(true);
       } else {
         setIsLoading(true);
-        setPage(1); // Reset to first page on new search/filter
+        setPage(1);
       }
 
       const res = await getCandidateTaskApps({
-        isTaken: false,
+        isTaken: showTaken,
         page: isLoadMore ? page + 1 : 1,
         pageSize,
         search: debouncedSearch,
@@ -46,18 +85,15 @@ export default function Page() {
 
       if (res.ok && res.data) {
         if (isLoadMore) {
-          // Append new results
           setCandidateTaskApps((prev) => [
             ...prev,
             ...res.data!.candidateTaskApps,
           ]);
           setPage((prev) => prev + 1);
         } else {
-          // Replace results
           setCandidateTaskApps(res.data.candidateTaskApps);
           setPage(1);
         }
-
         setTotalCount(res.data.totalCount);
         setHasMore(res.data.hasMore);
       }
@@ -69,14 +105,27 @@ export default function Page() {
     }
   };
 
-  // Load more function
+  // Auto-fetch when filters change
+  useEffect(() => {
+    fetchCandidateTaskApps();
+  }, [debouncedSearch, selectedGenres, excludeGenres, showTaken]);
+
+  const handleSetAppTaken = async (id: string, isTaken: boolean) => {
+    setCandidateTaskApps((prev) => prev.filter((app) => app.id !== id));
+    setTotalCount((prev) => Math.max(0, prev - 1));
+
+    const result = await setCandidateTaskAppTakenStatus({ id, isTaken });
+    if (!result.ok) {
+      toast.error(result.message);
+    }
+  };
+
   const loadMore = () => {
     if (hasMore && !isLoadingMore) {
       fetchCandidateTaskApps(true);
     }
   };
 
-  // Reset filters and search
   const resetFilters = () => {
     setSearch("");
     setSelectedGenres([]);
@@ -85,28 +134,70 @@ export default function Page() {
   };
 
   return (
+    <CandidateTaskContext.Provider
+      value={{
+        candidateTaskApps,
+        totalCount,
+        isLoading,
+        isLoadingMore,
+        hasMore,
+        search,
+        selectedGenres,
+        excludeGenres,
+        showTaken,
+        setSearch,
+        setSelectedGenres,
+        setExcludeGenres,
+        setShowTaken,
+        handleSetAppTaken,
+        loadMore,
+        resetFilters,
+        fetchCandidateTaskApps,
+      }}
+    >
+      {children}
+    </CandidateTaskContext.Provider>
+  );
+}
+
+export function useCandidateTask() {
+  const context = useContext(CandidateTaskContext);
+  if (!context) {
+    throw new Error(
+      "useCandidateTask must be used within CandidateTaskProvider"
+    );
+  }
+  return context;
+}
+
+function CandidatesPage() {
+  const { showTaken, setShowTaken, fetchCandidateTaskApps } =
+    useCandidateTask();
+
+  return (
     <div className="flex w-dvw min-h-dvh justify-center items-start p-8 md:p-16">
       <div className="flex flex-col gap-4 w-full">
         <h1 className="text-2xl font-bold">Candidates</h1>
-        <CandidateTaskSearch
-          search={search}
-          setSearch={setSearch}
-          totalCount={totalCount}
-          selectedGenres={selectedGenres}
-          setSelectedGenres={setSelectedGenres}
-          excludeGenres={excludeGenres}
-          setExcludeGenres={setExcludeGenres}
-          resetFilters={resetFilters}
-        />
-        <CandidateTaskGallery
-          filteredApps={candidateTaskApps}
-          search={search}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          isLoadingMore={isLoadingMore}
-          isLoading={isLoading}
-        />
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-2">
+            <Switch checked={showTaken} onCheckedChange={setShowTaken} />
+            <Label>Show Taken Apps</Label>
+          </div>
+          <Button className="h-full" onClick={fetchCandidateTaskApps}>
+            Refresh Apps <RefreshCcw className="w-4 h-4" />
+          </Button>
+        </div>
+        <CandidateTaskSearch />
+        <CandidateTaskGallery />
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <CandidateTaskProvider>
+      <CandidatesPage />
+    </CandidateTaskProvider>
   );
 }

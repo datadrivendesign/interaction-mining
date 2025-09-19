@@ -92,3 +92,30 @@ export const getCandidateTaskApps = async ({
     };
   }
 };
+
+export const setCandidateTaskAppTakenStatus = async ({
+  id,
+  isTaken,
+}: {
+  id: string;
+  isTaken: boolean;
+}): Promise<ActionPayload<{ totalCount: number }>> => {
+  try {
+    await prisma.candidateTaskApp.update({ where: { id }, data: { isTaken } });
+    const totalCount = await prisma.candidateTaskApp.count({
+      where: { isTaken: false },
+    });
+    return {
+      ok: true,
+      message: "Candidate task app taken status set successfully",
+      data: { totalCount },
+    };
+  } catch (error) {
+    console.error("Error setting candidate task app taken status:", error);
+    return {
+      ok: false,
+      message: "Failed to set candidate task app taken status",
+      data: null,
+    };
+  }
+};
