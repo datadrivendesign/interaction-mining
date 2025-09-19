@@ -1,4 +1,3 @@
-import { CandidateTaskApp } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { useState } from "react";
@@ -10,22 +9,12 @@ import {
 import { Separator } from "@radix-ui/react-dropdown-menu";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCandidateTask } from "@/app/(signed-in)/candidates/components/candidate-task-context";
+import { CandidateTaskApp } from "@/lib/actions";
 
-export const CandidateTaskGallery = ({
-  filteredApps,
-  search,
-  isLoadingMore,
-  hasMore,
-  onLoadMore,
-  isLoading,
-}: {
-  filteredApps: CandidateTaskApp[];
-  search: string;
-  isLoadingMore: boolean;
-  hasMore: boolean;
-  onLoadMore: () => void;
-  isLoading: boolean;
-}) => {
+export const CandidateTaskGallery = () => {
+  const { candidateTaskApps, isLoading, hasMore, loadMore, isLoadingMore } =
+    useCandidateTask();
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -38,8 +27,8 @@ export const CandidateTaskGallery = ({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4 p-4 lg:p-6">
-      {filteredApps.length > 0 ? (
-        filteredApps.map((candidateTaskApp) => (
+      {candidateTaskApps.length > 0 ? (
+        candidateTaskApps.map((candidateTaskApp) => (
           <CandidateGalleryAppCard
             key={candidateTaskApp.id}
             candidateTaskApp={candidateTaskApp}
@@ -48,15 +37,11 @@ export const CandidateTaskGallery = ({
           />
         ))
       ) : (
-        <CandidateGalleryNoApps search={search} />
+        <CandidateGalleryNoApps />
       )}
       {hasMore && (
         <div className="flex justify-center p-4">
-          <Button
-            onClick={onLoadMore}
-            disabled={isLoadingMore}
-            variant="outline"
-          >
+          <Button onClick={loadMore} disabled={isLoadingMore} variant="outline">
             {isLoadingMore ? "Loading..." : "Load More"}
           </Button>
         </div>
@@ -75,7 +60,7 @@ const CandidateGalleryAppCard = ({
   setSelectedAppId: (appId: string | null) => void;
 }) => {
   const [copyIcon, setCopyIcon] = useState<"copy" | "check">("copy");
-
+  const { handleSetAppTaken } = useCandidateTask();
   const handleCopy = (tasks: string[]) => {
     navigator.clipboard.writeText(tasks.join("\n"));
     setCopyIcon("check");
@@ -102,21 +87,29 @@ const CandidateGalleryAppCard = ({
     <Collapsible open={selectedAppId === candidateTaskApp.id}>
       <div className="flex flex-col overflow-hidden p-3 items-center justify-center rounded-lg hover:shadow-md cursor-pointer">
         <CollapsibleTrigger asChild>
-          <Image
-            src={candidateTaskApp.app.metadata.icon}
-            alt={`${candidateTaskApp.app.metadata.name} icon`}
-            width={0}
-            height={0}
-            sizes="100vw"
-            className="flex grow-0 shrink-0 basis-12 rounded-xl mr-4 aspect-square drop-shadow-md w-1/5 h-1/5 object-cover"
-            onClick={() => {
-              if (selectedAppId === candidateTaskApp.id) {
-                setSelectedAppId(null);
-              } else {
-                setSelectedAppId(candidateTaskApp.id);
-              }
-            }}
-          />
+          <div className="relative inline-block mb-2">
+            <Image
+              src={candidateTaskApp.app.metadata.icon}
+              alt={`${candidateTaskApp.app.metadata.name} icon`}
+              width={48}
+              height={48}
+              sizes="100vw"
+              className="rounded-xl aspect-square drop-shadow-md object-cover"
+              onClick={() => {
+                if (selectedAppId === candidateTaskApp.id) {
+                  setSelectedAppId(null);
+                } else {
+                  setSelectedAppId(candidateTaskApp.id);
+                }
+              }}
+            />
+            <Badge
+              variant="destructive"
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center text-xs p-0 font-bold shadow-lg z-10 bg-blue-500 text-white"
+            >
+              {candidateTaskApp.candidateTasks.length}
+            </Badge>
+          </div>
         </CollapsibleTrigger>
         <div className="flex flex-col grow min-w-0 justify-center items-center">
           <h2 className="text-sm font-medium leading-tight tracking-tight">
@@ -141,6 +134,16 @@ const CandidateGalleryAppCard = ({
             )}
           </div>
         </div>
+        <Button
+          variant={candidateTaskApp.isTaken ? "destructive" : "default"}
+          size="sm"
+          onClick={() =>
+            handleSetAppTaken(candidateTaskApp.id, !candidateTaskApp.isTaken)
+          }
+          className="w-full text-xs"
+        >
+          {candidateTaskApp.isTaken ? "Mark as Available" : "Mark as Taken"}
+        </Button>
         <Separator className="w-full" />
         <CollapsibleContent className="w-full mt-1 p-2 border rounded-lg">
           <div className="flex items-center justify-between">
@@ -162,7 +165,8 @@ const CandidateGalleryAppCard = ({
   );
 };
 
-const CandidateGalleryNoApps = ({ search }: { search: string }) => {
+const CandidateGalleryNoApps = () => {
+  const { search } = useCandidateTask();
   return (
     <div className="col-span-full text-center text-muted-foreground py-8">
       {search.trim()

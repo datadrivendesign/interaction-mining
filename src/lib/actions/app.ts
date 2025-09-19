@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { App, Prisma } from "@prisma/client";
+import { App, Prisma, Role } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { Platform } from "@/lib/utils";
+import { auth } from "../auth";
+import { isProduction } from "../utils/env";
 
 export type AppItemList = {
   id: string;
@@ -52,9 +54,23 @@ export async function getApps({
   page = 1,
   limit = 10,
 }: GetAppsParams = {}) {
-  // build a base “where” that overlays text search onto any custom filters
-  const query_: Prisma.AppWhereInput = {
+  // TODO: prevent support for iOS in prod for now, still in dev
+  const session = await auth();
+  const isProd = isProduction();
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const isIOSDisabled = isProd && !isAdmin;
+
+  // Create filtered where clause without mutating original
+  const filteredWhere = {
     ...where,
+    ...(isIOSDisabled && where.os === Platform.IOS
+      ? { os: Platform.ANDROID }
+      : {}),
+  };
+
+  // build a base "where" that overlays text search onto any custom filters
+  const query_: Prisma.AppWhereInput = {
+    ...filteredWhere,
     ...(query || query !== ""
       ? {
           metadata: {
