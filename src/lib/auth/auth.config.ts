@@ -1,5 +1,5 @@
 import { NextAuthConfig } from "next-auth";
-import AppleProvider from "next-auth/providers/apple";
+// import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
 
 // Notice this is only an object, not a full Auth.js instance

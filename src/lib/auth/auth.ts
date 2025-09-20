@@ -48,7 +48,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account && user) {
         token.accessToken = account.access_token;
         token.userId = user.id;
-        token.role = user.role;
+        token.role = user.role ?? Role.USER;
         // createdAt is available on our custom User type
         if ("createdAt" in user) {
           token.createdAt = user.createdAt;
@@ -60,7 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Send properties to the client
       if (token.userId) {
         session.user.id = token.userId as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as Role;
         session.user.createdAt = token.createdAt as Date;
       }
       return session;
@@ -75,7 +75,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
  * Middleware for Auth.js - uses same config as main auth
  */
 export const { auth: middleware } = NextAuth({
-  adapter: PrismaAdapter(prisma),
   ...authConfig,
   secret: process.env.AUTH_SECRET,
   session: {
@@ -98,7 +97,7 @@ export const { auth: middleware } = NextAuth({
       if (account && user) {
         token.accessToken = account.access_token;
         token.userId = user.id;
-        token.role = user.role;
+        token.role = user.role ?? Role.USER;
         // createdAt is available on our custom User type
         if ("createdAt" in user) {
           token.createdAt = user.createdAt;
@@ -109,7 +108,7 @@ export const { auth: middleware } = NextAuth({
     async session({ session, token }) {
       if (token.userId) {
         session.user.id = token.userId as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as Role;
         session.user.createdAt = token.createdAt as Date;
       }
       return session;
