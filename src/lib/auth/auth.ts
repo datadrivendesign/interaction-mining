@@ -22,27 +22,49 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   ...authConfig,
   pages: {
     signIn: "/sign-in",
     signOut: "/sign-out",
   },
   callbacks: {
-    async session({ session, token }) {
-      if (session.user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email },
-        });
-        if (dbUser) {
-          session.user.id = dbUser.id;
-          session.user.role = dbUser.role ?? Role.USER;
-          session.user.createdAt = dbUser.createdAt;
+    async jwt({ token, user, account }) {
+      // Persist the OAuth access_token and or the user id to the token right after signin
+      if (account && user) {
+        token.accessToken = account.access_token;
+        token.userId = user.id;
+        token.role = user.role;
+        // createdAt is available on our custom User type
+        if ("createdAt" in user) {
+          token.createdAt = user.createdAt;
         }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      // Send properties to the client
+      if (token.userId) {
+        session.user.id = token.userId as string;
+        session.user.role = token.role as string;
+        session.user.createdAt = token.createdAt as Date;
       }
       return session;
     },
-
     async authorized({ auth }) {
       return !!auth;
     },
@@ -50,9 +72,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 });
 
 /**
- * Middleware for Auth.js without database adapter
+ * Middleware for Auth.js - uses same config as main auth
  */
-export const { auth: middleware } = NextAuth(authConfig);
+export const { auth: middleware } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  ...authConfig,
+  secret: process.env.AUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
+  callbacks: {
+    async jwt({ token, user, account }) {
+      if (account && user) {
+        token.accessToken = account.access_token;
+        token.userId = user.id;
+        token.role = user.role;
+        // createdAt is available on our custom User type
+        if ("createdAt" in user) {
+          token.createdAt = user.createdAt;
+        }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token.userId) {
+        session.user.id = token.userId as string;
+        session.user.role = token.role as string;
+        session.user.createdAt = token.createdAt as Date;
+      }
+      return session;
+    },
+  },
+});
 
 /**
  * Verifies if a user is signed in and optionally checks a signed in user has certain roles
