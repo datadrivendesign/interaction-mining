@@ -1,10 +1,10 @@
 import { NextAuthConfig } from "next-auth";
-import AppleProvider from "next-auth/providers/apple";
+// import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
 
 // Notice this is only an object, not a full Auth.js instance
 export default {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET,
   providers: [
     // AppleProvider({
     //   clientId: process.env.APPLE_CLIENT_ID,
@@ -19,9 +19,14 @@ export default {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "select_account",
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+          scope: "openid email profile",
+          include_granted_scopes: "true",
         },
       },
+      checks: ["state"],
     }),
   ],
 } satisfies NextAuthConfig;
