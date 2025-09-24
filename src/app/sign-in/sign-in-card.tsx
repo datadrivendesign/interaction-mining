@@ -9,7 +9,7 @@ import { useSearchParams } from "next/navigation";
 export default function SignInCard() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
-  
+
   // Enhanced callback URL validation
   const safeCallbackUrl = (() => {
     if (!callbackUrl) return "/dashboard";
@@ -59,7 +59,7 @@ export default function SignInCard() {
           </Button>
 
           {/* Apple (disabled for now) */}
-          <Button
+          {/* <Button
             className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
             disabled
           >
@@ -74,7 +74,7 @@ export default function SignInCard() {
               />
               Sign in with Apple
             </span>
-          </Button>
+          </Button> */}
 
           {/* Sign Out */}
           {/* <Button
