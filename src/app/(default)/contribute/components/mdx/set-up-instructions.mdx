@@ -12,7 +12,7 @@ curl -o- https://dribosc0et3qr.cloudfront.net/install.sh | bash;
 
 The script will step you through the setup and build for both the web and mobile app.
 
-❗ Our script uses [`homebrew`](https://brew.sh) to install dependencies. Make sure you have it installed first before running our script. 
+❗ Our script uses [`homebrew`](https://brew.sh) to install dependencies. Make sure you have it installed first before running our script.
 
 The script targets for OSX devices, but may work on Linux with `homebrew` installed.
 
@@ -39,7 +39,6 @@ The script will prompt you for various settings to create a Docker compose file 
 1. Provide **username** and **password** credentials to set up MinIO object store access.
 2. Provide a **bucket name** to store uploaded task flow data.
 
-
 The script will use [MinIO Client CLI](https://min.io/docs/minio/linux/reference/minio-mc.html) to automatically create the bucket and set public permissions for you. If you do not have the CLI installed, the script will install it.
 
 #### MongoDB
@@ -64,11 +63,11 @@ We use [Auth.js](https://authjs.dev/) with Google OAuth to handle authenticati
 1. Go to [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a new project.
 3. Go to `APIs & Services` → `OAuth consent screen` and fill out the form.
-    - Set user type to **External**
-    - Add scopes: `email`, `profile`, `openid`
+   - Set user type to **External**
+   - Add scopes: `email`, `profile`, `openid`
 4. Go to `Credentials` → `Create Credentials` → `OAuth client ID`
-    - Application type: **Web Application**
-    - Redirect URI: `http://localhost:3000/api/auth/callback/google` (or your deployed domain)
+   - Application type: **Web Application**
+   - Redirect URI: `http://localhost:3000/api/auth/callback/google` (or your deployed domain)
 5. Save your **Client ID** and **Client Secret**. **The script will need it later.**
 
 📖 [Detailed setup guide](https://developers.google.com/identity/protocols/oauth2)
@@ -78,6 +77,7 @@ We use [Auth.js](https://authjs.dev/) with Google OAuth to handle authenticati
 ### Cloning The Interaction Mining Web Repository
 
 The script will clone the interaction mining [web app code repository]() and install package dependencies with the command:
+
 ```bash
 npm install
 ```
@@ -91,6 +91,7 @@ These environment variables will be saved to `.env.local`, you can always manual
 **The script will prompt you to manually enter OAuth Google Client ID and Secret:** `AUTH_GOOGLE_CLIENT_ID` and `AUTH_GOOGLE_CLIENT_SECRET`.
 
 Here are the expected env variables you should see in `.env.local`:
+
 ```env
 DATABASE_URL=
 _AWS_REGION=
@@ -98,6 +99,8 @@ _AWS_ACCESS_KEY_ID=
 _AWS_SECRET_ACCESS_KEY=
 _AWS_UPLOAD_BUCKET=
 NEXT_PUBLIC_AWS_CLOUDFRONT_URL=
+_AWS_CLOUDFRONT_KEY_PAIR_ID=
+_AWS_CLOUDFRONT_PRIVATE_KEY=
 USE_MINIO_STORE=
 MINIO_ENDPOINT=
 GOOGLE_CLIENT_ID=
@@ -117,9 +120,9 @@ Our Android app requires **Java JDK 17 or higher** to build. The script will ins
 
 #### Android Studio SDK Set Up
 
-The Android SDK is necessary to build the Android app. **The minimum required SDK version is v34**. 
+The Android SDK is necessary to build the Android app. **The minimum required SDK version is v34**.
 
-If the SDK is not already installed, the script uses `homebrew` to install `android-commandlinetools`, which is used to install Android build tools and SDK. 
+If the SDK is not already installed, the script uses `homebrew` to install `android-commandlinetools`, which is used to install Android build tools and SDK.
 
 The script will attempt to install the SDK through the command line. You will need to agree to license agreements and wait for the install to finish.
 
@@ -137,18 +140,19 @@ The script will clone the [mobile app code repository](). Then it will write you
 
 #### Build Mobile App APK
 
-The script will try to bundle an **APK** using a Gradle script in the mobile repo. The script requires parameter `API_URL_PREFIX`: the root url domain of the web app. 
+The script will try to bundle an **APK** using a Gradle script in the mobile repo. The script requires parameter `API_URL_PREFIX`: the root url domain of the web app.
 
-The app will use this parameter to upload recorded task flows. This parameter is automatically set by the script as the **local IP address of the web server**. 
+The app will use this parameter to upload recorded task flows. This parameter is automatically set by the script as the **local IP address of the web server**.
 
 The APK build command:
+
 ```bash
 ./gradlew assembleDebug -PAPI_URL_PREFIX="$API_URL_PREFIX"
 ```
 
 Once the build is done, the path to where the APK is bundled is printed. You can install this file on an Android phone or add it to an emulator.
 
-⚠️ **Only use `./gradlew assembleDebug` for local development. Debug builds allow cleartext (HTTP) traffic, which pose a security risk in production.** 
+⚠️ **Only use `./gradlew assembleDebug` for local development. Debug builds allow cleartext (HTTP) traffic, which pose a security risk in production.**
 
 **Use `./gradlew assembleRelease` for production APK builds, which block insecure HTTP calls by default.**
 
@@ -156,15 +160,18 @@ Once the build is done, the path to where the APK is bundled is printed. You can
 
 ### Running ODIM on Localhost
 
-Finally, the script starts the web development server: 
+Finally, the script starts the web development server:
+
 ```bash
 npm run dev -- -H 0.0.0.0
 ```
+
 The parameters `-- -H 0.0.0.0` binds the development server to all IPs, allowing other devices on your network to access your local server.
 
 ### Cleaning Up Local Dependencies
 
 Shut down local Docker containers:
+
 ```bash
 docker compose down
 ```
