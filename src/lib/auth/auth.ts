@@ -49,25 +49,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.accessToken = account.access_token;
         // Add unique session identifier to prevent cross-user sessions
         token.sessionId = `${user.id}-${Date.now()}-${Math.random()}`;
-      }
-      // Always fetch role from database when we have a userId
-      try {
-        if (!token.role || !token.userId || !token.createdAt) {
-          const dbUser = await prisma.user.findUnique({
-            where: { name: token.name as string, email: token.email as string },
+        // Fetch role from database only during sign-in
+        try {
+          const dbUser = await prisma.user.findFirst({
+            where: {
+              accounts: {
+                some: {
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                },
+              },
+            },
             select: { id: true, role: true, createdAt: true },
           });
           if (dbUser) {
+            token.userId = dbUser.id; // Store the MongoDB ObjectId
             token.role = dbUser.role;
             token.createdAt = dbUser.createdAt;
-            token.userId = dbUser.id;
           }
+        } catch (error) {
+          console.error("Error fetching user role:", error);
         }
-      } catch (error) {
-        console.error("Error fetching user role:", error);
       }
 
-      // if no role, set it to user role
+      // if no role, set it to default user role
       if (!token.role) {
         token.role = user.role ?? Role.USER;
       }
