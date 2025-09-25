@@ -31,7 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
@@ -50,17 +50,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Add unique session identifier to prevent cross-user sessions
         token.sessionId = `${user.id}-${Date.now()}-${Math.random()}`;
       }
-
       // Always fetch role from database when we have a userId
       try {
-        const dbUser = await prisma.user.findUnique({
-          where: { name: token.name as string, email: token.email as string },
-          select: { id: true, role: true, createdAt: true },
-        });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.createdAt = dbUser.createdAt;
-          token.userId = dbUser.id;
+        if (!token.role || !token.userId || !token.createdAt) {
+          const dbUser = await prisma.user.findUnique({
+            where: { name: token.name as string, email: token.email as string },
+            select: { id: true, role: true, createdAt: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.createdAt = dbUser.createdAt;
+            token.userId = dbUser.id;
+          }
         }
       } catch (error) {
         console.error("Error fetching user role:", error);
@@ -105,7 +106,7 @@ export const { auth: middleware } = NextAuth({
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
