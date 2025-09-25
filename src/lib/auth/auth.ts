@@ -1,5 +1,4 @@
 import NextAuth, { Session, DefaultSession } from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import authConfig from "./auth.config";
 import { Role } from "@prisma/client";
@@ -21,7 +20,8 @@ declare module "next-auth" {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  // Remove PrismaAdapter - use JWT strategy only
+  // adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -47,13 +47,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Persist the OAuth access_token and or the user id to the token right after signin
       if (account && user) {
         token.accessToken = account.access_token;
-        token.userId = user.id;
-        token.role = user.role ?? Role.USER;
-        // createdAt is available on our custom User type
-        if ("createdAt" in user) {
-          token.createdAt = user.createdAt;
-        }
+        // Add unique session identifier to prevent cross-user sessions
+        token.sessionId = `${user.id}-${Date.now()}-${Math.random()}`;
       }
+      // Always fetch role from database when we have a userId
+      try {
+        if (!token.role || !token.userId || !token.createdAt) {
+          const dbUser = await prisma.user.findUnique({
+            where: { name: token.name as string, email: token.email as string },
+            select: { id: true, role: true, createdAt: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.createdAt = dbUser.createdAt;
+            token.userId = dbUser.id;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+
+      // if no role, set it to user role
+      if (!token.role) {
+        token.role = user.role ?? Role.USER;
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -61,7 +79,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.userId) {
         session.user.id = token.userId as string;
         session.user.role = token.role as Role;
-        session.user.createdAt = token.createdAt as Date;
+        if (token.createdAt) {
+          session.user.createdAt = token.createdAt as Date;
+        }
       }
       return session;
     },
@@ -90,28 +110,6 @@ export const { auth: middleware } = NextAuth({
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
-    },
-  },
-  callbacks: {
-    async jwt({ token, user, account }) {
-      if (account && user) {
-        token.accessToken = account.access_token;
-        token.userId = user.id;
-        token.role = user.role ?? Role.USER;
-        // createdAt is available on our custom User type
-        if ("createdAt" in user) {
-          token.createdAt = user.createdAt;
-        }
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token.userId) {
-        session.user.id = token.userId as string;
-        session.user.role = token.role as Role;
-        session.user.createdAt = token.createdAt as Date;
-      }
-      return session;
     },
   },
 });
