@@ -6,14 +6,6 @@ import GoogleProvider from "next-auth/providers/google";
 export default {
   secret: process.env.AUTH_SECRET,
   providers: [
-    // AppleProvider({
-    //   clientId: process.env.APPLE_CLIENT_ID,
-    //   clientSecret: {
-    //     appleId: process.env.APPLE_ID,
-    //     privateKey: process.env.APPLE_PRIVATE_KEY,
-    //     teamId: process.env.APPLE_TEAM_ID,
-    //   },
-    // }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
