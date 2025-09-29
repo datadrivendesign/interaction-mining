@@ -1,4 +1,5 @@
 import NextAuth, { Session, DefaultSession } from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import authConfig from "./auth.config";
 import { Role } from "@prisma/client";
@@ -20,8 +21,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // Remove PrismaAdapter - use JWT strategy only
-  // adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -31,7 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
@@ -47,36 +47,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Persist the OAuth access_token and or the user id to the token right after signin
       if (account && user) {
         token.accessToken = account.access_token;
+        token.userId = user.id;
+        token.role = user.role ?? Role.USER;
         // Add unique session identifier to prevent cross-user sessions
         token.sessionId = `${user.id}-${Date.now()}-${Math.random()}`;
-        // Fetch role from database only during sign-in
-        try {
-          const dbUser = await prisma.user.findFirst({
-            where: {
-              accounts: {
-                some: {
-                  provider: account.provider,
-                  providerAccountId: account.providerAccountId,
-                },
-              },
-            },
-            select: { id: true, role: true, createdAt: true },
-          });
-          if (dbUser) {
-            token.userId = dbUser.id; // Store the MongoDB ObjectId
-            token.role = dbUser.role;
-            token.createdAt = dbUser.createdAt;
-          }
-        } catch (error) {
-          console.error("Error fetching user role:", error);
-        }
       }
-
-      // if no role, set it to default user role
-      if (!token.role) {
-        token.role = user.role ?? Role.USER;
-      }
-
       return token;
     },
     async session({ session, token }) {
@@ -88,33 +63,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           session.user.createdAt = token.createdAt as Date;
         }
       }
+
       return session;
     },
     async authorized({ auth }) {
       return !!auth;
-    },
-  },
-});
-
-/**
- * Middleware for Auth.js - uses same config as main auth
- */
-export const { auth: middleware } = NextAuth({
-  ...authConfig,
-  secret: process.env.AUTH_SECRET,
-  session: {
-    strategy: "jwt",
-    maxAge: 7 * 24 * 60 * 60, // 7 days
-  },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
     },
   },
 });
