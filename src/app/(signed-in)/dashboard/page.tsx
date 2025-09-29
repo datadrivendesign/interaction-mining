@@ -36,6 +36,11 @@ export default async function Page() {
   ]);
 
   if (!capturesData.ok || !tracesData.ok) {
+    console.error(
+      "Failed to fetch user data:",
+      capturesData.message,
+      tracesData.message
+    );
     notFound();
   }
 
