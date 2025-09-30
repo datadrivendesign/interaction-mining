@@ -17,9 +17,9 @@ export default async function Page({
   const { captureId } = await params;
   // auth check
   const session = await auth();
-  // Handle unauthenticated state
-  if (!session || !session?.user) {
-    redirect("/sign-in");
+  // Handle unauthenticated state (may already be handled by the layout though)
+  if (!session?.user) {
+    redirect(`/sign-in?callbackUrl=/capture/${captureId}/evaluate`);
   }
   const isAdmin = session.user.role === Role.ADMIN;
   // check if captureId matches the user

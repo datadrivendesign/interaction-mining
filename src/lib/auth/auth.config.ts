@@ -1,5 +1,5 @@
+import { Role } from "@prisma/client";
 import { NextAuthConfig } from "next-auth";
-// import AppleProvider from "next-auth/providers/apple";
 import GoogleProvider from "next-auth/providers/google";
 
 // Notice this is only an object, not a full Auth.js instance
@@ -11,14 +11,9 @@ export default {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-          scope: "openid email profile",
-          include_granted_scopes: "true",
+          prompt: "select_account",
         },
       },
-      checks: ["state"],
     }),
   ],
 } satisfies NextAuthConfig;
