@@ -22,46 +22,20 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: {
-    strategy: "jwt",
-    maxAge: 7 * 24 * 60 * 60, // 7 days
-  },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "strict",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
   ...authConfig,
   pages: {
     signIn: "/sign-in",
     signOut: "/sign-out",
   },
+  session: {
+    strategy: "database",
+  },
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Persist the OAuth access_token and or the user id to the token right after signin
-      if (account && user) {
-        token.accessToken = account.access_token;
-        token.userId = user.id;
-        token.role = user.role ?? Role.USER;
-        // Add unique session identifier to prevent cross-user sessions
-        token.sessionId = `${user.id}-${Date.now()}-${Math.random()}`;
-      }
-      return token;
-    },
-    async session({ session, token }) {
+    async session({ session, user }) {
       // Send properties to the client
-      if (token.userId) {
-        session.user.id = token.userId as string;
-        session.user.role = token.role as Role;
-        if (token.createdAt) {
-          session.user.createdAt = token.createdAt as Date;
-        }
+      if (user.id) {
+        session.user.id = user.id as string;
+        session.user.role = (user.role as Role) ?? Role.USER;
       }
 
       return session;

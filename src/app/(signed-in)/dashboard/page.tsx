@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Plus, Clock, Play, Eye, CheckCircle, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { User, CaptureStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -18,24 +18,29 @@ import { TracesList, NoTracesCard } from "./components/traces-list";
 export default async function Page() {
   const session = await auth();
 
-  if (!session || !session.user) {
-    redirect("/sign-in");
+  if (!session?.user) {
+    redirect("/sign-in?callbackUrl=/dashboard");
   }
 
-  const user = session?.user as User;
+  const user = session.user as User;
 
   const [capturesData, tracesData] = await Promise.all([
     getCaptures({
-      userId: session.user.id,
+      userId: user.id,
       includes: { app: true, task: true },
     }),
     getTraces({
-      userId: session.user.id,
+      userId: user.id,
       includes: { app: true, task: true },
     }),
   ]);
 
   if (!capturesData.ok || !tracesData.ok) {
+    console.error(
+      "Failed to fetch user data:",
+      capturesData.message,
+      tracesData.message
+    );
     notFound();
   }
 

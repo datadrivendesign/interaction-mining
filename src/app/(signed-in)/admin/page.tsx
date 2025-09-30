@@ -8,7 +8,7 @@ import { NotAuthorized } from "@/components/authorized";
 export default async function AdminPage() {
   const session = await auth();
 
-  if (!session || !session.user) {
+  if (!session?.user) {
     redirect(`/sign-in?callbackUrl=/admin`);
   }
   if (session!.user!.role !== Role.ADMIN) {
