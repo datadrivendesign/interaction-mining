@@ -27,6 +27,7 @@ export default async function Layout({
 
   // If capture is not found, redirect to 404
   if (!captureRes.ok || !capture) {
+    console.error("retrieving capture failed", captureRes.message);
     notFound();
   } else {
     // If capture has a traceId, redirect to the trace page

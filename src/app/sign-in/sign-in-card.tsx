@@ -25,11 +25,12 @@ export default function SignInCard() {
   })();
 
   const handleGoogleSignIn = async () => {
-    await signIn("google", { callbackUrl: safeCallbackUrl });
+    console.log("safeCallbackUrl", safeCallbackUrl);
+    await signIn("google", { redirectTo: safeCallbackUrl });
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await signOut({ redirectTo: "/" });
   };
 
   return (
@@ -57,34 +58,6 @@ export default function SignInCard() {
               Sign in with Google
             </span>
           </Button>
-
-          {/* Apple (disabled for now) */}
-          {/* <Button
-            className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
-            disabled
-          >
-            <span className="inline-flex items-center text-white dark:text-black font-medium">
-              <Image
-                className="w-auto h-4 mr-4 invert dark:invert-0"
-                src="/third-party-logos/apple.svg"
-                alt="Apple logo"
-                width={0}
-                height={0}
-                sizes="100vw"
-              />
-              Sign in with Apple
-            </span>
-          </Button> */}
-
-          {/* Sign Out */}
-          {/* <Button
-            className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
-            onClick={handleSignOut}
-          >
-            <span className="inline-flex items-center text-white dark:text-black font-medium">
-              Sign out
-            </span>
-          </Button> */}
         </CardHeader>
       </Card>
     </div>

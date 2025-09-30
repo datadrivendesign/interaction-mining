@@ -26,7 +26,7 @@ export async function AuthorizedRoute({
   );
   let session = await auth();
 
-  if (!session || !session.user) {
+  if (!session?.user) {
     // If not authenticated, redirect to sign-in page
     redirect(`/sign-in?callbackUrl=${callbackUrl ?? "/dashboard"}`);
   }
