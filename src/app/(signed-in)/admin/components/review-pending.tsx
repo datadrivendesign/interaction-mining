@@ -8,11 +8,11 @@ import {
   TableHead,
   TableHeader,
 } from "@/components/ui/table";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CaptureAdminView } from "@/lib/actions";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pagination,
   PaginationContent,
@@ -23,21 +23,39 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
+import { useDebounce } from "@uidotdev/usehooks";
+import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
 
 export function ReviewPending({ captures }: { captures: CaptureAdminView[] }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchUser, setSearchUser] = useState("");
+  const debouncedSearch = useDebounce(searchUser, 400);
   const itemsPerPage = 10;
 
   const validCaptures = captures.filter(
     (capture) => capture.user?.name !== null && capture.user?.email !== null
   );
-  const totalPages = Math.ceil(validCaptures.length / itemsPerPage);
+
+  const filteredCaptures = useMemo(() => {
+    if (!debouncedSearch.trim()) {
+      return validCaptures;
+    }
+
+    const searchTerm = debouncedSearch.toLowerCase().trim();
+    return validCaptures.filter((capture) => {
+      const name = capture.user?.name?.toLowerCase() || "";
+      const email = capture.user?.email?.toLowerCase() || "";
+      return name.includes(searchTerm) || email.includes(searchTerm);
+    });
+  }, [validCaptures, debouncedSearch]);
+
+  const totalPages = Math.ceil(filteredCaptures.length / itemsPerPage);
 
   const paginatedCaptures = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return validCaptures.slice(start, end);
-  }, [validCaptures, currentPage]);
+    return filteredCaptures.slice(start, end);
+  }, [filteredCaptures, currentPage]);
 
   const getPageNumbers = useCallback(() => {
     const pages = [];
@@ -49,11 +67,36 @@ export function ReviewPending({ captures }: { captures: CaptureAdminView[] }) {
     return pages;
   }, [currentPage, totalPages]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
   return (
     <>
-      <p className="text-muted-foreground text-start mt-1">
-        Review pending captures.
-      </p>
+      <div className="space-y-4 flex justify-between">
+        <div>
+          <p className="text-muted-foreground text-start mt-1">
+            Review pending captures.
+          </p>
+          {debouncedSearch && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {filteredCaptures.length} capture
+              {filteredCaptures.length !== 1 ? "s" : ""} found
+              {debouncedSearch && ` for "${debouncedSearch}"`}
+            </p>
+          )}
+        </div>
+        <InputRoot className="w-96">
+          <InputIcon>
+            <Search size={20} className="text-muted-foreground" />
+          </InputIcon>
+          <Input
+            placeholder="Search by name or email"
+            value={searchUser}
+            onChange={(e) => setSearchUser(e.target.value)}
+          />
+        </InputRoot>
+      </div>
       {/* Capture Table */}
       <div className="rounded-xl bg-muted/10 p-4">
         <Table>

@@ -9,9 +9,9 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { ManageableUser } from "./types";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import {
   Pagination,
   PaginationContent,
@@ -23,21 +23,39 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
+import { useDebounce } from "@uidotdev/usehooks";
 
 export function UserManager({ users }: { users: ManageableUser[] }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchUser, setSearchUser] = useState("");
+  const debouncedSearch = useDebounce(searchUser, 400);
   const itemsPerPage = 10;
 
   const validUsers = users.filter(
     (user) => user.name !== null && user.email !== null
   );
-  const totalPages = Math.ceil(validUsers.length / itemsPerPage);
+
+  const filteredUsers = useMemo(() => {
+    if (!debouncedSearch.trim()) {
+      return validUsers;
+    }
+
+    const searchTerm = debouncedSearch.toLowerCase().trim();
+    return validUsers.filter((user) => {
+      const name = user.name?.toLowerCase() || "";
+      const email = user.email?.toLowerCase() || "";
+      return name.includes(searchTerm) || email.includes(searchTerm);
+    });
+  }, [validUsers, debouncedSearch]);
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
   const paginatedUsers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return validUsers.slice(start, end);
-  }, [validUsers, currentPage]);
+    return filteredUsers.slice(start, end);
+  }, [filteredUsers, currentPage]);
 
   const getPageNumbers = useCallback(() => {
     const pages = [];
@@ -49,11 +67,37 @@ export function UserManager({ users }: { users: ManageableUser[] }) {
     return pages;
   }, [currentPage, totalPages]);
 
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
   return (
     <>
-      <p className="text-muted-foreground text-start mt-1">
-        Manage platform users and their roles.
-      </p>
+      <div className="space-y-4 flex justify-between">
+        <div>
+          <p className="text-muted-foreground text-start mt-1">
+            Manage platform users and their roles.
+          </p>
+          {debouncedSearch && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""}{" "}
+              found
+              {debouncedSearch && ` for "${debouncedSearch}"`}
+            </p>
+          )}
+        </div>
+        <InputRoot className="w-96">
+          <InputIcon>
+            <Search size={20} className="text-muted-foreground" />
+          </InputIcon>
+          <Input
+            placeholder="Search by name or email"
+            value={searchUser}
+            onChange={(e) => setSearchUser(e.target.value)}
+          />
+        </InputRoot>
+      </div>
       {/* Users Table */}
       <div className="rounded-xl bg-muted/10 p-4">
         <Table>
