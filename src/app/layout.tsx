@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -56,6 +57,10 @@ export default function RootLayout({
           <Toaster />
           {children}
         </body>
+        {/* Feature Flag: Google Analytics */}
+        {process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} />
+        )}
       </html>
     </SessionProvider>
   );
