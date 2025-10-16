@@ -65,17 +65,25 @@ export default function Page() {
   );
 
   useEffect(() => {
+    console.log('[START PAGE] useEffect triggered', {
+      captureState,
+      filteredUserUploadsLength: filteredUserUploads.length,
+      capture: !!capture
+    });
+    
     if (
       capture &&
       captureState === CaptureState.IDLE &&
       filteredUserUploads.length > 0
     ) {
+      console.log('[START PAGE] Setting state to UPLOADED');
       setCaptureState(CaptureState.UPLOADED);
     } else if (
       capture &&
       captureState === CaptureState.UPLOADED &&
       filteredUserUploads.length === 0
     ) {
+      console.log('[START PAGE] Setting state to IDLE');
       setCaptureState(CaptureState.IDLE);
     }
   }, [capture, captureState, filteredUserUploads.length]);
