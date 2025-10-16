@@ -34,7 +34,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Interaction Mining Platform",
+  title: "Interaction Mining",
   description: "Interaction Mining - A platform for capturing, analyzing, and understanding user interactions with mobile applications.",
 };
 
