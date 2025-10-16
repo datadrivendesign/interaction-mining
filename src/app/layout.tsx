@@ -34,8 +34,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ODIM",
-  description: "ODIM Project ",
+  title: "Interaction Mining Platform",
+  description: "Interaction Mining - A platform for capturing, analyzing, and understanding user interactions with mobile applications.",
 };
 
 export default function RootLayout({
