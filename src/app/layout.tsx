@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,8 +34,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ODIM",
-  description: "ODIM Project ",
+  title: "Interaction Mining Platform",
+  description: "Interaction Mining - A platform for capturing, analyzing, and understanding user interactions with mobile applications.",
 };
 
 export default function RootLayout({
@@ -56,6 +57,10 @@ export default function RootLayout({
           <Toaster />
           {children}
         </body>
+        {/* Feature Flag: Google Analytics */}
+        {process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} />
+        )}
       </html>
     </SessionProvider>
   );

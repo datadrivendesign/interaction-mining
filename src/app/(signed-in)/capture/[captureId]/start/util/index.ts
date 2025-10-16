@@ -56,30 +56,39 @@ export const getSWRConfig = (
 ): SWRConfiguration<ListedFiles[]> => ({
   refreshInterval: 5000,
   compare: (prevFiles, currFiles) => {
-    if (!prevFiles || !currFiles) {
-      // if one is undefined and the other is not, return false
-      if (!prevFiles && currFiles) {
+    const result = (() => {
+      if (!prevFiles || !currFiles) {
+        if (!prevFiles && !currFiles) {
+          return true;
+        }
+        // if one is undefined and the other is not, return false
         return false;
       }
-      if (prevFiles && !currFiles) {
+      // if both are defined, check if the file keys are the same
+      if (prevFiles.length !== currFiles.length) {
         return false;
       }
-      return true;
-    }
-    // if both are defined, check if the file keys are the same
-    if (prevFiles.length !== currFiles.length) {
+      // check if file keys are the same
+      const prevFileKeys = prevFiles.map((file) => file.fileKey);
+      const currFileKeys = currFiles.map((file) => file.fileKey);
+      if (prevFileKeys.every((key, index) => key === currFileKeys[index])) {
+        // check if any file urls are expired
+        if (prevFiles.some((file) => isCloudfrontUrlExpired(file.fileUrl))) {
+          return false;
+        }
+        return true;
+      }
       return false;
-    }
-    // check if file keys are the same
-    const prevFileKeys = prevFiles.map((file) => file.fileKey);
-    const currFileKeys = currFiles.map((file) => file.fileKey);
-    if (prevFileKeys.every((key, index) => key === currFileKeys[index])) {
-      // check if any file urls are expired
-      if (prevFiles.some((file) => isCloudfrontUrlExpired(file.fileUrl))) {
-        return false;
-      }
-      return true;
-    }
-    return false;
+    })();
+    
+    console.log('[SWR COMPARE]', {
+      operation,
+      prefix,
+      prevLength: prevFiles?.length || 0,
+      currLength: currFiles?.length || 0,
+      result
+    });
+    
+    return result;
   },
 });
