@@ -1,14 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Trash, X } from "lucide-react";
+import { Trash } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Role } from "@prisma/client";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { Combobox, ComboboxOption } from "../../util/combobox";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
+import { FilterBadge } from "@/components/ui/filter-badge";
+import { StatusButtonGroup } from "@/components/ui/status-button-group";
 
 const RoleOptions = [
   { value: "", label: "All" },
@@ -51,35 +50,13 @@ export function FilterUser({
             selectCallback={handleUserFilterSelect}
           />
         </div>
-
-        {/* Role filter - use radio buttons */}
-        <div className="flex items-center gap-2">
-          <label className="text-base font-bold text-foreground whitespace-nowrap">
-            Filter Role:
-          </label>
-          <div className="flex items-center gap-2">
-            <ButtonGroup>
-              {RoleOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    roleFiltered === option.value ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => handleRoleFilterSelect(option)}
-                  className={cn(
-                    roleFiltered === option.value
-                      ? "bg-blue-500/100 text-white"
-                      : "",
-                    "text-xs hover:bg-blue-500/100 hover:text-white"
-                  )}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </ButtonGroup>
-          </div>
-        </div>
+        {/* Role filter - use status button group */}
+        <StatusButtonGroup
+          options={RoleOptions}
+          selected={roleFiltered}
+          onChange={handleRoleFilterSelect}
+          label="Filter Role:"
+        />
 
         <div className="flex items-center justify-end self-end">
           <Button variant="destructive" size="sm" onClick={handleClearFilters}>
@@ -103,15 +80,11 @@ export function FilterUser({
 
             <div className="flex flex-wrap gap-2">
               {usersFiltered.map((user) => (
-                <Badge
+                <FilterBadge
                   key={user.value}
-                  variant="secondary"
-                  className="flex items-center gap-2 pr-2 cursor-pointer hover:bg-red-500/100 dark:hover:bg-red-500/100 hover:text-white"
-                  onClick={() => handleUserFilterRemove(user)}
-                >
-                  <X className="h-2 w-2 cursor-pointer" />
-                  {user.label}
-                </Badge>
+                  label={user.label}
+                  onRemove={() => handleUserFilterRemove(user)}
+                />
               ))}
             </div>
           </div>

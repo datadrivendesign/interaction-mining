@@ -1,8 +1,5 @@
-import { ButtonGroup } from "@/components/ui/button-group";
 import { TasksPanel } from "./components/tasks-panel";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Users } from "lucide-react";
+import { AdminNavBar } from "../components/admin-nav-bar";
 
 export default async function TasksPanelPage() {
   return (
@@ -13,17 +10,11 @@ export default async function TasksPanelPage() {
             Review Tasks
           </h1>
           {/* Action button for navigation */}
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-md font-bold tracking-tight">
-              Navigate To:
-            </span>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/users">
-                <Users className="w-4 h-4 mr-2" />
-                All Users Panel
-              </Link>
-            </Button>
-          </div>
+          <AdminNavBar
+            currentRoute={`/admin/tasks`}
+            showTasksLink={false}
+            showUsersLink={true}
+          />
         </div>
         <TasksPanel />
       </div>

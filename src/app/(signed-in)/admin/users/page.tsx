@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { UsersPanel } from "./components/users-panel";
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
+import { AdminNavBar } from "../components/admin-nav-bar";
 
 export default async function UsersPanelPage() {
   return (
@@ -11,18 +12,12 @@ export default async function UsersPanelPage() {
           <h1 className="text-3xl font-bold tracking-tight text-start">
             Manage Users
           </h1>
-          {/* Action button for navigation */}
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-md font-bold tracking-tight">
-              Navigate To:
-            </span>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/tasks">
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Review Tasks
-              </Link>
-            </Button>
-          </div>
+          {/* Action buttons for navigation */}
+          <AdminNavBar
+            currentRoute={`/admin/users`}
+            showTasksLink={true}
+            showUsersLink={false}
+          />
         </div>
         <UsersPanel />
       </div>

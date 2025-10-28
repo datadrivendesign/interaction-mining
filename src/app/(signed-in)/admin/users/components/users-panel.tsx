@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableHeader,
@@ -9,31 +8,23 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ComboboxOption } from "@/components/ui/combobox";
+import { AdminPagination } from "@/components/ui/admin-pagination";
+import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { useCallback, useState, useEffect } from "react";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input-icon";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  constructUserPanelURL,
   getFilterOptionsForUsers,
   getUsersCount,
   getUsersForAdmin,
   ManageableUser,
 } from "../../util";
 import { FilterUser } from "./filter-user";
-import { Badge } from "@/components/ui/badge";
 import { Role } from "@prisma/client";
-import { ComboboxOption } from "../../util/combobox";
 
 function UsersTable({
   users,
@@ -93,22 +84,6 @@ function UsersTable({
     </Table>
   );
 }
-
-const constructUserPanelURL = (
-  page: number,
-  users: string[],
-  role: Role | ""
-) => {
-  const queryParams = new URLSearchParams();
-  queryParams.set("page", page.toString());
-  if (users.length > 0) {
-    queryParams.set("users", users.join(","));
-  }
-  if (role !== "") {
-    queryParams.set("role", role);
-  }
-  return `/admin/users?${queryParams.toString()}`;
-};
 
 export function UsersPanel() {
   // constants
@@ -213,76 +188,14 @@ export function UsersPanel() {
   // pagination logic
   const totalPages = Math.ceil(usersCount / itemsPerPage);
 
-  const [showInputPaginationStart, setShowInputPaginationStart] =
-    useState(false);
-  const [showInputPaginationEnd, setShowInputPaginationEnd] = useState(false);
-
-  const [inputPaginationStart, setInputPaginationStart] = useState("");
-  const [inputPaginationEnd, setInputPaginationEnd] = useState("");
-
-  // calculate number of pages to show in pagination
-  const getPageNumbers = useCallback(() => {
-    const pages = [];
-    const startPage = Math.max(1, page - 2);
-    const endPage = Math.min(totalPages, page + 2);
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    return pages;
-  }, [page, totalPages]);
-
-  // handle user submit page input in starting pagination inputs
-  const handlePaginationStartInputSubmit = () => {
-    const newPage = parseInt(inputPaginationStart);
-    setShowInputPaginationStart(false);
-    setInputPaginationStart("");
-    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
-      router.push(
-        constructUserPanelURL(
-          newPage,
-          usersFiltered.map((user) => user.value),
-          roleFiltered
-        )
-      );
-    }
-  };
-
-  // handle user pressing enter or escape in starting pagination input
-  const handlePaginationStartInputKeyDown = (e: React.KeyboardEvent) => {
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        handlePaginationStartInputSubmit();
-      } else if (e.key === "Escape") {
-        setShowInputPaginationStart(false);
-        setInputPaginationStart("");
-      }
-    };
-  };
-
-  // handle user submit page input in ending pagination inputs
-  const handlePaginationEndInputSubmit = () => {
-    const newPage = parseInt(inputPaginationEnd);
-    setShowInputPaginationEnd(false);
-    setInputPaginationEnd("");
-    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
-      router.push(
-        constructUserPanelURL(
-          newPage,
-          usersFiltered.map((user) => user.value),
-          roleFiltered
-        )
-      );
-    }
-  };
-
-  // handle user pressing enter or escape in ending pagination input
-  const handlePaginationEndInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handlePaginationEndInputSubmit();
-    } else if (e.key === "Escape") {
-      setShowInputPaginationEnd(false);
-      setInputPaginationEnd("");
-    }
+  const handlePageChange = (page: number) => {
+    router.push(
+      constructUserPanelURL(
+        page,
+        usersFiltered.map((user) => user.value),
+        roleFiltered
+      )
+    );
   };
 
   // handle filter logic
@@ -378,162 +291,12 @@ export function UsersPanel() {
           />
         )}
       </div>
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              className={cn(page === 1 && "opacity-50 cursor-default")}
-              onClick={() => {
-                if (page > 1) {
-                  router.push(
-                    constructUserPanelURL(
-                      page - 1,
-                      usersFiltered.map((user) => user.value),
-                      roleFiltered
-                    )
-                  );
-                }
-              }}
-            />
-          </PaginationItem>
 
-          {!getPageNumbers().includes(1) && (
-            <>
-              <PaginationItem>
-                <PaginationLink
-                  href="#"
-                  onClick={() => {
-                    router.push(
-                      constructUserPanelURL(
-                        1,
-                        usersFiltered.map((user) => user.value),
-                        roleFiltered
-                      )
-                    );
-                  }}
-                >
-                  {1}
-                </PaginationLink>
-              </PaginationItem>
-              {showInputPaginationStart ? (
-                <PaginationItem>
-                  <Input
-                    className="w-20 h-8 text-center"
-                    type="number"
-                    min="1"
-                    max={totalPages}
-                    value={inputPaginationStart}
-                    onChange={(e) => setInputPaginationStart(e.target.value)}
-                    onKeyDown={handlePaginationStartInputKeyDown}
-                    onBlur={handlePaginationStartInputSubmit}
-                    autoFocus
-                    placeholder="Page"
-                  />
-                </PaginationItem>
-              ) : (
-                <PaginationItem>
-                  <PaginationEllipsis
-                    onClick={() => {
-                      setShowInputPaginationStart(true);
-                      setInputPaginationStart(page.toString());
-                    }}
-                    className="cursor-pointer hover:bg-muted/50 rounded"
-                  />
-                </PaginationItem>
-              )}
-            </>
-          )}
-
-          {getPageNumbers().map((pageNum) => (
-            <PaginationItem key={pageNum}>
-              <PaginationLink
-                href="#"
-                isActive={page === pageNum}
-                onClick={() => {
-                  router.push(
-                    constructUserPanelURL(
-                      pageNum,
-                      usersFiltered.map((user) => user.value),
-                      roleFiltered
-                    )
-                  );
-                }}
-              >
-                {pageNum}
-              </PaginationLink>
-            </PaginationItem>
-          ))}
-
-          {!getPageNumbers().includes(totalPages) && (
-            <>
-              {page < totalPages && (
-                <>
-                  {showInputPaginationEnd ? (
-                    <PaginationItem>
-                      <Input
-                        className="w-20 h-8 text-center"
-                        type="number"
-                        min="1"
-                        max={totalPages}
-                        value={inputPaginationEnd}
-                        onChange={(e) => setInputPaginationEnd(e.target.value)}
-                        onKeyDown={handlePaginationEndInputKeyDown}
-                        onBlur={handlePaginationEndInputSubmit}
-                        autoFocus
-                        placeholder="Page"
-                      />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem>
-                      <PaginationEllipsis
-                        onClick={() => {
-                          setShowInputPaginationEnd(true);
-                          setInputPaginationEnd(page.toString());
-                        }}
-                        className="cursor-pointer hover:bg-muted/50 rounded"
-                      />
-                    </PaginationItem>
-                  )}
-                </>
-              )}
-
-              <PaginationItem>
-                <PaginationLink
-                  href="#"
-                  onClick={() => {
-                    router.push(
-                      constructUserPanelURL(
-                        totalPages,
-                        usersFiltered.map((user) => user.value),
-                        roleFiltered
-                      )
-                    );
-                  }}
-                >
-                  {totalPages}
-                </PaginationLink>
-              </PaginationItem>
-            </>
-          )}
-
-          <PaginationItem>
-            <PaginationNext
-              className={cn(page === totalPages && "opacity-50 cursor-default")}
-              onClick={() => {
-                if (page < totalPages) {
-                  router.push(
-                    constructUserPanelURL(
-                      page + 1,
-                      usersFiltered.map((user) => user.value),
-                      roleFiltered
-                    )
-                  );
-                }
-              }}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <AdminPagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
     </>
   );
 }

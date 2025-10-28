@@ -8,31 +8,22 @@ import {
   TableHead,
   TableHeader,
 } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ComboboxOption } from "@/components/ui/combobox";
+import { Separator } from "@/components/ui/separator";
+import { AdminPagination } from "@/components/ui/admin-pagination";
+import { Loader2 } from "lucide-react";
 import { CaptureAdminView } from "@/lib/actions";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input-icon";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  constructTaskPanelURL,
   getFilterOptionsForTasks,
   getReviewCapturesCount,
   getReviewingCaptures,
 } from "../../util";
 import { FilterTask } from "./filter-task";
-import { ComboboxOption } from "../../util/combobox";
-import { Separator } from "@/components/ui/separator";
 
 function TasksTable({
   captures,
@@ -98,23 +89,6 @@ function TasksTable({
     </Table>
   );
 }
-
-// construct url
-const constructTaskPanelURL = (
-  page: number,
-  users: string[],
-  apps: string[]
-) => {
-  const queryParams = new URLSearchParams();
-  queryParams.set("page", page.toString());
-  if (users.length > 0) {
-    queryParams.set("users", users.join(","));
-  }
-  if (apps.length > 0) {
-    queryParams.set("apps", apps.join(","));
-  }
-  return `/admin/tasks?${queryParams.toString()}`;
-};
 
 export function TasksPanel() {
   // constants
@@ -228,71 +202,14 @@ export function TasksPanel() {
   // pagination logic
   const totalPages = Math.ceil(reviewCapturesCount / itemsPerPage);
 
-  const [showInputPaginationStart, setShowInputPaginationStart] =
-    useState(false);
-  const [showInputPaginationEnd, setShowInputPaginationEnd] = useState(false);
-
-  const [inputPaginationStart, setInputPaginationStart] = useState("");
-  const [inputPaginationEnd, setInputPaginationEnd] = useState("");
-
-  const getPageNumbers = useCallback(() => {
-    const pages = [];
-    const startPage = Math.max(1, page - 2);
-    const endPage = Math.min(totalPages, page + 2);
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    return pages;
-  }, [page, totalPages]);
-
-  const handlePaginationStartInputSubmit = () => {
-    const newPage = parseInt(inputPaginationStart);
-    setShowInputPaginationStart(false);
-    setInputPaginationStart("");
-    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
-      router.push(
-        constructTaskPanelURL(
-          newPage,
-          usersFiltered.map((user) => user.value),
-          appsFiltered.map((app) => app.value)
-        )
-      );
-    }
-  };
-
-  const handlePaginationStartInputKeyDown = (e: React.KeyboardEvent) => {
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        handlePaginationStartInputSubmit();
-      } else if (e.key === "Escape") {
-        setShowInputPaginationStart(false);
-        setInputPaginationStart("");
-      }
-    };
-  };
-
-  const handlePaginationEndInputSubmit = () => {
-    const newPage = parseInt(inputPaginationEnd);
-    setShowInputPaginationEnd(false);
-    setInputPaginationEnd("");
-    if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
-      router.push(
-        constructTaskPanelURL(
-          newPage,
-          usersFiltered.map((user) => user.value),
-          appsFiltered.map((app) => app.value)
-        )
-      );
-    }
-  };
-
-  const handlePaginationEndInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handlePaginationEndInputSubmit();
-    } else if (e.key === "Escape") {
-      setShowInputPaginationEnd(false);
-      setInputPaginationEnd("");
-    }
+  const handlePageChange = (page: number) => {
+    router.push(
+      constructTaskPanelURL(
+        page,
+        usersFiltered.map((user) => user.value),
+        appsFiltered.map((app) => app.value)
+      )
+    );
   };
 
   // handle filter logic
@@ -416,162 +333,12 @@ export function TasksPanel() {
           />
         )}
       </div>
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              className={cn(page === 1 && "opacity-50 cursor-default")}
-              onClick={() => {
-                if (page > 1) {
-                  router.push(
-                    constructTaskPanelURL(
-                      page - 1,
-                      usersFiltered.map((user) => user.value),
-                      appsFiltered.map((app) => app.value)
-                    )
-                  );
-                }
-              }}
-            />
-          </PaginationItem>
 
-          {!getPageNumbers().includes(1) && (
-            <>
-              <PaginationItem>
-                <PaginationLink
-                  href="#"
-                  onClick={() => {
-                    router.push(
-                      constructTaskPanelURL(
-                        1,
-                        usersFiltered.map((user) => user.value),
-                        appsFiltered.map((app) => app.value)
-                      )
-                    );
-                  }}
-                >
-                  {1}
-                </PaginationLink>
-              </PaginationItem>
-              {showInputPaginationStart ? (
-                <PaginationItem>
-                  <Input
-                    className="w-20 h-8 text-center"
-                    type="number"
-                    min="1"
-                    max={totalPages}
-                    value={inputPaginationStart}
-                    onChange={(e) => setInputPaginationStart(e.target.value)}
-                    onKeyDown={handlePaginationStartInputKeyDown}
-                    onBlur={handlePaginationStartInputSubmit}
-                    autoFocus
-                    placeholder="Page"
-                  />
-                </PaginationItem>
-              ) : (
-                <PaginationItem>
-                  <PaginationEllipsis
-                    onClick={() => {
-                      setShowInputPaginationStart(true);
-                      setInputPaginationStart(page.toString());
-                    }}
-                    className="cursor-pointer hover:bg-muted/50 rounded"
-                  />
-                </PaginationItem>
-              )}
-            </>
-          )}
-
-          {getPageNumbers().map((pageNum) => (
-            <PaginationItem key={pageNum}>
-              <PaginationLink
-                href="#"
-                isActive={page === pageNum}
-                onClick={() => {
-                  router.push(
-                    constructTaskPanelURL(
-                      pageNum,
-                      usersFiltered.map((user) => user.value),
-                      appsFiltered.map((app) => app.value)
-                    )
-                  );
-                }}
-              >
-                {pageNum}
-              </PaginationLink>
-            </PaginationItem>
-          ))}
-
-          {!getPageNumbers().includes(totalPages) && (
-            <>
-              {page < totalPages && (
-                <>
-                  {showInputPaginationEnd ? (
-                    <PaginationItem>
-                      <Input
-                        className="w-20 h-8 text-center"
-                        type="number"
-                        min="1"
-                        max={totalPages}
-                        value={inputPaginationEnd}
-                        onChange={(e) => setInputPaginationEnd(e.target.value)}
-                        onKeyDown={handlePaginationEndInputKeyDown}
-                        onBlur={handlePaginationEndInputSubmit}
-                        autoFocus
-                        placeholder="Page"
-                      />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem>
-                      <PaginationEllipsis
-                        onClick={() => {
-                          setShowInputPaginationEnd(true);
-                          setInputPaginationEnd(page.toString());
-                        }}
-                        className="cursor-pointer hover:bg-muted/50 rounded"
-                      />
-                    </PaginationItem>
-                  )}
-                </>
-              )}
-
-              <PaginationItem>
-                <PaginationLink
-                  href="#"
-                  onClick={() => {
-                    router.push(
-                      constructTaskPanelURL(
-                        totalPages,
-                        usersFiltered.map((user) => user.value),
-                        appsFiltered.map((app) => app.value)
-                      )
-                    );
-                  }}
-                >
-                  {totalPages}
-                </PaginationLink>
-              </PaginationItem>
-            </>
-          )}
-
-          <PaginationItem>
-            <PaginationNext
-              className={cn(page === totalPages && "opacity-50 cursor-default")}
-              onClick={() => {
-                if (page < totalPages) {
-                  router.push(
-                    constructTaskPanelURL(
-                      page + 1,
-                      usersFiltered.map((user) => user.value),
-                      appsFiltered.map((app) => app.value)
-                    )
-                  );
-                }
-              }}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <AdminPagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
     </>
   );
 }

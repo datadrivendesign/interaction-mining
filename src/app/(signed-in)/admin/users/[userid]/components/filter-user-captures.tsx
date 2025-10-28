@@ -1,12 +1,11 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { cn } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
-import { Combobox, ComboboxOption } from "../../../util/combobox";
-import { Trash, X } from "lucide-react";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
+import { FilterBadge } from "@/components/ui/filter-badge";
+import { StatusButtonGroup } from "@/components/ui/status-button-group";
+import { Trash } from "lucide-react";
 
 interface FilterCaptureParams {
   appsList: ComboboxOption[];
@@ -50,39 +49,16 @@ export function FilterCapture({
             selectCallback={handleAppFilterSelect}
           />
         </div>
-
-        {/* Status filter - use radio buttons */}
-        <div className="flex items-center gap-2">
-          <label className="text-base font-bold text-foreground whitespace-nowrap">
-            Status:
-          </label>
-          <div className="flex rounded-md border border-input bg-background">
-            <ButtonGroup>
-              {CaptureStatusOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    statusFiltered === option.value ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => handleStatusFilterSelect(option)}
-                  className={cn(
-                    statusFiltered === option.value
-                      ? "bg-blue-500/100 text-white"
-                      : "",
-                    "text-xs hover:bg-blue-500/100 hover:text-white pointer-cursor"
-                  )}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </ButtonGroup>
-          </div>
-        </div>
-
+        {/* Status filter - use status button group */}
+        <StatusButtonGroup
+          options={CaptureStatusOptions}
+          selected={statusFiltered}
+          onChange={handleStatusFilterSelect}
+          label="Filter Status:"
+        />
+        {/* Clear Filters Button */}
         <div className="flex items-center justify-end self-end">
           <Button variant="destructive" size="sm" onClick={handleClearFilters}>
-            {/* handleClearFilters */}
             <Trash className="w-4 h-4" />
             Clear
           </Button>
@@ -103,15 +79,11 @@ export function FilterCapture({
 
             <div className="flex flex-wrap gap-2">
               {appsFiltered.map((app) => (
-                <Badge
+                <FilterBadge
                   key={app.value}
-                  variant="secondary"
-                  className="flex items-center gap-2 pr-2 cursor-pointer hover:bg-red-500/100 dark:hover:bg-red-500/100 hover:text-white"
-                  onClick={() => handleAppFilterRemove(app)}
-                >
-                  <X className="h-2 w-2 cursor-pointer" />
-                  {app.label}
-                </Badge>
+                  label={app.label}
+                  onRemove={() => handleAppFilterRemove(app)}
+                />
               ))}
             </div>
           </div>

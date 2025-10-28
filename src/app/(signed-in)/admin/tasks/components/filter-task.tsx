@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Trash, X } from "lucide-react";
+import { Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Combobox, ComboboxOption } from "../../util/combobox";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
+import { FilterBadge } from "@/components/ui/filter-badge";
 
 interface FilterTaskParams {
   appsList: ComboboxOption[];
@@ -82,15 +82,11 @@ export function FilterTask({
               </div>
               <div className="flex flex-wrap gap-2">
                 {appsFiltered.map((app) => (
-                  <Badge
+                  <FilterBadge
                     key={app.value}
-                    variant="secondary"
-                    className="flex items-center gap-2 pr-2 hover:bg-red-500/100 dark:hover:bg-red-500/100 hover:text-white cursor-pointer"
-                    onClick={() => handleAppFilterRemove(app)}
-                  >
-                    <X className="h-2 w-2" />
-                    {app.label}
-                  </Badge>
+                    label={app.label}
+                    onRemove={() => handleAppFilterRemove(app)}
+                  />
                 ))}
               </div>
             </div>
@@ -109,15 +105,11 @@ export function FilterTask({
 
               <div className="flex flex-wrap gap-2">
                 {usersFiltered.map((user) => (
-                  <Badge
+                  <FilterBadge
                     key={user.value}
-                    variant="secondary"
-                    className="flex items-center gap-2 pr-2 hover:bg-red-500/100 dark:hover:bg-red-500/100 hover:text-white cursor-pointer"
-                    onClick={() => handleUserFilterRemove(user)}
-                  >
-                    <X className="h-2 w-2" />
-                    {user.label}
-                  </Badge>
+                    label={user.label}
+                    onRemove={() => handleUserFilterRemove(user)}
+                  />
                 ))}
               </div>
             </div>
