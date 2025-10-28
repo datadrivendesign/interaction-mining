@@ -80,7 +80,7 @@ function SessionContent() {
 
           {session.user?.role === Role.ADMIN && (
             <DropdownMenuItem asChild>
-              <Link href={`/admin`}>Admin Dashboard</Link>
+              <Link href={`/admin/tasks`}>Admin Dashboard</Link>
             </DropdownMenuItem>
           )}
 

@@ -158,6 +158,10 @@ model Capture {
   otp               String
   src               String
   status            CaptureStatus @default(CREATED)
+
+  // add indexes for faster lookup for admin review search/filter
+  @@index([status, userId])
+  @@index([status, appId])
   @@map("captures")
 }
 
