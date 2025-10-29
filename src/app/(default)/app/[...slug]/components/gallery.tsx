@@ -8,7 +8,6 @@ import {
   useContext,
   useEffect,
   useCallback,
-  useMemo,
 } from "react";
 import Image from "next/image";
 import clsx from "clsx";
@@ -176,7 +175,7 @@ export function InspectView({ data }: { data: Trace }) {
           <Button
             variant={"secondary"}
             onClick={handleDownload}
-            tooltip="Download trace data"
+            title="Download trace data"
           >
             <Download className="size-4" />
             Download trace
