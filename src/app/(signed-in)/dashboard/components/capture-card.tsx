@@ -17,6 +17,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 // Separate components for each action type
 function StartButton({ captureId }: { captureId: string }) {
@@ -139,7 +140,7 @@ export function CaptureCard({
   };
 
   return (
-    <div className="flex flex-row items-center justify-between p-3 border rounded-lg hover:bg-muted-background transition-colors">
+    <div className="flex flex-row items-center justify-between p-1 border rounded-lg hover:bg-muted-background transition-colors">
       <div className="flex flex-col items-center text-center space-x-3">
         {capture.app?.metadata?.icon ? (
           <Image
@@ -159,11 +160,16 @@ export function CaptureCard({
       </div>
       <div className="flex flex-col h-full justify-evenly content-evenly items-center text-center ml-2">
         {renderActionButtons()}
-        <p className="text-xs text-muted-foreground self-end">
-          {prettyOS(capture.task?.os)} •{" "}
-          {capture.task?.description?.slice(0, 30)}
-          {`${capture.task?.description?.length > 30 ? "..." : ""}`}
+        <p className="text-xs text-muted-foreground self-start mt-1">
+          {capture.task?.description?.slice(0, 18)}
+          {`${capture.task?.description?.length > 18 ? "..." : ""}`}
         </p>
+        <Badge
+          variant="outline"
+          className="text-xs text-muted-foreground self-start"
+        >
+          {prettyOS(capture.task?.os)}
+        </Badge>
       </div>
     </div>
   );

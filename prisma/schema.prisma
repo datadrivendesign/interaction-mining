@@ -69,6 +69,8 @@ model App {
 
   @@unique([packageName, os])
   @@fulltext([metadata.name])
+  // index on os to make faster lookups in explore page
+  @@index([os])
   @@map("apps")
 }
 
@@ -126,6 +128,8 @@ model Trace {
   iOSVersion    String?
   iPhoneVersion String?
 
+  // index on appId to make faster lookups in explore page
+  @@index([appId])
   @@map("traces")
 }
 
@@ -158,6 +162,10 @@ model Capture {
   otp               String
   src               String
   status            CaptureStatus @default(CREATED)
+
+  // add indexes for faster lookup for admin review search/filter
+  @@index([status, userId])
+  @@index([status, appId])
   @@map("captures")
 }
 

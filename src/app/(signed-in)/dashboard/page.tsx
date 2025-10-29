@@ -4,16 +4,14 @@ import { Plus, Search } from "lucide-react";
 import { User, CaptureStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { auth } from "@/lib/auth/auth";
-import { getCaptures, getTraces } from "@/lib/actions";
+import { getCaptureCounts, getCapturesPaginated } from "@/lib/actions";
 import {
   CaptureCardColumns,
   NoCapturesCard,
 } from "./components/capture-card-columns";
 import { ProfileCard } from "./components/profile-card";
-import { TracesList, NoTracesCard } from "./components/traces-list";
 
 export default async function Page() {
   const session = await auth();
@@ -24,45 +22,90 @@ export default async function Page() {
 
   const user = session.user as User;
 
-  const [capturesData, tracesData] = await Promise.all([
-    getCaptures({
+  const [
+    captureCountsData,
+    createdCapturesPaginatedData,
+    processingCapturesPaginatedData,
+    reviewingCapturesPaginatedData,
+  ] = await Promise.all([
+    getCaptureCounts({ userId: user.id }),
+    getCapturesPaginated({
       userId: user.id,
+      status: CaptureStatus.CREATED,
+      limit: 10,
       includes: { app: true, task: true },
     }),
-    getTraces({
+    getCapturesPaginated({
       userId: user.id,
+      status: CaptureStatus.PROCESSING,
+      limit: 10,
+      includes: { app: true, task: true },
+    }),
+    getCapturesPaginated({
+      userId: user.id,
+      status: CaptureStatus.REVIEWING,
+      limit: 10,
       includes: { app: true, task: true },
     }),
   ]);
 
-  if (!capturesData.ok || !tracesData.ok) {
-    console.error(
-      "Failed to fetch user data:",
-      capturesData.message,
-      tracesData.message
-    );
+  if (
+    !captureCountsData.ok ||
+    !createdCapturesPaginatedData.ok ||
+    !processingCapturesPaginatedData.ok ||
+    !reviewingCapturesPaginatedData.ok
+  ) {
+    if (!captureCountsData.ok) {
+      console.error(
+        "Failed to fetch capture counts:",
+        captureCountsData.message
+      );
+    }
+    if (!createdCapturesPaginatedData.ok) {
+      console.error(
+        "Failed to fetch created captures:",
+        createdCapturesPaginatedData.message
+      );
+    }
+    if (!processingCapturesPaginatedData.ok) {
+      console.error(
+        "Failed to fetch processing captures:",
+        processingCapturesPaginatedData.message
+      );
+    }
+    if (!reviewingCapturesPaginatedData.ok) {
+      console.error(
+        "Failed to fetch reviewing captures:",
+        reviewingCapturesPaginatedData.message
+      );
+    }
     notFound();
   }
 
-  const captures = capturesData.data;
-  const traces = tracesData.data;
-
   // Group captures by status
-  const capturesByStatus = captures.reduce(
+  const capturesCount = captureCountsData.data;
+  const capturesByStatus = capturesCount.reduce(
     (acc, capture) => {
       if (!acc[capture.status]) {
-        acc[capture.status] = [];
+        acc[capture.status] = capture.count;
       }
-      acc[capture.status].push(capture);
       return acc;
     },
-    {} as Record<CaptureStatus, typeof captures>
+    {} as Record<CaptureStatus, number>
   );
-
-  const totalCaptures = captures.length;
-  const approvedCaptures =
-    capturesByStatus[CaptureStatus.APPROVED]?.length || 0;
+  const totalCaptures = Object.values(capturesByStatus).reduce(
+    (a, b) => a + (b ?? 0),
+    0
+  );
+  const approvedCaptures = capturesByStatus[CaptureStatus.APPROVED] ?? 0;
   const pendingCaptures = totalCaptures - approvedCaptures;
+
+  // Get initial captures by status
+  const initialCapturesByStatus = {
+    [CaptureStatus.CREATED]: createdCapturesPaginatedData.data,
+    [CaptureStatus.PROCESSING]: processingCapturesPaginatedData.data,
+    [CaptureStatus.REVIEWING]: reviewingCapturesPaginatedData.data,
+  };
 
   return (
     <main className="flex flex-col grow justify-start items-center min-w-dvw min-h-dvh bg-neutral-50 dark:bg-neutral-950">
@@ -97,28 +140,14 @@ export default async function Page() {
             </div>
           </div>
 
-          <Tabs defaultValue="captures" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="captures">Captures</TabsTrigger>
-              <TabsTrigger value="traces">Traces</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="captures" className="mt-6">
-              {totalCaptures > 0 ? (
-                <CaptureCardColumns capturesByStatus={capturesByStatus} />
-              ) : (
-                <NoCapturesCard />
-              )}
-            </TabsContent>
-
-            <TabsContent value="traces" className="mt-6">
-              {traces.length > 0 ? (
-                <TracesList traces={traces} />
-              ) : (
-                <NoTracesCard />
-              )}
-            </TabsContent>
-          </Tabs>
+          {totalCaptures > 0 ? (
+            <CaptureCardColumns
+              userId={user.id}
+              initialCapturesByStatus={initialCapturesByStatus}
+            />
+          ) : (
+            <NoCapturesCard />
+          )}
         </section>
       </div>
     </main>

@@ -8,11 +8,14 @@ export type User = Prisma.UserGetPayload<{}>;
 
 export async function getUser(
   userId: string,
-  { includes }: { includes?: Prisma.UserInclude } = {}
+  { includes }: { includes?: Prisma.UserInclude } = {},
+  { select }: { select?: Prisma.UserSelect } = {}
 ): Promise<ActionPayload<User>> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      ...(includes ? { include: includes } : {}),
+      ...(select ? { select: select } : {}),
     });
 
     if (!user) {
