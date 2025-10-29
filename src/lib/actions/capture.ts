@@ -54,9 +54,9 @@ interface GetCaptureProps {
 /**
  * Fetches a capture from the database.
  * @param id Id of the capture to fetch.
- * @param taskId Id of the task to fetch the capture for.
  * @param otp OTP of the capture to fetch.
- * @returns ActionPayload
+ * @param includes Includes parameters to fetch the capture with.
+ * @returns ActionPayload of capture.
  */
 export const getCapture = unstable_cache(
   async ({
@@ -124,7 +124,8 @@ interface GetCapturesProps {
  * @param userId Id of the user to fetch captures for.
  * @param appId Id of the app to fetch captures for.
  * @param taskId Id of the task to fetch captures for.
- * @returns ActionPayload
+ * @param includes Includes parameters to fetch the captures with.
+ * @returns ActionPayload of list of captures.
  */
 export const getCaptures = unstable_cache(
   async ({
@@ -181,10 +182,120 @@ export const getCaptures = unstable_cache(
 );
 
 /**
+ * Fetches the number of captures for a user grouped by status.
+ * @param userId Id of the user to fetch capture counts for.
+ * @returns ActionPayload of list of capture counts grouped by status.
+ */
+export async function getCaptureCounts({
+  userId,
+}: {
+  userId: string;
+}): Promise<ActionPayload<{ status: CaptureStatus; count: number }[]>> {
+  // parameter validations
+  if (!isValidObjectId(userId)) {
+    return { ok: false, message: "Invalid userId provided.", data: null };
+  }
+  const session = await requireAuth();
+  if (!session || !session.user || !session.user.id) {
+    return { ok: false, message: "User not authenticated.", data: null };
+  }
+  // get capture counts
+  const counts = await prisma.capture.groupBy({
+    by: ["status"],
+    where: { userId },
+    _count: true,
+  });
+  return {
+    ok: true,
+    message: "Capture counts found.",
+    data: counts.map((count) => ({
+      status: count.status as CaptureStatus,
+      count: count._count,
+    })),
+  };
+}
+
+interface GetCapturesPaginatedProps {
+  userId: string;
+  status: CaptureStatus;
+  cursor?: string;
+  limit: number;
+  includes: Prisma.CaptureInclude;
+}
+
+export type CapturesPaginatedOutput = {
+  items: Capture[];
+  nextCursor: string | undefined;
+  hasNextPage: boolean;
+};
+
+/**
+ * Fetches a list of captures for a user with pagination capability.
+ * @param userId Id of the user to fetch captures for.
+ * @param status Status of the captures to fetch.
+ * @param cursor Cursor to fetch the next set of captures.
+ * @param limit Limit of captures to fetch.
+ * @param includes Includes parameters to fetch the captures with.
+ * @returns ActionPayload of list of captures with pagination capability.
+ */
+export async function getCapturesPaginated({
+  userId,
+  status,
+  cursor,
+  limit,
+  includes,
+}: GetCapturesPaginatedProps): Promise<ActionPayload<CapturesPaginatedOutput>> {
+  // parameter validations
+  if (!isValidObjectId(userId)) {
+    return { ok: false, message: "Invalid userId provided.", data: null };
+  }
+  if (cursor && !isValidObjectId(cursor)) {
+    return { ok: false, message: "Invalid cursor provided.", data: null };
+  }
+  if (limit <= 0) {
+    return { ok: false, message: "Limit must be greater than 0.", data: null };
+  }
+  const session = await requireAuth();
+  if (!session || !session.user || !session.user.id) {
+    return { ok: false, message: "User not authenticated.", data: null };
+  }
+  if (session.user.id !== userId) {
+    return { ok: false, message: "User not authorized.", data: null };
+  }
+  // get captures
+  try {
+    const { task = false, app = false } = includes || {};
+    const query: Prisma.CaptureWhereInput = {
+      userId,
+      status,
+    };
+    const captures = await prisma.capture.findMany({
+      where: query,
+      include: { app, task },
+      orderBy: { id: "desc" },
+      take: limit + 1, // Take one extra to check if there's more
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+    // set output data
+    const hasNextPage = captures.length > limit;
+    const items = hasNextPage ? captures.slice(0, limit) : captures;
+    const nextCursor = hasNextPage ? items[items.length - 1].id : undefined;
+    return {
+      ok: true,
+      message: "Captures found.",
+      data: { items, nextCursor, hasNextPage },
+    };
+  } catch (err) {
+    console.error("Error fetching captures:", err);
+    return { ok: false, message: "Failed to fetch captures.", data: null };
+  }
+}
+
+/**
  * Updates a capture in the database.
  * @param id Id of the capture to update.
  * @param data Data to update the capture with.
- * @returns ActionPayload
+ * @returns ActionPayload of updated capture.
  */
 export async function updateCapture(
   id: string,
@@ -212,7 +323,7 @@ export async function updateCapture(
 /**
  * Fetches a list of uploaded files for a given capture ID from S3.
  * @param captureId The ID of the capture to fetch uploaded files for.
- * @returns ActionPayload
+ * @returns ActionPayload of list of uploaded files.
  */
 export async function getCaptureFiles(
   captureId: string
@@ -240,7 +351,7 @@ export async function getCaptureFiles(
 /**
  * Creates a new capture task in the database.
  * @param data Data to create the capture task with.
- * @returns ActionPayload
+ * @returns ActionPayload of created capture.
  */
 export async function createCapture({
   data,
@@ -275,8 +386,10 @@ export async function createCapture({
 
 /**
  * Creates a new capture task in the database.
- * @param data Data to create the capture task with.
- * @returns ActionPayload
+ * @param appId Id of the app to create the capture task for.
+ * @param os OS of the capture task.
+ * @param description Description of the capture task.
+ * @returns ActionPayload of created capture and task.
  */
 export async function createCaptureTask({
   appId,
@@ -340,6 +453,11 @@ export async function createCaptureTask({
   }
 }
 
+/**
+ * Deletes a capture and task from the database.
+ * @param captureId Id of the capture to delete.
+ * @returns ActionPayload of deleted capture and task.
+ */
 export async function deleteCaptureTask(captureId: string) {
   try {
     const session = await requireAuth();

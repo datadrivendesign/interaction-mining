@@ -60,12 +60,15 @@ export async function getApps({
   const isAdmin = session?.user?.role === Role.ADMIN;
   const isIOSDisabled = isProd && !isAdmin;
 
+  // FIXME: disable iOS in prod for now, still in testing
+  let effectiveOS = where.os;
+  if (isIOSDisabled && where.os === Platform.IOS) {
+    effectiveOS = Platform.ANDROID;
+  }
   // Create filtered where clause without mutating original
   const filteredWhere = {
     ...where,
-    ...(isIOSDisabled && where.os === Platform.IOS
-      ? { os: Platform.ANDROID }
-      : {}),
+    os: effectiveOS,
   };
 
   // build a base "where" that overlays text search onto any custom filters
@@ -90,6 +93,44 @@ export async function getApps({
     orderBy,
     take: limit,
     skip: limit ? (page - 1) * limit : undefined,
+  });
+}
+
+export async function getAppsCount({ query, where = {} }: GetAppsParams = {}) {
+  const session = await auth();
+  const isProd = isProduction();
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const isIOSDisabled = isProd && !isAdmin;
+
+  // FIXME: disable iOS in prod for now, still in testing
+  let effectiveOS = where.os;
+  if (isIOSDisabled && where.os === Platform.IOS) {
+    effectiveOS = Platform.ANDROID;
+  }
+  // Create filtered where clause without mutating original
+  const filteredWhere = {
+    ...where,
+    os: effectiveOS,
+  };
+
+  // build a base "where" that overlays text search onto any custom filters
+  const query_: Prisma.AppWhereInput = {
+    ...filteredWhere,
+    ...(query || query !== ""
+      ? {
+          metadata: {
+            is: {
+              name: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+          },
+        }
+      : {}),
+  };
+  return prisma.app.count({
+    where: query_,
   });
 }
 

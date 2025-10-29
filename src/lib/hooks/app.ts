@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import debounce from "lodash/debounce";
-import { getApps, type GetAppsParams } from "@/lib/actions";
+import { getApps, getAppsCount, type GetAppsParams } from "@/lib/actions";
 import { App } from "@prisma/client";
 
 export function useAppSearch(params: GetAppsParams) {
   const [apps, setApps] = useState<App[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const debouncedFetch = useMemo(
@@ -13,12 +14,16 @@ export function useAppSearch(params: GetAppsParams) {
       debounce(async (p: GetAppsParams) => {
         setLoading(true);
         try {
-          const results = await getApps(p);
+          const [results, count] = await Promise.all([
+            getApps(p),
+            getAppsCount(p),
+          ]);
           setApps(results);
+          setTotalCount(count);
         } finally {
           setLoading(false);
         }
-      }, 500),
+      }, 300),
     []
   );
 
@@ -29,5 +34,5 @@ export function useAppSearch(params: GetAppsParams) {
     };
   }, [params, debouncedFetch]);
 
-  return { apps, loading, refetch: () => debouncedFetch(params) };
+  return { apps, totalCount, loading, refetch: () => debouncedFetch(params) };
 }
