@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { getCaptures, getUser } from "../actions";
+import { getUser } from "../actions";
 import useSWR from "swr";
 import { Prisma } from "@prisma/client";
 
