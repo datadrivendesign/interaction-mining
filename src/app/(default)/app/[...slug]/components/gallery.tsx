@@ -175,7 +175,7 @@ export function InspectView({ data }: { data: Trace }) {
           <Button
             variant={"secondary"}
             onClick={handleDownload}
-            title="Download trace data"
+            tooltip="Download trace data"
           >
             <Download className="size-4" />
             Download trace
