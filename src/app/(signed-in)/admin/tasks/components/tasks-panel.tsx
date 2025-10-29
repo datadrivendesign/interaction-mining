@@ -1,20 +1,10 @@
 "use client";
 
-import {
-  Table,
-  TableCell,
-  TableRow,
-  TableBody,
-  TableHead,
-  TableHeader,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { ComboboxOption } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
 import { AdminPagination } from "@/components/ui/admin-pagination";
 import { Loader2 } from "lucide-react";
 import { CaptureAdminView } from "@/lib/actions";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -24,72 +14,12 @@ import {
   getReviewingCaptures,
 } from "../../util";
 import { FilterTask } from "./filter-task";
+import { TasksTable } from "./tasks-table";
 
-function TasksTable({
-  captures,
-  handleTableUserClick,
-  handleTableAppClick,
-}: {
-  captures: CaptureAdminView[];
-  handleTableUserClick: (capture: CaptureAdminView) => void;
-  handleTableAppClick: (capture: CaptureAdminView) => void;
-}) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-none">
-          <TableHead className="text-muted-foreground">Name</TableHead>
-          <TableHead className="text-muted-foreground">Email</TableHead>
-          <TableHead className="text-muted-foreground">App</TableHead>
-          <TableHead className="text-muted-foreground">Review Task</TableHead>
-        </TableRow>
-      </TableHeader>
-
-      <TableBody>
-        {captures.map((capture) => (
-          <TableRow key={capture.id} className="hover:bg-muted/10 border-0">
-            <TableCell className="font-medium">
-              <Button
-                variant="outline"
-                className="hover p-2 cursor-pointer"
-                onClick={() => handleTableUserClick(capture)}
-              >
-                {capture.user?.name ?? "Unknown"}
-              </Button>
-            </TableCell>
-            <TableCell>
-              <Link href={`/admin/users/${capture.user?.id}`}>
-                <Button
-                  variant="link"
-                  className="hover:bg-transparent p-2 cursor-pointer"
-                >
-                  {capture.user?.email ?? "Unknown"}
-                </Button>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Button
-                variant="outline"
-                className="hover p-2 cursor-pointer"
-                onClick={() => handleTableAppClick(capture)}
-              >
-                {capture.app.metadata.name}
-              </Button>
-            </TableCell>
-            <TableCell>
-              <Link href={`/capture/${capture.id}/evaluate`}>
-                <Button className="hover p-2 cursor-pointer">
-                  {capture.task.description}
-                </Button>
-              </Link>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
+/**
+ * TasksPanel is the main panel for the tasks page
+ * @returns TasksPanel component
+ */
 export function TasksPanel() {
   // constants
   const itemsPerPage = 10;
@@ -113,6 +43,7 @@ export function TasksPanel() {
   const [appsFiltered, setAppsFiltered] = useState<ComboboxOption[]>([]);
   const [usersFiltered, setUsersFiltered] = useState<ComboboxOption[]>([]);
 
+  // handle fetching filter options from server
   useEffect(() => {
     const fetchFilterOptions = async () => {
       const filterOptionsRes = await getFilterOptionsForTasks();
@@ -139,6 +70,7 @@ export function TasksPanel() {
     fetchFilterOptions();
   }, []);
 
+  // handle updating filtered objects from url parameters
   useEffect(() => {
     const userIds = searchParams.get("users")
       ? searchParams.get("users")?.split(",")
@@ -150,6 +82,7 @@ export function TasksPanel() {
     setAppsFiltered(appsList.filter((app) => appIds?.includes(app.value)));
   }, [usersList, appsList, searchParams]);
 
+  // handle fetching captures from server based on filters
   useEffect(() => {
     const userIds = searchParams.get("users")
       ? searchParams.get("users")?.split(",")
@@ -195,13 +128,14 @@ export function TasksPanel() {
     fetchReviewCaptures();
   }, [page, itemsPerPage, searchParams]);
 
+  // filter out captures with no user or email
   const validCaptures = captures.filter(
     (capture) => capture.user?.name !== null && capture.user?.email !== null
   );
 
-  // pagination logic
+  // pagination inputs for pagination component
   const totalPages = Math.ceil(reviewCapturesCount / itemsPerPage);
-
+  // handle page change
   const handlePageChange = (page: number) => {
     router.push(
       constructTaskPanelURL(

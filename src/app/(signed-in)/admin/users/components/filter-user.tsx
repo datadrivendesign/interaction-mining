@@ -8,6 +8,9 @@ import { Role } from "@prisma/client";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { FilterBadge } from "@/components/ui/filter-badge";
 import { StatusButtonGroup } from "@/components/ui/status-button-group";
+import { useRouter } from "next/router";
+import { constructUserPanelURL } from "../../util";
+import { useState } from "react";
 
 const RoleOptions = [
   { value: "", label: "All" },
@@ -25,6 +28,16 @@ interface FilterUserParams {
   handleClearFilters: () => void;
 }
 
+/**
+ * FilterUser renders the filter UI for users panel. It only manages the UI, the logic needs to be handled by the parent component.
+ * @param usersList - Available users for filtering
+ * @param usersFiltered - Currently filtered users
+ * @param roleFiltered - Currently selected role filter
+ * @param handleUserFilterSelect - Handler for selecting a user filter
+ * @param handleUserFilterRemove - Handler for removing a user filter
+ * @param handleRoleFilterSelect - Handler for selecting a role filter
+ * @param handleClearFilters - Handler for clearing all filters
+ */
 export function FilterUser({
   usersList,
   usersFiltered,

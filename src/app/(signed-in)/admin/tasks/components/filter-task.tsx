@@ -19,6 +19,19 @@ interface FilterTaskParams {
   handleClearFilters: () => void;
 }
 
+/**
+ * FilterTask renders the filter UI for tasks panel. It only manages the UI, the logic needs to be handled by the parent component.
+ * @param appsList - Available apps for filtering
+ * @param usersList - Available users for filtering
+ * @param appsFiltered - Currently filtered apps
+ * @param usersFiltered - Currently filtered users
+ * @param handleAppFilterSelect - Handler for selecting a app filter
+ * @param handleUserFilterSelect - Handler for selecting a user filter
+ * @param handleAppFilterRemove - Handler for removing a app filter
+ * @param handleUserFilterRemove - Handler for removing a user filter
+ * @param handleClearFilters - Handler for clearing all filters
+ * @returns
+ */
 export function FilterTask({
   appsList,
   usersList,

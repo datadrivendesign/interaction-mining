@@ -1,19 +1,13 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComboboxOption } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
 import { AdminPagination } from "@/components/ui/admin-pagination";
 import { Capture } from "@/lib/actions";
-import { Platform, prettyOS } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
-import Image from "next/image";
-import Link from "next/link";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   constructUserCapturesURL,
   getFilterOptionsForUserCaptures,
@@ -23,63 +17,13 @@ import {
 } from "../../../util";
 import { AdminNavBar } from "../../../components/admin-nav-bar";
 import { FilterCapture } from "./filter-user-captures";
+import { CaptureCard } from "./capture-card";
 
-function EmptyCaptures() {
-  return (
-    <div className="flex items-center justify-center py-8 text-muted-foreground">
-      <AlertCircle className="mr-2 size-4" />
-      No captures found.
-    </div>
-  );
-}
-
-function CaptureCard({ capture }: { capture: Capture }) {
-  return (
-    <Card className="rounded-md hover:shadow-sm transition p-2">
-      <CardHeader className="flex flex-row items-center gap-4">
-        <Image
-          src={capture.app?.metadata?.icon || "/placeholder.png"}
-          alt="App Icon"
-          className="w-10 h-10 rounded object-cover"
-          width={40}
-          height={40}
-        />
-        <div className="w-full">
-          <div className="flex flex-row items-center gap-2">
-            <CardTitle className="text-sm font-medium">
-              {capture.app?.metadata?.name ?? "Unnamed App"}
-            </CardTitle>
-            <Badge variant="outline" className="text-xs">
-              {capture.task?.os
-                ? prettyOS(capture.task?.os as Platform)
-                : "Unknown OS"}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground line-clamp-1">
-            {capture.task?.description ?? "No description"}
-          </p>
-        </div>
-        <div>
-          <Badge variant="default">{capture.status}</Badge>
-        </div>
-        <div>
-          <Button variant="link" asChild>
-            <Link
-              href={
-                capture.status !== CaptureStatus.REVIEWING
-                  ? `/capture/${capture.id}/start`
-                  : `/capture/${capture.id}/evaluate`
-              }
-            >
-              Go
-            </Link>
-          </Button>
-        </div>
-      </CardHeader>
-    </Card>
-  );
-}
-
+/**
+ * CapturesList displays a list of capture cards
+ * @param captures - The captures to display
+ * @returns CapturesList component
+ */
 function CapturesList({ captures }: { captures: Capture[] }) {
   return (
     <div className="space-y-2">
@@ -90,6 +34,24 @@ function CapturesList({ captures }: { captures: Capture[] }) {
   );
 }
 
+/**
+ * EmptyCaptures displays a message when there are no captures
+ * @returns EmptyCaptures component
+ */
+function EmptyCaptures() {
+  return (
+    <div className="flex items-center justify-center py-8 text-muted-foreground">
+      <AlertCircle className="mr-2 size-4" />
+      No captures found.
+    </div>
+  );
+}
+
+/**
+ * CapturesColumn displays a column of capture cards
+ * @param userId - The ID of the user to display captures for
+ * @returns CapturesColumn component
+ */
 export function CapturesColumn({ userId }: { userId: string }) {
   // constants
   const itemsPerPage = 10;
@@ -107,11 +69,8 @@ export function CapturesColumn({ userId }: { userId: string }) {
   const [captures, setCaptures] = useState<Capture[]>([]);
   const [capturesCount, setCapturesCount] = useState(0);
   const [appsCount, setAppsCount] = useState(0);
-  // keep track of filtered apps
+  // keep track of available apps for filtering
   const [appsList, setAppsList] = useState<ComboboxOption[]>([]);
-  const [appsFiltered, setAppsFiltered] = useState<ComboboxOption[]>([]);
-  // keep track of filtered status
-  const [statusFiltered, setStatusFiltered] = useState<CaptureStatus | "">("");
 
   // handle fetching filter options from server
   useEffect(() => {
@@ -197,67 +156,20 @@ export function CapturesColumn({ userId }: { userId: string }) {
     fetchCaptures();
   }, [page, itemsPerPage, searchParams, userId]);
 
-  // pagination logic
+  // calculate total pages for pagination
   const totalPages = Math.ceil(capturesCount / itemsPerPage);
+  // handle page change
   const handlePageChange = (page: number) => {
-    router.push(
-      constructUserCapturesURL(
-        userId,
-        page,
-        appsFiltered.map((app) => app.value),
-        statusFiltered
-      )
-    );
-  };
+    const appIds = searchParams.get("apps")
+      ? searchParams.get("apps")?.split(",")
+      : [];
+    const status = (searchParams.get("status") ?? undefined) as
+      | CaptureStatus
+      | undefined;
 
-  // handle filter logic
-  const handleAppFilterSelect = (option: ComboboxOption) => {
-    const newAppsFiltered = [...appsFiltered, option];
-    setAppsFiltered(newAppsFiltered);
     router.push(
-      constructUserCapturesURL(
-        userId,
-        page,
-        newAppsFiltered.map((app) => app.value),
-        statusFiltered
-      )
+      constructUserCapturesURL(userId, page, appIds || [], status || "")
     );
-  };
-
-  const handleAppFilterRemove = (option: ComboboxOption) => {
-    const newAppsFiltered = appsFiltered.filter(
-      (app) => app.value !== option.value
-    );
-    setAppsFiltered(newAppsFiltered);
-    router.push(
-      constructUserCapturesURL(
-        userId,
-        page,
-        newAppsFiltered.map((app) => app.value),
-        statusFiltered
-      )
-    );
-  };
-
-  // handle role filter logic
-  const handleStatusFilterSelect = (option: ComboboxOption) => {
-    const newSelectedStatus = option.value as CaptureStatus | "";
-    setStatusFiltered(newSelectedStatus);
-    router.push(
-      constructUserCapturesURL(
-        userId,
-        page,
-        appsFiltered.map((app) => app.value),
-        newSelectedStatus
-      )
-    );
-  };
-
-  // handle clear filters logic
-  const handleClearFilters = () => {
-    setAppsFiltered([]);
-    setStatusFiltered("");
-    router.push(constructUserCapturesURL(userId, page, [], ""));
   };
 
   return (
@@ -278,15 +190,8 @@ export function CapturesColumn({ userId }: { userId: string }) {
           </div>
 
           <div className="justify-between">
-            <FilterCapture
-              appsList={appsList}
-              appsFiltered={appsFiltered}
-              statusFiltered={statusFiltered}
-              handleAppFilterSelect={handleAppFilterSelect}
-              handleAppFilterRemove={handleAppFilterRemove}
-              handleStatusFilterSelect={handleStatusFilterSelect}
-              handleClearFilters={handleClearFilters}
-            />
+            {/* Filter UI and logic */}
+            <FilterCapture userId={userId} page={page} appsList={appsList} />
             <div className="flex flex-row items-center gap-5">
               <p className="text-start mt-1 text-md font-bold tracking-tight">
                 Captures Fetched{" "}
@@ -310,6 +215,7 @@ export function CapturesColumn({ userId }: { userId: string }) {
                 <CapturesList captures={captures} />
               )}
             </div>
+            {/* Pagination */}
             <AdminPagination
               currentPage={page}
               totalPages={totalPages}
