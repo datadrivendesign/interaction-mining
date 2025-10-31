@@ -18,8 +18,8 @@ const remotePatterns: RemotePattern[] = [
   },
   {
     protocol: "https",
-    hostname: "dev.interactionmining.org"
-  }
+    hostname: "dev.interactionmining.org",
+  },
 ];
 // conditionally add cloudfront url if set
 if (process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL) {
@@ -49,6 +49,7 @@ if (process.env.MINIO_ENDPOINT) {
 }
 
 const nextConfig: NextConfig = {
+  reactStrictMode: false,
   turbopack: {
     rules: {
       "*.svg": {
