@@ -1,11 +1,12 @@
-import { toast } from "sonner";
 import { FrameData } from "../../types";
-import { generateSignedCloudFrontURL, listFromS3 } from "@/lib/aws/s3/server";
 import { ListedFiles } from "@/lib/actions";
-import { isCloudfrontUrlExpired } from "@/lib/aws";
 
 /**
- * Fallback frame grabber using Canvas2D (works in Safari).
+ * Fallback frame grabber using Canvas2D (works in Safari) to extract a frame from a video
+ * @param video - The HTML video element to extract frames from
+ * @param t - The timestamp to extract the frame from
+ * @param scale - The scale of the frame (default is 1)
+ * @returns The frame data (id, src, timestamp)
  */
 async function grabFrameViaCanvas(
   video: HTMLVideoElement,
@@ -49,7 +50,10 @@ async function grabFrameViaCanvas(
 
 /**
  * Extracts frame from the video at current timestamp using WebCodecs API
- * @param video HTML object of video element to extract from
+ * @param video - The HTML video element to extract frames from
+ * @param t - The timestamp to extract the frame from
+ * @param scale - The scale of the frame (default is 1)
+ * @returns The frame data (id, src, timestamp)
  */
 export async function extractVideoFrame(
   video: HTMLVideoElement,
@@ -60,47 +64,14 @@ export async function extractVideoFrame(
   return grabFrameViaCanvas(video, t, scale);
 }
 
-export async function fileFetcher(
-  [_, fileKey]: [string, string],
-  cachedData?: ListedFiles[]
-): Promise<ListedFiles[]> {
-  let res = await listFromS3(fileKey, false);
-  if (!res.ok) {
-    console.error("Failed to fetch uploaded files", res.message);
-    toast.error("Failed to fetch uploaded files");
-    return [];
-  }
-  // check if cached data matches current data and needs new signed url
-  const processedData = await Promise.all(
-    res.data.map(async (file) => {
-      const cachedFile = cachedData?.find(
-        (cached) => cached.fileKey === file.fileKey
-      );
-      // check if cached file is expired or not signed
-      if (cachedFile && cachedFile.fileUrl.includes("?")) {
-        const isExpired = isCloudfrontUrlExpired(cachedFile.fileUrl);
-        if (!isExpired) {
-          return { ...file, fileUrl: cachedFile.fileUrl };
-        }
-      }
-      // skip if file is a draft
-      // TODO: this is a hack, should find better way to handle this...
-      if (file.fileKey.includes("/drafts/")) {
-        return file;
-      }
-      // Generate new signed URL
-      const signedUrlRes = await generateSignedCloudFrontURL(file.fileKey);
-      if (signedUrlRes.ok) {
-        return { ...file, fileUrl: signedUrlRes.data.signedUrl };
-      } else {
-        return file;
-      }
-    })
-  );
-  return processedData;
-}
-
-// Load thumbnails
+/**
+ * Extracts thumbnails from the video
+ * @param video - The video element to extract thumbnails from
+ * @param videoDuration - The duration of the video
+ * @param maxThumbs - The maximum number of thumbnails to extract
+ * @param thumbHeight - The height of the thumbnails
+ * @returns The list of thumbnails
+ */
 export async function extractVideoThumbnails(
   video: HTMLVideoElement,
   videoDuration: number,
@@ -138,6 +109,14 @@ export async function extractVideoThumbnails(
   }));
 }
 
+/**
+ * Extracts thumbnails from the video
+ * @param video - The video element to extract thumbnails from
+ * @param videoDuration - The duration of the video
+ * @param maxThumbs - The maximum number of thumbnails to extract
+ * @param thumbHeight - The height of the thumbnails
+ * @returns The list of thumbnails
+ */
 export const extractThumbnails = async (
   video: HTMLVideoElement,
   videoDuration: number,
