@@ -34,6 +34,7 @@ enum CaptureState {
 }
 
 export default function Page() {
+  console.log("[START PAGE] Page component rendered");
   const { captureId } = useParams() as { captureId: string };
 
   const [captureState, setCaptureState] = useState<CaptureState>(
@@ -44,16 +45,11 @@ export default function Page() {
     includes: { app: true, task: true },
   });
   const os: Platform | undefined = capture?.task?.os as Platform | undefined;
-  // Memoize SWR config to prevent recreation on every render
-  const swrConfig = useMemo(
-    () => getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId),
-    [captureId]
-  );
-  // SWR to check updates if files been uploaded for this capture
+  // SWR (polling) to check updates if files been uploaded for this capture
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
-    swrConfig
+    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId)
   );
   // filter out draft autosaves and screen images
   const filteredUserUploads = useMemo(
