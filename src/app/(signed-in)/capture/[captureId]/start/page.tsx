@@ -22,7 +22,7 @@ import {
   fileFetcher,
   getSWRConfig,
   handleDeleteFile,
-} from "./util";
+} from "../util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { Platform } from "@/lib/utils";
@@ -34,6 +34,7 @@ enum CaptureState {
 }
 
 export default function Page() {
+  console.log("[START PAGE] Page component rendered");
   const { captureId } = useParams() as { captureId: string };
 
   const [captureState, setCaptureState] = useState<CaptureState>(
@@ -44,12 +45,13 @@ export default function Page() {
     includes: { app: true, task: true },
   });
   const os: Platform | undefined = capture?.task?.os as Platform | undefined;
-
+  // SWR (polling) to check updates if files been uploaded for this capture
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
-    [CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`],
+    [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
-    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
+    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId)
   );
+  // filter out draft autosaves and screen images
   const filteredUserUploads = useMemo(
     () =>
       uploadList.filter(
@@ -59,31 +61,33 @@ export default function Page() {
       ),
     [uploadList]
   );
+  // count number of draft autosaves
   const numFilteredDrafts = useMemo(
     () => uploadList.filter((file) => file.fileKey.includes("/drafts")),
     [uploadList]
   );
 
+  // useEffect to check if capture status should be updated or not
   useEffect(() => {
-    console.log('[START PAGE] useEffect triggered', {
+    console.log("[START PAGE] useEffect triggered", {
       captureState,
       filteredUserUploadsLength: filteredUserUploads.length,
-      capture: !!capture
+      capture: !!capture,
     });
-    
+
     if (
       capture &&
       captureState === CaptureState.IDLE &&
       filteredUserUploads.length > 0
     ) {
-      console.log('[START PAGE] Setting state to UPLOADED');
+      console.log("[START PAGE] Setting state to UPLOADED");
       setCaptureState(CaptureState.UPLOADED);
     } else if (
       capture &&
       captureState === CaptureState.UPLOADED &&
       filteredUserUploads.length === 0
     ) {
-      console.log('[START PAGE] Setting state to IDLE');
+      console.log("[START PAGE] Setting state to IDLE");
       setCaptureState(CaptureState.IDLE);
     }
   }, [capture, captureState, filteredUserUploads.length]);

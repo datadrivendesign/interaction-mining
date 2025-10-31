@@ -32,6 +32,8 @@ import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 import { FeedbackDialog } from "./components/repair-screen/components/feedback-dialog";
+import { fileFetcher } from "../util";
+import { ListedFiles } from "@/lib/actions";
 
 enum TraceSteps {
   Capture = 0,
@@ -49,6 +51,7 @@ export default function Page() {
   const [draftFetchResult, setDraftFetchResult] = useState<DraftFetchResults>(
     DraftFetchResults.LOADING
   );
+  const [files, setFiles] = useState<ListedFiles[]>([]);
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
 
@@ -145,6 +148,23 @@ export default function Page() {
     };
     fetchFiles();
   }, [captureId, draftFetchResult, methods]);
+
+  // Fetch video files once when component mounts - files won't change during edit session
+  useEffect(() => {
+    if (!captureId) return;
+
+    const fetchVideoFiles = async () => {
+      try {
+        const result = await fileFetcher(["", captureId]);
+        setFiles(result);
+      } catch (error) {
+        console.error("Failed to fetch video files:", error);
+        setFiles([]);
+      }
+    };
+
+    fetchVideoFiles();
+  }, [captureId]);
 
   const isAutosavingRef = useRef(false);
   useEffect(() => {
@@ -322,7 +342,11 @@ export default function Page() {
     switch (stepIndex) {
       case 0:
         return (
-          <RepairScreen capture={capture} draftFetchResult={draftFetchResult} />
+          <RepairScreen
+            capture={capture}
+            draftFetchResult={draftFetchResult}
+            files={files}
+          />
         );
       case 1:
         return <RedactScreen />;

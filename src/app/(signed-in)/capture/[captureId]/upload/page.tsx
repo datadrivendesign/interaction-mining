@@ -4,7 +4,7 @@ import { useActionState, useCallback, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import {
   ExternalLink,
   File,
@@ -32,17 +32,16 @@ import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 
-import {
-  fileFetcher,
-  handleUploadFile,
-  handleDeleteFile,
-  CaptureSWROperations,
-  getSWRConfig,
-} from "./util";
+import { handleUploadFile } from "./util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { useCapture } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
-import { ListedFiles } from "@/lib/actions";
+import {
+  CaptureSWROperations,
+  fileFetcher,
+  getSWRConfig,
+  handleDeleteFile,
+} from "../util";
 
 export default function Page() {
   const params = useParams();
@@ -54,11 +53,13 @@ export default function Page() {
 
   const app = capture?.app;
 
+  // SWR (polling) to check updates if files been uploaded for this capture
   const { data: uploadList = [] } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
-    (key): Promise<ListedFiles[]> => fileFetcher(key, uploadList),
-    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, `uploads/${captureId}`)
+    fileFetcher,
+    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId)
   );
+  // filter out draft autosaves and screen images
   const filteredUserUploads = useMemo(
     () =>
       uploadList.filter(
@@ -68,6 +69,7 @@ export default function Page() {
       ),
     [uploadList]
   );
+  // count number of draft autosaves
   const numFilteredDrafts = useMemo(
     () => uploadList.filter((file) => file.fileKey.includes("/drafts")),
     [uploadList]
@@ -75,8 +77,15 @@ export default function Page() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  // state to track if draft autosaves should be deleted
   const [deleteDrafts, setDeleteDrafts] = useState<boolean>(true);
 
+  /**
+   * Handles the submission of a file uploaded to form
+   * @param _ - The previous state (not used)
+   * @param formData - The form data (containing file to upload)
+   * @returns The result of the file upload
+   */
   const handleSubmit = useCallback(
     async (_: any, formData: FormData) => {
       return await handleUploadFile(captureId, formData).then((res) => {

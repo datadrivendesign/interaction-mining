@@ -6,14 +6,12 @@ import { Platform } from "@/lib/utils";
 import { useWatch } from "react-hook-form";
 import { FrameData } from "../types";
 
-import useSWR from "swr";
 import { useHotkeys } from "react-hotkeys-hook";
-import { fileFetcher, getSWRConfig } from "./util";
 import { RepairScreenAndroid } from "./components/android/repair-screen-android";
 import { RepairScreenIOS } from "./components/ios/repair-screen-ios";
-import { ListedFiles } from "@/lib/actions";
 import { Prisma } from "@prisma/client";
 import { DraftFetchResults } from "../../util";
+import { ListedFiles } from "@/lib/actions";
 
 interface NavigationContextType {
   handleNext: () => void;
@@ -48,6 +46,7 @@ export const useNavigation = () => {
 export default function RepairScreen({
   capture,
   draftFetchResult,
+  files,
 }: {
   capture:
     | Prisma.CaptureGetPayload<{
@@ -58,6 +57,7 @@ export default function RepairScreen({
       }>
     | undefined;
   draftFetchResult: DraftFetchResults;
+  files: ListedFiles[];
 }) {
   const [watchScreens] = useWatch({
     name: ["screens"],
@@ -67,6 +67,7 @@ export default function RepairScreen({
   const os = capture?.task ? capture.task.os : "none";
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
 
+  // handle focusing on previous screen in the filmstrip list
   const handlePrevious = useCallback(() => {
     // javascript be stupid, negative modulo isn't a thing here
     let wrappedIndex = (focusViewIndex - 1) % screens.length;
@@ -76,6 +77,7 @@ export default function RepairScreen({
     setFocusViewIndex(wrappedIndex);
   }, [focusViewIndex, screens.length]);
 
+  // handle focusing on next screen in the filmstrip list
   const handleNext = useCallback(() => {
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
@@ -95,15 +97,6 @@ export default function RepairScreen({
     e.preventDefault();
     handleNext();
   });
-
-  // Fetch file data
-  const { data: files = [] } = useSWR(
-    capture?.id ? ["Capture files", `uploads/${capture.id}`] : null,
-    (key): Promise<ListedFiles[]> => {
-      return fileFetcher(key, files);
-    },
-    getSWRConfig(capture?.id ?? "")
-  );
 
   return (
     <NavigationProvider
