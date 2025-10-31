@@ -48,6 +48,7 @@ if (process.env.MINIO_ENDPOINT) {
   }
 }
 
+const cdn = process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL;
 const nextConfig: NextConfig = {
   turbopack: {
     rules: {
@@ -68,12 +69,22 @@ const nextConfig: NextConfig = {
     viewTransition: true,
     reactCompiler: true,
   },
-  rewrites: async () => [
-    {
-      source: "/cdn/:path*", // public-facing path
-      destination: `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL || ""}/:path*`,
-    },
-  ],
+  rewrites: async () => {
+    try {
+      if (!cdn) {
+        return [];
+      }
+      const cdnUrl = new URL(cdn);
+      return [
+        {
+          source: "/cdn/:path*", // public-facing path
+          destination: `${cdnUrl.origin}/:path*`,
+        },
+      ];
+    } catch {
+      return [];
+    }
+  },
   redirects: async () => [
     {
       source: "/rico/:path*",
