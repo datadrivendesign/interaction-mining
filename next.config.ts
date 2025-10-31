@@ -49,7 +49,6 @@ if (process.env.MINIO_ENDPOINT) {
 }
 
 const nextConfig: NextConfig = {
-  reactStrictMode: false,
   turbopack: {
     rules: {
       "*.svg": {
