@@ -1,29 +1,64 @@
-# Interaction Mining (ODIM)
+<div align="center">
+  <h2>Interaction Mining</h2>
+  <p>A web platform that enables capture, annotation, and redaction of interaction mining data.</p>
 
-A privacy‑preserving, open‑source platform for collecting, managing, and analyzing organic user task flows from mobile apps.
+  </p>
+    <a href="https://shields.io/">
+      <img src="https://img.shields.io/badge/framework-Next.js-000000?logo=nextdotjs&logoColor=white" alt="framework" />
+    </a>
+    <a>
+      <img src="https://img.shields.io/badge/runtime-Node.js-43853D?logo=node.js&logoColor=white" alt="runtime" />
+    </a>
+    <a>
+      <img src="https://img.shields.io/badge/database-MongoDB-47A248?logo=mongodb&logoColor=white" alt="database" />
+    </a>
+    <a>
+      <img src="https://img.shields.io/badge/storage-MinIO%20%7C%20AWS%20S3-FFCA28?logo=amazon-s3&logoColor=black" alt="storage" />
+    </a>
+    <a>
+      <img src="https://img.shields.io/badge/auth-NextAuth.js%20(Google%20OAuth)-4285F4?logo=google&logoColor=white" alt="auth" />
+    </a>
+    <a href="LICENSE">
+      <img src="https://img.shields.io/badge/license-NCSA-green" alt="license" />
+    </a>
+  </p>
 
-> ODIM (On‑Device Interaction Mining) consists of an Android client that captures interaction data and a Next.js web app that stores, visualizes, and analyzes the collected flows.
+
+  <p>
+    <a href="#about-the-project">About</a>
+    · <a href="#features">Features</a>
+    · <a href="#architecture">Architecture</a>
+    · <a href="#tech-stack">Tech Stack</a>
+    · <a href="#getting-started">Getting Started</a>
+    · <a href="#troubleshooting">Troubleshooting</a>
+    · <a href="#research-group">Research Group</a>
+  </p>
+  <img src="teaser.png" alt="ODIM Workflow Diagram" width="700"/>
+</div>
+
 
 ---
 
 ## About the Project
 
-Interaction Mining is a privacy-preserving open-source platform for collecting, managing, and sharing organic user task flows from mobile apps. In other words, it allows you to capture what real users do inside apps such as screens, UI interactions, and navigation paths directly from their devices. ODIM, abbreviated as On Device Interaction Mining, is a Next.js (React) web app that receives the data from the Android client, stores it (in a database and object storage), and provides a UI to visualize and analyze the collected interaction flows. 
+* Interaction Mining is web platform that enables capture, annotation, and redaction of interaction mining data. Interaction Mining captures what real users do inside apps such as screens, UI interactions, and navigation paths directly from their devices.  
 ---
+## ODIM (On Device Interaction Mining) 
 
+* ODIM, abbreviated as On Device Interaction Mining, is a Next.js (React) web app that enables on-device capture of interaction mining data on an Android device.
+* ODIM's web platform enables more in-depth capabilities, such as repairing, redacting, and annotating user interaction data.
+* To learn more about the ODIM application, visit [ODIM Android on GitHub](https://github.com/datadrivendesign/odim-android).
+* We are also actively developing support for **iOS interaction mining**, expanding ODIM’s capabilities across mobile platforms.
+---
 ## Features
-
-* **Automated Interaction Capture**
-
-  * Uses Android’s Accessibility Service API to record user actions (taps, scrolls, text input) and screen content in the background, automatically generating task flows from real app use.
 
 * **Privacy‑Preserving Data Collection**
 
-  * Sensitive on-screen data is automatically detected and masked (e.g., passwords, personal info). All data stays private and under user control via self-hosted storage.
+  * Interface that allows for users to redact sensitive on-screen data (e.g., passwords, personal information) at their own discretion. The data is linked to a users’ account, and is not publicly viewable to the repository unless admin approved.
 
 * **Data Management & Visualization**
 
-  * Next.js web app to browse, replay, and analyze recorded flows to study user behavior, UI patterns, and pain points.
+  * Next.js web app to browse and analyze recorded flows to study user behavior, UI patterns, and pain points.
 
 * **Cloud or Local Storage Integration**
 
@@ -31,12 +66,15 @@ Interaction Mining is a privacy-preserving open-source platform for collecting, 
 
 * **User Authentication & Contributions**
 
-  * Supports Google OAuth login for managing contributors or shared datasets. Optional for personal, single‑user deployments.
+  * Supports Google OAuth login for managing contributors or shared datasets.
 
 * **Extensible & Open Source**
 
-  * Fully open source and customizable—extend for new analyses, visualizations, or data sources. Future plans may include iOS support.
+  * Fully open source and customizable—extend for new analyses, visualizations, or data sources. Future plans include iOS support.
 
+* **Automated Interaction Capture**
+
+  * Uses Android’s Accessibility Service API to record user actions (taps, scrolls, text input) and screen content in the background, automatically generating task flows from real app use. To learn more about the ODIM application, visit [ODIM Android on GitHub](https://github.com/datadrivendesign/odim-android).
 ---
 
 ## Architecture
