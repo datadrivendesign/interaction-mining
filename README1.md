@@ -79,39 +79,62 @@
 
 ## Architecture
 
-* **Next.js App Router** under `src/app/`
+### App routes
+- `/explore` — Browse datasets and flows.
+- `/contribute` — Contributor instructions & upload.
+- `/dashboard` — User dashboard for capture/task progress (signed-in).
+- `/candidates` — Panel to display candidate task apps (useful for crowdsourcing).
 
-  * Representative routes:
+### Capture workflow
+- `/capture/new` — Create a new interaction capture session.
+- `/capture/[captureId]/start` — Start capture session workflow (polls for incoming frame uploads).
+- `/capture/[captureId]/upload` — File upload UI for the session.
+- `/capture/[captureId]/edit` — Annotation/redaction interface (repair screens, redact sensitive data, review).
+- `/capture/[captureId]/evaluate` — Review panel to assess capture quality (accessible to the capture owner and admins).
 
-    * `/explore` – browse datasets or flows
-    * `/contribute` – contributor instructions/upload
-    * `/api/auth` – NextAuth authentication endpoints
-* **Backend / API layer** via Next.js API routes (Node.js) to accept data from the Android client and serve frontend requests.
-* **Database and object storage**
+### Admin
+- `/admin/tasks` — Admin panel to review captures/tasks before publishing to the repository.
+- `/admin/users` — Admin panel to view all users.
+- `/admin/users/[userId]` — Admin view for an individual user and their captures.
 
-  * MongoDB for metadata (flows, users, etc.)
-  * MinIO or AWS S3 for large assets (screenshots)
-* **Auth**
+### Backend / API layer
+- Next.js API routes (Node.js) that accept data from the Android client and serve frontend requests.
 
-  * NextAuth.js with Google OAuth 2.0 (optional)
-* **State management**
+**API routes**
+- `/api/auth/[...nextauth]` — NextAuth.js routes (Google OAuth).
+- `GET  /api/capture/[captureId]` — Capture details.
+- `POST /api/capture/[captureId]/upload/frames` — Upload screen frames.
+- `POST /api/capture/[captureId]/upload/metadata` — Upload trace metadata.
 
-  * React hooks and context; integrate other libraries as needed.
+### Database and Object Storage
+- **MongoDB** for metadata (flows, users, etc.).
+  - **Prisma** as the ORM; **MongoDB must run as a replica set** (Prisma needs this for transactions and `watch`/change streams). See [`/prisma/schema.prisma`](./prisma/schema.prisma).
+- **MinIO** or **AWS S3** for large assets (screenshots).
 
-> Note: Folder names and exact routes may differ; adapt this README to your repo’s structure as needed.
+### Auth
+- NextAuth.js with Google OAuth 2.0.
 
+### State management
+- React hooks and context; integrate additional libraries as needed.
+  
 ---
+
+## Dependencies
+
+- `@radix-ui/*` — UI component primitives  
+- `lucide-react` — Icons library  
+- `react-konva` — Canvas rendering for redaction  
+- `swr` — Data fetching  
+- `@dnd-kit/*` — Drag and drop utilities
 
 ## Tech Stack
 
-* **Framework:** Next.js (React) with the App Router
-* **Frontend:** React (functional components and hooks)
-* **Styling:** Tailwind CSS or another utility‑first framework (depending on project setup)
-* **Icons:** `lucide-react`
-* **Backend/API:** Next.js API routes on Node.js
-* **Database:** MongoDB (local or Atlas)
-* **Object Storage:** MinIO (local S3) or AWS S3
-* **Auth:** NextAuth.js (Google OAuth 2.0)
+- **React 19 (latest)**
+- **NextAuth v5 (beta)** with Prisma adapter
+- **Prisma 6.8.2** with **MongoDB provider**
+- **TypeScript** with **strict mode**
+- **Tailwind CSS v4 (beta)**
+- **Development uses Turbopack** (Next.js bundler)
 
 ---
 
@@ -119,169 +142,15 @@
 
 ### Prerequisites
 
-* **Node.js** v16 or v18 LTS (includes npm)
-
-  Verify:
-
-  ```bash
-  node -v
-  npm -v
-  ```
-
-* **MongoDB**
-
-  * Local: MongoDB Community Edition, or
-  * Cloud: MongoDB Atlas URI
-
-* **Docker** (optional but recommended)
-
-  * Needed if you want to run a local MinIO server instead of AWS S3.
-
-* **Android Studio**
-
-  * Android SDK Platform API 34 (Android 14)
-  * Build Tools 30.0.3+
-  * Kotlin plugin 1.7.20+
-  * Java JDK 17+
-
-* **Android Device or Emulator**
-
-  * Android 7.0+ (11+ recommended)
-  * Enable Developer Options and grant Accessibility Service permission after installing the APK
-
-* **Google Cloud OAuth credentials** (optional)
-
-  * Needed only if enabling Google Sign-In for multi-user access.
-  * Get your Client ID and Secret from Google Cloud Console.
+- **Node.js 18+** (LTS recommended)
+- **MongoDB** (Atlas or local **with replica set enabled**; Prisma requires a replica set)
+- **Object Storage:** **MinIO** or **AWS S3** (for screenshots/large assets)
+- *(Optional)* **Android Studio / Android device** if you plan to collect on-device interaction data locally
 
 ### Installation Guide
 
-#### 1) Clone the repositories
-
-```bash
-git clone https://github.com/datadrivendesign/interaction-mining.git
-git clone https://github.com/datadrivendesign/odim-android.git
-```
-
-You should now have two folders:
-
-* `interaction-mining` (web app)
-* `odim-android` (Android client)
-
-#### 2) Install web app dependencies
-
-```bash
-cd interaction-mining
-npm install
-```
-This installs all required Node.js packages for the Next.js web app.
-
-
-### Set Up Environment Variables
-
-Create a `.env.local` file inside the `interaction-mining` directory with values appropriate for your environment.
-
-Core configuration:
-
-```bash
-# Database
-DATABASE_URL=mongodb://localhost:27017/odim
-
-# Public URL used by the web app
-NEXT_PUBLIC_DEPLOYMENT_URL=http://<your-ip>:3000
-
-# Object Storage (choose MinIO or AWS S3 for screenshots)
-USE_MINIO_STORE=true
-AWS_ACCESS_KEY_ID=admin
-AWS_SECRET_ACCESS_KEY=password
-AWS_UPLOAD_BUCKET=odim-bucket
-MINIO_ENDPOINT=http://<your-ip>:9000
-
-# NextAuth / Google OAuth (optional)
-GOOGLE_CLIENT_ID=<your-client-id>
-GOOGLE_CLIENT_SECRET=<your-client-secret>
-NEXTAUTH_SECRET=<generated-secret>
-```
-
-Tip: Generate a strong NextAuth secret:
-
-```bash
-npx @next-auth/secret
-```
-
-### Storage and Database Setup
-
-#### MongoDB (local)
-
-* Start your local server (example for macOS with Homebrew):
-
-```bash
-brew services start mongodb-community@8.0
-```
-
-#### MinIO (local S3 alternative)
-
-Run with Docker:
-
-```bash
-docker run -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ROOT_USER=admin -e MINIO_ROOT_PASSWORD=password \
-  -v minio_data:/data quay.io/minio/minio server /data --console-address ":9001"
-```
-
-Then visit `http://localhost:9001` and create a bucket named `odim-bucket`.
-
-If using AWS S3 instead of MinIO, skip the MinIO step and provide valid AWS credentials and bucket name.
-
-### Google OAuth Setup (Optional)
-
-If you want to enable Google Sign‑In, configure credentials in Google Cloud Console. Add the following as an authorized redirect URI:
-
-```
-http://localhost:3000/api/auth/callback/google
-```
-### Build and Run
-
-#### Development
-```bash
-npm run dev
-```
-
-#### Production
-
-```bash
-npm run build
-npm start
-```
-
-#### Quick Setup (macOS only)
-
-A helper script may be available:
-
-```bash
-./install.sh
-```
-This installs dependencies, starts MongoDB and MinIO, and generates `.env.local` automatically.
-
-## Run the Web App Locally
-
-### Start the Server
-```bash
-cd interaction-mining
-npm install
-npm run dev
-```
-* Starts the app at `http://localhost:3000` (or your configured IP)
-* Open the URL in your browser — you should see the homepage or login screen.
-
-## Verify Your Setup
-
-* Check that `.env.local` contains the correct values (especially `DATABASE_URL` and storage configuration)
-* Ensure MongoDB is running locally or that your Atlas URI is reachable
-* Ensure MinIO or AWS S3 credentials are valid
-* Watch terminal logs for a successful MongoDB connection
-* Explore the UI at `http://localhost:3000` (`/explore`, `/contribute`)
-* Any new data you upload will appear in the dataset explorer view.
+**TBD:** Please follow the most up-to-date instructions on our website:  
+**https://interactionmining.org/contribute**
 
 ---
 
@@ -301,22 +170,35 @@ npm run dev
 
 ## Contact
 
-For questions, bug reports, or support, please open an issue on the repository’s GitHub Issues page. For sensitive inquiries (e.g., security concerns), reach out privately via email if listed in the repository; otherwise use Issues.
-
----
-
-## Research Group
-
 Developed by the Data‑Driven Design Group at the University of Illinois Urbana‑Champaign. For research collaborations or academic inquiries, visit the [project website](https://www.interactionmining.org/) or Prof. Ranjitha Kumar’s page.
 
----
-
-## Community & Discussion
-
-A GitHub Discussions board or Slack/Discord may be created as community interest grows. Check the repository for updates.
+For questions, bug reports, or support, please open an issue on the repository’s GitHub Issues page.  
+For sensitive inquiries (e.g., security concerns), contact **carlguo2@illinois.edu**.
 
 ---
 
 ## Report Bugs or Request Features
 
 Use the GitHub Issue tracker to report bugs or suggest enhancements. This is the fastest and most transparent way to reach the maintainers and to help other users with similar issues.
+
+---
+
+## Citation
+
+If you use this project in your research, please cite:
+
+> Arsan, Deniz; Guo, Carl; Wellyanto, Muhammad Rizky; Ji, Erik R; Talton, Jerry O.; Kumar, Ranjitha. **On-Device Interaction Mining**. *Proc. ACM Hum.-Comput. Interact.*, 9(5), MHCI024, Sep 2025. [https://doi.org/10.1145/3743726](https://doi.org/10.1145/3743726)
+
+```bibtex
+@article{10.1145/3743726,
+author = {Arsan, Deniz and Guo, Carl and Wellyanto, Muhammad Rizky and Ji, Erik R and Talton, Jerry O. and Kumar, Ranjitha},
+title = {On-Device Interaction Mining},
+journal = {Proc. ACM Hum.-Comput. Interact.},
+volume = {9},
+number = {5},
+articleno = {MHCI024},
+year = {2025},
+month = sep,
+doi = {10.1145/3743726},
+url = {https://doi.org/10.1145/3743726},
+}
