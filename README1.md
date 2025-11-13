@@ -31,7 +31,7 @@
     · <a href="#tech-stack">Tech Stack</a>
     · <a href="#getting-started">Getting Started</a>
     · <a href="#troubleshooting">Troubleshooting</a>
-    · <a href="#research-group">Research Group</a>
+    · <a href="#contact">Research Group</a>
   </p>
   <img src="teaser.png" alt="ODIM Workflow Diagram" width="700"/>
 </div>
