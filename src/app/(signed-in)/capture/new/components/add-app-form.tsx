@@ -59,7 +59,7 @@ export default function AddAppForm({
 
   async function handleAddApp() {
     if (!newAppId) return;
-    // TODO: db check breaks for ios because we lookup id instead of appId
+    // FIXME: db check breaks for ios because we lookup id instead of appId
     if (platform === Platform.ANDROID) {
       const existing = await checkIfAppExists(newAppId, platform);
       if (existing) {
@@ -79,7 +79,9 @@ export default function AddAppForm({
         : await getIosApp({ id: newAppId });
 
     if (!result || !result.ok) {
-      toast.error("Failed to fetch app from store.");
+      toast.error(
+        `Failed to fetch ${prettyOS(platform)} app. ${result?.message}`
+      );
       return;
     }
 
