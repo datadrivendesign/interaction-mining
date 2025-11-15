@@ -54,21 +54,10 @@ export async function getApps({
   page = 1,
   limit = 10,
 }: GetAppsParams = {}) {
-  // TODO: prevent support for iOS in prod for now, still in dev
-  const session = await auth();
-  const isProd = isProduction();
-  const isAdmin = session?.user?.role === Role.ADMIN;
-  const isIOSDisabled = isProd && !isAdmin;
-
-  // FIXME: disable iOS in prod for now, still in testing
-  let effectiveOS = where.os;
-  if (isIOSDisabled && where.os === Platform.IOS) {
-    effectiveOS = Platform.ANDROID;
-  }
   // Create filtered where clause without mutating original
   const filteredWhere = {
     ...where,
-    os: effectiveOS,
+    os: where.os ?? Platform.ANDROID, // default to Android if no OS is provided
   };
 
   // build a base "where" that overlays text search onto any custom filters
@@ -97,20 +86,10 @@ export async function getApps({
 }
 
 export async function getAppsCount({ query, where = {} }: GetAppsParams = {}) {
-  const session = await auth();
-  const isProd = isProduction();
-  const isAdmin = session?.user?.role === Role.ADMIN;
-  const isIOSDisabled = isProd && !isAdmin;
-
-  // FIXME: disable iOS in prod for now, still in testing
-  let effectiveOS = where.os;
-  if (isIOSDisabled && where.os === Platform.IOS) {
-    effectiveOS = Platform.ANDROID;
-  }
   // Create filtered where clause without mutating original
   const filteredWhere = {
     ...where,
-    os: effectiveOS,
+    os: where.os ?? Platform.ANDROID, // default to Android if no OS is provided
   };
 
   // build a base "where" that overlays text search onto any custom filters
