@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { App, Prisma, Role } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { Platform } from "@/lib/utils";
-import { auth } from "../auth";
-import { isProduction } from "../utils/env";
+import { auth } from "@/lib/auth";
+import { isProduction } from "@/lib/utils/env";
 
 export type AppItemList = {
   id: string;
@@ -45,19 +45,47 @@ export interface GetAppsParams {
   /** Pagination */
   page?: number;
   limit?: number;
+  /** Allow iOS apps in production for non-admins (only for trusted contexts like capture form) */
+  allowIOS?: boolean;
 }
-
+/**
+ * Fetches list of apps from the database.
+ * @param query - Simple full-text search (name, description, etc.)
+ * @param where - Deep-dive filters: any Prisma.AppWhereInput you want
+ * @param orderBy - Sort order (defaults to downloads desc)
+ * @param page - requested page number
+ * @param limit - requested number of apps to fetch per page
+ * @param allowIOS - Allow iOS apps in production for non-admins (only for trusted contexts like capture form)
+ * @returns list of apps
+ */
 export async function getApps({
   query,
   where = {},
   orderBy = { metadata: { downloads: "desc" } },
   page = 1,
   limit = 10,
+  allowIOS = false, // FIXME: temporarily disable some iOS apps in prod for now
 }: GetAppsParams = {}) {
+  // Server-side iOS restriction: enforce unless allowIOS is explicitly true
+  let osFilter = where.os ?? Platform.ANDROID;
+
+  // Check if iOS is being requested
+  const isRequestingIOS = where.os === Platform.IOS;
+  if (isRequestingIOS && !allowIOS) {
+    const session = await auth();
+    const isProd = isProduction();
+    const isAdmin = session?.user?.role === Role.ADMIN;
+
+    // If iOS requested in prod by non-admins without allowIOS, force Android
+    if (isProd && !isAdmin) {
+      osFilter = Platform.ANDROID;
+    }
+  }
+
   // Create filtered where clause without mutating original
-  const filteredWhere = {
+  const filteredWhere: Prisma.AppWhereInput = {
     ...where,
-    os: where.os ?? Platform.ANDROID, // default to Android if no OS is provided
+    os: osFilter,
   };
 
   // build a base "where" that overlays text search onto any custom filters
@@ -85,11 +113,39 @@ export async function getApps({
   });
 }
 
-export async function getAppsCount({ query, where = {} }: GetAppsParams = {}) {
+/**
+ * Fetches count of apps from the database.
+ * @param query - Simple full-text search (name, description, etc.)
+ * @param where - Deep-dive filters: any Prisma.AppWhereInput you want
+ * @param allowIOS - allow iOS apps in prod for non-admins (this is temporary since ios is currently in testing)
+ * @returns count of apps
+ */
+export async function getAppsCount({
+  query,
+  where = {},
+  allowIOS = false, // FIXME: temporarily disable some iOS apps in prod for now
+}: GetAppsParams = {}) {
+  // Server-side iOS restriction: enforce unless allowIOS is explicitly true
+  let osFilter = where.os ?? Platform.ANDROID;
+
+  // Check if iOS is being requested
+  const isRequestingIOS = where.os === Platform.IOS;
+
+  if (isRequestingIOS && !allowIOS) {
+    const session = await auth();
+    const isProd = isProduction();
+    const isAdmin = session?.user?.role === Role.ADMIN;
+
+    // If iOS requested in prod by non-admins without allowIOS, force Android
+    if (isProd && !isAdmin) {
+      osFilter = Platform.ANDROID;
+    }
+  }
+
   // Create filtered where clause without mutating original
-  const filteredWhere = {
+  const filteredWhere: Prisma.AppWhereInput = {
     ...where,
-    os: where.os ?? Platform.ANDROID, // default to Android if no OS is provided
+    os: osFilter,
   };
 
   // build a base "where" that overlays text search onto any custom filters
@@ -113,6 +169,11 @@ export async function getAppsCount({ query, where = {} }: GetAppsParams = {}) {
   });
 }
 
+/**
+ * Fetches a single app from the database.
+ * @param id - id of the app
+ * @returns app
+ */
 export async function getApp(id: string): Promise<App | null> {
   let app: App | null = {} as App;
 
@@ -133,6 +194,10 @@ export async function getApp(id: string): Promise<App | null> {
   return app;
 }
 
+/**
+ * Fetches list of all apps from the database.
+ * @returns list of apps
+ */
 export async function getAllApps(): Promise<AppItemList[]> {
   try {
     const apps = await prisma.app.findMany({
@@ -152,6 +217,11 @@ export async function getAllApps(): Promise<AppItemList[]> {
   }
 }
 
+/**
+ * Fetches a single app from the database by package name.
+ * @param packageName - package name of the app
+ * @returns app
+ */
 export async function getAppByPackageName(
   packageName: string
 ): Promise<App | null> {
@@ -171,6 +241,12 @@ export async function getAppByPackageName(
   }
 }
 
+/**
+ * Checks if an app exists in the database by package name and OS.
+ * @param packageName - package name of the app
+ * @param os - OS of the app
+ * @returns app
+ */
 export async function checkIfAppExists(
   packageName: string,
   os: Platform
@@ -191,6 +267,11 @@ export async function checkIfAppExists(
   }
 }
 
+/**
+ * Saves an app to the database.
+ * @param appData - app data to save
+ * @returns app
+ */
 export async function saveApp(
   appData: Prisma.AppCreateInput
 ): Promise<{ ok: boolean; data: App | null }> {

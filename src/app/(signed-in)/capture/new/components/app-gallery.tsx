@@ -48,6 +48,7 @@ export default function AppGallery({
       where: { os: platform },
       limit: 10,
       page: 1,
+      allowIOS: true,
     }),
     [search, platform]
   );

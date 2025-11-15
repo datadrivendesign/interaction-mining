@@ -34,7 +34,6 @@ import { isProduction } from "@/lib/utils/env";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminPagination } from "@/components/ui/admin-pagination";
 import { Badge } from "@/components/ui/badge";
-import { platform } from "node:os";
 
 const GalleryContext = createContext<{
   apps: App[];
@@ -181,8 +180,6 @@ export function GallerySearch() {
     },
     [setPlatform, router, search.query]
   );
-
-  console.log("platform", platform);
 
   return (
     <div className="flex items-center gap-2 lg:gap-4">

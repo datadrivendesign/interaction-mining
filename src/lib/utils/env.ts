@@ -14,13 +14,13 @@ export const getEnvironment = (): Environment => {
 };
 
 export const isProduction = (): boolean => {
-  return getEnvironment() === Environment.PROD;
+  return getEnvironment().toLowerCase() === Environment.PROD;
 };
 
 export const isDevelopment = (): boolean => {
-  return getEnvironment() === Environment.DEV;
+  return getEnvironment().toLowerCase() === Environment.DEV;
 };
 
 export const isLocal = (): boolean => {
-  return getEnvironment() === Environment.LOCAL;
+  return getEnvironment().toLowerCase() === Environment.LOCAL;
 };
