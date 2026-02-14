@@ -82,7 +82,10 @@ export function CaptureColumn({
   );
 }
 
-type NonApprovedStatus = Exclude<keyof typeof CaptureStatus, "APPROVED">;
+type NonApprovedStatus = Exclude<
+  keyof typeof CaptureStatus,
+  "APPROVED" | "ARCHIVED"
+>;
 type ColumnsState = Record<
   NonApprovedStatus,
   CapturesPaginatedOutput & { loading: boolean }
