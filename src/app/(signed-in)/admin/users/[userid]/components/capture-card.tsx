@@ -47,7 +47,8 @@ export function CaptureCard({ capture }: { capture: Capture }) {
           <Button variant="link" asChild>
             <Link
               href={
-                capture.status !== CaptureStatus.REVIEWING
+                capture.status !== CaptureStatus.REVIEWING &&
+                capture.status !== CaptureStatus.ARCHIVED
                   ? `/capture/${capture.id}/start`
                   : `/capture/${capture.id}/evaluate`
               }

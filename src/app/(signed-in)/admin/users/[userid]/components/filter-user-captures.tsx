@@ -16,7 +16,7 @@ interface FilterCaptureParams {
   appsList: ComboboxOption[];
   onFiltersChange?: (
     apps: ComboboxOption[],
-    status: CaptureStatus | ""
+    status: CaptureStatus | "",
   ) => void;
 }
 /**
@@ -44,7 +44,7 @@ export function FilterCapture({
     // Reconstruct appsFiltered from appIds and appsList
     const appIds = searchParams.get("apps")?.split(",") ?? [];
     const filtered = appsList.filter(
-      (app) => appIds?.includes(app.value) ?? false
+      (app) => appIds?.includes(app.value) ?? false,
     );
     setAppsFiltered(filtered);
     // construct status from url params
@@ -56,13 +56,13 @@ export function FilterCapture({
   const constructURL = (
     newPage: number,
     newApps: ComboboxOption[],
-    newStatus: CaptureStatus | ""
+    newStatus: CaptureStatus | "",
   ) => {
     return constructUserCapturesURL(
       userId,
       newPage,
       newApps.map((app) => app.value),
-      newStatus
+      newStatus,
     );
   };
 
@@ -76,7 +76,7 @@ export function FilterCapture({
 
   const handleAppFilterRemove = (option: ComboboxOption) => {
     const newAppsFiltered = appsFiltered.filter(
-      (app) => app.value !== option.value
+      (app) => app.value !== option.value,
     );
     setAppsFiltered(newAppsFiltered);
     onFiltersChange?.(newAppsFiltered, statusFiltered);
@@ -102,10 +102,11 @@ export function FilterCapture({
     { value: CaptureStatus.PROCESSING, label: "Processing" },
     { value: CaptureStatus.REVIEWING, label: "Reviewing" },
     { value: CaptureStatus.APPROVED, label: "Approved" },
+    { value: CaptureStatus.ARCHIVED, label: "Archived" },
   ];
 
   const nonFilteredApps = appsList.filter(
-    (app) => !appsFiltered.some((chosenApp) => chosenApp.value === app.value)
+    (app) => !appsFiltered.some((chosenApp) => chosenApp.value === app.value),
   );
 
   return (
@@ -113,7 +114,7 @@ export function FilterCapture({
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-2">
           <label className="text-base font-bold text-foreground whitespace-nowrap">
-            Filter Apps:
+            App:
           </label>
           <Combobox
             options={nonFilteredApps}
@@ -125,7 +126,7 @@ export function FilterCapture({
           options={CaptureStatusOptions}
           selected={statusFiltered}
           onChange={handleStatusFilterSelect}
-          label="Filter Status:"
+          label="Status:"
         />
         {/* Clear Filters Button */}
         <div className="flex items-center justify-end self-end">

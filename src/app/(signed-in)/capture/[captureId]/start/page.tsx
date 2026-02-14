@@ -34,11 +34,10 @@ enum CaptureState {
 }
 
 export default function Page() {
-  console.log("[START PAGE] Page component rendered");
   const { captureId } = useParams() as { captureId: string };
 
   const [captureState, setCaptureState] = useState<CaptureState>(
-    CaptureState.IDLE
+    CaptureState.IDLE,
   );
   const [deleteDrafts, setDeleteDrafts] = useState<boolean>(true);
   const { capture, isLoading: isCaptureLoading } = useCapture(captureId, {
@@ -49,7 +48,7 @@ export default function Page() {
   const { data: uploadList = [], isLoading: isUploadListLoading } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
-    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId)
+    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId),
   );
   // filter out draft autosaves and screen images
   const filteredUserUploads = useMemo(
@@ -57,37 +56,29 @@ export default function Page() {
       uploadList.filter(
         (file) =>
           !file.fileKey.includes("/drafts") &&
-          !file.fileKey.includes("/screens")
+          !file.fileKey.includes("/screens"),
       ),
-    [uploadList]
+    [uploadList],
   );
   // count number of draft autosaves
   const numFilteredDrafts = useMemo(
     () => uploadList.filter((file) => file.fileKey.includes("/drafts")),
-    [uploadList]
+    [uploadList],
   );
 
   // useEffect to check if capture status should be updated or not
   useEffect(() => {
-    console.log("[START PAGE] useEffect triggered", {
-      captureState,
-      filteredUserUploadsLength: filteredUserUploads.length,
-      capture: !!capture,
-    });
-
     if (
       capture &&
       captureState === CaptureState.IDLE &&
       filteredUserUploads.length > 0
     ) {
-      console.log("[START PAGE] Setting state to UPLOADED");
       setCaptureState(CaptureState.UPLOADED);
     } else if (
       capture &&
       captureState === CaptureState.UPLOADED &&
       filteredUserUploads.length === 0
     ) {
-      console.log("[START PAGE] Setting state to IDLE");
       setCaptureState(CaptureState.IDLE);
     }
   }, [capture, captureState, filteredUserUploads.length]);

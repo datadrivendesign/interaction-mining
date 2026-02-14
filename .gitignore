@@ -51,3 +51,4 @@ prisma/scripts/add-capture-task.mjs
 prisma/scripts/add-ios-app-to-db.mjs
 prisma/scripts/delete-trace.mjs
 prisma/scripts/transition-to-cloudfront.mjs
+prisma/scripts/archive-duplicate-tasks.mjs
