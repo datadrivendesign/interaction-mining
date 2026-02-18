@@ -110,7 +110,7 @@
     "sonner": "^2.0.0",
     "superagent": "^10.2.1",
     "swr": "^2.3.3",
-    "tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "tls": "^0.0.1",
     "use-image": "^1.1.1",

@@ -163,7 +163,7 @@ export function ReviewPanelIOS({
         <div className="flex-shrink-0 flex flex-row justify-center gap-2 pt-3 mt-auto border-t border-neutral-200 dark:border-neutral-800">
           <Button
             variant="outline"
-            className="bg-green-600 text-white hover:bg-green-700 dark:bg-white dark:text-black"
+            className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800 dark:text-white"
             onClick={handleApprove}
             disabled={isSubmitting}
           >
@@ -171,7 +171,7 @@ export function ReviewPanelIOS({
           </Button>
           <Button
             variant="outline"
-            className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-500 dark:text-white"
+            className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800 dark:text-white"
             onClick={handleDeny}
             disabled={isSubmitting}
           >
