@@ -183,7 +183,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             defaultSize={25}
             minSize={25}
             maxSize={30}
-            className="bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full"
+            className="min-h-0 bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full overflow-hidden flex flex-col"
           >
             {traceData && capture && (
               <ReviewPanelAndroid

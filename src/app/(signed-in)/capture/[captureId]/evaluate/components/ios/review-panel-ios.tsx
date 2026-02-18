@@ -29,13 +29,13 @@ export function ReviewPanelIOS({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [annotateFeedback, setAnnotateFeedback] = useState(
-    capture.annotateFeedback ?? ""
+    capture.annotateFeedback ?? "",
   );
   const [redactFeedback, setRedactFeedback] = useState(
-    capture.redactFeedback ?? ""
+    capture.redactFeedback ?? "",
   );
   const [summarizeFeedback, setSummarizeFeedback] = useState(
-    capture.summarizeFeedback ?? ""
+    capture.summarizeFeedback ?? "",
   );
 
   const router = useRouter();
@@ -59,10 +59,10 @@ export function ReviewPanelIOS({
       }
       await revalidateCaptureCaches();
       toast.success("Capture approved successfully");
-      router.push(`/app/${capture.appId}`);
+      router.push(`/admin/tasks`);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error ? err.message : "An unknown error occurred",
       );
     } finally {
       setIsSubmitting(false);
@@ -76,17 +76,17 @@ export function ReviewPanelIOS({
         capture,
         annotateFeedback,
         redactFeedback,
-        summarizeFeedback
+        summarizeFeedback,
       );
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
       }
       await revalidateCaptureCaches();
       toast.success("Capture denied successfully");
-      router.push(`/capture/${capture.id}/edit`);
+      router.push(`/admin/tasks`);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error ? err.message : "An unknown error occurred",
       );
     } finally {
       setIsSubmitting(false);
@@ -94,79 +94,89 @@ export function ReviewPanelIOS({
   };
 
   return (
-    <aside className="w-full h-full flex flex-col flex-grow justify-between p-3">
-      <Badge variant={isAdmin ? "default" : "secondary"}>
-        {isAdmin ? "Admin Review" : "Owner Review"}
-      </Badge>
-      <Badge variant="default" className="bg-gray-500 mt-5">
-        <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
-          <p className="text-center">
-            Task: {capture.task.description ?? "No task provided."}
-          </p>
-        </article>
-      </Badge>
-
-      <div className="flex flex-col justify-center items-center w-full h-full gap-4 mt-5">
-        <video
-          ref={videoRef}
-          crossOrigin="anonymous"
-          preload="auto"
-          className="w-1/2 h-auto rounded-lg object-contain"
-          controls={true}
-        />
+    <aside className="w-full h-full flex flex-col min-h-0 p-3">
+      {/* Header: badges — fixed at top */}
+      <div className="flex-shrink-0 space-y-2">
+        <Badge variant={isAdmin ? "default" : "secondary"}>
+          {isAdmin ? "Admin Review" : "Owner Review"}
+        </Badge>
+        <Badge variant="default" className="bg-gray-500 block w-full">
+          <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
+            <p className="text-center">
+              Task: {capture.task.description ?? "No task provided."}
+            </p>
+          </article>
+        </Badge>
       </div>
+
+      {/* Scrollable content: video + feedback textareas */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex flex-col gap-4 py-3">
+          <div className="flex justify-center w-full">
+            <video
+              ref={videoRef}
+              crossOrigin="anonymous"
+              preload="auto"
+              className="w-1/2 min-w-0 h-auto rounded-lg object-contain"
+              controls={true}
+            />
+          </div>
+          {isAdmin && (
+            <div className="flex flex-col gap-3 w-full">
+              <div className="flex flex-col gap-1.5 w-full">
+                <Label htmlFor="annotateFeedback">Annotate:</Label>
+                <Textarea
+                  className="w-full min-h-[4rem] resize-y"
+                  id="annotateFeedback"
+                  placeholder="Annotate feedback"
+                  value={annotateFeedback}
+                  onChange={(e) => setAnnotateFeedback(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 w-full">
+                <Label htmlFor="redactFeedback">Redact:</Label>
+                <Textarea
+                  className="w-full min-h-[4rem] resize-y"
+                  id="redactFeedback"
+                  placeholder="Redact feedback"
+                  value={redactFeedback}
+                  onChange={(e) => setRedactFeedback(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 w-full">
+                <Label htmlFor="summarizeFeedback">Summarize:</Label>
+                <Textarea
+                  className="w-full min-h-[4rem] resize-y"
+                  id="summarizeFeedback"
+                  placeholder="Description feedback"
+                  value={summarizeFeedback}
+                  onChange={(e) => setSummarizeFeedback(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sticky footer: Approve/Deny always reachable (admin only) */}
       {isAdmin && (
-        <div className="flex flex-col justify-center items-center w-full h-full gap-3 my-3">
-          <div className="flex flex-col gap-3 items-center w-full">
-            <div className="flex flex-col gap-3 px-3 items-start w-full">
-              <Label htmlFor="annotateFeedback">Annotate:</Label>
-              <Textarea
-                className="w-full h-full"
-                id="annotateFeedback"
-                placeholder="Annotate feedback"
-                value={annotateFeedback}
-                onChange={(e) => setAnnotateFeedback(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-3 px-3 items-start w-full">
-              <Label htmlFor="redactFeedback">Redact:</Label>
-              <Textarea
-                className="w-full h-full"
-                id="redactFeedback"
-                placeholder="Redact feedback"
-                value={redactFeedback}
-                onChange={(e) => setRedactFeedback(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-3 px-3 items-start w-full">
-              <Label htmlFor="summarizeFeedback">Summarize:</Label>
-              <Textarea
-                className="w-full h-full"
-                id="summarizeFeedback"
-                placeholder="Description feedback"
-                value={summarizeFeedback}
-                onChange={(e) => setSummarizeFeedback(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex flex-row self-align-end justify-center gap-2 mb-5">
-            <Button
-              variant="outline"
-              className="bg-green-600 text-white hover:bg-green-700 dark:bg-white dark:text-black"
-              onClick={handleApprove}
-              disabled={isSubmitting}
-            >
-              Approve
-            </Button>
-            <Button
-              variant="outline"
-              className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-500 dark:text-white"
-              onClick={handleDeny}
-              disabled={isSubmitting}
-            >
-              Deny
-            </Button>
-          </div>
+        <div className="flex-shrink-0 flex flex-row justify-center gap-2 pt-3 mt-auto border-t border-neutral-200 dark:border-neutral-800">
+          <Button
+            variant="outline"
+            className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800 dark:text-white"
+            onClick={handleApprove}
+            disabled={isSubmitting}
+          >
+            Approve
+          </Button>
+          <Button
+            variant="outline"
+            className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800 dark:text-white"
+            onClick={handleDeny}
+            disabled={isSubmitting}
+          >
+            Deny
+          </Button>
         </div>
       )}
     </aside>
