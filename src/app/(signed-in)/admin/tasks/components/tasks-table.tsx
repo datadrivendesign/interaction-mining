@@ -52,7 +52,11 @@ export function TasksTable({
               </Button>
             </TableCell>
             <TableCell>
-              <Link href={`/admin/users/${capture.user?.id}`}>
+              <Link
+                href={`/admin/users/${capture.user?.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Button
                   variant="link"
                   className="hover:bg-transparent p-2 cursor-pointer"
@@ -71,7 +75,11 @@ export function TasksTable({
               </Button>
             </TableCell>
             <TableCell>
-              <Link href={`/capture/${capture.id}/evaluate`}>
+              <Link
+                href={`/capture/${capture.id}/evaluate`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Button className="hover p-2 cursor-pointer">
                   {capture.task.description}
                 </Button>
