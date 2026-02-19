@@ -1,4 +1,3 @@
-// src/lib/utils/gesture-options.tsx
 "use client";
 
 import React from "react";
@@ -24,6 +23,7 @@ import {
   RotateTopRightIcon,
 } from "@hugeicons/core-free-icons";
 
+// Import your custom SVGs
 import DoubleTapIcon from "@/components/ui/gesture-icons/double-tap-01.svg";
 import TouchHoldIcon from "@/components/ui/gesture-icons/touch-and-hold.svg";
 import DragUpIcon from "@/components/ui/gesture-icons/drag-up-01.svg";
@@ -32,11 +32,7 @@ import DragDownIcon from "@/components/ui/gesture-icons/drag-down-01.svg";
 import { cn } from "@/lib/utils";
 
 /**
- * Shared icon wrapper so every source (Hugeicons/Lucide/custom SVG)
- * renders at the same size and color.
- *
- * - size: 36x36 (w-9 h-9)
- * - color: currentColor, controlled by CSS var --gesture-accent
+ * Shared icon wrapper
  */
 export const IconBox = ({
   children,
@@ -48,7 +44,7 @@ export const IconBox = ({
   <span
     className={cn(
       "inline-flex items-center justify-center w-9 h-9 flex-shrink-0",
-      "text-[var(--gesture-accent,#facc15)]",
+      "text-[var(--gesture-accent,#facc15)]", // Inherits Yellow by default, Black when inside marker
       className
     )}
   >
@@ -57,56 +53,32 @@ export const IconBox = ({
 );
 
 /**
- * Normalize SVGR-imported icons so they center + size consistently.
- *
- * If `forceCurrentColor` is true:
- * - overrides baked-in SVG colors to use currentColor
- *
- * If `normalizeStrokeWidth` is set:
- * - forces a consistent stroke width for all descendants
- * - uses non-scaling stroke so scaling doesn't make it look thicker
+ * Custom SVG Wrapper
+ * Increased baseline size from 75% to 85% to match standard icons better.
  */
 const CustomSvg = ({
   Svg,
   className,
-  scaleClassName = "",
-  forceCurrentColor = false,
-  normalizeStrokeWidth, // e.g. 1.5
+  containerClassName,
 }: {
   Svg: React.ComponentType<any>;
   className?: string;
-  scaleClassName?: string;
-  forceCurrentColor?: boolean;
-  normalizeStrokeWidth?: number;
+  containerClassName?: string;
 }) => (
   <IconBox>
-    <Svg
-      preserveAspectRatio="xMidYMid meet"
-      className={cn(
-        "block w-full h-full gesture-icon",
-        scaleClassName,
-        className,
-
-        // Force color to follow currentColor (so menu can be yellow, marker can be black)
-        forceCurrentColor
-          ? cn("text-current", "[&_*]:!fill-current", "[&_*]:!stroke-current")
-          : "",
-
-        // Normalize stroke width if requested (fixes the thick DoubleTap look)
-        typeof normalizeStrokeWidth === "number"
-          ? cn(
-              // Keep strokes from visually thickening when scaled
-              "[&_*]:[vector-effect:non-scaling-stroke]",
-              // Force consistent stroke width
-              `[&_*]:[stroke-width:${normalizeStrokeWidth}]`
-            )
-          : ""
-      )}
-    />
+    <span className={cn("flex items-center justify-center w-[85%] h-[85%]", containerClassName)}>
+      <Svg
+        className={cn(
+          "block w-full h-full gesture-icon-custom", // Custom class for globals.css overrides
+          className
+        )}
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </span>
   </IconBox>
 );
 
-// Hugeicons helper so they also pick up the same sizing/color
+// Hugeicons helper
 const HI = ({ icon }: { icon: any }) => (
   <IconBox>
     <HugeiconsIcon icon={icon} className="w-full h-full gesture-icon block" />
@@ -131,37 +103,20 @@ export const GestureOptionSchema: z.ZodType<{
 
 export type GestureOption = z.infer<typeof GestureOptionSchema>;
 
-// classes consumed by the menu
 export const POPOVER_CONTENT_CLASS = "w-50 p-0 overflow-visible";
 export const COMMAND_LIST_CLASS = "max-h-none overflow-visible";
 export const COMMAND_ITEM_CLASS =
   "cursor-pointer group px-2 py-1 rounded-md relative";
 
-// ── options (ordered) ────────────────────────────────────────
+// ── options ────────────────────────────────────────
 export const gestureOptions: GestureOption[] = [
   { value: "Tap", label: "Tap", icon: <HI icon={Tap01Icon} /> },
 
   {
     value: "Double tap",
     label: "Double tap",
-    /**
-     * ✅ Key behavior:
-     * - Menu: stays yellow (default --gesture-accent)
-     * - Selected marker: turns black (marker sets --gesture-accent to #111)
-     *
-     * ✅ Fix for stroke looking too thick:
-     * - normalizeStrokeWidth forces a consistent stroke width.
-     *
-     * If you want it slightly thinner/thicker, tweak 1.5 -> 1.25 or 1.75.
-     */
-    icon: (
-      <CustomSvg
-        Svg={DoubleTapIcon}
-        scaleClassName="scale-[1.11]"
-        forceCurrentColor
-        normalizeStrokeWidth={1.5}
-      />
-    ),
+    // scale-[1.15] makes it larger. translate nudges it into the exact center.
+    icon: <CustomSvg Svg={DoubleTapIcon} containerClassName="scale-[1.15] translate-x-[2px] translate-y-[2px]" />,
   },
 
   {
@@ -170,21 +125,9 @@ export const gestureOptions: GestureOption[] = [
     icon: <HI icon={Move01Icon} />,
     subGestures: [
       { value: "Swipe up", label: "Swipe up", icon: <HI icon={SwipeUp01Icon} /> },
-      {
-        value: "Swipe down",
-        label: "Swipe down",
-        icon: <HI icon={SwipeDown01Icon} />,
-      },
-      {
-        value: "Swipe left",
-        label: "Swipe left",
-        icon: <HI icon={SwipeLeft01Icon} />,
-      },
-      {
-        value: "Swipe right",
-        label: "Swipe right",
-        icon: <HI icon={SwipeRight01Icon} />,
-      },
+      { value: "Swipe down", label: "Swipe down", icon: <HI icon={SwipeDown01Icon} /> },
+      { value: "Swipe left", label: "Swipe left", icon: <HI icon={SwipeLeft01Icon} /> },
+      { value: "Swipe right", label: "Swipe right", icon: <HI icon={SwipeRight01Icon} /> },
     ],
   },
 
@@ -193,7 +136,7 @@ export const gestureOptions: GestureOption[] = [
     label: "Typing",
     icon: (
       <IconBox>
-        <Keyboard className="block w-full h-full gesture-icon scale-[0.78]" />
+        <Keyboard className="block w-[80%] h-[80%] gesture-icon" />
       </IconBox>
     ),
   },
@@ -201,7 +144,8 @@ export const gestureOptions: GestureOption[] = [
   {
     value: "Touch and hold",
     label: "Touch and hold",
-    icon: <CustomSvg Svg={TouchHoldIcon} scaleClassName="scale-[1.08]" />,
+    // scale-[1.15] makes it larger. translate nudges it into the exact center.
+    icon: <CustomSvg Svg={TouchHoldIcon} containerClassName="scale-[1.15] translate-x-[2.2px] translate-y-[2px]" />,
   },
 
   {
@@ -212,19 +156,17 @@ export const gestureOptions: GestureOption[] = [
       {
         value: "Drag up",
         label: "Drag up",
-        icon: <CustomSvg Svg={DragUpIcon} scaleClassName="scale-[1.08]" />,
+        // Fixed invalid translate-y--2 to -translate-y-[2px]
+        icon: <CustomSvg Svg={DragUpIcon} containerClassName="translate-x-[2.2px] -translate-y-[2px]" />,
       },
       {
         value: "Drag down",
         label: "Drag down",
-        icon: <CustomSvg Svg={DragDownIcon} scaleClassName="scale-[1.08]" />,
+        // Fixed invalid translate-y--2 to -translate-y-[2px]
+        icon: <CustomSvg Svg={DragDownIcon} containerClassName="translate-x-[2px] -translate-y-[2px]" />,
       },
       { value: "Drag left", label: "Drag left", icon: <HI icon={DragLeft01Icon} /> },
-      {
-        value: "Drag right",
-        label: "Drag right",
-        icon: <HI icon={DragRight01Icon} />,
-      },
+      { value: "Drag right", label: "Drag right", icon: <HI icon={DragRight01Icon} /> },
     ],
   },
 
@@ -243,16 +185,8 @@ export const gestureOptions: GestureOption[] = [
     label: "Rotate",
     icon: <HI icon={RotateSquareIcon} />,
     subGestures: [
-      {
-        value: "Rotate right",
-        label: "Rotate right",
-        icon: <HI icon={RotateTopRightIcon} />,
-      },
-      {
-        value: "Rotate left",
-        label: "Rotate left",
-        icon: <HI icon={RotateTopLeftIcon} />,
-      },
+      { value: "Rotate right", label: "Rotate right", icon: <HI icon={RotateTopRightIcon} /> },
+      { value: "Rotate left", label: "Rotate left", icon: <HI icon={RotateTopLeftIcon} /> },
     ],
   },
 
@@ -261,7 +195,7 @@ export const gestureOptions: GestureOption[] = [
     label: "Other",
     icon: (
       <IconBox>
-        <CircleHelp className="block w-full h-full gesture-icon scale-[0.78]" />
+        <CircleHelp className="block w-[80%] h-[80%] gesture-icon" />
       </IconBox>
     ),
   },
