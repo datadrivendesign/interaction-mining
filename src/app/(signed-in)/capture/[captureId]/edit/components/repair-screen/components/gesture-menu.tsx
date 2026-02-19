@@ -7,9 +7,8 @@ import React, {
   useEffect,
   useState,
   useRef,
-  RefObject,
   KeyboardEvent,
-  ChangeEvent,
+  useMemo,
 } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { ScreenGesture } from "@prisma/client";
@@ -39,6 +38,16 @@ import { motion } from "motion/react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 
 import clsx from "clsx";
+import {
+  composeGestureTemplateDescription,
+  GESTURE_DESCRIPTION_MAX_LENGTH,
+  getGestureTemplate,
+  getGestureTemplateDefaultSlots,
+  GestureTemplateSlot,
+  GestureTemplateSlotKey,
+  isFreeformGestureType,
+  parseGestureTemplateDescription,
+} from "../util";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -64,12 +73,20 @@ export function GestureMenu({
   position: { x: number | null; y: number | null };
   transform: { x: number; y: number; scaleX: number; scaleY: number } | null;
 }) {
+  const firstSlotInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
   const { gesture, setGesture } = useContext(GestureContext);
   const { handleNext } = useNavigation();
   const [annotateLen, setAnnotateLen] = useState(0);
-  const maxLength = 50;
+  const [slotValues, setSlotValues] = useState<Record<GestureTemplateSlotKey, string>>(
+    getGestureTemplateDefaultSlots(gesture.type)
+  );
+  const [legacyTemplateHint, setLegacyTemplateHint] = useState(false);
+  const hasInitializedTypeRef = useRef(false);
+  const previousGestureTypeRef = useRef<ScreenGesture["type"]>(gesture.type);
+  const maxLength = GESTURE_DESCRIPTION_MAX_LENGTH;
+  const activeTemplate = useMemo(() => getGestureTemplate(gesture.type), [gesture.type]);
 
   useEffect(() => {
     // Get the marker's position and droppable area height
@@ -87,8 +104,116 @@ export function GestureMenu({
     }
   }, [position, placeTextareaAbove]);
 
+  useEffect(() => {
+    setAnnotateLen((gesture.description ?? "").length);
+  }, [gesture.description]);
+
+  useEffect(() => {
+    const previousType = previousGestureTypeRef.current;
+    const typeChanged = previousType !== gesture.type;
+
+    if (!gesture.type) {
+      setLegacyTemplateHint(false);
+      previousGestureTypeRef.current = gesture.type;
+      return;
+    }
+
+    if (isFreeformGestureType(gesture.type)) {
+      if (
+        typeChanged &&
+        hasInitializedTypeRef.current &&
+        previousType &&
+        !isFreeformGestureType(previousType)
+      ) {
+        const previousParsed = parseGestureTemplateDescription(
+          previousType,
+          gesture.description ?? ""
+        );
+        const previousTemplate = getGestureTemplate(previousType);
+        if (
+          previousParsed &&
+          previousTemplate &&
+          previousTemplate.slots.some(
+            (slot) => previousParsed[slot.key].trim().length === 0
+          )
+        ) {
+          setGesture((prev) => ({
+            ...prev,
+            description: "",
+          }));
+        }
+      }
+      setLegacyTemplateHint(false);
+      previousGestureTypeRef.current = gesture.type;
+      hasInitializedTypeRef.current = true;
+      return;
+    }
+
+    if (typeChanged && hasInitializedTypeRef.current) {
+      const defaults = getGestureTemplateDefaultSlots(gesture.type);
+      setSlotValues(defaults);
+      setLegacyTemplateHint(false);
+      const templatedDescription = composeGestureTemplateDescription(
+        gesture.type,
+        defaults
+      );
+      if (templatedDescription !== gesture.description) {
+        setGesture((prev) => ({
+          ...prev,
+          description: templatedDescription,
+        }));
+      }
+      previousGestureTypeRef.current = gesture.type;
+      return;
+    }
+
+    const parsed = parseGestureTemplateDescription(
+      gesture.type,
+      gesture.description ?? ""
+    );
+    if (parsed) {
+      setSlotValues(parsed);
+      setLegacyTemplateHint(false);
+      const normalizedDescription = composeGestureTemplateDescription(
+        gesture.type,
+        parsed
+      );
+      if (normalizedDescription !== gesture.description) {
+        setGesture((prev) => ({
+          ...prev,
+          description: normalizedDescription,
+        }));
+      }
+      hasInitializedTypeRef.current = true;
+      previousGestureTypeRef.current = gesture.type;
+      return;
+    }
+
+    const defaults = getGestureTemplateDefaultSlots(gesture.type);
+    const legacyText = (gesture.description ?? "").trim();
+    if (legacyText.length > 0) {
+      defaults.intent = legacyText;
+      setLegacyTemplateHint(true);
+    } else {
+      setLegacyTemplateHint(false);
+    }
+    setSlotValues(defaults);
+    const templatedDescription = composeGestureTemplateDescription(
+      gesture.type,
+      defaults
+    );
+    if (templatedDescription !== gesture.description) {
+      setGesture((prev) => ({
+        ...prev,
+        description: templatedDescription,
+      }));
+    }
+    hasInitializedTypeRef.current = true;
+    previousGestureTypeRef.current = gesture.type;
+  }, [gesture.type, gesture.description, setGesture]);
+
   const handleEnter = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleNext();
@@ -97,16 +222,105 @@ export function GestureMenu({
     [handleNext]
   );
 
-  const handleTextareaChange = useCallback(
-    (e: ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value;
+  const handleFreeformChange = useCallback(
+    (value: string) => {
       setGesture((prev) => ({
         ...prev,
         description: value,
       }));
-      setAnnotateLen(value.length);
     },
     [setGesture]
+  );
+
+  const handleSlotChange = useCallback(
+    (slot: GestureTemplateSlot, value: string) => {
+      if (!gesture.type || !activeTemplate) {
+        return;
+      }
+      const nextValues = {
+        ...slotValues,
+        [slot.key]: value,
+      };
+      const nextDescription = composeGestureTemplateDescription(
+        gesture.type,
+        nextValues
+      );
+      if (nextDescription.length > maxLength) {
+        return;
+      }
+      setSlotValues(nextValues);
+      setGesture((prev) => ({
+        ...prev,
+        description: nextDescription,
+      }));
+    },
+    [activeTemplate, gesture.type, maxLength, setGesture, slotValues]
+  );
+
+  const focusDescriptionField = useCallback(() => {
+    if (isFreeformGestureType(gesture.type)) {
+      textareaRef.current?.focus();
+      return;
+    }
+    firstSlotInputRef.current?.focus();
+  }, [gesture.type]);
+
+  const annotationEditor = (
+    <div className="w-full">
+      {isFreeformGestureType(gesture.type) || !activeTemplate ? (
+        <Textarea
+          ref={textareaRef}
+          className="text-sm w-full h-full bg-background!"
+          placeholder="Describe this gesture in your own words."
+          maxLength={maxLength}
+          value={gesture.description ?? ""}
+          onKeyDown={handleEnter}
+          onChange={(e) => handleFreeformChange(e.target.value)}
+        />
+      ) : (
+        <div className="rounded-md border bg-background p-2 space-y-2">
+          <div className="text-xs text-muted-foreground">
+            Edit only bracketed fields.
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            {activeTemplate.fixedParts.map((fixedPart, index) => {
+              const slot = activeTemplate.slots[index];
+              return (
+                <React.Fragment key={`${fixedPart}-${index}`}>
+                  {fixedPart ? (
+                    <span className="text-xs font-semibold tracking-wide text-foreground/90 whitespace-pre">
+                      {fixedPart}
+                    </span>
+                  ) : null}
+                  {slot ? (
+                    <input
+                      ref={index === 0 ? firstSlotInputRef : undefined}
+                      className="h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs"
+                      aria-label={slot.label}
+                      placeholder={slot.placeholder}
+                      value={slotValues[slot.key] ?? ""}
+                      onKeyDown={handleEnter}
+                      onChange={(e) => handleSlotChange(slot, e.target.value)}
+                    />
+                  ) : null}
+                </React.Fragment>
+              );
+            })}
+          </div>
+          {legacyTemplateHint ? (
+            <p className="text-[11px] text-amber-600">
+              Existing text was moved into intent. Complete missing fields.
+            </p>
+          ) : null}
+        </div>
+      )}
+      <div className="w-full flex flex-col">
+        <Progress className="w-full" value={(annotateLen / maxLength) * 100} />
+        <div className="text-sm flex justify-end text-muted-foreground z-10">
+          {`${annotateLen}/${maxLength}`}
+        </div>
+      </div>
+    </div>
   );
 
   return (
@@ -122,53 +336,15 @@ export function GestureMenu({
     >
       {placeTextareaAbove && (
         <div className="absolute mb-1 w-full -top-22">
-          {textareaRef.current && (
-            <div className="w-full flex flex-col">
-              <div className="text-sm flex justify-end text-muted-foreground z-10">
-                {`${annotateLen}/${maxLength}`}
-              </div>
-              <Progress
-                className="w-full"
-                value={(annotateLen / maxLength) * 100}
-              />
-            </div>
-          )}
-          <Textarea
-            ref={textareaRef}
-            className="text-sm w-full h-full bg-background!"
-            placeholder="What was your goal with this gesture?"
-            maxLength={maxLength}
-            value={gesture.description ? gesture.description : ""}
-            onKeyDown={handleEnter}
-            onChange={handleTextareaChange}
-          />
+          {annotationEditor}
         </div>
       )}
 
-      <GestureSelection textareaRef={textareaRef} />
+      <GestureSelection focusDescriptionField={focusDescriptionField} />
 
       {!placeTextareaAbove && (
         <div className="absolute mt-1 w-full">
-          <Textarea
-            ref={textareaRef}
-            className="text-sm w-full h-full bg-background!"
-            placeholder="What was your goal with this gesture?"
-            maxLength={maxLength}
-            value={gesture.description ? gesture.description : ""}
-            onKeyDown={handleEnter}
-            onChange={handleTextareaChange}
-          />
-          {textareaRef.current && (
-            <div className="w-full flex flex-col">
-              <Progress
-                className="w-full"
-                value={(annotateLen / maxLength) * 100}
-              />
-              <div className="text-sm flex justify-end text-muted-foreground z-10">
-                {`${annotateLen}/${maxLength}`}
-              </div>
-            </div>
-          )}
+          {annotationEditor}
         </div>
       )}
     </div>
@@ -176,14 +352,18 @@ export function GestureMenu({
 }
 
 function GestureSelection({
-  textareaRef,
+  focusDescriptionField,
 }: {
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  focusDescriptionField: () => void;
 }) {
   const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
-  const [value, setValue] = useState(gesture.type);
+  const [value, setValue] = useState<ScreenGesture["type"] | "">(gesture.type);
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(gesture.type);
+  }, [gesture.type]);
 
   // Update gesture type when value changes
   useEffect(() => {
@@ -192,9 +372,9 @@ function GestureSelection({
         ...prev,
         type: value,
         scrollDeltaX:
-          value === "Swipe left" ? -0.02 : value === "Swipe right" ? 0.02 : 0,
+          value === "swipe left" ? -0.02 : value === "swipe right" ? 0.02 : 0,
         scrollDeltaY:
-          value === "Swipe down" ? -0.02 : value === "Swipe up" ? 0.02 : 0,
+          value === "swipe down" ? -0.02 : value === "swipe up" ? 0.02 : 0,
       }));
     } else {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
@@ -267,7 +447,7 @@ function GestureSelection({
                             onClick={() => {
                               setValue(subOption.value);
                               setOpen(false);
-                              textareaRef.current?.focus();
+                              focusDescriptionField();
                             }}
                           >
                             <span className="inline-flex items-center gap-2">
@@ -291,7 +471,7 @@ function GestureSelection({
                       onSelect={(currentValue) => {
                         setValue(currentValue === value ? "" : currentValue);
                         setOpen(false);
-                        textareaRef.current?.focus();
+                        focusDescriptionField();
                       }}
                     >
                       <span className="inline-flex items-center gap-2">

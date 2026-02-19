@@ -16,6 +16,7 @@ import Kbd from "@/components/ui/kbd";
 import Image from "next/image";
 import { card } from "../util";
 import { spring } from "@/lib/motion";
+import { validateGestureDescription } from "../util";
 
 export function Filmstrip({
   screens,
@@ -112,8 +113,7 @@ export function Filmstrip({
               hasError={
                 !gestures[screen.id] ||
                 gestures[screen.id].type === null ||
-                gestures[screen.id].description === undefined ||
-                gestures[screen.id].description === ""
+                !validateGestureDescription(gestures[screen.id])
               }
               onClick={() => setFocusViewIndex(index)}
               handleSetTime={handleSetTime}

@@ -1,5 +1,6 @@
 import { ScreenGesture } from "@prisma/client";
 import { z, ZodType } from "zod";
+import { validateGestureDescription } from "./repair-screen/util/gesture-description-template";
 
 export type FrameData = {
   id: string;
@@ -69,6 +70,13 @@ export const GestureSchema = z.record(
       message: "Gesture description is required",
     }),
   })
+).refine(
+  (gestures) =>
+    Object.values(gestures).every((gesture) => validateGestureDescription(gesture)),
+  {
+    message:
+      "Gesture descriptions must match the required template. Use freeform only for 'Other'.",
+  }
 );
 
 export const ScreenGestureSchema = z
