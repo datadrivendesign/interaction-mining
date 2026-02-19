@@ -1,153 +1,268 @@
+// src/lib/utils/gesture-options.tsx
+"use client";
+
 import React from "react";
-import {
-  ArrowDownFromLine,
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
-  ArrowUpFromLine,
-  Circle,
-  CircleDot,
-  CircleHelp,
-  CircleStop,
-  Grab,
-  IterationCcw,
-  IterationCw,
-  Keyboard,
-  Move,
-  RefreshCw,
-  ScanSearch,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
 import { z } from "zod";
 
+import { Keyboard, CircleHelp } from "lucide-react";
+
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Tap01Icon,
+  Move01Icon,
+  SwipeLeft01Icon,
+  SwipeRight01Icon,
+  SwipeUp01Icon,
+  SwipeDown01Icon,
+  Drag02Icon,
+  DragLeft01Icon,
+  DragRight01Icon,
+  Minimize01Icon,
+  Maximize01Icon,
+  RotateSquareIcon,
+  RotateTopLeftIcon,
+  RotateTopRightIcon,
+} from "@hugeicons/core-free-icons";
+
+import DoubleTapIcon from "@/components/ui/gesture-icons/double-tap-01.svg";
+import TouchHoldIcon from "@/components/ui/gesture-icons/touch-and-hold.svg";
+import DragUpIcon from "@/components/ui/gesture-icons/drag-up-01.svg";
+import DragDownIcon from "@/components/ui/gesture-icons/drag-down-01.svg";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * Shared icon wrapper so every source (Hugeicons/Lucide/custom SVG)
+ * renders at the same size and color.
+ *
+ * - size: 36x36 (w-9 h-9)
+ * - color: currentColor, controlled by CSS var --gesture-accent
+ */
+export const IconBox = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <span
+    className={cn(
+      "inline-flex items-center justify-center w-9 h-9 flex-shrink-0",
+      "text-[var(--gesture-accent,#facc15)]",
+      className
+    )}
+  >
+    {children}
+  </span>
+);
+
+/**
+ * Normalize SVGR-imported icons so they center + size consistently.
+ *
+ * If `forceCurrentColor` is true:
+ * - overrides baked-in SVG colors to use currentColor
+ *
+ * If `normalizeStrokeWidth` is set:
+ * - forces a consistent stroke width for all descendants
+ * - uses non-scaling stroke so scaling doesn't make it look thicker
+ */
+const CustomSvg = ({
+  Svg,
+  className,
+  scaleClassName = "",
+  forceCurrentColor = false,
+  normalizeStrokeWidth, // e.g. 1.5
+}: {
+  Svg: React.ComponentType<any>;
+  className?: string;
+  scaleClassName?: string;
+  forceCurrentColor?: boolean;
+  normalizeStrokeWidth?: number;
+}) => (
+  <IconBox>
+    <Svg
+      preserveAspectRatio="xMidYMid meet"
+      className={cn(
+        "block w-full h-full gesture-icon",
+        scaleClassName,
+        className,
+
+        // Force color to follow currentColor (so menu can be yellow, marker can be black)
+        forceCurrentColor
+          ? cn("text-current", "[&_*]:!fill-current", "[&_*]:!stroke-current")
+          : "",
+
+        // Normalize stroke width if requested (fixes the thick DoubleTap look)
+        typeof normalizeStrokeWidth === "number"
+          ? cn(
+              // Keep strokes from visually thickening when scaled
+              "[&_*]:[vector-effect:non-scaling-stroke]",
+              // Force consistent stroke width
+              `[&_*]:[stroke-width:${normalizeStrokeWidth}]`
+            )
+          : ""
+      )}
+    />
+  </IconBox>
+);
+
+// Hugeicons helper so they also pick up the same sizing/color
+const HI = ({ icon }: { icon: any }) => (
+  <IconBox>
+    <HugeiconsIcon icon={icon} className="w-full h-full gesture-icon block" />
+  </IconBox>
+);
+
+// ── schema & type ─────────────────────────────────────────────
 export const GestureOptionSchema: z.ZodType<{
   value: string;
   label: string;
-  icon?: React.JSX.Element;
+  icon?: React.ReactNode;
   subGestures?: any;
 }> = z.lazy(
-  (): z.ZodType<any> => // 👈 annotate the return type here
+  (): z.ZodType<any> =>
     z.object({
       value: z.string(),
       label: z.string(),
-      icon: z.custom<React.JSX.Element>().optional(),
+      icon: z.custom<React.ReactNode>().optional(),
       subGestures: z.array(GestureOptionSchema).optional(),
     })
 );
 
-// Then define the type from schema (for safety & completion support)
 export type GestureOption = z.infer<typeof GestureOptionSchema>;
 
+// classes consumed by the menu
+export const POPOVER_CONTENT_CLASS = "w-50 p-0 overflow-visible";
+export const COMMAND_LIST_CLASS = "max-h-none overflow-visible";
+export const COMMAND_ITEM_CLASS =
+  "cursor-pointer group px-2 py-1 rounded-md relative";
+
+// ── options (ordered) ────────────────────────────────────────
 export const gestureOptions: GestureOption[] = [
+  { value: "Tap", label: "Tap", icon: <HI icon={Tap01Icon} /> },
+
   {
-    value: "tap",
-    label: "Tap",
-    icon: <Circle className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "swipe",
-    label: "Finger swipe",
-    icon: <Move className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-    subGestures: [
-      {
-        value: "swipe up",
-        label: "Swipe up",
-        icon: (
-          <ArrowUpFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-      {
-        value: "swipe down",
-        label: "Swipe down",
-        icon: (
-          <ArrowDownFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-      {
-        value: "swipe left",
-        label: "Swipe left",
-        icon: (
-          <ArrowLeftFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-      {
-        value: "swipe right",
-        label: "Swipe right",
-        icon: (
-          <ArrowRightFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-    ],
-  },
-  {
-    value: "typing",
-    label: "Typing",
-    icon: <Keyboard className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "touch and hold",
-    label: "Touch and hold",
-    icon: <CircleDot className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "double tap",
+    value: "Double tap",
     label: "Double tap",
-    icon: <CircleStop className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    /**
+     * ✅ Key behavior:
+     * - Menu: stays yellow (default --gesture-accent)
+     * - Selected marker: turns black (marker sets --gesture-accent to #111)
+     *
+     * ✅ Fix for stroke looking too thick:
+     * - normalizeStrokeWidth forces a consistent stroke width.
+     *
+     * If you want it slightly thinner/thicker, tweak 1.5 -> 1.25 or 1.75.
+     */
+    icon: (
+      <CustomSvg
+        Svg={DoubleTapIcon}
+        scaleClassName="scale-[1.11]"
+        forceCurrentColor
+        normalizeStrokeWidth={1.5}
+      />
+    ),
   },
+
   {
-    value: "drag",
+    value: "Finger swipe",
+    label: "Finger swipe",
+    icon: <HI icon={Move01Icon} />,
+    subGestures: [
+      { value: "Swipe up", label: "Swipe up", icon: <HI icon={SwipeUp01Icon} /> },
+      {
+        value: "Swipe down",
+        label: "Swipe down",
+        icon: <HI icon={SwipeDown01Icon} />,
+      },
+      {
+        value: "Swipe left",
+        label: "Swipe left",
+        icon: <HI icon={SwipeLeft01Icon} />,
+      },
+      {
+        value: "Swipe right",
+        label: "Swipe right",
+        icon: <HI icon={SwipeRight01Icon} />,
+      },
+    ],
+  },
+
+  {
+    value: "Typing",
+    label: "Typing",
+    icon: (
+      <IconBox>
+        <Keyboard className="block w-full h-full gesture-icon scale-[0.78]" />
+      </IconBox>
+    ),
+  },
+
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: <CustomSvg Svg={TouchHoldIcon} scaleClassName="scale-[1.08]" />,
+  },
+
+  {
+    value: "Drag",
     label: "Drag",
-    icon: <Grab className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: <HI icon={Drag02Icon} />,
+    subGestures: [
+      {
+        value: "Drag up",
+        label: "Drag up",
+        icon: <CustomSvg Svg={DragUpIcon} scaleClassName="scale-[1.08]" />,
+      },
+      {
+        value: "Drag down",
+        label: "Drag down",
+        icon: <CustomSvg Svg={DragDownIcon} scaleClassName="scale-[1.08]" />,
+      },
+      { value: "Drag left", label: "Drag left", icon: <HI icon={DragLeft01Icon} /> },
+      {
+        value: "Drag right",
+        label: "Drag right",
+        icon: <HI icon={DragRight01Icon} />,
+      },
+    ],
   },
+
   {
-    value: "zoom",
+    value: "Zoom",
     label: "Zoom",
-    icon: <ScanSearch className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: <HI icon={Minimize01Icon} />,
     subGestures: [
-      {
-        value: "zoom in",
-        label: "Zoom in",
-        icon: <ZoomIn className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-      },
-      {
-        value: "zoom out",
-        label: "Zoom out",
-        icon: <ZoomOut className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-      },
+      { value: "Zoom in", label: "Zoom in", icon: <HI icon={Minimize01Icon} /> },
+      { value: "Zoom out", label: "Zoom out", icon: <HI icon={Maximize01Icon} /> },
     ],
   },
+
   {
-    value: "rotate",
+    value: "Rotate",
     label: "Rotate",
-    icon: <RefreshCw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: <HI icon={RotateSquareIcon} />,
     subGestures: [
       {
-        value: "rotate cw",
-        label: "Rotate clockwise",
-        icon: (
-          <IterationCw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />
-        ),
+        value: "Rotate right",
+        label: "Rotate right",
+        icon: <HI icon={RotateTopRightIcon} />,
       },
       {
-        value: "rotate ccw",
-        label: "Rotate counter-clockwise",
-        icon: (
-          <IterationCcw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />
-        ),
+        value: "Rotate left",
+        label: "Rotate left",
+        icon: <HI icon={RotateTopLeftIcon} />,
       },
     ],
   },
+
   {
-    value: "other",
+    value: "Other",
     label: "Other",
-    icon: <CircleHelp className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: (
+      <IconBox>
+        <CircleHelp className="block w-full h-full gesture-icon scale-[0.78]" />
+      </IconBox>
+    ),
   },
-]; 
+];

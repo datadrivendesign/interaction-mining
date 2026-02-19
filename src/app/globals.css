@@ -97,3 +97,15 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+.gesture-icon :where(svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.gesture-icon :where(path[fill], circle[fill], rect[fill], polygon[fill]) {
+  fill: currentColor !important;
+}
+.gesture-icon :where(path[stroke], circle[stroke], rect[stroke], line[stroke]) {
+  stroke: currentColor !important;
+}
