@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
 import { CaptureStatus } from "@prisma/client";
 import {
@@ -15,6 +15,8 @@ import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
+import { useHotkeys } from "react-hotkeys-hook";
+import Kbd from "@/components/ui/kbd";
 
 export function ReviewPanelAndroid({
   traceData,
@@ -38,7 +40,7 @@ export function ReviewPanelAndroid({
 
   const router = useRouter();
 
-  const handleApprove = async () => {
+  const handleApprove = useCallback(async () => {
     try {
       setIsSubmitting(true);
       const approveRes = await validateApprovePermissions();
@@ -65,9 +67,9 @@ export function ReviewPanelAndroid({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [capture, router, traceData]);
 
-  const handleDeny = async () => {
+  const handleDeny = useCallback(async () => {
     try {
       setIsSubmitting(true);
       const denyRes = await denyCapture(
@@ -89,7 +91,39 @@ export function ReviewPanelAndroid({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [annotateFeedback, capture, redactFeedback, router, summarizeFeedback]);
+
+  useHotkeys(
+    "ctrl+shift+a",
+    (event) => {
+      event.preventDefault();
+      void handleApprove();
+    },
+    {
+      enabled: isAdmin && !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleApprove, isAdmin, isSubmitting],
+  );
+
+  useHotkeys(
+    "ctrl+shift+d",
+    (event) => {
+      event.preventDefault();
+      void handleDeny();
+    },
+    {
+      enabled: isAdmin && !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleDeny, isAdmin, isSubmitting],
+  );
 
   return (
     <aside className="w-full h-full flex flex-col min-h-0 p-3">
@@ -147,22 +181,28 @@ export function ReviewPanelAndroid({
 
       {/* Sticky footer: Approve/Deny always reachable */}
       {isAdmin && (
-        <div className="flex-shrink-0 flex flex-row justify-center gap-2 pt-3 mt-auto border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex-shrink-0 flex flex-row w-full justify-center gap-2 pt-3 mt-auto border-t border-neutral-200 dark:border-neutral-800">
           <Button
             variant="outline"
-            className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800! dark:text-white!"
+            className="flex-1 min-w-0 h-auto py-2 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800! dark:text-white! flex flex-col items-center justify-center gap-1"
             onClick={handleApprove}
             disabled={isSubmitting}
           >
-            Approve
+            <span className="leading-none">Approve</span>
+            <Kbd className="h-4 px-1 text-[10px] leading-none border-white/50 bg-green-700 text-white dark:bg-green-800 whitespace-nowrap">
+              Ctrl+Shift+A
+            </Kbd>
           </Button>
           <Button
             variant="outline"
-            className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800! dark:text-white!"
+            className="flex-1 min-w-0 h-auto py-2 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800! dark:text-white! flex flex-col items-center justify-center gap-1"
             onClick={handleDeny}
             disabled={isSubmitting}
           >
-            Deny
+            <span className="leading-none">Deny</span>
+            <Kbd className="h-4 px-1 text-[10px] leading-none border-white/50 bg-red-600 text-white dark:bg-red-800 whitespace-nowrap">
+              Ctrl+Shift+D
+            </Kbd>
           </Button>
         </div>
       )}
