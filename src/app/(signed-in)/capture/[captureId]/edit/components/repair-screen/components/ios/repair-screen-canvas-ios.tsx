@@ -60,6 +60,9 @@ export default function RepairScreenCanvasIOS({
     x: null,
     y: null,
   });
+  const [imageOrientation, setImageOrientation] = useState<
+    "portrait" | "landscape" | null
+  >(null);
 
   // Set initial marker position on image
   const handleImageClick = () => {
@@ -95,7 +98,7 @@ export default function RepairScreenCanvasIOS({
         }));
       }
     },
-    [ref, width, height, setGesture]
+    [ref, width, height, setGesture],
   );
 
   useEffect(() => {
@@ -115,6 +118,13 @@ export default function RepairScreenCanvasIOS({
     }
   }, [gesture, markerPixelPosition, width, height]);
 
+  // Portrait frames are capped to roughly half the focus area so they do not
+  // dominate the workspace or collide with absolute overlays.
+  const frameContainerClass =
+    imageOrientation === "landscape"
+      ? "relative inline-flex w-[55%] h-[55%] min-w-[12rem] min-h-[12rem]"
+      : "relative w-fit inline-flex h-full";
+
   return (
     <>
       <GestureContext.Provider
@@ -130,7 +140,7 @@ export default function RepairScreenCanvasIOS({
         >
           <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
             <div
-              className="relative w-fit inline-flex h-full"
+              className={frameContainerClass}
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
             >
               <DroppableArea>
@@ -177,6 +187,17 @@ export default function RepairScreenCanvasIOS({
                   width={0}
                   height={0}
                   sizes="100vw"
+                  onLoad={(event) => {
+                    const img = event.currentTarget;
+                    if (!img.naturalWidth || !img.naturalHeight) {
+                      return;
+                    }
+                    setImageOrientation(
+                      img.naturalWidth > img.naturalHeight
+                        ? "landscape"
+                        : "portrait",
+                    );
+                  }}
                   onClick={handleImageClick}
                   onMouseMove={() => {
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });
