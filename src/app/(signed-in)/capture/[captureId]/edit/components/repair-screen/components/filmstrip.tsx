@@ -38,19 +38,19 @@ export function Filmstrip({
 
   const setFrameData = useCallback(
     (value: FrameData[]) => setValue("screens", value),
-    [setValue]
+    [setValue],
   );
   const setGestureData = useCallback(
     (value: { [key: string]: ScreenGesture }) => setValue("gestures", value),
-    [setValue]
+    [setValue],
   );
   const setRedactionData = useCallback(
     (value: { [key: string]: Redaction[] }) => setValue("redactions", value),
-    [setValue]
+    [setValue],
   );
   const setVHData = useCallback(
     (value: { [key: string]: any }) => setValue("vhs", value),
-    [setValue]
+    [setValue],
   );
 
   const handleDeleteFrame = useCallback(
@@ -93,7 +93,7 @@ export function Filmstrip({
       setRedactionData,
       setFocusViewIndex,
       setVHData,
-    ]
+    ],
   );
 
   return (
@@ -105,15 +105,16 @@ export function Filmstrip({
             <FilmstripItem
               key={screen.id}
               index={index}
-              isLast={isLast}
               screen={screen}
               redactions={redactions[screen.id] ?? []}
               os={os}
               isSelected={focusViewIndex === index}
               hasError={
-                !gestures[screen.id] ||
-                gestures[screen.id].type === null ||
-                !validateGestureDescription(gestures[screen.id])
+                isLast
+                  ? false
+                  : !gestures[screen.id] ||
+                    gestures[screen.id].type === null ||
+                    !validateGestureDescription(gestures[screen.id])
               }
               onClick={() => setFocusViewIndex(index)}
               handleSetTime={handleSetTime}
@@ -130,7 +131,6 @@ function FilmstripItem({
   screen,
   redactions,
   index = 0,
-  isLast = false,
   os,
   isSelected,
   hasError = false,
@@ -142,7 +142,6 @@ function FilmstripItem({
   screen: FrameData;
   redactions: Array<Redaction>;
   index?: number;
-  isLast: boolean;
   os: Platform;
   isSelected?: boolean;
   hasError?: boolean;
@@ -254,12 +253,12 @@ function FilmstripItem({
                       "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
                       isSelected
                         ? "ring-2 ring-inset ring-blue-500"
-                        : hasError && !isLast
+                        : hasError
                           ? "ring-2 ring-inset ring-yellow-500"
-                          : ""
+                          : "",
                     )}
                   >
-                    {hasError && !isLast && (
+                    {hasError && (
                       <CircleAlert
                         className={cn("size-6", "text-yellow-500")}
                       />
@@ -281,11 +280,11 @@ function FilmstripItem({
           <div
             className={cn(
               "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
-              hasError && !isLast
+              hasError
                 ? isSelected
                   ? "grayscale brightness-70"
                   : "grayscale brightness-50"
-                : "grayscale-0 brightness-100"
+                : "grayscale-0 brightness-100",
             )}
           >
             {/* {children} */}

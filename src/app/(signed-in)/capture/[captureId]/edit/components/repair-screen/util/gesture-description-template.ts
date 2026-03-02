@@ -1,13 +1,9 @@
 import { ScreenGesture } from "@prisma/client";
 
-export const GESTURE_DESCRIPTION_MAX_LENGTH = 75;
+export const GESTURE_DESCRIPTION_MAX_LENGTH = 125;
+export const MIN_SLOT_LENGTH = 2;
 
-export type GestureTemplateSlotKey =
-  | "element"
-  | "area"
-  | "intent"
-  | "text"
-  | "destination";
+export type GestureTemplateSlotKey = "target" | "goal" | "destination";
 
 export type GestureTemplateSlot = {
   key: GestureTemplateSlotKey;
@@ -21,127 +17,142 @@ export type GestureTemplate = {
   slots: readonly GestureTemplateSlot[];
 };
 
+// Canonical phrase templates used to compose and parse stored gesture descriptions.
 const gestureTemplates: GestureTemplate[] = [
   {
     type: "tap",
-    fixedParts: ["TAP ", " TO ", ""],
+    fixedParts: ["Tap ", " to ", ""],
     slots: [
-      { key: "element", label: "element", placeholder: "button" },
-      { key: "intent", label: "intent", placeholder: "open settings" },
+      { key: "target", label: "target", placeholder: "button" },
+      { key: "goal", label: "goal", placeholder: "open settings" },
     ],
   },
   {
     type: "swipe up",
-    fixedParts: ["SWIPE UP ON ", " TO ", ""],
+    fixedParts: ["Swipe up on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "feed" },
-      { key: "intent", label: "intent", placeholder: "see older items" },
+      { key: "target", label: "target", placeholder: "feed" },
+      { key: "goal", label: "goal", placeholder: "see older items" },
     ],
   },
   {
     type: "swipe down",
-    fixedParts: ["SWIPE DOWN ON ", " TO ", ""],
+    fixedParts: ["Swipe down on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "notification shade" },
-      { key: "intent", label: "intent", placeholder: "refresh content" },
+      { key: "target", label: "target", placeholder: "slider" },
+      { key: "goal", label: "goal", placeholder: "see older items" },
     ],
   },
   {
     type: "swipe left",
-    fixedParts: ["SWIPE LEFT ON ", " TO ", ""],
+    fixedParts: ["Swipe left on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "carousel" },
-      { key: "intent", label: "intent", placeholder: "view next item" },
+      { key: "target", label: "target", placeholder: "items list" },
+      { key: "goal", label: "goal", placeholder: "view next item" },
     ],
   },
   {
     type: "swipe right",
-    fixedParts: ["SWIPE RIGHT ON ", " TO ", ""],
+    fixedParts: ["Swipe right on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "carousel" },
-      { key: "intent", label: "intent", placeholder: "view previous item" },
+      { key: "target", label: "target", placeholder: "items list" },
+      { key: "goal", label: "goal", placeholder: "view previous item" },
     ],
   },
   {
     type: "typing",
-    fixedParts: ["TYPE ", " TO ", ""],
+    fixedParts: ["Type in ", " to ", ""],
     slots: [
-      { key: "text", label: "text", placeholder: "search query" },
-      { key: "intent", label: "intent", placeholder: "find a result" },
+      { key: "target", label: "target", placeholder: "search bar" },
+      { key: "goal", label: "goal", placeholder: "search for item" },
     ],
   },
   {
     type: "touch and hold",
-    fixedParts: ["TOUCH AND HOLD ", " TO ", ""],
+    fixedParts: ["Touch and hold ", " to ", ""],
     slots: [
-      { key: "element", label: "element", placeholder: "app icon" },
-      { key: "intent", label: "intent", placeholder: "open context menu" },
+      { key: "target", label: "target", placeholder: "photo" },
+      { key: "goal", label: "goal", placeholder: "open context menu" },
     ],
   },
   {
     type: "double tap",
-    fixedParts: ["DOUBLE TAP ", " TO ", ""],
+    fixedParts: ["Double tap ", " to ", ""],
     slots: [
-      { key: "element", label: "element", placeholder: "image" },
-      { key: "intent", label: "intent", placeholder: "like post" },
+      { key: "target", label: "target", placeholder: "image" },
+      { key: "goal", label: "goal", placeholder: "like post" },
     ],
   },
   {
     type: "drag",
-    fixedParts: ["DRAG ", " TO ", " TO ", ""],
+    fixedParts: ["Drag ", " to ", " in order to ", ""],
     slots: [
-      { key: "element", label: "element", placeholder: "slider handle" },
+      { key: "target", label: "target", placeholder: "slider handle" },
       { key: "destination", label: "destination", placeholder: "right end" },
-      { key: "intent", label: "intent", placeholder: "increase value" },
+      { key: "goal", label: "goal", placeholder: "increase value" },
     ],
   },
   {
     type: "zoom in",
-    fixedParts: ["ZOOM IN ON ", " TO ", ""],
+    fixedParts: ["Zoom in on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "map" },
-      { key: "intent", label: "intent", placeholder: "inspect details" },
+      { key: "target", label: "target", placeholder: "map" },
+      { key: "goal", label: "goal", placeholder: "inspect details" },
     ],
   },
   {
     type: "zoom out",
-    fixedParts: ["ZOOM OUT ON ", " TO ", ""],
+    fixedParts: ["Zoom out on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "map" },
-      { key: "intent", label: "intent", placeholder: "see larger area" },
+      { key: "target", label: "target", placeholder: "map" },
+      { key: "goal", label: "goal", placeholder: "see larger area" },
     ],
   },
   {
     type: "rotate cw",
-    fixedParts: ["ROTATE CLOCKWISE ON ", " TO ", ""],
+    fixedParts: ["Rotate clockwise on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "photo" },
-      { key: "intent", label: "intent", placeholder: "adjust orientation" },
+      { key: "target", label: "target", placeholder: "photo" },
+      { key: "goal", label: "goal", placeholder: "adjust orientation" },
     ],
   },
   {
     type: "rotate ccw",
-    fixedParts: ["ROTATE COUNTERCLOCKWISE ON ", " TO ", ""],
+    fixedParts: ["Rotate counterclockwise on ", " to ", ""],
     slots: [
-      { key: "area", label: "area", placeholder: "photo" },
-      { key: "intent", label: "intent", placeholder: "adjust orientation" },
+      { key: "target", label: "target", placeholder: "map" },
+      { key: "goal", label: "goal", placeholder: "adjust orientation" },
     ],
   },
 ];
 
+// Fast lookup by gesture type for runtime validation and rendering.
 const gestureTemplateMap = new Map(
-  gestureTemplates.map((template) => [template.type, template])
+  gestureTemplates.map((template) => [template.type, template]),
 );
 
+// Adds in fixed template parts into the regex pattern
 const escapeRegex = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
 
+/**
+ * Returns true if the gesture type is freeform, false otherwise.
+ *
+ * @param type - The gesture type.
+ * @returns True if the gesture type is freeform, false otherwise.
+ */
 export function isFreeformGestureType(type: ScreenGesture["type"]): boolean {
   return type === "other";
 }
 
+/**
+ * Fast lookup by gesture type for runtime validation and rendering.
+ *
+ * @param type - The gesture type.
+ * @returns The gesture template, or null if the type is not found.
+ */
 export function getGestureTemplate(
-  type: ScreenGesture["type"]
+  type: ScreenGesture["type"],
 ): GestureTemplate | null {
   if (!type || type === "other") {
     return null;
@@ -149,15 +160,19 @@ export function getGestureTemplate(
   return gestureTemplateMap.get(type) ?? null;
 }
 
+/**
+ * Return a fully shaped slot object so UI code can stay simple and controlled.
+ *
+ * @param type - The gesture type.
+ * @returns The default slot values.
+ */
 export function getGestureTemplateDefaultSlots(
-  type: ScreenGesture["type"]
+  type: ScreenGesture["type"],
 ): Record<GestureTemplateSlotKey, string> {
   const template = getGestureTemplate(type);
   const defaults = {
-    element: "",
-    area: "",
-    intent: "",
-    text: "",
+    target: "",
+    goal: "",
     destination: "",
   };
   if (!template) {
@@ -169,9 +184,15 @@ export function getGestureTemplateDefaultSlots(
   return defaults;
 }
 
+/**
+ * Build persisted description text from fixed template parts + editable slot values.
+ * @param type - The gesture type.
+ * @param slotValues - The slot values.
+ * @returns The composed description.
+ */
 export function composeGestureTemplateDescription(
   type: ScreenGesture["type"],
-  slotValues: Record<GestureTemplateSlotKey, string>
+  slotValues: Record<GestureTemplateSlotKey, string>,
 ): string {
   const template = getGestureTemplate(type);
   if (!template) {
@@ -186,10 +207,18 @@ export function composeGestureTemplateDescription(
   });
 }
 
+/**
+ * Parse persisted description back into slot values to hydrate the template UI.
+ *
+ * @param type - The gesture type.
+ * @param description - The persisted description.
+ * @returns The slot values, or null if the description is invalid.
+ */
 export function parseGestureTemplateDescription(
   type: ScreenGesture["type"],
-  description: string
+  description: string,
 ): Record<GestureTemplateSlotKey, string> | null {
+  // Parse persisted description back into slot values to hydrate the template UI.
   const template = getGestureTemplate(type);
   if (!template) {
     return null;
@@ -214,8 +243,14 @@ export function parseGestureTemplateDescription(
   return parsed;
 }
 
+/**
+ * Shared validation for filmstrip error badges and form schema refinement.
+ *
+ * @param gesture - The gesture to validate.
+ * @returns True if the gesture description is valid, false otherwise.
+ */
 export function validateGestureDescription(
-  gesture: Pick<ScreenGesture, "type" | "description">
+  gesture: Pick<ScreenGesture, "type" | "description">,
 ): boolean {
   if (!gesture.type) {
     return false;
@@ -239,5 +274,8 @@ export function validateGestureDescription(
   if (!parsed) {
     return false;
   }
-  return template.slots.every((slot) => parsed[slot.key].trim().length > 0);
+  return template.slots.every((slot) => {
+    const value = parsed[slot.key].trim();
+    return value.length > MIN_SLOT_LENGTH;
+  });
 }
