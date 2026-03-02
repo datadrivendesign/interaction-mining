@@ -67,6 +67,8 @@ export function TargetSlotCombobox({
   onEnter,
   isGoalInvalid,
   onGoalTouched,
+  isDestinationInvalid,
+  onDestinationTouched,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -77,6 +79,8 @@ export function TargetSlotCombobox({
   onEnter?: () => void;
   isGoalInvalid?: boolean;
   onGoalTouched?: () => void;
+  isDestinationInvalid?: boolean;
+  onDestinationTouched?: () => void;
 }) {
   const targetInputId = useId();
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -189,6 +193,10 @@ export function TargetSlotCombobox({
           onGoalTouched();
           return;
         }
+        if (isDestinationInvalid && onDestinationTouched) {
+          onDestinationTouched();
+          return;
+        }
         onEnter?.();
         return;
       }
@@ -198,7 +206,9 @@ export function TargetSlotCombobox({
       commitTargetOption,
       flatFilteredTargetOptions,
       highlightIndex,
+      isDestinationInvalid,
       isGoalInvalid,
+      onDestinationTouched,
       onEnter,
       onGoalTouched,
       onTouched,

@@ -12,6 +12,7 @@ import React, {
 import { ScreenGesture } from "@prisma/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import {
   composeGestureTemplateDescription,
   GESTURE_DESCRIPTION_MAX_LENGTH,
@@ -46,9 +47,10 @@ export const GestureAnnotationEditor =
         Record<GestureTemplateSlotKey, string>
       >(() => getGestureTemplateDefaultSlots(gesture.type));
       const [legacyTemplateHint, setLegacyTemplateHint] = useState(false);
-      // Track if target and goal slots have been touched for form validation
+      // Track if slots have been touched for form validation
       const [targetTouched, setTargetTouched] = useState(false);
       const [goalTouched, setGoalTouched] = useState(false);
+      const [destinationTouched, setDestinationTouched] = useState(false);
       const hasInitializedTypeRef = useRef(false);
       const previousGestureTypeRef = useRef<ScreenGesture["type"]>(
         gesture.type,
@@ -66,17 +68,31 @@ export const GestureAnnotationEditor =
         () => !!activeTemplate?.slots.some((slot) => slot.key === "goal"),
         [activeTemplate],
       );
+      const hasDestinationSlot = useMemo(
+        () =>
+          !!activeTemplate?.slots.some((slot) => slot.key === "destination"),
+        [activeTemplate],
+      );
       const isTargetInvalid =
         hasTargetSlot &&
         (slotValues.target?.trim().length ?? 0) <= MIN_SLOT_LENGTH;
       const isGoalInvalid =
         hasGoalSlot && (slotValues.goal?.trim().length ?? 0) <= MIN_SLOT_LENGTH;
+      const isDestinationInvalid =
+        hasDestinationSlot &&
+        (slotValues.destination?.trim().length ?? 0) <= MIN_SLOT_LENGTH;
       const MIN_CHARS_REQUIRED = MIN_SLOT_LENGTH + 1;
       const shouldShowTargetError =
         hasTargetSlot && targetTouched && isTargetInvalid;
       const shouldShowGoalError = hasGoalSlot && goalTouched && isGoalInvalid;
+      const shouldShowDestinationError =
+        hasDestinationSlot &&
+        destinationTouched &&
+        isDestinationInvalid;
       const shouldShowTemplateLengthError =
-        shouldShowTargetError || shouldShowGoalError;
+        shouldShowTargetError ||
+        shouldShowGoalError ||
+        shouldShowDestinationError;
 
       // Decide whether to show the textarea or the template inputs
       useImperativeHandle(
@@ -145,6 +161,7 @@ export const GestureAnnotationEditor =
           setLegacyTemplateHint(false);
           setTargetTouched(false);
           setGoalTouched(false);
+          setDestinationTouched(false);
           const templated = composeGestureTemplateDescription(
             gesture.type,
             defaults,
@@ -166,6 +183,7 @@ export const GestureAnnotationEditor =
           setLegacyTemplateHint(false);
           setTargetTouched(false);
           setGoalTouched(false);
+          setDestinationTouched(false);
           const normalized = composeGestureTemplateDescription(
             gesture.type,
             parsed,
@@ -190,6 +208,7 @@ export const GestureAnnotationEditor =
         setSlotValues(defaults);
         setTargetTouched(false);
         setGoalTouched(false);
+        setDestinationTouched(false);
         const templated = composeGestureTemplateDescription(
           gesture.type,
           defaults,
@@ -233,6 +252,7 @@ export const GestureAnnotationEditor =
           setSlotValues(nextValues);
           if (slot.key === "target") setTargetTouched(true);
           if (slot.key === "goal") setGoalTouched(true);
+          if (slot.key === "destination") setDestinationTouched(true);
           setGesture((prev) => ({ ...prev, description: nextDescription }));
         },
         [activeTemplate, gesture.type, setGesture, slotValues],
@@ -245,10 +265,16 @@ export const GestureAnnotationEditor =
           e.preventDefault();
           if (isTargetInvalid) setTargetTouched(true);
           if (isGoalInvalid) setGoalTouched(true);
-          if (isTargetInvalid || isGoalInvalid) return;
+          if (isDestinationInvalid) setDestinationTouched(true);
+          if (isTargetInvalid || isGoalInvalid || isDestinationInvalid) return;
           handleNext();
         },
-        [handleNext, isGoalInvalid, isTargetInvalid],
+        [
+          handleNext,
+          isDestinationInvalid,
+          isGoalInvalid,
+          isTargetInvalid,
+        ],
       );
 
       return (
@@ -292,16 +318,28 @@ export const GestureAnnotationEditor =
                             onEnter={handleNext}
                             isGoalInvalid={isGoalInvalid}
                             onGoalTouched={() => setGoalTouched(true)}
+                            isDestinationInvalid={isDestinationInvalid}
+                            onDestinationTouched={() =>
+                              setDestinationTouched(true)
+                            }
                           />
                         ) : (
                           <input
                             ref={index === 0 ? firstSlotInputRef : undefined}
-                            className="h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs"
+                            className={cn(
+                              "h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs",
+                              slot.key === "destination" &&
+                                shouldShowDestinationError
+                                ? "border-red-500"
+                                : "",
+                            )}
                             aria-label={slot.label}
                             placeholder={slot.placeholder}
                             value={slotValues[slot.key] ?? ""}
                             onBlur={() => {
                               if (slot.key === "goal") setGoalTouched(true);
+                              if (slot.key === "destination")
+                                setDestinationTouched(true);
                             }}
                             onKeyDown={handleTemplateEnter}
                             onChange={(e) =>
