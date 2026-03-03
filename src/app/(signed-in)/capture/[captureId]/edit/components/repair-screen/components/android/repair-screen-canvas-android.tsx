@@ -16,7 +16,10 @@ import { ScreenGesture } from "@prisma/client";
 
 import mergeRefs from "@/lib/utils/merge-refs";
 import { FrameData } from "../../../types";
-import { GestureOption } from "@/lib/utils/gesture-options";
+import {
+  GestureOption,
+  normalizeGestureType,
+} from "@/lib/utils/gesture-options";
 import BoundingBoxOverlay from "./bounding-box-overlay";
 import {
   DraggableMarker,
@@ -89,9 +92,10 @@ export default function RepairScreenCanvasAndroid({
       const relativeY = mouse.elementY / height;
 
       setGesture((prev) => {
-        if (prev.type === "Drag") {
+        if (normalizeGestureType(prev.type) === normalizeGestureType("drag")) {
           const hasStart = prev.x !== null && prev.y !== null;
-          const hasEnd = prev.scrollDeltaX !== null && prev.scrollDeltaY !== null;
+          const hasEnd =
+            prev.scrollDeltaX !== null && prev.scrollDeltaY !== null;
 
           if (!hasStart || hasEnd) {
             return {
@@ -137,7 +141,7 @@ export default function RepairScreenCanvasAndroid({
         }));
       }
     },
-    [ref, width, height, setGesture]
+    [ref, width, height, setGesture],
   );
 
   useEffect(() => {

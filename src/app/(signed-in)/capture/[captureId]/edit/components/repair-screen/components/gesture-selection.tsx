@@ -19,8 +19,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-import { GestureOption } from "@/lib/utils/gesture-options";
+import {
+  GestureOption,
+  COMMAND_ITEM_CLASS,
+  COMMAND_LIST_CLASS,
+  findGestureOption,
+  normalizeGestureType,
+  POPOVER_CONTENT_CLASS,
+} from "@/lib/utils/gesture-options";
 import { GestureContext } from "./gesture-menu";
 
 export function GestureSelection({
@@ -32,23 +45,60 @@ export function GestureSelection({
 }) {
   const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
-  const [value, setValue] = useState<ScreenGesture["type"] | "">(gesture.type);
+  const [value, setValue] = useState<string>(gesture.type ?? "");
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
 
+  const toStoredGestureType = (raw: string): ScreenGesture["type"] | null => {
+    if (!raw) return null;
+    const normalized = normalizeGestureType(raw);
+    return normalized ? (normalized.toLowerCase() as ScreenGesture["type"]) : null;
+  };
+
   useEffect(() => {
-    setValue(gesture.type);
+    setValue(findGestureOption(gesture.type)?.value ?? "");
   }, [gesture.type]);
+
+  const selectedStoredType = toStoredGestureType(value);
+  const dragHelperText =
+    selectedStoredType === "drag"
+      ? gesture.x === null || gesture.y === null
+        ? "Click start point"
+        : gesture.scrollDeltaX === null || gesture.scrollDeltaY === null
+          ? "Click end point"
+          : null
+      : null;
 
   // Update gesture type when value changes
   useEffect(() => {
-    if (value !== "") {
+    const storedType = toStoredGestureType(value);
+    if (storedType) {
       setGesture((prev) => ({
         ...prev,
-        type: value,
+        type: storedType,
+        ...(storedType === "drag" && prev.type !== "drag"
+          ? {
+              x: null,
+              y: null,
+              scrollDeltaX: null,
+              scrollDeltaY: null,
+            }
+          : {}),
         scrollDeltaX:
-          value === "swipe left" ? -0.02 : value === "swipe right" ? 0.02 : 0,
+          storedType === "drag"
+            ? prev.scrollDeltaX
+            : storedType === "swipe left"
+            ? -0.02
+            : storedType === "swipe right"
+              ? 0.02
+              : 0,
         scrollDeltaY:
-          value === "swipe down" ? -0.02 : value === "swipe up" ? 0.02 : 0,
+          storedType === "drag"
+            ? prev.scrollDeltaY
+            : storedType === "swipe down"
+            ? -0.02
+            : storedType === "swipe up"
+              ? 0.02
+              : 0,
       }));
     } else {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
@@ -67,25 +117,20 @@ export function GestureSelection({
             aria-expanded={open}
             className="w-50 justify-between"
           >
-            {value
-              ? gestureOptions
-                  .flat()
-                  .flatMap((option) => [option, ...(option.subGestures ?? [])])
-                  .find((option) => option.value === value)?.label
-              : "Select gesture..."}
+            {value ? findGestureOption(value)?.label : "Select gesture..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-50 p-0"
+          className={POPOVER_CONTENT_CLASS}
           side={openAbove ? "top" : "bottom"}
           align="start"
           sideOffset={4}
           avoidCollisions={false}
         >
           <Command>
-            <CommandList>
-              <CommandEmpty>No framework found.</CommandEmpty>
+            <CommandList className={COMMAND_LIST_CLASS}>
+              <CommandEmpty>No gesture found.</CommandEmpty>
               <CommandGroup>
                 {gestureOptions.map((option) =>
                   option.subGestures ? (
@@ -98,7 +143,7 @@ export function GestureSelection({
                       onMouseLeave={() => {
                         setHoveredOption(null);
                       }}
-                      className="cursor-pointer"
+                      className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
                     >
                       <div
                         id={`${option.value}-label`}
@@ -121,25 +166,33 @@ export function GestureSelection({
                         }`}
                       >
                         {option.subGestures.map((subOption: GestureOption) => (
-                          <button
-                            key={subOption.value}
-                            className="w-full cursor-pointer"
-                            onClick={() => {
-                              setValue(subOption.value);
-                              setOpen(false);
-                              focusDescriptionField();
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-2">
-                              {value === subOption.value ? (
-                                <Check
-                                  className={cn("h-4 w-4", "opacity-100")}
-                                />
-                              ) : (
-                                subOption.icon
-                              )}
-                            </span>
-                          </button>
+                          <TooltipProvider key={subOption.value} delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  className="w-full cursor-pointer"
+                                  onClick={() => {
+                                    setValue(subOption.value);
+                                    setOpen(false);
+                                    focusDescriptionField();
+                                  }}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    {value === subOption.value ? (
+                                      <Check
+                                        className={cn("h-4 w-4", "opacity-100")}
+                                      />
+                                    ) : (
+                                      subOption.icon
+                                    )}
+                                  </span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                {subOption.label}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ))}
                       </div>
                     </CommandItem>
@@ -147,9 +200,11 @@ export function GestureSelection({
                     <CommandItem
                       key={option.value}
                       value={option.value}
-                      className="cursor-pointer"
+                      className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
                       onSelect={(currentValue) => {
-                        setValue(currentValue === value ? "" : currentValue);
+                        const selected = currentValue === value ? "" : currentValue;
+                        const normalized = normalizeGestureType(selected);
+                        setValue(normalized ?? selected);
                         setOpen(false);
                         focusDescriptionField();
                       }}
@@ -170,6 +225,11 @@ export function GestureSelection({
           </Command>
         </PopoverContent>
       </Popover>
+      {dragHelperText ? (
+        <div className="mt-1.5 inline-flex items-center rounded-md border border-black/20 dark:border-white/25 bg-black/85 dark:bg-white/90 px-2 py-1 text-xs font-semibold tracking-wide text-white dark:text-black shadow-sm">
+          {dragHelperText}
+        </div>
+      ) : null}
     </div>
   );
 }

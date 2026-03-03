@@ -85,11 +85,14 @@ const gestureTemplates: GestureTemplate[] = [
   },
   {
     type: "drag",
-    fixedParts: ["Drag ", " to ", " in order to ", ""],
+    fixedParts: ["Drag ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "slider handle" },
-      { key: "destination", label: "destination", placeholder: "right end" },
-      { key: "goal", label: "goal", placeholder: "increase value" },
+      {
+        key: "destination",
+        label: "destination",
+        placeholder: "increase value to 40%",
+      },
     ],
   },
   {
@@ -131,6 +134,23 @@ const gestureTemplateMap = new Map(
   gestureTemplates.map((template) => [template.type, template]),
 );
 
+// Accept UI/display aliases while keeping cw/ccw as canonical persisted types.
+const gestureTemplateTypeAliasMap: Record<string, GestureTemplate["type"]> = {
+  "rotate right": "rotate cw",
+  "rotate left": "rotate ccw",
+};
+
+const normalizeTemplateGestureType = (
+  type: ScreenGesture["type"],
+): GestureTemplate["type"] | null => {
+  if (!type || type === "other") {
+    return null;
+  }
+  const lowerType = type.toLowerCase();
+  const aliasedType = gestureTemplateTypeAliasMap[lowerType];
+  return (aliasedType ?? lowerType) as GestureTemplate["type"];
+};
+
 // Adds in fixed template parts into the regex pattern
 const escapeRegex = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
@@ -154,10 +174,11 @@ export function isFreeformGestureType(type: ScreenGesture["type"]): boolean {
 export function getGestureTemplate(
   type: ScreenGesture["type"],
 ): GestureTemplate | null {
-  if (!type || type === "other") {
+  const normalizedType = normalizeTemplateGestureType(type);
+  if (!normalizedType) {
     return null;
   }
-  return gestureTemplateMap.get(type) ?? null;
+  return gestureTemplateMap.get(normalizedType) ?? null;
 }
 
 /**

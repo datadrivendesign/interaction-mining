@@ -26,10 +26,10 @@ import TouchHoldIcon from "@/components/ui/gesture-icons/touch-and-hold.svg";
 
 import { cn } from "@/lib/utils";
 
-const ICON_BOX_SIZE = "w-7 h-7";
-const HUGE_ICON_SIZE = "w-7 h-7";
-const LUCIDE_ICON_SIZE = "w-7 h-7";
-const CUSTOM_ICON_SIZE = "w-7 h-7";
+const ICON_BOX_SIZE = "w-6 h-6";
+const HUGE_ICON_SIZE = "w-6 h-6";
+const LUCIDE_ICON_SIZE = "w-6 h-6";
+const CUSTOM_ICON_SIZE = "w-6 h-6";
 
 /**
  * Shared icon wrapper
