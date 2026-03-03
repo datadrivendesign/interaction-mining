@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { Role } from "@prisma/client";
+import { CaptureStatus, Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { getCapture } from "@/lib/actions";
 import { NotAuthorized } from "@/components/authorized";
@@ -27,6 +27,14 @@ export default async function Page({
   const isOwner = capture.data?.userId === session.user.id;
   if ((!isOwner && !isAdmin) || !capture.data) {
     return <NotAuthorized />;
+  }
+
+  const terminalStatuses: CaptureStatus[] = [
+    CaptureStatus.APPROVED,
+    CaptureStatus.ARCHIVED,
+  ];
+  if (terminalStatuses.includes(capture.data.status)) {
+    redirect(`/capture/${captureId}/start`);
   }
 
   const platform = capture.data.app.os;
