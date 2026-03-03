@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FrameData, Redaction, TraceFormData } from "../../types";
 import type { ScreenGesture } from "@prisma/client";
@@ -21,6 +22,9 @@ export function SaveTraceGallery() {
   const screens = watch("screens");
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
   const redactions = watch("redactions") as { [key: string]: Redaction[] };
+  const [orientationByScreenId, setOrientationByScreenId] = useState<
+    Record<string, "portrait" | "landscape">
+  >({});
 
   return (
     <section className="block h-full w-full p-5">
@@ -33,6 +37,19 @@ export function SaveTraceGallery() {
               index={index}
               gesture={gestures[screen.id]}
               redactions={redactions[screen.id] || []}
+              isLandscape={orientationByScreenId[screen.id] === "landscape"}
+              onImageLoad={(img) => {
+                if (!img.naturalWidth || !img.naturalHeight) {
+                  return;
+                }
+                setOrientationByScreenId((prev) => ({
+                  ...prev,
+                  [screen.id]:
+                    img.naturalWidth > img.naturalHeight
+                      ? "landscape"
+                      : "portrait",
+                }));
+              }}
             />
           ))}
         </div>
@@ -46,11 +63,15 @@ function SaveTraceFigure({
   index,
   gesture,
   redactions,
+  isLandscape,
+  onImageLoad,
 }: {
   screen: FrameData;
   index: number;
   gesture?: ScreenGesture;
   redactions: Redaction[];
+  isLandscape: boolean;
+  onImageLoad: (img: HTMLImageElement) => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -66,17 +87,18 @@ function SaveTraceFigure({
     canvasWidth > 0 &&
     canvasHeight > 0;
 
-  const startX = isDrag ? gesture!.x! * canvasWidth : 0;
-  const startY = isDrag ? gesture!.y! * canvasHeight : 0;
-  const endX = isDrag
-    ? (gesture!.x! + gesture!.scrollDeltaX!) * canvasWidth
-    : 0;
-  const endY = isDrag
-    ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
-    : 0;
+  const startX = isDrag ? gesture.x! * canvasWidth : 0;
+  const startY = isDrag ? gesture.y! * canvasHeight : 0;
+  const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
+  const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
+  const cardWidthClass = isLandscape
+    ? "w-[min(38rem,88vw)]"
+    : "w-[min(18rem,42vw)]";
 
   return (
-    <figure className="relative flex flex-col bg-neutral-100 dark:bg-neutral-900 shrink-0 shadow-xs w-1/4">
+    <figure
+      className={`relative flex flex-col bg-neutral-100 dark:bg-neutral-900 shrink-0 shadow-xs ${cardWidthClass}`}
+    >
       <div className="relative w-full" ref={containerRef}>
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
           {index + 1}
@@ -91,6 +113,7 @@ function SaveTraceFigure({
             width={0}
             height={0}
             sizes="100vw"
+            onLoad={(event) => onImageLoad(event.currentTarget)}
           />
 
           {isDrag && (
@@ -137,7 +160,7 @@ function SaveTraceFigure({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70"
+                  className="cursor-pointer absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70 w-6 h-6 md:w-7 md:h-7"
                   style={{
                     left: `${(gesture.x ?? 0) * 100}%`,
                     top: `${(gesture.y ?? 0) * 100}%`,

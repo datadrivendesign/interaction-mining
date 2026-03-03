@@ -17,6 +17,7 @@ import Image from "next/image";
 import { card } from "../util";
 import { spring } from "@/lib/motion";
 import { findGestureOption } from "@/lib/utils/gesture-options";
+import { validateGestureDescription } from "../util";
 
 export function Filmstrip({
   screens,
@@ -105,17 +106,17 @@ export function Filmstrip({
             <FilmstripItem
               key={screen.id}
               index={index}
-              isLast={isLast}
               screen={screen}
               gesture={gestures[screen.id]}
               redactions={redactions[screen.id] ?? []}
               os={os}
               isSelected={focusViewIndex === index}
               hasError={
-                !gestures[screen.id] ||
-                gestures[screen.id].type === null ||
-                gestures[screen.id].description === undefined ||
-                gestures[screen.id].description === ""
+                isLast
+                  ? false
+                  : !gestures[screen.id] ||
+                    gestures[screen.id].type === null ||
+                    !validateGestureDescription(gestures[screen.id])
               }
               onClick={() => setFocusViewIndex(index)}
               handleSetTime={handleSetTime}
@@ -133,7 +134,6 @@ function FilmstripItem({
   gesture,
   redactions,
   index = 0,
-  isLast = false,
   os,
   isSelected,
   hasError = false,
@@ -146,7 +146,6 @@ function FilmstripItem({
   gesture?: ScreenGesture;
   redactions: Array<Redaction>;
   index?: number;
-  isLast: boolean;
   os: Platform;
   isSelected?: boolean;
   hasError?: boolean;
@@ -207,12 +206,12 @@ function FilmstripItem({
                       "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
                       isSelected
                         ? "ring-2 ring-inset ring-blue-500"
-                        : hasError && !isLast
+                        : hasError
                           ? "ring-2 ring-inset ring-yellow-500"
                           : "",
                     )}
                   >
-                    {hasError && !isLast && (
+                    {hasError && (
                       <CircleAlert
                         className={cn("size-6", "text-yellow-500")}
                       />
@@ -234,7 +233,7 @@ function FilmstripItem({
           <div
             className={cn(
               "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
-              hasError && !isLast
+              hasError
                 ? isSelected
                   ? "grayscale brightness-70"
                   : "grayscale brightness-50"

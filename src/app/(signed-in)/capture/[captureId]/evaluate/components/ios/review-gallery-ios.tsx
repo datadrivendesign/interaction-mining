@@ -15,6 +15,7 @@ import { TraceFormData } from "../../../edit/components/types";
 import { Badge } from "@/components/ui/badge";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
+import { useState } from "react";
 
 export function ReviewGalleryIOS({
   traceData,
@@ -23,6 +24,10 @@ export function ReviewGalleryIOS({
   traceData: TraceFormData;
   videoRef: React.RefObject<HTMLVideoElement>;
 }) {
+  const [orientationByScreenId, setOrientationByScreenId] = useState<
+    Record<string, "portrait" | "landscape">
+  >({});
+
   return (
     <section className="block w-full h-full p-5">
       <Badge variant="default" className="bg-black my-5">
@@ -34,7 +39,7 @@ export function ReviewGalleryIOS({
       </Badge>
       <article className="flex w-full overflow-x-scroll touch-pan-x">
         <div className="flex min-w-full gap-5">
-          {traceData.screens
+          {[...traceData.screens]
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((screen, index) => (
               <ReviewFigureIOS
@@ -43,6 +48,19 @@ export function ReviewGalleryIOS({
                 screen={screen}
                 gesture={traceData.gestures[screen.id]}
                 redactions={traceData.redactions[screen.id] || []}
+                isLandscape={orientationByScreenId[screen.id] === "landscape"}
+                onImageLoad={(img) => {
+                  if (!img.naturalWidth || !img.naturalHeight) {
+                    return;
+                  }
+                  setOrientationByScreenId((prev) => ({
+                    ...prev,
+                    [screen.id]:
+                      img.naturalWidth > img.naturalHeight
+                        ? "landscape"
+                        : "portrait",
+                  }));
+                }}
                 onJump={() => {
                   if (videoRef.current) {
                     videoRef.current.currentTime = screen.timestamp;
@@ -61,12 +79,16 @@ function ReviewFigureIOS({
   screen,
   gesture,
   redactions,
+  isLandscape,
+  onImageLoad,
   onJump,
 }: {
   index: number;
   screen: TraceFormData["screens"][number];
   gesture?: ScreenGesture;
   redactions: TraceFormData["redactions"][string];
+  isLandscape: boolean;
+  onImageLoad: (img: HTMLImageElement) => void;
   onJump: () => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
@@ -83,13 +105,16 @@ function ReviewFigureIOS({
     canvasWidth > 0 &&
     canvasHeight > 0;
 
-  const startX = isDrag ? gesture!.x! * canvasWidth : 0;
-  const startY = isDrag ? gesture!.y! * canvasHeight : 0;
-  const endX = isDrag ? (gesture!.x! + gesture!.scrollDeltaX!) * canvasWidth : 0;
-  const endY = isDrag ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight : 0;
+  const startX = isDrag ? gesture.x! * canvasWidth : 0;
+  const startY = isDrag ? gesture.y! * canvasHeight : 0;
+  const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
+  const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
+  const cardWidthClass = isLandscape
+    ? "w-[min(38rem,88vw)]"
+    : "w-[min(18rem,42vw)]";
 
   return (
-    <figure className="relative flex flex-col shrink-0 shadow-xs w-1/4">
+    <figure className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}>
       <div className="relative w-full cursor-pointer" onClick={onJump} ref={containerRef}>
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
           {index + 1}
@@ -104,6 +129,7 @@ function ReviewFigureIOS({
               height={0}
               sizes="100vw"
               className="relative z-0 w-full h-full rounded-lg object-contain border-blue-500 border-2"
+              onLoad={(event) => onImageLoad(event.currentTarget)}
             />
           )}
 
@@ -151,7 +177,7 @@ function ReviewFigureIOS({
             <TooltipTrigger asChild>
               {gesture ? (
                 <div
-                  className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-85"
+                  className="cursor-pointer absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-85 w-7 h-7 md:w-8 md:h-8"
                   style={{
                     left: `${(gesture.x ?? 0) * 100}%`,
                     top: `${(gesture.y ?? 0) * 100}%`,
