@@ -1,5 +1,6 @@
 import { ScreenGesture } from "@prisma/client";
 import { z, ZodType } from "zod";
+import { normalizeGestureType } from "@/lib/utils/gesture-options";
 
 export type FrameData = {
   id: string;
@@ -54,9 +55,13 @@ export const ScreenSchema = z
 
 export const GestureSchema = z.record(
   z.object({
-    type: z.string({
-      message: "Gesture type is required",
-    }),
+    type: z
+      .string({
+        message: "Gesture type is required",
+      })
+      .refine((value) => normalizeGestureType(value) !== null, {
+        message: "Gesture type is invalid",
+      }),
     x: z.number({
       message: "X coordinate is required",
     }),

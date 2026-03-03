@@ -80,8 +80,8 @@ body {
 }
 
 
-.gesture-icon :where(svg),
-.gesture-icon-custom :where(svg) {
+.gesture-icon,
+.gesture-icon-custom {
   width: 100%;
   height: 100%;
 }

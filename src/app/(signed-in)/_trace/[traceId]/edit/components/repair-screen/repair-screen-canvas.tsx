@@ -176,7 +176,7 @@ export default function RepairScreenCanvas({
         }));
       }
     },
-    [ref, width, height, setGesture]
+    [ref, width, height, setGesture],
   );
 
   useEffect(() => {
@@ -254,7 +254,7 @@ export default function RepairScreenCanvas({
             gestureX >= box.x / rootBounds.width &&
             gestureX <= (box.x + box.width) / rootBounds.width &&
             gestureY >= box.y / rootBounds.height &&
-            gestureY <= (box.y + box.height) / rootBounds.height
+            gestureY <= (box.y + box.height) / rootBounds.height,
         ) ?? {};
       setFocusedBox(foundBox);
     }
@@ -392,7 +392,7 @@ function DraggableMarker({
         }}
         className={clsx(
           "absolute z-50 flex justify-center items-center bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-colors duration-150 ease-in-out",
-          isDragging ? "cursor-grabbing" : "cursor-grab"
+          isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
         {...listeners}
         {...attributes}
@@ -403,7 +403,7 @@ function DraggableMarker({
             .find(
               (option) =>
                 option.value === gesture.type ||
-                option.value.toLowerCase() === gesture.type?.toLowerCase()
+                option.value.toLowerCase() === gesture.type?.toLowerCase(),
             )?.icon
         ) : (
           <CircleDashed className="size-4 text-yellow-800 hover:text-black" />
@@ -578,7 +578,7 @@ function GestureSelection() {
                 .find(
                   (option) =>
                     option.value === gesture.type ||
-                    option.value.toLowerCase() === gesture.type?.toLowerCase()
+                    option.value.toLowerCase() === gesture.type?.toLowerCase(),
                 )?.label
             : "Select gesture..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -601,15 +601,11 @@ function GestureSelection() {
                     }
                   }}
                 >
-                  {value === option.value ? 
-                    <Check
-                    className={cn(
-                      "h-4 w-4",
-                      "opacity-100"
-                    )}
-                  /> : 
-                    option.icon 
-                  }
+                  {value === option.value ? (
+                    <Check className={cn("h-4 w-4", "opacity-100")} />
+                  ) : (
+                    option.icon
+                  )}
                   {option.label}
 
                   {option.subGestures && (
@@ -636,23 +632,23 @@ function GestureSelection() {
                                   value={gesture.value}
                                   onSelect={(currentValue) => {
                                     setValue(
-                                      currentValue === value ? "" : currentValue
+                                      currentValue === value
+                                        ? ""
+                                        : currentValue,
                                     );
                                     setOpen(false);
                                   }}
                                 >
-                                  {value === option.value ? 
+                                  {value === option.value ? (
                                     <Check
-                                      className={cn(
-                                        "h-4 w-4",
-                                        "opacity-100"
-                                      )}
-                                    /> : 
-                                    option.icon 
-                                  }
+                                      className={cn("h-4 w-4", "opacity-100")}
+                                    />
+                                  ) : (
+                                    option.icon
+                                  )}
                                   {gesture.label}
                                 </CommandItem>
-                              )
+                              ),
                             )}
                           </CommandList>
                         </Command>
