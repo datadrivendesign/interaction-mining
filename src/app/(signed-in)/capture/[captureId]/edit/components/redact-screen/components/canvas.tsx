@@ -178,12 +178,16 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           : 16;
       const availableW = width;
       const availableH = height! - vPadding * 2;
-      const scale =
+      const fitScale =
         image && width && height
           ? Math.min(availableW! / image.width, availableH / image.height)
           : 1;
-      const displayWidth = image ? image.width * scale : 0;
-      const displayHeight = image ? image.height * scale : 0;
+      // Start landscape frames at a smaller initial fit so they do not dominate
+      // the redact focus area on first load.
+      const initialScale =
+        image && image.width > image.height ? fitScale * 0.5 : fitScale;
+      const displayWidth = image ? image.width * initialScale : 0;
+      const displayHeight = image ? image.height * initialScale : 0;
       const offsetX = image ? (width! - displayWidth) / 2 : 0;
       const offsetY = image ? vPadding + (availableH - displayHeight) / 2 : 0;
       return { displayWidth, displayHeight, offsetX, offsetY };

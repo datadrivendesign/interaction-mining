@@ -1,49 +1,36 @@
 "use client";
 
 import React, {
-  createContext,
-  useCallback,
   useContext,
   useEffect,
   useState,
   useRef,
-  RefObject,
-  KeyboardEvent,
-  ChangeEvent,
+  createContext,
 } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
 import { ScreenGesture } from "@prisma/client";
-
-import { cn } from "@/lib/utils";
-
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import { GestureOption } from "@/lib/utils/gesture-options";
-import { Progress } from "@/components/ui/progress";
-import { useNavigation } from "../repair-screen";
 
 import { CircleDashed } from "lucide-react";
 import { motion } from "motion/react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 
 import clsx from "clsx";
+import {
+  findGestureOption,
+  GestureOption,
+  normalizeGestureType,
+} from "@/lib/utils/gesture-options";
+
+import {
+  GestureAnnotationEditor,
+  GestureAnnotationEditorHandle,
+} from "./gesture-annotation-editor";
+import { GestureSelection } from "./gesture-selection";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
+  canvasSize: { width: number; height: number };
 }>({
   gesture: {
     type: null,
@@ -55,6 +42,7 @@ export const GestureContext = createContext<{
   },
   setGesture: () => {},
   gestureOptions: [],
+  canvasSize: { width: 0, height: 0 },
 });
 
 export function GestureMenu({
@@ -64,19 +52,13 @@ export function GestureMenu({
   position: { x: number | null; y: number | null };
   transform: { x: number; y: number; scaleX: number; scaleY: number } | null;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<GestureAnnotationEditorHandle>(null);
   const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
-  const { gesture, setGesture } = useContext(GestureContext);
-  const { handleNext } = useNavigation();
-  const [annotateLen, setAnnotateLen] = useState(0);
-  const maxLength = 50;
 
+  // Determine whether to place the textarea above or below the marker
   useEffect(() => {
-    // Get the marker's position and droppable area height
     const droppableElement = document.querySelector("[data-droppable]");
     const droppableRect = droppableElement?.getBoundingClientRect();
-
-    // If marker is in bottom 25% of droppable area, place textarea above
     const shouldPlaceAbove =
       (droppableRect &&
         position.y !== null &&
@@ -87,27 +69,10 @@ export function GestureMenu({
     }
   }, [position, placeTextareaAbove]);
 
-  const handleEnter = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleNext();
-      }
-    },
-    [handleNext]
-  );
-
-  const handleTextareaChange = useCallback(
-    (e: ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      setGesture((prev) => ({
-        ...prev,
-        description: value,
-      }));
-      setAnnotateLen(value.length);
-    },
-    [setGesture]
-  );
+  // Focus the description field of the gesture annotation editor
+  const focusDescriptionField = () => {
+    editorRef.current?.focusDescription();
+  };
 
   return (
     <div
@@ -121,195 +86,24 @@ export function GestureMenu({
       }}
     >
       {placeTextareaAbove && (
-        <div className="absolute mb-1 w-full -top-22">
-          {textareaRef.current && (
-            <div className="w-full flex flex-col">
-              <div className="text-sm flex justify-end text-muted-foreground z-10">
-                {`${annotateLen}/${maxLength}`}
-              </div>
-              <Progress
-                className="w-full"
-                value={(annotateLen / maxLength) * 100}
-              />
-            </div>
-          )}
-          <Textarea
-            ref={textareaRef}
-            className="text-sm w-full h-full bg-background!"
-            placeholder="What was your goal with this gesture?"
-            maxLength={maxLength}
-            value={gesture.description ? gesture.description : ""}
-            onKeyDown={handleEnter}
-            onChange={handleTextareaChange}
-          />
+        <div
+          className="absolute w-full"
+          style={{ top: 0, transform: "translateY(calc(-100% - 0.25rem))" }}
+        >
+          <GestureAnnotationEditor ref={editorRef} />
         </div>
       )}
 
-      <GestureSelection textareaRef={textareaRef} />
+      <GestureSelection
+        focusDescriptionField={focusDescriptionField}
+        openAbove={placeTextareaAbove}
+      />
 
       {!placeTextareaAbove && (
         <div className="absolute mt-1 w-full">
-          <Textarea
-            ref={textareaRef}
-            className="text-sm w-full h-full bg-background!"
-            placeholder="What was your goal with this gesture?"
-            maxLength={maxLength}
-            value={gesture.description ? gesture.description : ""}
-            onKeyDown={handleEnter}
-            onChange={handleTextareaChange}
-          />
-          {textareaRef.current && (
-            <div className="w-full flex flex-col">
-              <Progress
-                className="w-full"
-                value={(annotateLen / maxLength) * 100}
-              />
-              <div className="text-sm flex justify-end text-muted-foreground z-10">
-                {`${annotateLen}/${maxLength}`}
-              </div>
-            </div>
-          )}
+          <GestureAnnotationEditor ref={editorRef} />
         </div>
       )}
-    </div>
-  );
-}
-
-function GestureSelection({
-  textareaRef,
-}: {
-  textareaRef: RefObject<HTMLTextAreaElement>;
-}) {
-  const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
-  const [open, setOpen] = useState(gesture.type === null);
-  const [value, setValue] = useState(gesture.type);
-  const [hoveredOption, setHoveredOption] = useState<string | null>(null);
-
-  // Update gesture type when value changes
-  useEffect(() => {
-    if (value !== "") {
-      setGesture((prev) => ({
-        ...prev,
-        type: value,
-        scrollDeltaX:
-          value === "Swipe left" ? -0.02 : value === "Swipe right" ? 0.02 : 0,
-        scrollDeltaY:
-          value === "Swipe down" ? -0.02 : value === "Swipe up" ? 0.02 : 0,
-      }));
-    } else {
-      // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
-      setGesture((prev) => ({ ...prev, type: null }));
-    }
-  }, [value, setGesture]);
-
-  return (
-    <div className="relative">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            size="sm"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-50 justify-between"
-          >
-            {value
-              ? gestureOptions
-                  .flat()
-                  .flatMap((option) => [option, ...(option.subGestures ?? [])])
-                  .find((option) => option.value === value)?.label
-              : "Select gesture..."}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-50 p-0">
-          <Command>
-            <CommandList>
-              <CommandEmpty>No framework found.</CommandEmpty>
-              <CommandGroup>
-                {gestureOptions.map((option) =>
-                  option.subGestures ? (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      onMouseEnter={() => {
-                        setHoveredOption(option.value);
-                      }}
-                      onMouseLeave={() => {
-                        setHoveredOption(null);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <div
-                        id={`${option.value}-label`}
-                        className={`inline-flex w-full items-center gap-2 transition-transform duration-200 ${
-                          hoveredOption === option.value
-                            ? "-translate-x-full"
-                            : "translate-x-0"
-                        }`}
-                      >
-                        {option.icon}
-                        {option.label}
-                      </div>
-                      {/* Sub-gesture hidden menu shown on hover */}
-                      <div
-                        id={`${option.value}-sub-gestures`}
-                        className={`absolute w-full inset-0 flex justify-center items-center transition-transform duration-200 ${
-                          hoveredOption === option.value
-                            ? "translate-x-0"
-                            : "translate-x-full"
-                        }`}
-                      >
-                        {option.subGestures.map((subOption: GestureOption) => (
-                          <button
-                            key={subOption.value}
-                            className="w-full cursor-pointer"
-                            onClick={() => {
-                              setValue(subOption.value);
-                              setOpen(false);
-                              textareaRef.current?.focus();
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-2">
-                              {value === subOption.value ? (
-                                <Check
-                                  className={cn("h-4 w-4", "opacity-100")}
-                                />
-                              ) : (
-                                subOption.icon
-                              )}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </CommandItem>
-                  ) : (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      className="cursor-pointer"
-                      onSelect={(currentValue) => {
-                        setValue(currentValue === value ? "" : currentValue);
-                        setOpen(false);
-                        textareaRef.current?.focus();
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        {value === option.value ? (
-                          <Check className={cn("h-4 w-4", "opacity-100")} />
-                        ) : (
-                          option.icon
-                        )}
-                        {option.label}
-                      </span>
-                    </CommandItem>
-                  )
-                )}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }
@@ -323,21 +117,85 @@ export function DroppableArea({ children }: { children: React.ReactNode }) {
   );
 }
 
+function isDragGesture(type: string | null) {
+  return normalizeGestureType(type) === "Drag";
+}
+
 export function DraggableMarker({
   position,
 }: {
   position: { x: number | null; y: number | null };
   props?: React.HTMLAttributes<HTMLDivElement>;
 }) {
+  const { gesture, canvasSize } = useContext(GestureContext);
   const { attributes, isDragging, listeners, setNodeRef, transform } =
     useDraggable({
       id: "gestureMarker",
     });
 
-  const { gesture, gestureOptions } = useContext(GestureContext);
+  const selectedIcon = gesture.type ? findGestureOption(gesture.type)?.icon : null;
+  const showDragPath =
+    isDragGesture(gesture.type) &&
+    gesture.scrollDeltaX !== null &&
+    gesture.scrollDeltaY !== null &&
+    position.x !== null &&
+    position.y !== null;
+  const dragPath =
+    showDragPath && position.x !== null && position.y !== null
+      ? {
+          startX: position.x,
+          startY: position.y,
+          endX:
+            position.x +
+            (gesture.scrollDeltaX ?? 0) * Math.max(canvasSize.width, 1),
+          endY:
+            position.y +
+            (gesture.scrollDeltaY ?? 0) * Math.max(canvasSize.height, 1),
+        }
+      : null;
 
   return (
     <>
+      {dragPath ? (
+        <svg
+          className="pointer-events-none absolute inset-0 z-45 overflow-visible"
+          width="100%"
+          height="100%"
+        >
+          <defs>
+            <marker
+              id="repair-drag-arrowhead"
+              viewBox="0 0 8 8"
+              markerWidth="5"
+              markerHeight="5"
+              refX="7"
+              refY="4"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L0,8 L8,4 z" fill="rgba(23,23,23,0.7)" />
+            </marker>
+          </defs>
+          <line
+            x1={dragPath.startX}
+            y1={dragPath.startY}
+            x2={dragPath.endX}
+            y2={dragPath.endY}
+            stroke="rgba(23,23,23,0.65)"
+            strokeWidth="1.75"
+            markerEnd="url(#repair-drag-arrowhead)"
+          />
+          <circle
+            cx={dragPath.endX}
+            cy={dragPath.endY}
+            r="4.75"
+            fill="white"
+            stroke="rgba(23,23,23,0.88)"
+            strokeWidth="1.6"
+          />
+        </svg>
+      ) : null}
+
       <motion.div
         ref={setNodeRef}
         data-marker
@@ -352,15 +210,15 @@ export function DraggableMarker({
         }}
         className={clsx(
           "absolute z-50 flex justify-center items-center bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-colors duration-150 ease-in-out",
-          isDragging ? "cursor-grabbing" : "cursor-grab"
+          isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
         {...listeners}
         {...attributes}
       >
-        {gesture.type ? (
-          gestureOptions
-            .flatMap((gesture) => [gesture, ...(gesture.subGestures ?? [])])
-            .find((option) => option.value === gesture.type)?.icon
+        {selectedIcon ? (
+          <span className="inline-flex items-center justify-center w-full h-full">
+            {selectedIcon}
+          </span>
         ) : (
           <CircleDashed className="size-4 text-yellow-800 hover:text-black" />
         )}

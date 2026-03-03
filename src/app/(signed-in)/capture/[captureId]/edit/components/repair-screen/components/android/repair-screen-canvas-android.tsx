@@ -16,7 +16,10 @@ import { ScreenGesture } from "@prisma/client";
 
 import mergeRefs from "@/lib/utils/merge-refs";
 import { FrameData } from "../../../types";
-import { GestureOption } from "@/lib/utils/gesture-options";
+import {
+  GestureOption,
+  normalizeGestureType,
+} from "@/lib/utils/gesture-options";
 import BoundingBoxOverlay from "./bounding-box-overlay";
 import {
   DraggableMarker,
@@ -88,11 +91,37 @@ export default function RepairScreenCanvasAndroid({
       const relativeX = mouse.elementX / width;
       const relativeY = mouse.elementY / height;
 
-      setGesture((prev) => ({
-        ...prev,
-        x: relativeX,
-        y: relativeY,
-      }));
+      setGesture((prev) => {
+        if (normalizeGestureType(prev.type) === normalizeGestureType("drag")) {
+          const hasStart = prev.x !== null && prev.y !== null;
+          const hasEnd =
+            prev.scrollDeltaX !== null && prev.scrollDeltaY !== null;
+
+          if (!hasStart || hasEnd) {
+            return {
+              ...prev,
+              x: relativeX,
+              y: relativeY,
+              scrollDeltaX: null,
+              scrollDeltaY: null,
+            };
+          }
+          const startX = prev.x ?? relativeX;
+          const startY = prev.y ?? relativeY;
+
+          return {
+            ...prev,
+            scrollDeltaX: relativeX - startX,
+            scrollDeltaY: relativeY - startY,
+          };
+        }
+
+        return {
+          ...prev,
+          x: relativeX,
+          y: relativeY,
+        };
+      });
     }
   };
 
@@ -112,7 +141,7 @@ export default function RepairScreenCanvasAndroid({
         }));
       }
     },
-    [ref, width, height, setGesture]
+    [ref, width, height, setGesture],
   );
 
   useEffect(() => {
@@ -181,6 +210,7 @@ export default function RepairScreenCanvasAndroid({
           gesture: memoizedGestureState["gesture"],
           setGesture: memoizedGestureState["setGesture"],
           gestureOptions: gestureOptions,
+          canvasSize: { width: width ?? 1, height: height ?? 1 },
         }}
       >
         <DndContext

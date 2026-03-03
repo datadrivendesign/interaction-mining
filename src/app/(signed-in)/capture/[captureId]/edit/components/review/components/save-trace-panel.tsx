@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -16,7 +16,13 @@ import {
 } from "@/components/ui/select";
 import { iosOptions, iphoneOptions } from "@/lib/utils/ios-options";
 
-export function SaveTracePanel({ os }: { os: string }) {
+export function SaveTracePanel({
+  os,
+  taskDescription,
+}: {
+  os: string;
+  taskDescription: string;
+}) {
   return (
     <div className="flex flex-col w-full grow justify-start">
       {os === "ios" && (
@@ -36,7 +42,7 @@ export function SaveTracePanel({ os }: { os: string }) {
         </div>
       )}
 
-      <DescriptionField />
+      <DescriptionField taskDescription={taskDescription} />
     </div>
   );
 }
@@ -83,16 +89,43 @@ function VersionSelect({
   );
 }
 
-function DescriptionField() {
-  const { register } = useFormContext<TraceFormData>();
+function DescriptionField({ taskDescription }: { taskDescription: string }) {
+  const { register, setValue, getValues } = useFormContext<TraceFormData>();
   const { onChange, ref, onBlur, name } = register("description");
+  const descriptionValue = useWatch({
+    name: "description",
+  });
   const descriptionTextAreaRef = useRef<HTMLTextAreaElement>(null);
   const [descriptionLen, setDescriptionLen] = useState(0);
+  const [hasInitializedPrefill, setHasInitializedPrefill] = useState(false);
+
+  useEffect(() => {
+    const value = descriptionValue ?? "";
+    setDescriptionLen(value.length);
+  }, [descriptionValue, taskDescription]);
+
+  useEffect(() => {
+    if (hasInitializedPrefill) {
+      return;
+    }
+    const existing = (getValues("description") ?? "").trim();
+    if (existing.length > 0) {
+      setHasInitializedPrefill(true);
+      return;
+    }
+    if (!taskDescription) {
+      setHasInitializedPrefill(true);
+      return;
+    }
+    setValue("description", taskDescription);
+    setDescriptionLen(taskDescription.length);
+    setHasInitializedPrefill(true);
+  }, [getValues, hasInitializedPrefill, setValue, taskDescription]);
 
   return (
     <>
       <Label htmlFor="description" className="mb-2">
-        Trace Description
+        Interaction Summary
       </Label>
       <Textarea
         id="description"
@@ -106,11 +139,28 @@ function DescriptionField() {
         ref={
           mergeRefs(
             ref,
-            descriptionTextAreaRef
+            descriptionTextAreaRef,
           ) as React.MutableRefObject<HTMLTextAreaElement | null>
         }
-        placeholder="In your own words, describe in one sentence the OVERALL task shown in these screens."
+        placeholder="Briefly summarize the interaction flow in these screens, do not include private information."
       />
+      {taskDescription ? (
+        <div className="mt-2 mb-3 flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Prefilled from your task - edit freely.
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-neutral-200 transition-colors dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+            onClick={() => {
+              setValue("description", taskDescription);
+              setDescriptionLen(taskDescription.length);
+            }}
+          >
+            Reuse task description
+          </button>
+        </div>
+      ) : null}
       {descriptionTextAreaRef.current && (
         <div className="w-full flex flex-col">
           <Progress

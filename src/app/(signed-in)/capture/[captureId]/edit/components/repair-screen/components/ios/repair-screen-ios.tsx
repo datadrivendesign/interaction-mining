@@ -312,7 +312,7 @@ export function RepairScreenIOS({
               <Card
                 key="video"
                 className={
-                  "left-4 absolute top-0 w-20 h-20 p-0 z-10 shadow-md bg-background border rounded-md"
+                  "hidden lg:block left-4 absolute top-0 w-20 h-20 p-0 z-10 shadow-md bg-background border rounded-md"
                 }
               >
                 <CardHeader className="flex flex-col items-center p-2">

@@ -31,6 +31,8 @@
     "@formity/react": "^0.3.0",
     "@headlessui/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
+    "@hugeicons/core-free-icons": "^1.2.1",
+    "@hugeicons/react": "^1.1.1",
     "@mdx-js/loader": "^3.1.0",
     "@mdx-js/react": "^3.1.0",
     "@next/bundle-analyzer": "^15.3.3",
