@@ -1,10 +1,10 @@
 import { cn, Platform, prettyNumber } from "@/lib/utils";
 import { FrameData, Redaction, TraceFormData } from "../../types";
-import { ScreenGesture } from "@prisma/client";
+import type { ScreenGesture } from "@prisma/client";
 import { useNavigation } from "../repair-screen";
 import { useFormContext } from "react-hook-form";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +16,7 @@ import Kbd from "@/components/ui/kbd";
 import Image from "next/image";
 import { card } from "../util";
 import { spring } from "@/lib/motion";
+import { findGestureOption } from "@/lib/utils/gesture-options";
 
 export function Filmstrip({
   screens,
@@ -37,19 +38,19 @@ export function Filmstrip({
 
   const setFrameData = useCallback(
     (value: FrameData[]) => setValue("screens", value),
-    [setValue]
+    [setValue],
   );
   const setGestureData = useCallback(
     (value: { [key: string]: ScreenGesture }) => setValue("gestures", value),
-    [setValue]
+    [setValue],
   );
   const setRedactionData = useCallback(
     (value: { [key: string]: Redaction[] }) => setValue("redactions", value),
-    [setValue]
+    [setValue],
   );
   const setVHData = useCallback(
     (value: { [key: string]: any }) => setValue("vhs", value),
-    [setValue]
+    [setValue],
   );
 
   const handleDeleteFrame = useCallback(
@@ -92,7 +93,7 @@ export function Filmstrip({
       setRedactionData,
       setFocusViewIndex,
       setVHData,
-    ]
+    ],
   );
 
   return (
@@ -106,6 +107,7 @@ export function Filmstrip({
               index={index}
               isLast={isLast}
               screen={screen}
+              gesture={gestures[screen.id]}
               redactions={redactions[screen.id] ?? []}
               os={os}
               isSelected={focusViewIndex === index}
@@ -128,6 +130,7 @@ export function Filmstrip({
 
 function FilmstripItem({
   screen,
+  gesture,
   redactions,
   index = 0,
   isLast = false,
@@ -140,6 +143,7 @@ function FilmstripItem({
   ...props
 }: {
   screen: FrameData;
+  gesture?: ScreenGesture;
   redactions: Array<Redaction>;
   index?: number;
   isLast: boolean;
@@ -150,54 +154,6 @@ function FilmstripItem({
   handleDeleteFrame: (index: number) => void;
   // children?: React.ReactNode;
 } & React.HTMLAttributes<HTMLLIElement>) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const [imgDimensions, setImgDimensions] = useState<{
-    width: number;
-    height: number;
-    offsetX: number;
-    offsetY: number;
-    scaleX: number;
-    scaleY: number;
-  }>({ width: 0, height: 0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
-
-  const updateSize = useCallback(() => {
-    if (containerRef.current && imageRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const imageRect = imageRef.current.getBoundingClientRect();
-      const naturalWidth = imageRef.current.naturalWidth;
-      const naturalHeight = imageRef.current.naturalHeight;
-
-      // Only update if image is loaded (naturalWidth/Height > 0)
-      if (naturalWidth > 0 && naturalHeight > 0) {
-        // Calculate the scale factor between the natural and displayed size:
-        const scaleX = imageRect.width / naturalWidth;
-        const scaleY = imageRect.height / naturalHeight;
-        // Compute offsets in case the image is letterboxed inside its container:
-        const offsetX = (containerRect.width - imageRect.width) / 2;
-        const offsetY = (containerRect.height - imageRect.height) / 2;
-        setImgDimensions({
-          width: imageRect.width,
-          height: imageRect.height,
-          offsetX,
-          offsetY,
-          scaleX,
-          scaleY,
-        });
-      }
-    }
-  }, []);
-
-  const handleImageLoad = useCallback(() => {
-    // Small delay to ensure image is fully rendered
-    setTimeout(updateSize, 0);
-  }, [updateSize]);
-
-  useEffect(() => {
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, [updateSize]);
-
   return (
     <motion.div
       className="min-w-fit h-full max-w-full"
@@ -237,10 +193,7 @@ function FilmstripItem({
             <X className="size-4 text-muted-foreground hover:opacity-75" />
           </button>
         </div>
-        <div
-          ref={containerRef}
-          className="relative h-[calc(100%-1rem)] rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
-        >
+        <div className="relative h-[calc(100%-1rem)] rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
           {/* Index overlay */}
           <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
             {index + 1}
@@ -256,7 +209,7 @@ function FilmstripItem({
                         ? "ring-2 ring-inset ring-blue-500"
                         : hasError && !isLast
                           ? "ring-2 ring-inset ring-yellow-500"
-                          : ""
+                          : "",
                     )}
                   >
                     {hasError && !isLast && (
@@ -285,13 +238,12 @@ function FilmstripItem({
                 ? isSelected
                   ? "grayscale brightness-70"
                   : "grayscale brightness-50"
-                : "grayscale-0 brightness-100"
+                : "grayscale-0 brightness-100",
             )}
           >
             {/* {children} */}
             {screen.src ? (
               <Image
-                ref={imageRef}
                 key={screen.id}
                 src={screen.src}
                 alt="gallery"
@@ -300,7 +252,6 @@ function FilmstripItem({
                 width={0}
                 height={0}
                 sizes="100vw"
-                onLoad={handleImageLoad}
                 onError={() => {
                   console.warn(`Failed to load image for screen ${screen.id}`);
                 }}
@@ -310,36 +261,28 @@ function FilmstripItem({
                 <div className="text-xs text-muted-foreground">Loading...</div>
               </div>
             )}
-            {/* Render redaction overlays using the natural dimensions and scale factors */}
-            {imgDimensions.width > 0 &&
-              redactions.map((rect, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    position: "absolute",
-                    top:
-                      imgDimensions.offsetY +
-                      rect.y *
-                        imageRef.current!.naturalHeight *
-                        imgDimensions.scaleY,
-                    left:
-                      imgDimensions.offsetX +
-                      rect.x *
-                        imageRef.current!.naturalWidth *
-                        imgDimensions.scaleX,
-                    width:
-                      rect.width *
-                      imageRef.current!.naturalWidth *
-                      imgDimensions.scaleX,
-                    height:
-                      rect.height *
-                      imageRef.current!.naturalHeight *
-                      imgDimensions.scaleY,
-                    backgroundColor: "black",
-                    border: "1px solid black",
-                  }}
-                />
-              ))}
+            {/* Render redaction overlays in image-normalized coordinates. */}
+            {redactions.map((rect, idx) => (
+              <div
+                key={idx}
+                style={{
+                  position: "absolute",
+                  top: `${rect.y * 100}%`,
+                  left: `${rect.x * 100}%`,
+                  width: `${rect.width * 100}%`,
+                  height: `${rect.height * 100}%`,
+                  backgroundColor: "black",
+                  border: "1px solid black",
+                }}
+              />
+            ))}
+            {gesture?.type && (
+              <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full border border-black/20 flex items-center justify-center">
+                  {findGestureOption(gesture.type)?.icon}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </li>
