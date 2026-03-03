@@ -39,6 +39,9 @@ export function ReviewPanelIOS({
   const [summarizeFeedback, setSummarizeFeedback] = useState(
     capture.summarizeFeedback ?? "",
   );
+  const [videoOrientation, setVideoOrientation] = useState<
+    "portrait" | "landscape" | null
+  >(null);
 
   const router = useRouter();
 
@@ -126,6 +129,7 @@ export function ReviewPanelIOS({
     },
     [handleDeny, isAdmin, isSubmitting],
   );
+  const videoSizeClass = videoOrientation === "landscape" ? "w-[95%]" : "w-1/2";
 
   return (
     <aside className="w-full h-full flex flex-col min-h-0 p-3">
@@ -151,8 +155,19 @@ export function ReviewPanelIOS({
               ref={videoRef}
               crossOrigin="anonymous"
               preload="auto"
-              className="w-1/2 min-w-0 h-auto rounded-lg object-contain"
+              className={`${videoSizeClass} min-w-0 h-auto rounded-lg object-contain`}
               controls={true}
+              onLoadedMetadata={(event) => {
+                const videoElement = event.currentTarget;
+                if (!videoElement.videoWidth || !videoElement.videoHeight) {
+                  return;
+                }
+                setVideoOrientation(
+                  videoElement.videoWidth > videoElement.videoHeight
+                    ? "landscape"
+                    : "portrait",
+                );
+              }}
             />
           </div>
           {isAdmin && (

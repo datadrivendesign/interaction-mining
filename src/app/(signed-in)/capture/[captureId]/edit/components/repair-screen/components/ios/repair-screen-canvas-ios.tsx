@@ -16,7 +16,10 @@ import { ScreenGesture } from "@prisma/client";
 
 import mergeRefs from "@/lib/utils/merge-refs";
 import { FrameData } from "../../../types";
-import { GestureOption } from "@/lib/utils/gesture-options";
+import {
+  GestureOption,
+  normalizeGestureType,
+} from "@/lib/utils/gesture-options";
 import {
   DraggableMarker,
   DroppableArea,
@@ -60,6 +63,9 @@ export default function RepairScreenCanvasIOS({
     x: null,
     y: null,
   });
+  const [imageOrientation, setImageOrientation] = useState<
+    "portrait" | "landscape" | null
+  >(null);
 
   // Set initial marker position on image
   const handleImageClick = () => {
@@ -71,11 +77,37 @@ export default function RepairScreenCanvasIOS({
       const relativeX = mouse.elementX / width;
       const relativeY = mouse.elementY / height;
 
-      setGesture((prev) => ({
-        ...prev,
-        x: relativeX,
-        y: relativeY,
-      }));
+      setGesture((prev) => {
+        if (normalizeGestureType(prev.type) === normalizeGestureType("drag")) {
+          const hasStart = prev.x !== null && prev.y !== null;
+          const hasEnd =
+            prev.scrollDeltaX !== null && prev.scrollDeltaY !== null;
+
+          if (!hasStart || hasEnd) {
+            return {
+              ...prev,
+              x: relativeX,
+              y: relativeY,
+              scrollDeltaX: null,
+              scrollDeltaY: null,
+            };
+          }
+          const startX = prev.x ?? relativeX;
+          const startY = prev.y ?? relativeY;
+
+          return {
+            ...prev,
+            scrollDeltaX: relativeX - startX,
+            scrollDeltaY: relativeY - startY,
+          };
+        }
+
+        return {
+          ...prev,
+          x: relativeX,
+          y: relativeY,
+        };
+      });
     }
   };
 
@@ -95,7 +127,7 @@ export default function RepairScreenCanvasIOS({
         }));
       }
     },
-    [ref, width, height, setGesture]
+    [ref, width, height, setGesture],
   );
 
   useEffect(() => {
@@ -115,6 +147,13 @@ export default function RepairScreenCanvasIOS({
     }
   }, [gesture, markerPixelPosition, width, height]);
 
+  // Portrait frames are capped to roughly half the focus area so they do not
+  // dominate the workspace or collide with absolute overlays.
+  const frameContainerClass =
+    imageOrientation === "landscape"
+      ? "relative inline-flex w-[55%] h-[55%] min-w-[12rem] min-h-[12rem]"
+      : "relative w-fit inline-flex h-full";
+
   return (
     <>
       <GestureContext.Provider
@@ -122,6 +161,7 @@ export default function RepairScreenCanvasIOS({
           gesture: memoizedGestureState["gesture"],
           setGesture: memoizedGestureState["setGesture"],
           gestureOptions: gestureOptions,
+          canvasSize: { width: width ?? 1, height: height ?? 1 },
         }}
       >
         <DndContext
@@ -130,7 +170,7 @@ export default function RepairScreenCanvasIOS({
         >
           <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
             <div
-              className="relative w-fit inline-flex h-full"
+              className={frameContainerClass}
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
             >
               <DroppableArea>
@@ -177,6 +217,17 @@ export default function RepairScreenCanvasIOS({
                   width={0}
                   height={0}
                   sizes="100vw"
+                  onLoad={(event) => {
+                    const img = event.currentTarget;
+                    if (!img.naturalWidth || !img.naturalHeight) {
+                      return;
+                    }
+                    setImageOrientation(
+                      img.naturalWidth > img.naturalHeight
+                        ? "landscape"
+                        : "portrait",
+                    );
+                  }}
                   onClick={handleImageClick}
                   onMouseMove={() => {
                     setTooltip({ x: mouse.elementX, y: mouse.elementY });

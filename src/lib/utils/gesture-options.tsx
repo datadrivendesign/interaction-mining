@@ -1,153 +1,276 @@
+"use client";
+
 import React from "react";
-import {
-  ArrowDownFromLine,
-  ArrowLeftFromLine,
-  ArrowRightFromLine,
-  ArrowUpFromLine,
-  Circle,
-  CircleDot,
-  CircleHelp,
-  CircleStop,
-  Grab,
-  IterationCcw,
-  IterationCw,
-  Keyboard,
-  Move,
-  RefreshCw,
-  ScanSearch,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
 import { z } from "zod";
 
+import { Keyboard, CircleHelp, Grab } from "lucide-react";
+
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Tap01Icon,
+  Move01Icon,
+  SwipeLeft01Icon,
+  SwipeRight01Icon,
+  SwipeUp01Icon,
+  SwipeDown01Icon,
+  Minimize01Icon,
+  Maximize01Icon,
+  RotateSquareIcon,
+  RotateTopLeftIcon,
+  RotateTopRightIcon,
+} from "@hugeicons/core-free-icons";
+
+// Import your custom SVGs
+import DoubleTapIcon from "@/components/ui/gesture-icons/double-tap-01.svg";
+import TouchHoldIcon from "@/components/ui/gesture-icons/touch-and-hold.svg";
+
+import { cn } from "@/lib/utils";
+
+const ICON_BOX_SIZE = "w-6 h-6";
+const HUGE_ICON_SIZE = "w-6 h-6";
+const LUCIDE_ICON_SIZE = "w-6 h-6";
+const CUSTOM_ICON_SIZE = "w-6 h-6";
+
+/**
+ * Shared icon wrapper
+ */
+export const IconBox = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <span
+    className={cn(
+      "gesture-icon-box inline-flex items-center justify-center flex-shrink-0",
+      ICON_BOX_SIZE,
+      "text-[var(--gesture-accent,#854d0e)]", // Inherits amber tone by default, near-black inside marker
+      className,
+    )}
+  >
+    {children}
+  </span>
+);
+
+/**
+ * Custom SVG Wrapper
+ * Increased baseline size from 75% to 85% to match standard icons better.
+ */
+const CustomSvg = ({
+  Svg,
+  className,
+}: {
+  Svg: React.ComponentType<any>;
+  className?: string;
+}) => (
+  <IconBox>
+    <span className={cn("flex items-center justify-center", CUSTOM_ICON_SIZE)}>
+      <Svg
+        className={cn("block w-full h-full gesture-icon-custom", className)}
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </span>
+  </IconBox>
+);
+
+// Hugeicons helper
+const HugeIconsWrapper = ({ icon }: { icon: any }) => (
+  <IconBox>
+    <HugeiconsIcon
+      icon={icon}
+      className={cn("gesture-icon block", HUGE_ICON_SIZE)}
+    />
+  </IconBox>
+);
+
+// ── schema & type ─────────────────────────────────────────────
 export const GestureOptionSchema: z.ZodType<{
   value: string;
   label: string;
-  icon?: React.JSX.Element;
+  icon?: React.ReactNode;
   subGestures?: any;
 }> = z.lazy(
-  (): z.ZodType<any> => // 👈 annotate the return type here
+  (): z.ZodType<any> =>
     z.object({
       value: z.string(),
       label: z.string(),
-      icon: z.custom<React.JSX.Element>().optional(),
+      icon: z.custom<React.ReactNode>().optional(),
       subGestures: z.array(GestureOptionSchema).optional(),
-    })
+    }),
 );
 
-// Then define the type from schema (for safety & completion support)
 export type GestureOption = z.infer<typeof GestureOptionSchema>;
 
+export const POPOVER_CONTENT_CLASS =
+  "w-50 p-0 overflow-visible hover:cursor-pointer";
+export const COMMAND_LIST_CLASS =
+  "max-h-none overflow-visible hover:cursor-pointer";
+export const COMMAND_ITEM_CLASS =
+  "cursor-pointer group px-2 py-1 rounded-md relative hover:cursor-pointer";
+
+const LEGACY_GESTURE_TYPE_MAP: Record<string, string> = {
+  tap: "Tap",
+  "double tap": "Double tap",
+  swipe: "Finger swipe",
+  typing: "Typing",
+  "touch and hold": "Touch and hold",
+  drag: "Drag",
+  "drag up": "Drag",
+  "drag down": "Drag",
+  "drag left": "Drag",
+  "drag right": "Drag",
+  zoom: "Zoom",
+  "zoom in": "Zoom in",
+  "zoom out": "Zoom out",
+  rotate: "Rotate",
+  "rotate cw": "Rotate right",
+  "rotate clockwise": "Rotate right",
+  "rotate ccw": "Rotate left",
+  "rotate counter-clockwise": "Rotate left",
+  other: "Other",
+};
+
+// ── options ────────────────────────────────────────
 export const gestureOptions: GestureOption[] = [
+  { value: "Tap", label: "Tap", icon: <HugeIconsWrapper icon={Tap01Icon} /> },
+
   {
-    value: "tap",
-    label: "Tap",
-    icon: <Circle className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "swipe",
-    label: "Finger swipe",
-    icon: <Move className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-    subGestures: [
-      {
-        value: "swipe up",
-        label: "Swipe up",
-        icon: (
-          <ArrowUpFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-      {
-        value: "swipe down",
-        label: "Swipe down",
-        icon: (
-          <ArrowDownFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-      {
-        value: "swipe left",
-        label: "Swipe left",
-        icon: (
-          <ArrowLeftFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-      {
-        value: "swipe right",
-        label: "Swipe right",
-        icon: (
-          <ArrowRightFromLine 
-            className="w-[70%] h-[70%] text-yellow-800 hover:text-black"
-          />
-        ),
-      },
-    ],
-  },
-  {
-    value: "typing",
-    label: "Typing",
-    icon: <Keyboard className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "touch and hold",
-    label: "Touch and hold",
-    icon: <CircleDot className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
-  },
-  {
-    value: "double tap",
+    value: "Double tap",
     label: "Double tap",
-    icon: <CircleStop className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: <CustomSvg Svg={DoubleTapIcon} />,
   },
+
   {
-    value: "drag",
+    value: "Finger swipe",
+    label: "Finger swipe",
+    icon: <HugeIconsWrapper icon={Move01Icon} />,
+    subGestures: [
+      {
+        value: "Swipe up",
+        label: "Swipe up",
+        icon: <HugeIconsWrapper icon={SwipeUp01Icon} />,
+      },
+      {
+        value: "Swipe down",
+        label: "Swipe down",
+        icon: <HugeIconsWrapper icon={SwipeDown01Icon} />,
+      },
+      {
+        value: "Swipe left",
+        label: "Swipe left",
+        icon: <HugeIconsWrapper icon={SwipeLeft01Icon} />,
+      },
+      {
+        value: "Swipe right",
+        label: "Swipe right",
+        icon: <HugeIconsWrapper icon={SwipeRight01Icon} />,
+      },
+    ],
+  },
+
+  {
+    value: "Typing",
+    label: "Typing",
+    icon: (
+      <IconBox>
+        <Keyboard className={cn("gesture-icon block", LUCIDE_ICON_SIZE)} />
+      </IconBox>
+    ),
+  },
+
+  {
+    value: "Touch and hold",
+    label: "Touch and hold",
+    icon: <CustomSvg Svg={TouchHoldIcon} />,
+  },
+
+  {
+    value: "Drag",
     label: "Drag",
-    icon: <Grab className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: (
+      <IconBox>
+        <Grab className={cn("gesture-icon block", LUCIDE_ICON_SIZE)} />
+      </IconBox>
+    ),
   },
+
   {
-    value: "zoom",
+    value: "Zoom",
     label: "Zoom",
-    icon: <ScanSearch className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: <HugeIconsWrapper icon={Minimize01Icon} />,
     subGestures: [
       {
-        value: "zoom in",
+        value: "Zoom in",
         label: "Zoom in",
-        icon: <ZoomIn className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+        icon: <HugeIconsWrapper icon={Minimize01Icon} />,
       },
       {
-        value: "zoom out",
+        value: "Zoom out",
         label: "Zoom out",
-        icon: <ZoomOut className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+        icon: <HugeIconsWrapper icon={Maximize01Icon} />,
       },
     ],
   },
+
   {
-    value: "rotate",
+    value: "Rotate",
     label: "Rotate",
-    icon: <RefreshCw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: <HugeIconsWrapper icon={RotateSquareIcon} />,
     subGestures: [
       {
-        value: "rotate cw",
-        label: "Rotate clockwise",
-        icon: (
-          <IterationCw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />
-        ),
+        value: "Rotate right",
+        label: "Rotate right",
+        icon: <HugeIconsWrapper icon={RotateTopRightIcon} />,
       },
       {
-        value: "rotate ccw",
-        label: "Rotate counter-clockwise",
-        icon: (
-          <IterationCcw className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />
-        ),
+        value: "Rotate left",
+        label: "Rotate left",
+        icon: <HugeIconsWrapper icon={RotateTopLeftIcon} />,
       },
     ],
   },
+
   {
-    value: "other",
+    value: "Other",
     label: "Other",
-    icon: <CircleHelp className="w-[70%] h-[70%] text-yellow-800 hover:text-black" />,
+    icon: (
+      <IconBox>
+        <CircleHelp className={cn("gesture-icon block", LUCIDE_ICON_SIZE)} />
+      </IconBox>
+    ),
   },
-]; 
+];
+
+export function flattenGestureOptions(
+  options: GestureOption[] = gestureOptions,
+) {
+  return options.flatMap((option) => [option, ...(option.subGestures ?? [])]);
+}
+
+export function normalizeGestureType(type: string | null | undefined) {
+  if (!type) return null;
+  const raw = type.trim();
+  if (!raw) return null;
+
+  const allOptions = flattenGestureOptions();
+  const exact = allOptions.find((option) => option.value === raw);
+  if (exact) return exact.value;
+
+  const lower = raw.toLowerCase();
+  const caseInsensitive = allOptions.find(
+    (option) => option.value.toLowerCase() === lower,
+  );
+  if (caseInsensitive) return caseInsensitive.value;
+
+  return LEGACY_GESTURE_TYPE_MAP[lower] ?? null;
+}
+
+export function findGestureOption(type: string | null | undefined) {
+  const normalized = normalizeGestureType(type);
+  if (!normalized) return null;
+  return (
+    flattenGestureOptions().find((option) => option.value === normalized) ??
+    null
+  );
+}

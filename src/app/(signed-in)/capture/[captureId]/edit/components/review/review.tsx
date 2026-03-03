@@ -17,6 +17,7 @@ export default function Review({
     | undefined;
 }) {
   const os = capture?.task ? capture.task.os : "none";
+  const taskDescription = capture?.task?.description ?? "";
 
   return (
     <div className="flex w-full h-full">
@@ -24,7 +25,7 @@ export default function Review({
         <SaveTraceGallery />
       </div>
       <div className="sticky top-0 flex flex-col shrink-0 grow-0 justify-center items-center w-1/3 h-full p-8">
-        <SaveTracePanel os={os} />
+        <SaveTracePanel os={os} taskDescription={taskDescription} />
       </div>
     </div>
   );

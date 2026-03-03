@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 import { Platform } from "@/lib/utils";
 import { useWatch } from "react-hook-form";
@@ -9,9 +15,10 @@ import { FrameData } from "../types";
 import { useHotkeys } from "react-hotkeys-hook";
 import { RepairScreenAndroid } from "./components/android/repair-screen-android";
 import { RepairScreenIOS } from "./components/ios/repair-screen-ios";
-import { Prisma } from "@prisma/client";
+import { Prisma, ScreenGesture } from "@prisma/client";
 import { DraftFetchResults } from "../../util";
 import { ListedFiles } from "@/lib/actions";
+import { validateGestureDescription } from "./util";
 
 interface NavigationContextType {
   handleNext: () => void;
@@ -21,7 +28,7 @@ interface NavigationContextType {
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const NavigationProvider: React.FC<{
@@ -59,13 +66,35 @@ export default function RepairScreen({
   draftFetchResult: DraftFetchResults;
   files: ListedFiles[];
 }) {
-  const [watchScreens] = useWatch({
-    name: ["screens"],
+  const [watchScreens, watchGestures] = useWatch({
+    name: ["screens", "gestures"],
   });
   const screens = watchScreens as FrameData[];
+  const gestures = useMemo(
+    () => (watchGestures ?? {}) as { [key: string]: ScreenGesture },
+    [watchGestures],
+  );
 
   const os = capture?.task ? capture.task.os : "none";
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
+
+  // UI-level guard for keyboard/arrow navigation so users cannot leave a screen
+  // with incomplete required template fields. Matches validateGestureDescription
+  // used by filmstrip and form schema.
+  const canAdvanceFromCurrentScreen = useCallback(() => {
+    if (focusViewIndex < 0 || focusViewIndex >= screens.length) {
+      return true;
+    }
+    // Last screen does not require a gesture.
+    if (focusViewIndex === screens.length - 1) {
+      return true;
+    }
+    const currentScreen = screens[focusViewIndex];
+    const currentGesture = gestures[currentScreen.id];
+    return validateGestureDescription(
+      currentGesture ?? { type: null, description: "" },
+    );
+  }, [focusViewIndex, gestures, screens]);
 
   // handle focusing on previous screen in the filmstrip list
   const handlePrevious = useCallback(() => {
@@ -79,24 +108,39 @@ export default function RepairScreen({
 
   // handle focusing on next screen in the filmstrip list
   const handleNext = useCallback(() => {
+    if (!canAdvanceFromCurrentScreen()) {
+      return;
+    }
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
-  }, [focusViewIndex, screens.length]);
+  }, [canAdvanceFromCurrentScreen, focusViewIndex, screens.length]);
 
-  useHotkeys("left", (e) => {
-    e.preventDefault();
-    handlePrevious();
-  });
+  useHotkeys(
+    "left",
+    (e) => {
+      e.preventDefault();
+      handlePrevious();
+    },
+    { enableOnFormTags: false },
+  );
 
-  useHotkeys("right", (e) => {
-    e.preventDefault();
-    handleNext();
-  });
+  useHotkeys(
+    "right",
+    (e) => {
+      e.preventDefault();
+      handleNext();
+    },
+    { enableOnFormTags: false },
+  );
 
-  useHotkeys("tab", (e) => {
-    e.preventDefault();
-    handleNext();
-  });
+  useHotkeys(
+    "tab",
+    (e) => {
+      e.preventDefault();
+      handleNext();
+    },
+    { enableOnFormTags: false },
+  );
 
   return (
     <NavigationProvider

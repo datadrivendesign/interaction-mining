@@ -12,7 +12,7 @@ export const InstructionCardIOS = ({
     <Card
       key="task"
       className={
-        "right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"
+        "hidden lg:block right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"
       }
     >
       <CardHeader className="flex flex-col items-center p-2">
@@ -32,8 +32,9 @@ export const InstructionCardIOS = ({
           </p>
           <p className="text-xs font-semibold">2. Add gestures to screens</p>
           <p className="text-xs">
-            <strong>Add screen gestures on this side.</strong> Start gesture
-            description with a verb, no full sentences.
+            <strong>Add screen gestures on this side.</strong> Fill in the
+            template fields for each gesture. Use <strong>Other</strong> when
+            you need freeform text.
           </p>
         </CardDescription>
       </CardHeader>
@@ -54,7 +55,7 @@ export const InstructionCardAndroid = ({
     <Card
       key="task"
       className={
-        "right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
+        "hidden lg:block right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
       }
     >
       <CardHeader className="flex flex-col items-center p-2">
@@ -71,8 +72,9 @@ export const InstructionCardAndroid = ({
           </Badge>
           <p className="mt-2 text-xs font-semibold">Add gestures to screens</p>
           <p className="mt-2 text-xs">
-            <strong>Add screen gestures on this side.</strong> Start gesture
-            description with a verb, no full sentences.
+            <strong>Add screen gestures on this side.</strong> Fill in the
+            template fields for each gesture. Use <strong>Other</strong> when
+            you need freeform text.
           </p>
           <div className="space-y-1 my-5">
             <Switch

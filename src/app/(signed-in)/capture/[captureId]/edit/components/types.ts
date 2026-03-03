@@ -1,5 +1,9 @@
 import { ScreenGesture } from "@prisma/client";
 import { z, ZodType } from "zod";
+import {
+  MIN_SLOT_LENGTH,
+  validateGestureDescription,
+} from "./repair-screen/util/gesture-description-template";
 
 export type FrameData = {
   id: string;
@@ -48,28 +52,38 @@ export const ScreenSchema = z
       id: z.string(),
       src: z.string(),
       timestamp: z.number(),
-    })
+    }),
   )
   .min(1, { message: "At least one screen is required" });
 
-export const GestureSchema = z.record(
-  z.object({
-    type: z.string({
-      message: "Gesture type is required",
+export const GestureSchema = z
+  .record(
+    z.object({
+      type: z.string({
+        message: "Gesture type is required",
+      }),
+      x: z.number({
+        message: "X coordinate is required",
+      }),
+      y: z.number({
+        message: "Y coordinate is required",
+      }),
+      scrollDeltaX: z.number().nullable(),
+      scrollDeltaY: z.number().nullable(),
+      description: z.string().min(1, {
+        message: "Gesture description is required",
+      }),
     }),
-    x: z.number({
-      message: "X coordinate is required",
-    }),
-    y: z.number({
-      message: "Y coordinate is required",
-    }),
-    scrollDeltaX: z.number() || z.null(),
-    scrollDeltaY: z.number() || z.null(),
-    description: z.string().min(1, {
-      message: "Gesture description is required",
-    }),
-  })
-);
+  )
+  .refine(
+    (gestures) =>
+      Object.values(gestures).every((gesture) =>
+        validateGestureDescription(gesture),
+      ),
+    {
+      message: `Gesture descriptions must match the required template and each template field must be longer than ${MIN_SLOT_LENGTH} characters.`,
+    },
+  );
 
 export const ScreenGestureSchema = z
   .object({
@@ -83,7 +97,7 @@ export const ScreenGestureSchema = z
         return data.gestures[screen.id];
       });
     },
-    { message: "Each screen except the last one must have a gesture" }
+    { message: "Each screen except the last one must have a gesture" },
   );
 
 export const RedactionSchema = z
@@ -96,8 +110,8 @@ export const RedactionSchema = z
         width: z.number(),
         height: z.number(),
         annotation: z.string(),
-      })
-    )
+      }),
+    ),
   )
   .refine(
     (data) => {
@@ -111,7 +125,7 @@ export const RedactionSchema = z
       }
       return true;
     },
-    { message: "Each redaction must have an annotation." }
+    { message: "Each redaction must have an annotation." },
   );
 
 export const TraceFormSchema: ZodType<TraceFormData> = z
@@ -136,5 +150,5 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
       }
       return true;
     },
-    { message: "Each screen except the last one must have a gesture" }
+    { message: "Each screen except the last one must have a gesture" },
   );
