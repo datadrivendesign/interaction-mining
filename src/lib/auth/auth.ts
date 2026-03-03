@@ -1,5 +1,6 @@
 import NextAuth, { Session, DefaultSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "next-auth/adapters";
 import { prisma } from "@/lib/prisma";
 import authConfig from "./auth.config";
 import { Role } from "@prisma/client";
@@ -21,7 +22,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as Adapter,
   ...authConfig,
   pages: {
     signIn: "/sign-in",
