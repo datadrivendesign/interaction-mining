@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import {
   Play,
   Pause,
@@ -50,40 +50,82 @@ export default function FrameTimeline({
 }: FrameTimelineProps) {
   const [timelineRef, timelineMeasure] = useMeasure<HTMLDivElement>();
   const [dragging, setDragging] = useState(false);
+  const activePointerIdRef = useRef<number | null>(null);
 
   // Map pointer X -> video time
-  const getTimeFromEvent = (e: MouseEvent | React.MouseEvent) => {
-    const rect = timelineRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    return pct * videoDuration;
-  };
+  const getTimeFromClientX = useCallback(
+    (clientX: number) => {
+      if (videoDuration <= 0) {
+        return;
+      }
+      const rect = timelineRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const pct = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+      return pct * videoDuration;
+    },
+    [timelineRef, videoDuration]
+  );
+
+  const endScrub = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>, shouldCommit: boolean) => {
+      if (activePointerIdRef.current !== e.pointerId) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (timelineRef.current?.hasPointerCapture(e.pointerId)) {
+        timelineRef.current.releasePointerCapture(e.pointerId);
+      }
+      if (shouldCommit && dragging) {
+        const t = getTimeFromClientX(e.clientX);
+        if (t !== undefined) {
+          handleSetTime(t);
+        }
+      }
+      activePointerIdRef.current = null;
+      setDragging(false);
+    },
+    [dragging, getTimeFromClientX, handleSetTime, timelineRef]
+  );
 
   // Start scrub on pointer down
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || videoDuration <= 0) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    activePointerIdRef.current = e.pointerId;
     timelineRef.current?.setPointerCapture(e.pointerId);
     setDragging(true);
-    const t = getTimeFromEvent(e);
+    const t = getTimeFromClientX(e.clientX);
     if (t !== undefined) handleSetTime(t);
   };
 
   // Scrub on pointer move when dragging
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging || activePointerIdRef.current !== e.pointerId) {
+      return;
+    }
+    const rect = timelineRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
     e.preventDefault();
-    if (!dragging) return;
-    const t = getTimeFromEvent(e);
+    e.stopPropagation();
+    const t = getTimeFromClientX(e.clientX);
     if (t !== undefined) handleSetTime(t);
   };
 
   // End scrub on pointer up
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    timelineRef.current?.releasePointerCapture(e.pointerId);
-    if (dragging) {
-      const t = getTimeFromEvent(e);
-      if (t !== undefined) handleSetTime(t);
-    }
-    setDragging(false);
+    endScrub(e, true);
   };
+
+  const scrubProgressPercent =
+    videoDuration > 0
+      ? Math.min(Math.max((currentTime / videoDuration) * 100, 0), 100)
+      : 0;
 
   const handleSkipForward = () => {
     const newTime = Math.min(currentTime + 5, videoDuration);
@@ -190,10 +232,13 @@ export default function FrameTimeline({
 
       <div
         ref={timelineRef}
-        className="relative flex w-full h-full bg-muted-background overflow-clip whitespace-nowrap cursor-pointer"
+        className="relative flex w-full h-full bg-muted-background overflow-clip whitespace-nowrap cursor-pointer touch-none select-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={(e) => endScrub(e, false)}
+        onLostPointerCapture={(e) => endScrub(e, false)}
+        onDragStart={(e) => e.preventDefault()}
       >
         {displayedThumbnails.map((thumb, index) => (
           <Image
@@ -213,7 +258,7 @@ export default function FrameTimeline({
           className="absolute top-0 bottom-0 w-full h-full pointer-events-auto"
           animate={{
             opacity: dragging ? 0.5 : 1,
-            x: `${(currentTime / videoDuration) * 100}%`,
+            x: `${scrubProgressPercent}%`,
           }}
           transition={dragging ? { duration: 0 } : spring({ duration: 0.125 })}
         >
