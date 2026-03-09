@@ -16,6 +16,7 @@ import {
   findGestureOption,
   normalizeGestureType,
 } from "@/lib/utils/gesture-options";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export function SaveTraceGallery() {
   const { watch } = useFormContext<TraceFormData>();
@@ -79,7 +80,7 @@ function SaveTraceFigure({
 
   const isDrag =
     gesture &&
-    normalizeGestureType(gesture.type) === "Drag" &&
+    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
     gesture.x !== null &&
     gesture.y !== null &&
     gesture.scrollDeltaX !== null &&
