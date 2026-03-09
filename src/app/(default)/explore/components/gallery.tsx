@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 const GalleryContext = createContext<{
   apps: App[];
   totalCount: number;
+  totalTraceCount: number;
   isLoading: boolean;
   itemsPerPage: number;
   search: {
@@ -54,6 +55,7 @@ const GalleryContext = createContext<{
 }>({
   apps: [],
   totalCount: 0,
+  totalTraceCount: 0,
   isLoading: false,
   itemsPerPage: 44,
   search: {
@@ -100,14 +102,15 @@ export function GalleryRoot({ children }: { children: React.ReactNode }) {
       limit: itemsPerPage,
       page: page,
     }),
-    [search, platform, page]
+    [search, platform, page],
   );
 
   const {
     apps = [],
     totalCount = 0,
+    totalTraceCount = 0,
     loading: isLoading,
-  } = useAppSearch(params);
+  } = useAppSearch(params, { includeTraceCount: true });
 
   // sync URL param with state
   useEffect(() => {
@@ -124,6 +127,7 @@ export function GalleryRoot({ children }: { children: React.ReactNode }) {
       value={{
         apps,
         totalCount,
+        totalTraceCount,
         isLoading,
         itemsPerPage,
         search,
@@ -141,8 +145,14 @@ export function GalleryRoot({ children }: { children: React.ReactNode }) {
 
 export function GallerySearch() {
   const router = useRouter();
-  const { platform, search, setSearch, setPlatform, totalCount } =
-    useContext(GalleryContext);
+  const {
+    platform,
+    search,
+    setSearch,
+    setPlatform,
+    totalCount,
+    totalTraceCount,
+  } = useContext(GalleryContext);
   // FIXME: disable UI selection of iOS in prod for now, still in testing
   const { data: session } = useSession();
   const isProd = isProduction();
@@ -164,7 +174,7 @@ export function GallerySearch() {
       }
       router.push(`/explore?${queryParams.toString()}`);
     },
-    [setSearch, search.where, router, platform]
+    [setSearch, search.where, router, platform],
   );
 
   const handleSetOS = useCallback(
@@ -178,13 +188,16 @@ export function GallerySearch() {
       setPlatform(os);
       router.push(`/explore?${queryParams.toString()}`);
     },
-    [setPlatform, router, search.query]
+    [setPlatform, router, search.query],
   );
 
   return (
     <div className="flex items-center gap-2 lg:gap-4">
       <Badge variant="secondary" className="h-full px-3">
         {totalCount} Apps
+      </Badge>
+      <Badge variant="secondary" className="h-full px-3">
+        {totalTraceCount} Traces
       </Badge>
       <InputRoot className="w-full md:w-96">
         <InputIcon>
@@ -249,7 +262,7 @@ export function Gallery() {
       setPage(page);
       router.push(`/explore?${queryParams.toString()}`);
     },
-    [setPage, router, search.query, platform]
+    [setPage, router, search.query, platform],
   );
 
   return (
@@ -266,7 +279,7 @@ export function Gallery() {
       <div
         className={cn(
           "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 p-4 lg:p-6",
-          isLoading && "opacity-50"
+          isLoading && "opacity-50",
         )}
       >
         {apps.length > 0 ? (
