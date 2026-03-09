@@ -95,7 +95,7 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
         leading: true,
         trailing: true,
       }),
-    [updatePositionsUnthrottled]
+    [updatePositionsUnthrottled],
   );
 
   useEffect(() => {
@@ -166,7 +166,7 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
 
   // Handler to stop events from bubbling to Konva stage:
   const stopPointer = (
-    event: React.MouseEvent | React.WheelEvent | React.TouchEvent
+    event: React.MouseEvent | React.WheelEvent | React.TouchEvent,
   ) => {
     event.stopPropagation();
     event.preventDefault();
@@ -174,7 +174,10 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
   };
 
   const getOverlayPosition = useCallback(
-    (nodeId: string, box: { x: number; y: number; width: number; height: number }) => {
+    (
+      nodeId: string,
+      box: { x: number; y: number; width: number; height: number },
+    ) => {
       const margin = 8;
       const gap = 16;
       const size = overlaySizes[nodeId] ?? { width: 0, height: 0 };
@@ -186,24 +189,27 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
       if (size.width > 0) {
         left = Math.max(
           margin,
-          Math.min(left, containerSize.width - size.width - margin)
+          Math.min(left, containerSize.width - size.width - margin),
         );
       }
 
       let top = box.y;
-      if (size.height > 0 && top + size.height > containerSize.height - margin) {
+      if (
+        size.height > 0 &&
+        top + size.height > containerSize.height - margin
+      ) {
         top = box.y + box.height - size.height;
       }
       if (size.height > 0) {
         top = Math.max(
           margin,
-          Math.min(top, containerSize.height - size.height - margin)
+          Math.min(top, containerSize.height - size.height - margin),
         );
       }
 
       return { left, top };
     },
-    [containerSize.height, containerSize.width, overlaySizes]
+    [containerSize.height, containerSize.width, overlaySizes],
   );
 
   return (
@@ -251,7 +257,7 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
               position: "absolute",
               left,
               top,
-              zIndex: 80,
+              zIndex: 140,
               pointerEvents: isPanning ? "none" : "auto",
             }}
             onWheel={stopPointer}

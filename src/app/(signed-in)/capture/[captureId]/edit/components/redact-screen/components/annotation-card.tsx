@@ -75,7 +75,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
       setLabelValue(selectedValue);
       setOpen(false);
     },
-    [selectRedaction, setAnnotation, setLabelValue, setOpen]
+    [selectRedaction, setAnnotation, setLabelValue, setOpen],
   );
 
   const handleEnter = useCallback(
@@ -85,7 +85,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
         selectRedaction(null, false);
       }
     },
-    [selectRedaction]
+    [selectRedaction],
   );
 
   const handleTextareaChange = useCallback(
@@ -94,11 +94,11 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
       setCustomInput(value);
       setAnnotation(value);
     },
-    [setAnnotation, setCustomInput]
+    [setAnnotation, setCustomInput],
   );
 
   return (
-    <div className="absolute">
+    <div className="absolute z-[150]">
       <Card className="flex flex-col items-start gap-2 p-3 shadow-lg">
         <div className="flex w-full items-center justify-between">
           <span className="text-sm font-semibold">Annotation</span>
@@ -108,7 +108,11 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             variant="ghost"
             className="size-7"
             onClick={handleCollapseToggle}
-            aria-label={isCollapsed ? "Expand annotation card" : "Collapse annotation card"}
+            aria-label={
+              isCollapsed
+                ? "Expand annotation card"
+                : "Collapse annotation card"
+            }
           >
             {isCollapsed ? (
               <ChevronDown className="size-4" />
@@ -134,12 +138,17 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
               </div>
               <div className="flex w-full justify-start items-center gap-1 text-sm">
                 <span>Copy/Paste:</span>
-                <Kbd className="text-muted-foreground rounded-sm">Ctrl+C</Kbd> and
+                <Kbd className="text-muted-foreground rounded-sm">
+                  Ctrl+C
+                </Kbd>{" "}
+                and
                 <Kbd className="text-muted-foreground rounded-sm">Ctrl+V</Kbd>
               </div>
               <div className="flex w-full justify-start items-center gap-1 text-sm">
                 <span>Delete:</span>
-                <Kbd className="text-muted-foreground rounded-sm">Backspace</Kbd>
+                <Kbd className="text-muted-foreground rounded-sm">
+                  Backspace
+                </Kbd>
               </div>
               <div className="flex w-full justify-start items-center gap-1 text-sm">
                 <span>Close:</span>
@@ -155,7 +164,11 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-50 p-0" align="start" side="bottom">
+                <PopoverContent
+                  className="w-50 p-0"
+                  align="start"
+                  side="bottom"
+                >
                   <Command>
                     <CommandList>
                       {redactLabels.map((label) => (

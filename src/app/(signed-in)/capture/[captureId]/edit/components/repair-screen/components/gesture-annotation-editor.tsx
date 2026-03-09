@@ -298,7 +298,7 @@ export const GestureAnnotationEditor =
       );
 
       return (
-        <div className="w-full rounded-md border bg-background p-2">
+        <div className="relative z-[150] w-full rounded-md border bg-background p-2 shadow-lg">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
               Annotation
@@ -310,7 +310,9 @@ export const GestureAnnotationEditor =
               className="size-6"
               onClick={() => setIsCollapsed((prev) => !prev)}
               aria-label={
-                isCollapsed ? "Expand annotation editor" : "Collapse annotation editor"
+                isCollapsed
+                  ? "Expand annotation editor"
+                  : "Collapse annotation editor"
               }
             >
               {isCollapsed ? (
@@ -374,7 +376,9 @@ export const GestureAnnotationEditor =
                               />
                             ) : (
                               <input
-                                ref={index === 0 ? firstSlotInputRef : undefined}
+                                ref={
+                                  index === 0 ? firstSlotInputRef : undefined
+                                }
                                 className={cn(
                                   "h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs",
                                   slot.key === "destination" &&
@@ -415,7 +419,8 @@ export const GestureAnnotationEditor =
                   ) : null}
                   {legacyTemplateHint ? (
                     <p className="text-[11px] text-amber-600">
-                      Existing text was moved into goal. Complete missing fields.
+                      Existing text was moved into goal. Complete missing
+                      fields.
                     </p>
                   ) : null}
                 </div>

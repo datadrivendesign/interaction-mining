@@ -73,8 +73,18 @@ export function GestureMenu({
 
     const margin = 8;
     const baseLeft = markerX + 16;
-    const maxLeft = Math.max(margin, droppableRect.width - menuRect.width - margin);
-    const clampedLeft = Math.min(Math.max(baseLeft, margin), maxLeft);
+    // Keep the annotation menu anchored to the right of the gesture marker.
+    // If there is insufficient room near the right edge, allow right overflow
+    // rather than shifting the menu left over the marker icon.
+    const maxLeft = Math.max(
+      margin,
+      droppableRect.width - menuRect.width - margin,
+    );
+    const minLeft = markerX + 12;
+    const clampedLeft =
+      maxLeft < minLeft
+        ? minLeft
+        : Math.min(Math.max(baseLeft, minLeft), maxLeft);
     const nextHorizontalOffset = clampedLeft - baseLeft;
     if (Math.abs(nextHorizontalOffset - horizontalOffset) > 0.5) {
       setHorizontalOffset(nextHorizontalOffset);
@@ -87,7 +97,14 @@ export function GestureMenu({
     if (shouldPlaceAbove !== placeTextareaAbove) {
       setPlaceTextareaAbove(shouldPlaceAbove);
     }
-  }, [horizontalOffset, placeTextareaAbove, position.x, position.y, transform?.x, transform?.y]);
+  }, [
+    horizontalOffset,
+    placeTextareaAbove,
+    position.x,
+    position.y,
+    transform?.x,
+    transform?.y,
+  ]);
 
   // Determine whether to place the textarea above or below the marker.
   useEffect(() => {
@@ -125,7 +142,7 @@ export function GestureMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute z-[60] ml-2"
+      className="absolute z-[140] ml-2"
       style={{
         left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
         top: `calc(${position.y ?? 0}px - var(--marker-radius))`,

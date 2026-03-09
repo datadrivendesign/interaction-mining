@@ -26,7 +26,7 @@ export function FocusViewIOS({
       y: null,
       scrollDeltaX: 0,
       scrollDeltaY: 0,
-    }
+    },
   );
 
   // Update gesture in form data
@@ -44,7 +44,7 @@ export function FocusViewIOS({
 
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden">
+      <div className="relative z-20 flex justify-center w-full h-full overflow-visible">
         <RepairScreenCanvasIOS
           key={screen.id}
           screen={screen}

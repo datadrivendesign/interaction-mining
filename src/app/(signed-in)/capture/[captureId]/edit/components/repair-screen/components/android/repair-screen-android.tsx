@@ -44,13 +44,13 @@ export function RepairScreenAndroid({
   const currRedactions = watchRedactions as { [key: string]: Redaction[] };
 
   const populateFrameData = async (
-    files: ListedFiles[]
+    files: ListedFiles[],
   ): Promise<{ [key: string]: CaptureScreenFile }> => {
     const regexRule =
       /(\d{4})-(\d{2})-(\d{2}) (\d{2})\:(\d{2})\:(\d{2})\.(\d{3})(.+)\.(json)$/;
     // iOS screen recordings capitalize file extension, so we lowercase here
     const frameFiles = files.filter((f) =>
-      regexRule.test(f.fileName.toLowerCase())
+      regexRule.test(f.fileName.toLowerCase()),
     );
     const frames: { [key: string]: CaptureScreenFile } = {};
     for (const [i, c] of frameFiles.entries()) {
@@ -68,7 +68,7 @@ export function RepairScreenAndroid({
   };
 
   const populateOriginalData = async (
-    files: ListedFiles[]
+    files: ListedFiles[],
   ): Promise<{
     screens: FrameData[];
     vhs: { [key: string]: any };
@@ -76,11 +76,11 @@ export function RepairScreenAndroid({
     redactions: { [key: string]: Redaction[] };
   }> => {
     const originalMetadataFile = files.find((f) =>
-      f.fileName.toLowerCase().includes("original-metadata.json")
+      f.fileName.toLowerCase().includes("original-metadata.json"),
     );
     if (originalMetadataFile) {
       const originalMetadataFileResponse = await fetch(
-        originalMetadataFile.fileUrl
+        originalMetadataFile.fileUrl,
       );
       const originalMetadataFileJson =
         await originalMetadataFileResponse.json();
@@ -127,12 +127,12 @@ export function RepairScreenAndroid({
         ({ screens, vhs, gestures, redactions }) => {
           setValue(
             "screens",
-            screens.sort((a, b) => a.timestamp - b.timestamp)
+            screens.sort((a, b) => a.timestamp - b.timestamp),
           );
           setValue("vhs", vhs);
           setValue("gestures", gestures);
           setValue("redactions", redactions);
-        }
+        },
       );
     } else if (draftFetchResult === DraftFetchResults.SUCCESS) {
       populateOriginalData(files);
@@ -152,7 +152,7 @@ export function RepairScreenAndroid({
         });
         setValue(
           "screens",
-          screensCopy.sort((a, b) => a.timestamp - b.timestamp)
+          screensCopy.sort((a, b) => a.timestamp - b.timestamp),
         );
         setValue("vhs", vhCopy);
       });
@@ -164,7 +164,12 @@ export function RepairScreenAndroid({
   return (
     <div className="w-full h-full">
       <ResizablePanelGroup direction="vertical">
-        <ResizablePanel defaultSize={75} minSize={50} maxSize={75}>
+        <ResizablePanel
+          defaultSize={75}
+          minSize={50}
+          maxSize={75}
+          className="relative z-20 overflow-visible"
+        >
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel
               defaultSize={33}
@@ -179,7 +184,10 @@ export function RepairScreenAndroid({
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={75}>
+            <ResizablePanel
+              defaultSize={75}
+              className="relative overflow-visible"
+            >
               {focusViewIndex > -1 && focusViewIndex < currScreens.length ? (
                 <FocusViewAndroid
                   key={focusViewIndex}
@@ -200,7 +208,12 @@ export function RepairScreenAndroid({
         </ResizablePanel>
 
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
+        <ResizablePanel
+          defaultSize={25}
+          minSize={25}
+          maxSize={50}
+          className="relative z-10"
+        >
           <Filmstrip
             key={`filmstrip-${currScreens.length}-${currScreens.filter((s) => s.src && s.src.length > 0).length}`}
             screens={currScreens}

@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Play,
   Pause,
@@ -51,6 +57,46 @@ export default function FrameTimeline({
   const [timelineRef, timelineMeasure] = useMeasure<HTMLDivElement>();
   const [dragging, setDragging] = useState(false);
   const activePointerIdRef = useRef<number | null>(null);
+  const scrubRafRef = useRef<number | null>(null);
+  const pendingScrubTimeRef = useRef<number | null>(null);
+
+  const commitScrubTime = useCallback(
+    (t: number) => {
+      if (Math.abs(t - currentTime) < 0.001) {
+        return;
+      }
+      handleSetTime(t);
+    },
+    [currentTime, handleSetTime],
+  );
+
+  const flushPendingScrubTime = useCallback(() => {
+    scrubRafRef.current = null;
+    const pendingTime = pendingScrubTimeRef.current;
+    pendingScrubTimeRef.current = null;
+    if (pendingTime !== null) {
+      commitScrubTime(pendingTime);
+    }
+  }, [commitScrubTime]);
+
+  const queueScrubTime = useCallback(
+    (t: number) => {
+      pendingScrubTimeRef.current = t;
+      if (scrubRafRef.current !== null) {
+        return;
+      }
+      scrubRafRef.current = requestAnimationFrame(flushPendingScrubTime);
+    },
+    [flushPendingScrubTime],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (scrubRafRef.current !== null) {
+        cancelAnimationFrame(scrubRafRef.current);
+      }
+    };
+  }, []);
 
   // Map pointer X -> video time
   const getTimeFromClientX = useCallback(
@@ -63,7 +109,7 @@ export default function FrameTimeline({
       const pct = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
       return pct * videoDuration;
     },
-    [timelineRef, videoDuration]
+    [timelineRef, videoDuration],
   );
 
   const endScrub = useCallback(
@@ -79,13 +125,15 @@ export default function FrameTimeline({
       if (shouldCommit && dragging) {
         const t = getTimeFromClientX(e.clientX);
         if (t !== undefined) {
-          handleSetTime(t);
+          pendingScrubTimeRef.current = null;
+          commitScrubTime(t);
         }
       }
+      pendingScrubTimeRef.current = null;
       activePointerIdRef.current = null;
       setDragging(false);
     },
-    [dragging, getTimeFromClientX, handleSetTime, timelineRef]
+    [commitScrubTime, dragging, getTimeFromClientX, timelineRef],
   );
 
   // Start scrub on pointer down
@@ -99,7 +147,7 @@ export default function FrameTimeline({
     timelineRef.current?.setPointerCapture(e.pointerId);
     setDragging(true);
     const t = getTimeFromClientX(e.clientX);
-    if (t !== undefined) handleSetTime(t);
+    if (t !== undefined) commitScrubTime(t);
   };
 
   // Scrub on pointer move when dragging
@@ -114,7 +162,7 @@ export default function FrameTimeline({
     e.preventDefault();
     e.stopPropagation();
     const t = getTimeFromClientX(e.clientX);
-    if (t !== undefined) handleSetTime(t);
+    if (t !== undefined) queueScrubTime(t);
   };
 
   // End scrub on pointer up
@@ -160,7 +208,7 @@ export default function FrameTimeline({
         Math.abs(curr.timestamp - targetTime) <
         Math.abs(prev.timestamp - targetTime)
           ? curr
-          : prev
+          : prev,
       );
     });
 

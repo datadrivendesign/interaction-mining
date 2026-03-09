@@ -260,7 +260,7 @@ export default function RepairScreenCanvasAndroid({
                 ) : null}
                 {isLastScreen ? (
                   <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-                    <div className="rounded-md bg-emerald-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-md">
+                    <div className="rounded-md bg-emerald-600/70 px-3 py-1.5 text-xs font-semibold text-white/95 shadow-sm">
                       Goal screen reached. No gesture required.
                     </div>
                   </div>
