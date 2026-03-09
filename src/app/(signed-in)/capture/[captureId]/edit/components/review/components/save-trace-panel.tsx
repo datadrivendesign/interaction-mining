@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { iosOptions, iphoneOptions } from "@/lib/utils/ios-options";
+import { getMyPreferredDeviceVersions } from "@/lib/actions";
 
 export function SaveTracePanel({
   os,
@@ -23,6 +24,49 @@ export function SaveTracePanel({
   os: string;
   taskDescription: string;
 }) {
+  const { getValues, setValue } = useFormContext<TraceFormData>();
+  const [hasLoadedProfilePreference, setHasLoadedProfilePreference] =
+    useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const maybePrefillDeviceVersions = async () => {
+      if (os !== "ios" || hasLoadedProfilePreference) {
+        return;
+      }
+      const existingIPhoneVersion = (getValues("iPhoneVersion") ?? "").trim();
+      const existingIOSVersion = (getValues("iOSVersion") ?? "").trim();
+      if (existingIPhoneVersion.length > 0 && existingIOSVersion.length > 0) {
+        setHasLoadedProfilePreference(true);
+        return;
+      }
+      const profilePrefRes = await getMyPreferredDeviceVersions();
+      if (isCancelled) {
+        return;
+      }
+      if (profilePrefRes.ok && profilePrefRes.data) {
+        if (
+          existingIPhoneVersion.length === 0 &&
+          profilePrefRes.data.preferredIPhoneVersion
+        ) {
+          setValue("iPhoneVersion", profilePrefRes.data.preferredIPhoneVersion);
+        }
+        if (
+          existingIOSVersion.length === 0 &&
+          profilePrefRes.data.preferredIOSVersion
+        ) {
+          setValue("iOSVersion", profilePrefRes.data.preferredIOSVersion);
+        }
+      }
+      setHasLoadedProfilePreference(true);
+    };
+    maybePrefillDeviceVersions();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [getValues, hasLoadedProfilePreference, os, setValue]);
+
   return (
     <div className="flex flex-col w-full grow justify-start">
       {os === "ios" && (
@@ -59,9 +103,20 @@ function VersionSelect({
   placeholder: string;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const value = useWatch({
+  const rawValue = useWatch({
     name: formKey,
   });
+  const value = (rawValue ?? "").trim();
+  const resolvedOptions = useMemo(() => {
+    if (!value) {
+      return options;
+    }
+    if (options.some((option) => option.value === value)) {
+      return options;
+    }
+    // Keep older saved values selectable/visible after list refreshes.
+    return [{ value, label: value }, ...options];
+  }, [options, value]);
 
   return (
     <div className="flex flex-col">
@@ -72,13 +127,13 @@ function VersionSelect({
         onValueChange={(value) => {
           setValue(formKey, value);
         }}
-        value={value || ""}
+        value={value}
       >
         <SelectTrigger>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
+          {resolvedOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>

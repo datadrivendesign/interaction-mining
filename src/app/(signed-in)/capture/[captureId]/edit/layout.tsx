@@ -134,7 +134,7 @@ function Error({
         return {
           title: "Capture in review",
           message:
-            "The capture you are looking for is currently in review. Please wait for the review to complete.",
+            "This capture is currently in review. If this status looks wrong (for example, it was recently sent back), refresh this page and try again.",
           linkText: "Return to review",
           linkUrl: `/capture/${captureId}/evaluate`,
         };

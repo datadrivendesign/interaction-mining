@@ -16,7 +16,7 @@ export function FocusView({
 }) {
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden">
+      <div className="relative z-20 flex justify-center w-full h-full overflow-visible">
         <RedactScreenCanvas
           screen={screen}
           vh={vh}

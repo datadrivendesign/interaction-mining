@@ -1,4 +1,9 @@
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Capture, getCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { ArrowLeft } from "lucide-react";
@@ -27,23 +32,29 @@ export default async function Layout({
   const capture = captureRes.data;
 
   if (!captureRes?.ok || !capture) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.NO_CAPTURE}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.NO_CAPTURE}
+      />
+    );
   } else if (capture?.status === CaptureStatus.REVIEWING) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.IN_REVIEW}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.IN_REVIEW}
+      />
+    );
   } else if (capture?.status === CaptureStatus.APPROVED && capture.appId) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.APPROVED}
-    />
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.APPROVED}
+      />
+    );
   }
   return <>{children}</>;
 }
@@ -51,7 +62,7 @@ export default async function Layout({
 function Error({
   captureId,
   capture,
-  errorType
+  errorType,
 }: {
   captureId: string;
   capture: Capture | null;
@@ -69,19 +80,21 @@ function Error({
       case ErrorType.IN_REVIEW:
         return {
           title: "Capture in review",
-          message: "The capture you are looking for is currently in review. Please wait for the review to complete.",
+          message:
+            "This capture is currently in review. If this status looks wrong (for example, it was recently sent back), refresh this page and try again.",
           linkText: "Return to review",
           linkUrl: `/capture/${captureId}/evaluate`,
-        }
+        };
       case ErrorType.APPROVED:
         return {
           title: "Capture already approved",
-          message: "This capture has already been approved. You can view the completed trace.",
+          message:
+            "This capture has already been approved. You can view the completed trace.",
           linkText: "View trace",
-          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`
-        }
+          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`,
+        };
     }
-  }
+  };
   const error = getError(errorType);
 
   return (
@@ -89,9 +102,7 @@ function Error({
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>{error.title}</CardTitle>
-          <CardDescription>
-            {error.message}
-          </CardDescription>
+          <CardDescription>{error.message}</CardDescription>
           <Link href={error.linkUrl}>
             <span className="inline-flex items-center underline">
               <ArrowLeft className="w-4 h-4 mr-1 inline-block" />

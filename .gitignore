@@ -57,3 +57,6 @@ prisma/scripts/explore-capture-stats.mjs
 # script outputs
 prisma/scripts/stats.txt
 prisma/scripts/stats.json
+
+# agent plans
+plans/

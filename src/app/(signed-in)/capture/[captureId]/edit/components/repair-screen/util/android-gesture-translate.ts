@@ -1,4 +1,5 @@
 import { ScreenGesture } from "@prisma/client";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 type AndroidGesture = {
   type: string;
@@ -11,26 +12,26 @@ type AndroidGesture = {
 export function translateTypeAndroidToODIM(
   androidType: string,
   scrollDeltaX: number | null,
-  scrollDeltaY: number | null
-): string {
+  scrollDeltaY: number | null,
+): ScreenGesture["type"] | "" {
   if (
     androidType === "TYPE_VIEW_CLICKED" ||
     androidType == "TYPE_VIEW_SELECTED"
   ) {
-    return "tap";
+    return GESTURE_TYPES.TAP;
   } else if (androidType === "TYPE_VIEW_LONG_CLICKED") {
-    return "touch and hold";
+    return GESTURE_TYPES.TOUCH_AND_HOLD;
   } else if (androidType === "TYPE_VIEW_SCROLLED") {
     if (scrollDeltaX !== null && scrollDeltaY !== null) {
       // get direction of scroll/swipe w. dominant delta direction
       if (scrollDeltaX > 0 && scrollDeltaX > scrollDeltaY) {
-        return "swipe right";
+        return GESTURE_TYPES.SWIPE_RIGHT;
       } else if (scrollDeltaX < 0 && scrollDeltaX < scrollDeltaY) {
-        return "swipe left";
+        return GESTURE_TYPES.SWIPE_LEFT;
       } else if (scrollDeltaY > 0 && scrollDeltaY > scrollDeltaX) {
-        return "swipe up";
+        return GESTURE_TYPES.SWIPE_UP;
       } else if (scrollDeltaY < 0 && scrollDeltaY < scrollDeltaX) {
-        return "swipe down";
+        return GESTURE_TYPES.SWIPE_DOWN;
       } else {
         // set as empty because we don't know what the gesture is
         return "";
@@ -58,7 +59,7 @@ export function createScreenGesture(gesture: AndroidGesture): ScreenGesture {
     screenGesture.type = translateTypeAndroidToODIM(
       type,
       scrollDeltaX,
-      scrollDeltaY
+      scrollDeltaY,
     );
   }
   return screenGesture;

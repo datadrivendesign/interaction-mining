@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
 import { useState } from "react";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export function ReviewGalleryIOS({
   traceData,
@@ -97,7 +98,7 @@ function ReviewFigureIOS({
 
   const isDrag =
     gesture &&
-    normalizeGestureType(gesture.type) === "Drag" &&
+    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
     gesture.x !== null &&
     gesture.y !== null &&
     gesture.scrollDeltaX !== null &&
@@ -114,8 +115,14 @@ function ReviewFigureIOS({
     : "w-[min(18rem,42vw)]";
 
   return (
-    <figure className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}>
-      <div className="relative w-full cursor-pointer" onClick={onJump} ref={containerRef}>
+    <figure
+      className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}
+    >
+      <div
+        className="relative w-full cursor-pointer"
+        onClick={onJump}
+        ref={containerRef}
+      >
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
           {index + 1}
         </div>

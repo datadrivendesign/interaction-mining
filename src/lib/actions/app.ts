@@ -170,6 +170,65 @@ export async function getAppsCount({
 }
 
 /**
+ * Fetches count of traces for apps that match the same app filters.
+ * @param query - Simple full-text search (name, description, etc.)
+ * @param where - Deep-dive filters: any Prisma.AppWhereInput you want
+ * @param allowIOS - allow iOS apps in prod for non-admins (this is temporary since ios is currently in testing)
+ * @returns count of traces
+ */
+export async function getAppsTraceCount({
+  query,
+  where = {},
+  allowIOS = false, // FIXME: temporarily disable some iOS apps in prod for now
+}: GetAppsParams = {}) {
+  // Server-side iOS restriction: enforce unless allowIOS is explicitly true
+  let osFilter = where.os ?? Platform.ANDROID;
+
+  // Check if iOS is being requested
+  const isRequestingIOS = where.os === Platform.IOS;
+
+  if (isRequestingIOS && !allowIOS) {
+    const session = await auth();
+    const isProd = isProduction();
+    const isAdmin = session?.user?.role === Role.ADMIN;
+
+    // If iOS requested in prod by non-admins without allowIOS, force Android
+    if (isProd && !isAdmin) {
+      osFilter = Platform.ANDROID;
+    }
+  }
+
+  // Create filtered where clause without mutating original
+  const filteredWhere: Prisma.AppWhereInput = {
+    ...where,
+    os: osFilter,
+  };
+
+  // Build the app-filter query to match getApps/getAppsCount behavior.
+  const query_: Prisma.AppWhereInput = {
+    ...filteredWhere,
+    ...(query || query !== ""
+      ? {
+          metadata: {
+            is: {
+              name: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+          },
+        }
+      : {}),
+  };
+
+  return prisma.trace.count({
+    where: {
+      app: query_,
+    },
+  });
+}
+
+/**
  * Fetches a single app from the database.
  * @param id - id of the app
  * @returns app

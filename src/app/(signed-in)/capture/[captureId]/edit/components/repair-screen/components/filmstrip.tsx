@@ -99,7 +99,7 @@ export function Filmstrip({
 
   return (
     <AnimatePresence mode="popLayout">
-      <ul className="flex h-full p-2 gap-1 overflow-x-auto">
+      <ul className="relative z-0 flex h-full p-2 gap-1 overflow-x-auto">
         {screens?.map((screen: FrameData, index: number) => {
           const isLast = screens.length - 1 === index;
           return (

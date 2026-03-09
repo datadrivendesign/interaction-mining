@@ -29,7 +29,7 @@ export function FocusViewAndroid({
       y: null,
       scrollDeltaX: 0,
       scrollDeltaY: 0,
-    }
+    },
   );
 
   // Update gesture in form data
@@ -47,7 +47,7 @@ export function FocusViewAndroid({
 
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden">
+      <div className="relative z-20 flex justify-center w-full h-full overflow-visible">
         <RepairScreenCanvasAndroid
           key={screen.id}
           screen={screen}

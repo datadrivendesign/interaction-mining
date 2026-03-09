@@ -17,7 +17,7 @@ export function Filmstrip({
   setFocusViewIndex: (index: number) => void;
 }) {
   return (
-    <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+    <ul className="relative z-0 flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
       {screens?.map((screen: FrameData, index: number) => (
         <FilmstripItem
           key={screen.id}
@@ -53,9 +53,7 @@ function FilmstripItem({
       data-index={index}
       {...props}
     >
-      <div
-        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain"
-      >
+      <div className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
         {/* Index overlay */}
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
           {index + 1}
@@ -68,14 +66,14 @@ function FilmstripItem({
                 ? "ring-2 ring-inset ring-yellow-500"
                 : hasError
                   ? "ring-2 ring-inset ring-red-500"
-                  : ""
+                  : "",
             )}
           >
             {hasError && (
               <CircleAlert
                 className={cn(
                   "size-6",
-                  isSelected ? "text-yellow-500" : "text-red-500"
+                  isSelected ? "text-yellow-500" : "text-red-500",
                 )}
               />
             )}
@@ -84,7 +82,7 @@ function FilmstripItem({
         <div
           className={cn(
             "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
-            hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100"
+            hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100",
           )}
         >
           <Image
@@ -99,19 +97,19 @@ function FilmstripItem({
           />
           {/* Render redaction overlays in normalized image coordinates */}
           {redactions.map((rect, idx) => (
-              <div
-                key={idx}
-                style={{
-                  position: "absolute",
-                  top: `${rect.y * 100}%`,
-                  left: `${rect.x * 100}%`,
-                  width: `${rect.width * 100}%`,
-                  height: `${rect.height * 100}%`,
-                  backgroundColor: "black",
-                  border: "1px solid black",
-                }}
-              />
-            ))}
+            <div
+              key={idx}
+              style={{
+                position: "absolute",
+                top: `${rect.y * 100}%`,
+                left: `${rect.x * 100}%`,
+                width: `${rect.width * 100}%`,
+                height: `${rect.height * 100}%`,
+                backgroundColor: "black",
+                border: "1px solid black",
+              }}
+            />
+          ))}
         </div>
       </div>
     </li>
