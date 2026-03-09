@@ -12,6 +12,7 @@ import React, {
 import { ScreenGesture } from "@prisma/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   composeGestureTemplateDescription,
@@ -23,10 +24,13 @@ import {
   isFreeformGestureType,
   parseGestureTemplateDescription,
   MIN_SLOT_LENGTH,
+  hasCompleteDragPoints,
 } from "../util";
 import { GestureContext } from "./gesture-menu";
 import { useNavigation } from "../repair-screen";
 import { TargetSlotCombobox } from "./target-slot-combobox";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export interface GestureAnnotationEditorHandle {
   focusDescription: () => void;
@@ -47,6 +51,7 @@ export const GestureAnnotationEditor =
         Record<GestureTemplateSlotKey, string>
       >(() => getGestureTemplateDefaultSlots(gesture.type));
       const [legacyTemplateHint, setLegacyTemplateHint] = useState(false);
+      const [isCollapsed, setIsCollapsed] = useState(false);
       // Track if slots have been touched for form validation
       const [targetTouched, setTargetTouched] = useState(false);
       const [goalTouched, setGoalTouched] = useState(false);
@@ -86,27 +91,40 @@ export const GestureAnnotationEditor =
         hasTargetSlot && targetTouched && isTargetInvalid;
       const shouldShowGoalError = hasGoalSlot && goalTouched && isGoalInvalid;
       const shouldShowDestinationError =
-        hasDestinationSlot &&
-        destinationTouched &&
-        isDestinationInvalid;
+        hasDestinationSlot && destinationTouched && isDestinationInvalid;
       const shouldShowTemplateLengthError =
         shouldShowTargetError ||
         shouldShowGoalError ||
         shouldShowDestinationError;
+      const shouldShowDragPointError =
+        gesture.type === GESTURE_TYPES.DRAG && !hasCompleteDragPoints(gesture);
 
       // Decide whether to show the textarea or the template inputs
+      const focusDescriptionField = useCallback(() => {
+        if (isFreeformGestureType(gesture.type)) {
+          textareaRef.current?.focus();
+          return;
+        }
+        firstSlotInputRef.current?.focus();
+      }, [gesture.type]);
+
       useImperativeHandle(
         ref,
         () => ({
           focusDescription: () => {
-            if (isFreeformGestureType(gesture.type)) {
-              textareaRef.current?.focus();
-            } else {
-              firstSlotInputRef.current?.focus();
+            if (isCollapsed) {
+              setIsCollapsed(false);
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  focusDescriptionField();
+                });
+              });
+              return;
             }
+            focusDescriptionField();
           },
         }),
-        [gesture.type],
+        [focusDescriptionField, isCollapsed],
       );
 
       // Update the length of the description as the user types
@@ -266,6 +284,7 @@ export const GestureAnnotationEditor =
           if (isTargetInvalid) setTargetTouched(true);
           if (isGoalInvalid) setGoalTouched(true);
           if (isDestinationInvalid) setDestinationTouched(true);
+          if (shouldShowDragPointError) return;
           if (isTargetInvalid || isGoalInvalid || isDestinationInvalid) return;
           handleNext();
         },
@@ -274,106 +293,149 @@ export const GestureAnnotationEditor =
           isDestinationInvalid,
           isGoalInvalid,
           isTargetInvalid,
+          shouldShowDragPointError,
         ],
       );
 
       return (
-        <div className="w-full">
-          {isFreeformGestureType(gesture.type) || !activeTemplate ? (
-            <Textarea
-              ref={textareaRef}
-              className="text-sm w-full h-full bg-background!"
-              placeholder="Describe this gesture in your own words."
-              maxLength={GESTURE_DESCRIPTION_MAX_LENGTH}
-              value={gesture.description ?? ""}
-              onKeyDown={handleEnter}
-              onChange={(e) => handleFreeformChange(e.target.value)}
-            />
-          ) : (
-            <div className="rounded-md border bg-background p-2 space-y-2">
-              <div className="text-xs text-muted-foreground">
-                Fill in the missing fields.
-              </div>
-              <div className="flex flex-wrap gap-2 items-center">
-                {activeTemplate.fixedParts.map((fixedPart, index) => {
-                  const slot = activeTemplate.slots[index];
-                  return (
-                    <React.Fragment key={`${fixedPart}-${index}`}>
-                      {fixedPart ? (
-                        <span className="text-xs font-semibold tracking-wide text-foreground/90 whitespace-pre">
-                          {fixedPart}
-                        </span>
-                      ) : null}
-                      {slot ? (
-                        slot.key === "target" ? (
-                          <TargetSlotCombobox
-                            value={slotValues.target ?? ""}
-                            onChange={(v) => handleSlotChange(slot, v)}
-                            onTouched={() => setTargetTouched(true)}
-                            slot={slot}
-                            inputRef={
-                              index === 0 ? firstSlotInputRef : undefined
-                            }
-                            showError={shouldShowTargetError}
-                            onEnter={handleNext}
-                            isGoalInvalid={isGoalInvalid}
-                            onGoalTouched={() => setGoalTouched(true)}
-                            isDestinationInvalid={isDestinationInvalid}
-                            onDestinationTouched={() =>
-                              setDestinationTouched(true)
-                            }
-                          />
-                        ) : (
-                          <input
-                            ref={index === 0 ? firstSlotInputRef : undefined}
-                            className={cn(
-                              "h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs",
-                              slot.key === "destination" &&
-                                shouldShowDestinationError
-                                ? "border-red-500"
-                                : "",
-                            )}
-                            aria-label={slot.label}
-                            placeholder={slot.placeholder}
-                            value={slotValues[slot.key] ?? ""}
-                            onBlur={() => {
-                              if (slot.key === "goal") setGoalTouched(true);
-                              if (slot.key === "destination")
-                                setDestinationTouched(true);
-                            }}
-                            onKeyDown={handleTemplateEnter}
-                            onChange={(e) =>
-                              handleSlotChange(slot, e.target.value)
-                            }
-                          />
-                        )
-                      ) : null}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-              {shouldShowTemplateLengthError ? (
-                <p className="text-[11px] text-red-500">
-                  All template fields must be at least {MIN_CHARS_REQUIRED}{" "}
-                  characters.
-                </p>
-              ) : null}
-              {legacyTemplateHint ? (
-                <p className="text-[11px] text-amber-600">
-                  Existing text was moved into goal. Complete missing fields.
-                </p>
-              ) : null}
-            </div>
-          )}
-          <div className="w-full flex flex-col">
-            <Progress
-              className="w-full"
-              value={(annotateLen / GESTURE_DESCRIPTION_MAX_LENGTH) * 100}
-            />
-            <div className="text-sm flex justify-end text-muted-foreground z-10">
-              {`${annotateLen}/${GESTURE_DESCRIPTION_MAX_LENGTH}`}
-            </div>
+        <div className="relative z-[150] w-full rounded-md border bg-background p-2 shadow-lg">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Annotation
+            </span>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-6"
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              aria-label={
+                isCollapsed
+                  ? "Expand annotation editor"
+                  : "Collapse annotation editor"
+              }
+            >
+              {isCollapsed ? (
+                <ChevronDown className="size-4" />
+              ) : (
+                <ChevronUp className="size-4" />
+              )}
+            </Button>
           </div>
+          {isCollapsed ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {(gesture.description ?? "").trim().length > 0
+                ? gesture.description
+                : "Collapsed. Expand to edit annotation."}
+            </p>
+          ) : (
+            <>
+              {isFreeformGestureType(gesture.type) || !activeTemplate ? (
+                <Textarea
+                  ref={textareaRef}
+                  className="text-sm w-full h-full bg-background!"
+                  placeholder="Describe this gesture in your own words."
+                  maxLength={GESTURE_DESCRIPTION_MAX_LENGTH}
+                  value={gesture.description ?? ""}
+                  onKeyDown={handleEnter}
+                  onChange={(e) => handleFreeformChange(e.target.value)}
+                />
+              ) : (
+                <div className="rounded-md border bg-background p-2 space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    Fill in the missing fields.
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {activeTemplate.fixedParts.map((fixedPart, index) => {
+                      const slot = activeTemplate.slots[index];
+                      return (
+                        <React.Fragment key={`${fixedPart}-${index}`}>
+                          {fixedPart ? (
+                            <span className="text-xs font-semibold tracking-wide text-foreground/90 whitespace-pre">
+                              {fixedPart}
+                            </span>
+                          ) : null}
+                          {slot ? (
+                            slot.key === "target" ? (
+                              <TargetSlotCombobox
+                                value={slotValues.target ?? ""}
+                                onChange={(v) => handleSlotChange(slot, v)}
+                                onTouched={() => setTargetTouched(true)}
+                                slot={slot}
+                                inputRef={
+                                  index === 0 ? firstSlotInputRef : undefined
+                                }
+                                showError={shouldShowTargetError}
+                                onEnter={handleNext}
+                                isGoalInvalid={isGoalInvalid}
+                                onGoalTouched={() => setGoalTouched(true)}
+                                isDestinationInvalid={isDestinationInvalid}
+                                onDestinationTouched={() =>
+                                  setDestinationTouched(true)
+                                }
+                              />
+                            ) : (
+                              <input
+                                ref={
+                                  index === 0 ? firstSlotInputRef : undefined
+                                }
+                                className={cn(
+                                  "h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs",
+                                  slot.key === "destination" &&
+                                    shouldShowDestinationError
+                                    ? "border-red-500"
+                                    : "",
+                                )}
+                                aria-label={slot.label}
+                                placeholder={slot.placeholder}
+                                value={slotValues[slot.key] ?? ""}
+                                onBlur={() => {
+                                  if (slot.key === "goal") setGoalTouched(true);
+                                  if (slot.key === "destination")
+                                    setDestinationTouched(true);
+                                }}
+                                onKeyDown={handleTemplateEnter}
+                                onChange={(e) =>
+                                  handleSlotChange(slot, e.target.value)
+                                }
+                              />
+                            )
+                          ) : null}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                  {shouldShowTemplateLengthError ? (
+                    <p className="text-[11px] text-red-500">
+                      All template fields must be at least {MIN_CHARS_REQUIRED}{" "}
+                      characters.
+                    </p>
+                  ) : null}
+                  {shouldShowDragPointError ? (
+                    <p className="text-[11px] text-red-500">
+                      Drag requires both a start point and an end point on the
+                      screen.
+                    </p>
+                  ) : null}
+                  {legacyTemplateHint ? (
+                    <p className="text-[11px] text-amber-600">
+                      Existing text was moved into goal. Complete missing
+                      fields.
+                    </p>
+                  ) : null}
+                </div>
+              )}
+              <div className="w-full flex flex-col mt-2">
+                <Progress
+                  className="w-full"
+                  value={(annotateLen / GESTURE_DESCRIPTION_MAX_LENGTH) * 100}
+                />
+                <div className="text-sm flex justify-end text-muted-foreground z-10">
+                  {`${annotateLen}/${GESTURE_DESCRIPTION_MAX_LENGTH}`}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       );
     },

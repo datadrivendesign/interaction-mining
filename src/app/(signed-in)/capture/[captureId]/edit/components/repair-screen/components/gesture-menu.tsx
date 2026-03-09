@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useState,
   useRef,
+  useCallback,
   createContext,
 } from "react";
 import { ScreenGesture } from "@prisma/client";
@@ -25,6 +26,7 @@ import {
   GestureAnnotationEditorHandle,
 } from "./gesture-annotation-editor";
 import { GestureSelection } from "./gesture-selection";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export const GestureContext = createContext<{
   gesture: ScreenGesture;
@@ -53,21 +55,84 @@ export function GestureMenu({
   transform: { x: number; y: number; scaleX: number; scaleY: number } | null;
 }) {
   const editorRef = useRef<GestureAnnotationEditorHandle>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
+  const [horizontalOffset, setHorizontalOffset] = useState(0);
 
-  // Determine whether to place the textarea above or below the marker
-  useEffect(() => {
+  const updatePlacement = useCallback(() => {
     const droppableElement = document.querySelector("[data-droppable]");
-    const droppableRect = droppableElement?.getBoundingClientRect();
+    const menuElement = menuRef.current;
+    if (!droppableElement || !menuElement) {
+      return;
+    }
+
+    const markerX = (position.x ?? 0) + (transform?.x ?? 0);
+    const markerY = (position.y ?? 0) + (transform?.y ?? 0);
+    const droppableRect = droppableElement.getBoundingClientRect();
+    const menuRect = menuElement.getBoundingClientRect();
+
+    const margin = 8;
+    const baseLeft = markerX + 16;
+    // Keep the annotation menu anchored to the right of the gesture marker.
+    // If there is insufficient room near the right edge, allow right overflow
+    // rather than shifting the menu left over the marker icon.
+    const maxLeft = Math.max(
+      margin,
+      droppableRect.width - menuRect.width - margin,
+    );
+    const minLeft = markerX + 12;
+    const clampedLeft =
+      maxLeft < minLeft
+        ? minLeft
+        : Math.min(Math.max(baseLeft, minLeft), maxLeft);
+    const nextHorizontalOffset = clampedLeft - baseLeft;
+    if (Math.abs(nextHorizontalOffset - horizontalOffset) > 0.5) {
+      setHorizontalOffset(nextHorizontalOffset);
+    }
+
+    const roomBelow = droppableRect.height - markerY;
+    const roomAbove = markerY;
     const shouldPlaceAbove =
-      (droppableRect &&
-        position.y !== null &&
-        position.y > droppableRect.height * 0.8) ||
-      false;
+      roomBelow < menuRect.height + margin && roomAbove > roomBelow;
     if (shouldPlaceAbove !== placeTextareaAbove) {
       setPlaceTextareaAbove(shouldPlaceAbove);
     }
-  }, [position, placeTextareaAbove]);
+  }, [
+    horizontalOffset,
+    placeTextareaAbove,
+    position.x,
+    position.y,
+    transform?.x,
+    transform?.y,
+  ]);
+
+  // Determine whether to place the textarea above or below the marker.
+  useEffect(() => {
+    updatePlacement();
+  }, [updatePlacement]);
+
+  useEffect(() => {
+    const menuElement = menuRef.current;
+    if (!menuElement) {
+      return;
+    }
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updatePlacement);
+      return () => {
+        window.removeEventListener("resize", updatePlacement);
+      };
+    }
+    const resizeObserver = new ResizeObserver(() => {
+      updatePlacement();
+    });
+    resizeObserver.observe(menuElement);
+    window.addEventListener("resize", updatePlacement);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updatePlacement);
+    };
+  }, [updatePlacement]);
 
   // Focus the description field of the gesture annotation editor
   const focusDescriptionField = () => {
@@ -76,11 +141,12 @@ export function GestureMenu({
 
   return (
     <div
-      className="absolute z-50 ml-2"
+      ref={menuRef}
+      className="absolute z-[140] ml-2"
       style={{
         left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
         top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
-        transform: `translate3d(${transform?.x ?? 0}px, ${
+        transform: `translate3d(${(transform?.x ?? 0) + horizontalOffset}px, ${
           transform?.y ?? 0
         }px, 0)`,
       }}
@@ -118,7 +184,7 @@ export function DroppableArea({ children }: { children: React.ReactNode }) {
 }
 
 function isDragGesture(type: string | null) {
-  return normalizeGestureType(type) === "Drag";
+  return normalizeGestureType(type) === GESTURE_TYPES.DRAG;
 }
 
 export function DraggableMarker({
@@ -133,7 +199,9 @@ export function DraggableMarker({
       id: "gestureMarker",
     });
 
-  const selectedIcon = gesture.type ? findGestureOption(gesture.type)?.icon : null;
+  const selectedIcon = gesture.type
+    ? findGestureOption(gesture.type)?.icon
+    : null;
   const showDragPath =
     isDragGesture(gesture.type) &&
     gesture.scrollDeltaX !== null &&

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMemo } from "react";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export function ReviewGalleryAndroid({
   traceData,
@@ -70,7 +71,7 @@ function ReviewFigureAndroid({
 
   const isDrag =
     gesture &&
-    normalizeGestureType(gesture.type) === "Drag" &&
+    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
     gesture.x !== null &&
     gesture.y !== null &&
     gesture.scrollDeltaX !== null &&
@@ -80,8 +81,12 @@ function ReviewFigureAndroid({
 
   const startX = isDrag ? gesture!.x! * canvasWidth : 0;
   const startY = isDrag ? gesture!.y! * canvasHeight : 0;
-  const endX = isDrag ? (gesture!.x! + gesture!.scrollDeltaX!) * canvasWidth : 0;
-  const endY = isDrag ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight : 0;
+  const endX = isDrag
+    ? (gesture!.x! + gesture!.scrollDeltaX!) * canvasWidth
+    : 0;
+  const endY = isDrag
+    ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
+    : 0;
 
   return (
     <figure className="relative flex flex-col shrink-0 shadow-xs w-1/4">

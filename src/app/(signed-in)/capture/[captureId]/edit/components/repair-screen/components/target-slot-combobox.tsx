@@ -2,7 +2,6 @@
 
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandList,
@@ -13,21 +12,6 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import {
-  Circle,
-  Image as ImageIcon,
-  Link2,
-  List,
-  Map,
-  Menu,
-  MousePointerClick,
-  Search,
-  Settings2,
-  Square,
-  TextCursorInput,
-  ToggleLeft,
-} from "lucide-react";
-import { Square as SquareIcon } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -41,21 +25,6 @@ import {
   TARGET_SLOT_OPTION_GROUPS,
   TargetSlotOptionGroup,
 } from "../util/target-slot-options";
-
-const TARGET_ICON_MAP: Record<string, React.ReactNode> = {
-  button: <MousePointerClick className="h-3.5 w-3.5" />,
-  "text field": <TextCursorInput className="h-3.5 w-3.5" />,
-  "search bar": <Search className="h-3.5 w-3.5" />,
-  switch: <ToggleLeft className="h-3.5 w-3.5" />,
-  slider: <Settings2 className="h-3.5 w-3.5" />,
-  tab: <Square className="h-3.5 w-3.5" />,
-  menu: <Menu className="h-3.5 w-3.5" />,
-  link: <Link2 className="h-3.5 w-3.5" />,
-  "list item": <List className="h-3.5 w-3.5" />,
-  icon: <Circle className="h-3.5 w-3.5" />,
-  image: <ImageIcon className="h-3.5 w-3.5" />,
-  map: <Map className="h-3.5 w-3.5" />,
-};
 
 export function TargetSlotCombobox({
   value,
@@ -254,9 +223,6 @@ export function TargetSlotCombobox({
           value={flatFilteredTargetOptions[highlightIndex]?.value ?? ""}
         >
           <CommandList>
-            {flatFilteredTargetOptions.length === 0 ? (
-              <CommandEmpty>No match. Keep typing for free text.</CommandEmpty>
-            ) : null}
             {filteredTargetGroups.map((group) => (
               <CommandGroup key={group.label} heading={group.label}>
                 {group.options.map((option) => {
@@ -277,9 +243,7 @@ export function TargetSlotCombobox({
                       onSelect={() => commitTargetOption(option.value)}
                       className="cursor-pointer"
                     >
-                      {TARGET_ICON_MAP[option.value] ?? (
-                        <SquareIcon className="h-3.5 w-3.5" />
-                      )}
+                      {option.icon}
                       <span>{option.label}</span>
                     </CommandItem>
                   );

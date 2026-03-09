@@ -25,6 +25,7 @@ import DoubleTapIcon from "@/components/ui/gesture-icons/double-tap-01.svg";
 import TouchHoldIcon from "@/components/ui/gesture-icons/touch-and-hold.svg";
 
 import { cn } from "@/lib/utils";
+import { GESTURE_GROUP_TYPES, GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 const ICON_BOX_SIZE = "w-6 h-6";
 const HUGE_ICON_SIZE = "w-6 h-6";
@@ -110,59 +111,61 @@ export const COMMAND_ITEM_CLASS =
   "cursor-pointer group px-2 py-1 rounded-md relative hover:cursor-pointer";
 
 const LEGACY_GESTURE_TYPE_MAP: Record<string, string> = {
-  tap: "Tap",
-  "double tap": "Double tap",
-  swipe: "Finger swipe",
-  typing: "Typing",
-  "touch and hold": "Touch and hold",
-  drag: "Drag",
-  "drag up": "Drag",
-  "drag down": "Drag",
-  "drag left": "Drag",
-  "drag right": "Drag",
-  zoom: "Zoom",
-  "zoom in": "Zoom in",
-  "zoom out": "Zoom out",
-  rotate: "Rotate",
-  "rotate cw": "Rotate right",
-  "rotate clockwise": "Rotate right",
-  "rotate ccw": "Rotate left",
-  "rotate counter-clockwise": "Rotate left",
-  other: "Other",
+  Tap: GESTURE_TYPES.TAP,
+  "Double tap": GESTURE_TYPES.DOUBLE_TAP,
+  "Finger Swipe": GESTURE_GROUP_TYPES.SWIPE,
+  Typing: GESTURE_TYPES.TYPING,
+  "Touch and hold": GESTURE_TYPES.TOUCH_AND_HOLD,
+  Drag: GESTURE_TYPES.DRAG,
+  "Drag up": GESTURE_TYPES.DRAG,
+  "Drag down": GESTURE_TYPES.DRAG,
+  "Drag left": GESTURE_TYPES.DRAG,
+  "Drag right": GESTURE_TYPES.DRAG,
+  Zoom: GESTURE_GROUP_TYPES.ZOOM,
+  "Zoom in": GESTURE_TYPES.ZOOM_IN,
+  "Zoom out": GESTURE_TYPES.ZOOM_OUT,
+  Rotate: GESTURE_GROUP_TYPES.ROTATE,
+  "Rotate right": GESTURE_TYPES.ROTATE_CW,
+  "Rotate left": GESTURE_TYPES.ROTATE_CCW,
+  Other: GESTURE_TYPES.OTHER,
 };
 
 // ── options ────────────────────────────────────────
 export const gestureOptions: GestureOption[] = [
-  { value: "Tap", label: "Tap", icon: <HugeIconsWrapper icon={Tap01Icon} /> },
+  {
+    value: GESTURE_TYPES.TAP,
+    label: "Tap",
+    icon: <HugeIconsWrapper icon={Tap01Icon} />,
+  },
 
   {
-    value: "Double tap",
+    value: GESTURE_TYPES.DOUBLE_TAP,
     label: "Double tap",
     icon: <CustomSvg Svg={DoubleTapIcon} />,
   },
 
   {
-    value: "Finger swipe",
+    value: GESTURE_GROUP_TYPES.SWIPE,
     label: "Finger swipe",
     icon: <HugeIconsWrapper icon={Move01Icon} />,
     subGestures: [
       {
-        value: "Swipe up",
+        value: GESTURE_TYPES.SWIPE_UP,
         label: "Swipe up",
         icon: <HugeIconsWrapper icon={SwipeUp01Icon} />,
       },
       {
-        value: "Swipe down",
+        value: GESTURE_TYPES.SWIPE_DOWN,
         label: "Swipe down",
         icon: <HugeIconsWrapper icon={SwipeDown01Icon} />,
       },
       {
-        value: "Swipe left",
+        value: GESTURE_TYPES.SWIPE_LEFT,
         label: "Swipe left",
         icon: <HugeIconsWrapper icon={SwipeLeft01Icon} />,
       },
       {
-        value: "Swipe right",
+        value: GESTURE_TYPES.SWIPE_RIGHT,
         label: "Swipe right",
         icon: <HugeIconsWrapper icon={SwipeRight01Icon} />,
       },
@@ -170,7 +173,7 @@ export const gestureOptions: GestureOption[] = [
   },
 
   {
-    value: "Typing",
+    value: GESTURE_TYPES.TYPING,
     label: "Typing",
     icon: (
       <IconBox>
@@ -180,13 +183,13 @@ export const gestureOptions: GestureOption[] = [
   },
 
   {
-    value: "Touch and hold",
+    value: GESTURE_TYPES.TOUCH_AND_HOLD,
     label: "Touch and hold",
     icon: <CustomSvg Svg={TouchHoldIcon} />,
   },
 
   {
-    value: "Drag",
+    value: GESTURE_TYPES.DRAG,
     label: "Drag",
     icon: (
       <IconBox>
@@ -196,17 +199,17 @@ export const gestureOptions: GestureOption[] = [
   },
 
   {
-    value: "Zoom",
+    value: GESTURE_GROUP_TYPES.ZOOM,
     label: "Zoom",
     icon: <HugeIconsWrapper icon={Minimize01Icon} />,
     subGestures: [
       {
-        value: "Zoom in",
+        value: GESTURE_TYPES.ZOOM_IN,
         label: "Zoom in",
         icon: <HugeIconsWrapper icon={Minimize01Icon} />,
       },
       {
-        value: "Zoom out",
+        value: GESTURE_TYPES.ZOOM_OUT,
         label: "Zoom out",
         icon: <HugeIconsWrapper icon={Maximize01Icon} />,
       },
@@ -214,17 +217,17 @@ export const gestureOptions: GestureOption[] = [
   },
 
   {
-    value: "Rotate",
+    value: GESTURE_GROUP_TYPES.ROTATE,
     label: "Rotate",
     icon: <HugeIconsWrapper icon={RotateSquareIcon} />,
     subGestures: [
       {
-        value: "Rotate right",
+        value: GESTURE_TYPES.ROTATE_CW,
         label: "Rotate right",
         icon: <HugeIconsWrapper icon={RotateTopRightIcon} />,
       },
       {
-        value: "Rotate left",
+        value: GESTURE_TYPES.ROTATE_CCW,
         label: "Rotate left",
         icon: <HugeIconsWrapper icon={RotateTopLeftIcon} />,
       },
@@ -232,7 +235,7 @@ export const gestureOptions: GestureOption[] = [
   },
 
   {
-    value: "Other",
+    value: GESTURE_TYPES.OTHER,
     label: "Other",
     icon: (
       <IconBox>

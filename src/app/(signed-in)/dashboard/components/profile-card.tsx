@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { googleImageAdapter } from "../../lib/image";
 import { prettyTime } from "@/lib/utils";
+import { DevicePreferenceControl } from "./iphone-preference-control";
 
 export function ProfileCard({
   user,
@@ -78,6 +79,7 @@ export function ProfileCard({
               format: "yyyy",
             })}
           </span>
+          <DevicePreferenceControl />
         </div>
       </aside>
     </Card>

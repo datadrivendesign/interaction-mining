@@ -1,4 +1,6 @@
 import { ScreenGesture } from "@prisma/client";
+import { normalizeGestureType } from "@/lib/utils/gesture-options";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export const GESTURE_DESCRIPTION_MAX_LENGTH = 125;
 export const MIN_SLOT_LENGTH = 2;
@@ -12,7 +14,7 @@ export type GestureTemplateSlot = {
 };
 
 export type GestureTemplate = {
-  type: Exclude<ScreenGesture["type"], null | "other">;
+  type: Exclude<ScreenGesture["type"], null | typeof GESTURE_TYPES.OTHER>;
   fixedParts: readonly string[];
   slots: readonly GestureTemplateSlot[];
 };
@@ -20,7 +22,7 @@ export type GestureTemplate = {
 // Canonical phrase templates used to compose and parse stored gesture descriptions.
 const gestureTemplates: GestureTemplate[] = [
   {
-    type: "tap",
+    type: GESTURE_TYPES.TAP,
     fixedParts: ["Tap ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "button" },
@@ -28,7 +30,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "swipe up",
+    type: GESTURE_TYPES.SWIPE_UP,
     fixedParts: ["Swipe up on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "feed" },
@@ -36,7 +38,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "swipe down",
+    type: GESTURE_TYPES.SWIPE_DOWN,
     fixedParts: ["Swipe down on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "slider" },
@@ -44,7 +46,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "swipe left",
+    type: GESTURE_TYPES.SWIPE_LEFT,
     fixedParts: ["Swipe left on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "items list" },
@@ -52,7 +54,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "swipe right",
+    type: GESTURE_TYPES.SWIPE_RIGHT,
     fixedParts: ["Swipe right on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "items list" },
@@ -60,7 +62,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "typing",
+    type: GESTURE_TYPES.TYPING,
     fixedParts: ["Type in ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "search bar" },
@@ -68,7 +70,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "touch and hold",
+    type: GESTURE_TYPES.TOUCH_AND_HOLD,
     fixedParts: ["Touch and hold ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "photo" },
@@ -76,7 +78,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "double tap",
+    type: GESTURE_TYPES.DOUBLE_TAP,
     fixedParts: ["Double tap ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "image" },
@@ -84,7 +86,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "drag",
+    type: GESTURE_TYPES.DRAG,
     fixedParts: ["Drag ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "slider handle" },
@@ -96,7 +98,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "zoom in",
+    type: GESTURE_TYPES.ZOOM_IN,
     fixedParts: ["Zoom in on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "map" },
@@ -104,7 +106,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "zoom out",
+    type: GESTURE_TYPES.ZOOM_OUT,
     fixedParts: ["Zoom out on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "map" },
@@ -112,7 +114,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "rotate cw",
+    type: GESTURE_TYPES.ROTATE_CW,
     fixedParts: ["Rotate clockwise on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "photo" },
@@ -120,7 +122,7 @@ const gestureTemplates: GestureTemplate[] = [
     ],
   },
   {
-    type: "rotate ccw",
+    type: GESTURE_TYPES.ROTATE_CCW,
     fixedParts: ["Rotate counterclockwise on ", " to ", ""],
     slots: [
       { key: "target", label: "target", placeholder: "map" },
@@ -136,14 +138,14 @@ const gestureTemplateMap = new Map(
 
 // Accept UI/display aliases while keeping cw/ccw as canonical persisted types.
 const gestureTemplateTypeAliasMap: Record<string, GestureTemplate["type"]> = {
-  "rotate right": "rotate cw",
-  "rotate left": "rotate ccw",
+  "rotate right": GESTURE_TYPES.ROTATE_CW,
+  "rotate left": GESTURE_TYPES.ROTATE_CCW,
 };
 
 const normalizeTemplateGestureType = (
   type: ScreenGesture["type"],
 ): GestureTemplate["type"] | null => {
-  if (!type || type === "other") {
+  if (!type || type === GESTURE_TYPES.OTHER) {
     return null;
   }
   const lowerType = type.toLowerCase();
@@ -162,7 +164,7 @@ const escapeRegex = (value: string) =>
  * @returns True if the gesture type is freeform, false otherwise.
  */
 export function isFreeformGestureType(type: ScreenGesture["type"]): boolean {
-  return type === "other";
+  return type === GESTURE_TYPES.OTHER;
 }
 
 /**
@@ -271,7 +273,10 @@ export function parseGestureTemplateDescription(
  * @returns True if the gesture description is valid, false otherwise.
  */
 export function validateGestureDescription(
-  gesture: Pick<ScreenGesture, "type" | "description">,
+  gesture: Pick<
+    ScreenGesture,
+    "type" | "description" | "x" | "y" | "scrollDeltaX" | "scrollDeltaY"
+  >,
 ): boolean {
   if (!gesture.type) {
     return false;
@@ -286,6 +291,11 @@ export function validateGestureDescription(
   if (isFreeformGestureType(gesture.type)) {
     return true;
   }
+  if (normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG) {
+    if (!hasCompleteDragPoints(gesture)) {
+      return false;
+    }
+  }
 
   const template = getGestureTemplate(gesture.type);
   if (!template) {
@@ -299,4 +309,15 @@ export function validateGestureDescription(
     const value = parsed[slot.key].trim();
     return value.length > MIN_SLOT_LENGTH;
   });
+}
+
+export function hasCompleteDragPoints(
+  gesture: Pick<ScreenGesture, "x" | "y" | "scrollDeltaX" | "scrollDeltaY">,
+): boolean {
+  return (
+    gesture.x !== null &&
+    gesture.y !== null &&
+    gesture.scrollDeltaX !== null &&
+    gesture.scrollDeltaY !== null
+  );
 }

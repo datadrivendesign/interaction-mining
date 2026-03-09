@@ -57,30 +57,31 @@ type AppMetadata {
   url         String?
 }
 
-model App { 
-  id                String        @id @default(auto()) @map("_id") @db.ObjectId
-  v                 Int           @default(0) @map("__v")
-  os                String
-  category          AppsCategory?
-  packageName       String
-  metadata          AppMetadata
-  Capture           Capture[]
-  Trace             Trace[]
-  CandidateTaskApp  CandidateTaskApp?
+model App {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  v                Int               @default(0) @map("__v")
+  os               String
+  category         AppsCategory?
+  packageName      String
+  metadata         AppMetadata
+  Capture          Capture[]
+  Trace            Trace[]
+  CandidateTaskApp CandidateTaskApp?
 
   @@unique([packageName, os])
-  @@fulltext([metadata.name])
   // index on os to make faster lookups in explore page
   @@index([os])
+  @@fulltext([metadata.name])
   @@map("apps")
 }
 
 model CandidateTaskApp {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  appId           String @unique @map("app") @db.ObjectId
-  app             App    @relation(fields: [appId], references: [id])
-  candidateTasks  String[]
-  isTaken         Boolean
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  appId          String   @unique @map("app") @db.ObjectId
+  app            App      @relation(fields: [appId], references: [id])
+  candidateTasks String[]
+  isTaken        Boolean
+
   @@map("candidate_task_apps")
 }
 
@@ -171,20 +172,22 @@ model Capture {
 }
 
 model User {
-  id            String          @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String?         @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role            @default(USER)
-  accounts      Account[]
-  sessions      Session[]
-  captureIds    String[]        @default([]) @map("captures") @db.ObjectId
-  captures      Capture[]
-  traceIds      String[]        @default([]) @map("traces") @db.ObjectId
-  traces        Trace[]
+  id                     String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String?
+  email                  String?         @unique
+  emailVerified          DateTime?
+  image                  String?
+  role                   Role            @default(USER)
+  preferredIOSVersion    String?         @map("preferred_ios_version")
+  preferredIPhoneVersion String?         @map("preferred_iphone_version")
+  accounts               Account[]
+  sessions               Session[]
+  captureIds             String[]        @default([]) @map("captures") @db.ObjectId
+  captures               Capture[]
+  traceIds               String[]        @default([]) @map("traces") @db.ObjectId
+  traces                 Trace[]
   // Optional for WebAuthn support
-  Authenticator Authenticator[]
+  Authenticator          Authenticator[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

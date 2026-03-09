@@ -7,6 +7,7 @@ import React, {
   useContext,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import throttle from "lodash/throttle";
 import { RedactCanvasContext } from "./redact-screen-canvas";
@@ -39,9 +40,14 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
   isPanning,
   setIsPanning,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number; width: number; height: number }>
   >({});
+  const [overlaySizes, setOverlaySizes] = useState<
+    Record<string, { width: number; height: number }>
+  >({});
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   const { redactions } = useContext(RedactCanvasContext);
 
@@ -89,7 +95,7 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
         leading: true,
         trailing: true,
       }),
-    [updatePositionsUnthrottled]
+    [updatePositionsUnthrottled],
   );
 
   useEffect(() => {
@@ -133,17 +139,82 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
     };
   }, [stage, overlays, redactions, updatePositions]);
 
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+
+    const updateSize = () => {
+      setContainerSize({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+    };
+
+    updateSize();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Handler to stop events from bubbling to Konva stage:
   const stopPointer = (
-    event: React.MouseEvent | React.WheelEvent | React.TouchEvent
+    event: React.MouseEvent | React.WheelEvent | React.TouchEvent,
   ) => {
     event.stopPropagation();
     event.preventDefault();
     setIsPanning(true);
   };
 
+  const getOverlayPosition = useCallback(
+    (
+      nodeId: string,
+      box: { x: number; y: number; width: number; height: number },
+    ) => {
+      const margin = 8;
+      const gap = 16;
+      const size = overlaySizes[nodeId] ?? { width: 0, height: 0 };
+
+      let left = box.x + box.width + gap;
+      if (size.width > 0 && left + size.width > containerSize.width - margin) {
+        left = box.x - size.width - gap;
+      }
+      if (size.width > 0) {
+        left = Math.max(
+          margin,
+          Math.min(left, containerSize.width - size.width - margin),
+        );
+      }
+
+      let top = box.y;
+      if (
+        size.height > 0 &&
+        top + size.height > containerSize.height - margin
+      ) {
+        top = box.y + box.height - size.height;
+      }
+      if (size.height > 0) {
+        top = Math.max(
+          margin,
+          Math.min(top, containerSize.height - size.height - margin),
+        );
+      }
+
+      return { left, top };
+    },
+    [containerSize.height, containerSize.width, overlaySizes],
+  );
+
   return (
     <div
+      ref={containerRef}
       style={{
         position: "absolute",
         top: 0,
@@ -156,13 +227,37 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
       {overlays.map((overlay) => {
         const box = positions[overlay.nodeId];
         if (!box) return null;
+        const { left, top } = getOverlayPosition(overlay.nodeId, box);
         return (
           <div
             key={overlay.nodeId}
+            ref={(node) => {
+              if (!node) return;
+              const nextWidth = node.offsetWidth;
+              const nextHeight = node.offsetHeight;
+              setOverlaySizes((prev) => {
+                const curr = prev[overlay.nodeId];
+                if (
+                  curr &&
+                  curr.width === nextWidth &&
+                  curr.height === nextHeight
+                ) {
+                  return prev;
+                }
+                return {
+                  ...prev,
+                  [overlay.nodeId]: {
+                    width: nextWidth,
+                    height: nextHeight,
+                  },
+                };
+              });
+            }}
             style={{
               position: "absolute",
-              left: `calc(${box.x + box.width}px + 1rem)`,
-              top: box.y,
+              left,
+              top,
+              zIndex: 140,
               pointerEvents: isPanning ? "none" : "auto",
             }}
             onWheel={stopPointer}

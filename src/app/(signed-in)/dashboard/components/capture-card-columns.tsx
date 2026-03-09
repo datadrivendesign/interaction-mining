@@ -91,6 +91,16 @@ type ColumnsState = Record<
   CapturesPaginatedOutput & { loading: boolean }
 >;
 
+function sortCaptureItemsNewestFirst<T extends { id: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => b.id.localeCompare(a.id));
+}
+
+function normalizeCaptureItems<T extends { id: string }>(items: T[]): T[] {
+  const deduped = new Map<string, T>();
+  items.forEach((item) => deduped.set(item.id, item));
+  return sortCaptureItemsNewestFirst(Array.from(deduped.values()));
+}
+
 export function CaptureCardColumns({
   userId,
   initialCapturesByStatus,
@@ -101,7 +111,11 @@ export function CaptureCardColumns({
   const [columns, setColumns] = useState<ColumnsState>(() => {
     const entries = Object.entries(initialCapturesByStatus).map(([k, v]) => [
       k as NonApprovedStatus,
-      { ...v, loading: false },
+      {
+        ...v,
+        items: normalizeCaptureItems(v.items),
+        loading: false,
+      },
     ]);
     return Object.fromEntries(entries) as ColumnsState;
   });
@@ -136,7 +150,7 @@ export function CaptureCardColumns({
     setColumns((prev) => ({
       ...prev,
       [status]: {
-        items: [...prev[status].items, ...items],
+        items: normalizeCaptureItems([...prev[status].items, ...items]),
         nextCursor,
         hasNextPage,
         loading: false,

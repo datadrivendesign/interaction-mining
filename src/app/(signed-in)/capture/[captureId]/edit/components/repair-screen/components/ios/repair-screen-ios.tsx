@@ -88,7 +88,7 @@ export function RepairScreenIOS({
       }
       return frames;
     },
-    [screens]
+    [screens],
   );
 
   useEffect(() => {
@@ -146,13 +146,13 @@ export function RepairScreenIOS({
           video,
           video.duration,
           MAX_THUMBS,
-          THUMB_HEIGHT
+          THUMB_HEIGHT,
         );
         setThumbnails(thumbs);
         const draftScreens = await populateDraftScreens(video);
         setValue(
           "screens",
-          draftScreens.sort((a, b) => a.timestamp - b.timestamp)
+          draftScreens.sort((a, b) => a.timestamp - b.timestamp),
         );
       } catch (e) {
         console.error("Error loading video blob:", e);
@@ -210,7 +210,7 @@ export function RepairScreenIOS({
       video.currentTime = t;
       setCurrentTime(t);
     },
-    [videoRef, videoDuration]
+    [videoRef, videoDuration],
   );
 
   const handleCaptureFrame = async () => {
@@ -218,7 +218,7 @@ export function RepairScreenIOS({
     const f = await extractVideoFrame(videoRef.current, currentTime);
     setValue(
       "screens",
-      [...screens, f].sort((a, b) => a.timestamp - b.timestamp)
+      [...screens, f].sort((a, b) => a.timestamp - b.timestamp),
     );
   };
 
@@ -239,7 +239,7 @@ export function RepairScreenIOS({
       e.preventDefault();
       handleSetTime(currentTime - 5);
     },
-    [currentTime, handleSetTime]
+    [currentTime, handleSetTime],
   );
 
   useHotkeys(
@@ -248,7 +248,7 @@ export function RepairScreenIOS({
       e.preventDefault();
       handleSetTime(currentTime - 5);
     },
-    [currentTime, handleSetTime]
+    [currentTime, handleSetTime],
   );
 
   useHotkeys(
@@ -257,7 +257,7 @@ export function RepairScreenIOS({
       e.preventDefault();
       handleSetTime(currentTime + 5);
     },
-    [currentTime, handleSetTime]
+    [currentTime, handleSetTime],
   );
 
   useHotkeys(
@@ -266,7 +266,7 @@ export function RepairScreenIOS({
       e.preventDefault();
       handleSetTime(currentTime + 5);
     },
-    [currentTime, handleSetTime]
+    [currentTime, handleSetTime],
   );
 
   // Seek backward/forward by one frame
@@ -276,7 +276,7 @@ export function RepairScreenIOS({
       e.preventDefault();
       handleSetTime(currentTime - frameStep);
     },
-    [currentTime, handleSetTime]
+    [currentTime, handleSetTime],
   );
 
   useHotkeys(
@@ -285,7 +285,7 @@ export function RepairScreenIOS({
       e.preventDefault();
       handleSetTime(currentTime + frameStep);
     },
-    [currentTime, handleSetTime]
+    [currentTime, handleSetTime],
   );
 
   useHotkeys(
@@ -295,13 +295,18 @@ export function RepairScreenIOS({
       handleCaptureFrame();
     },
     { keyup: true },
-    [handleCaptureFrame]
+    [handleCaptureFrame],
   );
 
   return (
     <div className="flex flex-col w-full h-full">
       <ResizablePanelGroup direction="vertical">
-        <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
+        <ResizablePanel
+          defaultSize={67}
+          minSize={50}
+          maxSize={67}
+          className="relative z-20 overflow-visible"
+        >
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel
               defaultSize={33}
@@ -338,7 +343,12 @@ export function RepairScreenIOS({
               </div>
             </ResizablePanel>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={67} minSize={50} maxSize={67}>
+            <ResizablePanel
+              defaultSize={67}
+              minSize={50}
+              maxSize={67}
+              className="relative overflow-visible"
+            >
               <InstructionCardIOS taskDescription={taskDescription} />
               {focusViewIndex > -1 && focusViewIndex < screens.length ? (
                 <FocusViewIOS
@@ -358,7 +368,12 @@ export function RepairScreenIOS({
         </ResizablePanel>
 
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={30} minSize={30} maxSize={50}>
+        <ResizablePanel
+          defaultSize={30}
+          minSize={30}
+          maxSize={50}
+          className="relative z-10"
+        >
           <div className="flex flex-col h-full">
             <Filmstrip
               screens={screens}

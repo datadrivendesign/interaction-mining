@@ -34,6 +34,7 @@ import {
   normalizeGestureType,
   POPOVER_CONTENT_CLASS,
 } from "@/lib/utils/gesture-options";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 import { GestureContext } from "./gesture-menu";
 
 export function GestureSelection({
@@ -51,7 +52,7 @@ export function GestureSelection({
   const toStoredGestureType = (raw: string): ScreenGesture["type"] | null => {
     if (!raw) return null;
     const normalized = normalizeGestureType(raw);
-    return normalized ? (normalized.toLowerCase() as ScreenGesture["type"]) : null;
+    return normalized ? (normalized as ScreenGesture["type"]) : null;
   };
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function GestureSelection({
 
   const selectedStoredType = toStoredGestureType(value);
   const dragHelperText =
-    selectedStoredType === "drag"
+    selectedStoredType === GESTURE_TYPES.DRAG
       ? gesture.x === null || gesture.y === null
         ? "Click start point"
         : gesture.scrollDeltaX === null || gesture.scrollDeltaY === null
@@ -72,37 +73,43 @@ export function GestureSelection({
   useEffect(() => {
     const storedType = toStoredGestureType(value);
     if (storedType) {
-      setGesture((prev) => ({
-        ...prev,
-        type: storedType,
-        ...(storedType === "drag" && prev.type !== "drag"
-          ? {
-              x: null,
-              y: null,
-              scrollDeltaX: null,
-              scrollDeltaY: null,
-            }
-          : {}),
-        scrollDeltaX:
-          storedType === "drag"
-            ? prev.scrollDeltaX
-            : storedType === "swipe left"
-            ? -0.02
-            : storedType === "swipe right"
-              ? 0.02
-              : 0,
-        scrollDeltaY:
-          storedType === "drag"
-            ? prev.scrollDeltaY
-            : storedType === "swipe down"
-            ? -0.02
-            : storedType === "swipe up"
-              ? 0.02
-              : 0,
-      }));
+      setGesture((prev) => {
+        const wasDrag = prev.type === GESTURE_TYPES.DRAG;
+        const isDrag = storedType === GESTURE_TYPES.DRAG;
+        const isGestureTypeTransition = prev.type !== storedType;
+        const resetDragPoints = isGestureTypeTransition && (wasDrag || isDrag);
+
+        return {
+          ...prev,
+          type: storedType,
+          x: resetDragPoints ? null : prev.x,
+          y: resetDragPoints ? null : prev.y,
+          scrollDeltaX: isDrag
+            ? resetDragPoints
+              ? null
+              : prev.scrollDeltaX
+            : storedType === GESTURE_TYPES.SWIPE_LEFT
+              ? -0.02
+              : storedType === GESTURE_TYPES.SWIPE_RIGHT
+                ? 0.02
+                : 0,
+          scrollDeltaY: isDrag
+            ? resetDragPoints
+              ? null
+              : prev.scrollDeltaY
+            : storedType === GESTURE_TYPES.SWIPE_DOWN
+              ? -0.02
+              : storedType === GESTURE_TYPES.SWIPE_UP
+                ? 0.02
+                : 0,
+        };
+      });
     } else {
       // Reset gesture type when value is empty i.e. empty string i.e. no gesture selected
-      setGesture((prev) => ({ ...prev, type: null }));
+      setGesture((prev) => ({
+        ...prev,
+        type: null,
+      }));
     }
   }, [value, setGesture]);
 
@@ -166,7 +173,10 @@ export function GestureSelection({
                         }`}
                       >
                         {option.subGestures.map((subOption: GestureOption) => (
-                          <TooltipProvider key={subOption.value} delayDuration={0}>
+                          <TooltipProvider
+                            key={subOption.value}
+                            delayDuration={0}
+                          >
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button
@@ -202,7 +212,8 @@ export function GestureSelection({
                       value={option.value}
                       className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
                       onSelect={(currentValue) => {
-                        const selected = currentValue === value ? "" : currentValue;
+                        const selected =
+                          currentValue === value ? "" : currentValue;
                         const normalized = normalizeGestureType(selected);
                         setValue(normalized ?? selected);
                         setOpen(false);

@@ -44,7 +44,10 @@ export default function RedactScreen() {
   return (
     <div className="flex w-full h-full">
       <ResizablePanelGroup direction="vertical">
-        <ResizablePanel defaultSize={75}>
+        <ResizablePanel
+          defaultSize={75}
+          className="relative z-20 overflow-visible"
+        >
           {focusViewIndex > -1 ? (
             <FocusView
               key={focusViewIndex}
@@ -62,7 +65,12 @@ export default function RedactScreen() {
           )}
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={20} minSize={20} maxSize={50}>
+        <ResizablePanel
+          defaultSize={20}
+          minSize={20}
+          maxSize={50}
+          className="relative z-10"
+        >
           <Filmstrip
             screens={screens}
             redactions={redactions}

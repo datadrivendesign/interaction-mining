@@ -1,5 +1,9 @@
 export const iosOptions = [
   {
+    value: "iOS 18",
+    label: "iOS 18",
+  },
+  {
     value: "iOS 17",
     label: "iOS 17",
   },
@@ -23,17 +27,13 @@ export const iosOptions = [
     value: "iOS 12",
     label: "iOS 12",
   },
-  {
-    value: "iOS 11",
-    label: "iOS 11",
-  },
-  {
-    value: "iOS 10",
-    label: "iOS 10",
-  },
 ];
 
 export const iphoneOptions = [
+  {
+    value: "iPhone 16",
+    label: "iPhone 16",
+  },
   {
     value: "iPhone 15",
     label: "iPhone 15",
@@ -47,10 +47,6 @@ export const iphoneOptions = [
     label: "iPhone 13",
   },
   {
-    value: "iPhone SE 2",
-    label: "iPhone SE 2",
-  },
-  {
     value: "iPhone 12",
     label: "iPhone 12",
   },
@@ -59,15 +55,15 @@ export const iphoneOptions = [
     label: "iPhone 11",
   },
   {
-    value: "iPhone 10",
-    label: "iPhone 10",
+    value: "iPhone SE 3",
+    label: "iPhone SE 3",
   },
   {
-    value: "iPhone 9",
-    label: "iPhone 9",
+    value: "iPhone SE 2",
+    label: "iPhone SE 2",
   },
   {
-    value: "iPhone 8",
-    label: "iPhone 8",
+    value: "iPhone SE",
+    label: "iPhone SE",
   },
 ];
