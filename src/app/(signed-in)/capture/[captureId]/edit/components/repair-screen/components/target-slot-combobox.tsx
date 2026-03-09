@@ -2,7 +2,6 @@
 
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandList,
@@ -254,9 +253,6 @@ export function TargetSlotCombobox({
           value={flatFilteredTargetOptions[highlightIndex]?.value ?? ""}
         >
           <CommandList>
-            {flatFilteredTargetOptions.length === 0 ? (
-              <CommandEmpty>No match. Keep typing for free text.</CommandEmpty>
-            ) : null}
             {filteredTargetGroups.map((group) => (
               <CommandGroup key={group.label} heading={group.label}>
                 {group.options.map((option) => {

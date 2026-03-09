@@ -25,6 +25,7 @@ import {
   DroppableArea,
   GestureContext,
 } from "../gesture-menu";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export default function RepairScreenCanvasIOS({
   screen,
@@ -78,7 +79,7 @@ export default function RepairScreenCanvasIOS({
       const relativeY = mouse.elementY / height;
 
       setGesture((prev) => {
-        if (normalizeGestureType(prev.type) === normalizeGestureType("drag")) {
+        if (normalizeGestureType(prev.type) === GESTURE_TYPES.DRAG) {
           const hasStart = prev.x !== null && prev.y !== null;
           const hasEnd =
             prev.scrollDeltaX !== null && prev.scrollDeltaY !== null;
@@ -207,6 +208,13 @@ export default function RepairScreenCanvasIOS({
                 {markerPixelPosition.x !== null &&
                 markerPixelPosition.y !== null ? (
                   <DraggableMarker position={markerPixelPosition} />
+                ) : null}
+                {isLastScreen ? (
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                    <div className="rounded-md bg-emerald-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-md">
+                      Goal screen reached. No gesture required.
+                    </div>
+                  </div>
                 ) : null}
                 <Image
                   ref={mergedRef as MutableRefObject<HTMLImageElement | null>}

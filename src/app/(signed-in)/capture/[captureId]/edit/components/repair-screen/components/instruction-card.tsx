@@ -12,7 +12,7 @@ export const InstructionCardIOS = ({
     <Card
       key="task"
       className={
-        "hidden lg:block right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md"
+        "hidden lg:block right-4 absolute top-0 w-64 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
       }
     >
       <CardHeader className="flex flex-col items-center p-2">
@@ -27,14 +27,9 @@ export const InstructionCardIOS = ({
               </p>
             </article>
           </Badge>
-          <p className="mt-1 text-xs font-semibold">
-            1. Capture screens from video.
-          </p>
-          <p className="text-xs font-semibold">2. Add gestures to screens</p>
-          <p className="text-xs">
-            <strong>Add screen gestures on this side.</strong> Fill in the
-            template fields for each gesture. Use <strong>Other</strong> when
-            you need freeform text.
+          <p className="mt-2 text-xs font-semibold text-muted-foreground">
+            Shortcuts: Arrow Left / Right to move between screens. Tab to move
+            to next card input.
           </p>
         </CardDescription>
       </CardHeader>
@@ -55,7 +50,7 @@ export const InstructionCardAndroid = ({
     <Card
       key="task"
       className={
-        "hidden lg:block right-4 absolute top-0 w-60 h-40 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
+        "hidden lg:block right-4 absolute top-0 w-64 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
       }
     >
       <CardHeader className="flex flex-col items-center p-2">
@@ -70,20 +65,19 @@ export const InstructionCardAndroid = ({
               </p>
             </article>
           </Badge>
-          <p className="mt-2 text-xs font-semibold">Add gestures to screens</p>
-          <p className="mt-2 text-xs">
-            <strong>Add screen gestures on this side.</strong> Fill in the
-            template fields for each gesture. Use <strong>Other</strong> when
-            you need freeform text.
+          <p className="mt-2 text-xs font-semibold text-muted-foreground">
+            Shortcuts: Tab / Left / Right to move between screens
           </p>
-          <div className="space-y-1 my-5">
+          <div className="space-y-1 mt-3">
             <Switch
               checked={showBoxes}
               onCheckedChange={(checked) => {
                 setShowBoxes(checked);
               }}
             />
-            <span className="pl-3">Show Bounding Boxes</span>
+            <span className="pl-3 text-xs font-medium">
+              Show Bounding Boxes
+            </span>
           </div>
         </CardDescription>
       </CardHeader>
