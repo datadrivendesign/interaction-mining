@@ -31,7 +31,7 @@ import { DraftFetchResults, getDraftFiles, handleDraftSave } from "./util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
-import { FeedbackDialog } from "./components/repair-screen/components/feedback-dialog";
+import { FeedbackChecklist } from "./components/feedback-checklist";
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
 
@@ -194,6 +194,19 @@ export default function Page() {
   }, [capture]);
 
   const [stepIndex, setStepIndex] = useState(0);
+
+  // Map each step to its relevant evaluator-feedback field.
+  const stepFeedbackMap: Record<number, string | undefined> = {
+    [TraceSteps.Capture]: capture?.annotateFeedback ?? undefined,
+    [TraceSteps.Redact]: capture?.redactFeedback ?? undefined,
+    [TraceSteps.Review]: capture?.summarizeFeedback ?? undefined,
+  };
+  const stepLabels: Record<number, string> = {
+    [TraceSteps.Capture]: "Annotate",
+    [TraceSteps.Redact]: "Redact",
+    [TraceSteps.Review]: "Description",
+  };
+  const currentStepFeedback = stepFeedbackMap[stepIndex];
 
   const handleNext = async () => {
     setIsSubmitting(true);
@@ -368,13 +381,15 @@ export default function Page() {
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex w-full h-[calc(100%-var(--nav-height))]">
-                {/* <aside className="hidden md:flex flex-col w-full max-w-xs h-full border-r border-neutral-200 dark:border-neutral-800">
-                  <article className="prose prose-neutral dark:prose-invert leading-snug p-4 md:p-6 overflow-auto">
-                    {docRender()}
-                  </article>
-                </aside> */}
-                <div className="flex flex-col w-full h-full items-center">
+              <div className="relative flex flex-col w-full h-[calc(100%-var(--nav-height))]">
+                {currentStepFeedback && (
+                  <FeedbackChecklist
+                    key={stepIndex}
+                    feedback={currentStepFeedback}
+                    stepLabel={stepLabels[stepIndex]}
+                  />
+                )}
+                <div className="flex flex-col w-full min-h-0 flex-1 items-center">
                   {editorRender()}
                 </div>
               </div>
@@ -430,13 +445,6 @@ export default function Page() {
                     )}
                   </Button>
 
-                  <FeedbackDialog
-                    annotateFeedback={capture?.annotateFeedback ?? ""}
-                    redactFeedback={capture?.redactFeedback ?? ""}
-                    summarizeFeedback={capture?.summarizeFeedback ?? ""}
-                  >
-                    <Button variant="default">Feedback</Button>
-                  </FeedbackDialog>
                 </div>
                 <div className="flex gap-4 items-center">
                   <Button
