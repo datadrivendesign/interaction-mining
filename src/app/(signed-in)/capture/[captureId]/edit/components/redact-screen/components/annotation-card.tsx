@@ -26,11 +26,13 @@ import { redactLabels, requiresCustomInput } from "@/lib/utils/redact-labels";
 import { RedactCanvasContext } from "./redact-screen-canvas";
 
 interface AnnotationCardProps {
+  redactionId: string;
   annotation: string;
   setAnnotation: (value: string) => void;
 }
 
 const AnnotationCard: React.FC<AnnotationCardProps> = ({
+  redactionId,
   annotation,
   setAnnotation,
 }) => {
@@ -41,6 +43,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const [customInput, setCustomInput] = useState(annotation);
   const maxLength = 30;
   const { selectRedaction } = useContext(RedactCanvasContext);
+  const previousRedactionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isCollapsed && labelValue === "") {
@@ -52,6 +55,16 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
     setLabelValue(annotation);
     setCustomInput(annotation);
   }, [annotation]);
+
+  useEffect(() => {
+    if (previousRedactionIdRef.current === redactionId) {
+      return;
+    }
+    const hasExistingLabel = (annotation ?? "").trim().length > 0;
+    // Default to minimized for already-annotated redactions to reduce occlusion.
+    setIsCollapsed(hasExistingLabel);
+    previousRedactionIdRef.current = redactionId;
+  }, [annotation, redactionId]);
 
   const handleCollapseToggle = useCallback(() => {
     setIsCollapsed((prev) => {
@@ -99,7 +112,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
   return (
     <div className="absolute z-[150]">
-      <Card className="flex flex-col items-start gap-2 p-3 shadow-lg">
+      <Card className="flex flex-col items-start gap-2 p-3 shadow-lg max-w-80">
         <div className="flex w-full items-center justify-between">
           <span className="text-sm font-semibold">Annotation</span>
           <Button

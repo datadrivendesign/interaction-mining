@@ -438,6 +438,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               render: () => (
                 <AnnotationCard
                   key={`annotation-${selectedRedactions[0].id}`}
+                  redactionId={selectedRedactions[0].id}
                   annotation={selectedRedactions[0].annotation}
                   setAnnotation={(value) => {
                     updateRect(selectedRedactions[0].id, {
