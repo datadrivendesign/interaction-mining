@@ -213,7 +213,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             defaultSize={isCompactLayout ? 62 : 75}
             minSize={isCompactLayout ? 45 : 70}
             maxSize={isCompactLayout ? 72 : 75}
-            className="bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full"
+            className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full"
           >
             {traceData && <ReviewGalleryAndroid traceData={traceData} />}
           </ResizablePanel>

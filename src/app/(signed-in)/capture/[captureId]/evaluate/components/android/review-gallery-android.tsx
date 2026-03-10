@@ -24,15 +24,15 @@ export function ReviewGalleryAndroid({
   traceData: TraceFormData;
 }) {
   return (
-    <section className="block w-full h-full px-3 py-3 md:p-5">
-      <Badge variant="default" className="bg-black my-3 md:my-5">
+    <section className="block w-full h-full px-3 sm:py-2 md:py-3 lg:py-4">
+      <Badge variant="default" className="bg-black my-1 md:my-3">
         <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
             Description: {traceData.description ?? "No description provided."}
           </p>
         </article>
       </Badge>
-      <article className="flex w-full overflow-x-scroll touch-pan-x">
+      <article className="flex w-full overflow-x-auto touch-auto">
         <div className="flex min-w-full gap-3 md:gap-5 pb-2">
           {traceData.screens
             .sort((a, b) => a.timestamp - b.timestamp)
@@ -87,7 +87,7 @@ function ReviewFigureAndroid({
   const endY = isDrag
     ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
     : 0;
-  const cardWidthClass = "w-[min(19rem,84vw)] sm:w-[min(20rem,70vw)] lg:w-[min(22rem,34vw)]";
+  const cardWidthClass = "w-[62%] sm:w-[54%] md:w-[44%] lg:w-[34%] xl:w-[28%]";
 
   return (
     <figure
@@ -238,7 +238,7 @@ const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
   return (
     <div className="w-full h-full">
       <Image
-        className="relative z-0 w-full h-full rounded-lg object-contain border-blue-500 border-2"
+        className="relative z-0 w-full h-auto rounded-lg object-contain border-blue-500 border-2"
         src={screen.src}
         alt={screen.id}
         width={0}

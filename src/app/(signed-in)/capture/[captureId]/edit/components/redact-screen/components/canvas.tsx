@@ -141,7 +141,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               ? [stageRef.current.x(), stageRef.current.y()]
               : [0, 0],
         },
-      }
+      },
     );
 
     // Helper to calculate pointer position accounting for current transform.
@@ -213,7 +213,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           });
         }
       },
-      [offsetX, offsetY, displayWidth, displayHeight, mode, getRelativePointer]
+      [offsetX, offsetY, displayWidth, displayHeight, mode, getRelativePointer],
     );
 
     // handler for mouse move event
@@ -245,7 +245,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         displayWidth,
         displayHeight,
         getRelativePointer,
-      ]
+      ],
     );
 
     // handler for mouse up event
@@ -272,7 +272,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           setNewRect(null);
         }
       },
-      [newRect, createRedactions, mode, setMode, displayWidth, displayHeight]
+      [newRect, createRedactions, mode, setMode, displayWidth, displayHeight],
     );
 
     // function to update the rectangle properties
@@ -282,7 +282,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           updateRedaction(id, rect);
         }
       },
-      [selectedRedactions, updateRedaction]
+      [selectedRedactions, updateRedaction],
     );
 
     const handleBackgroundClick = (e: KonvaEventObject<MouseEvent>) => {
@@ -315,7 +315,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const y = Math.min(Math.max(newBox.y, y0), y0 + maxH - h);
         return { ...oldBox, x, y, width: w, height: h };
       },
-      [offsetX, offsetY, displayWidth, displayHeight]
+      [offsetX, offsetY, displayWidth, displayHeight],
     );
 
     const handleTransform = useCallback(
@@ -364,7 +364,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         selectedRedactions,
         updateRect,
         boundBoxFunc,
-      ]
+      ],
     );
 
     const handleRectDelete = (e: any, id: string) => {
@@ -402,7 +402,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       if (mode !== "select") {
         selectRedaction(null, false);
         setOverlay((prev: any) =>
-          prev.filter((o: any) => o.type !== `annotation`)
+          prev.filter((o: any) => o.type !== `annotation`),
         );
 
         transformer.nodes([]);
@@ -438,7 +438,6 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               render: () => (
                 <AnnotationCard
                   key={`annotation-${selectedRedactions[0].id}`}
-                  redactionId={selectedRedactions[0].id}
                   annotation={selectedRedactions[0].annotation}
                   setAnnotation={(value) => {
                     updateRect(selectedRedactions[0].id, {
@@ -451,18 +450,18 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           ]);
         } else if (selectedNodes.length > 1) {
           setOverlay((prev: any) =>
-            prev.filter((o: any) => o.type !== `annotation`)
+            prev.filter((o: any) => o.type !== `annotation`),
           );
         } else {
           console.warn(
-            `No node found for selected redaction with id: ${selectedNodes[0].id}`
+            `No node found for selected redaction with id: ${selectedNodes[0].id}`,
           );
         }
       } else {
         transformer.nodes([]);
         transformer.getLayer()?.batchDraw();
         setOverlay((prev: any) =>
-          prev.filter((o: any) => o.type !== `annotation`)
+          prev.filter((o: any) => o.type !== `annotation`),
         );
       }
     }, [selectedRedactions, mode, selectRedaction, updateRect]);
@@ -477,14 +476,14 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           ref={
             mergeRefs(
               refMeasure,
-              containerRef
+              containerRef,
             ) as React.MutableRefObject<HTMLDivElement | null>
           }
           className={cn(
             "relative w-full h-full",
             mode === "select" && "cursor-normal",
             mode === "pencil" && "cursor-crosshair",
-            mode === "eraser" && "cursor-normal"
+            mode === "eraser" && "cursor-normal",
           )}
         >
           {imageStatus === "loaded" &&
@@ -597,7 +596,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 export default CanvasComponent;
