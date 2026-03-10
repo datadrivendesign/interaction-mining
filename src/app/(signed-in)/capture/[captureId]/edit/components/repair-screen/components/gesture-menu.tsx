@@ -8,6 +8,7 @@ import React, {
   useCallback,
   createContext,
 } from "react";
+import { createPortal } from "react-dom";
 import { ScreenGesture } from "@prisma/client";
 
 import { CircleDashed } from "lucide-react";
@@ -54,10 +55,21 @@ export function GestureMenu({
   position: { x: number | null; y: number | null };
   transform: { x: number; y: number; scaleX: number; scaleY: number } | null;
 }) {
+  const MARKER_RADIUS_PX = 16;
+  const HORIZONTAL_GAP_PX = 8;
   const editorRef = useRef<GestureAnnotationEditorHandle>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
   const [horizontalOffset, setHorizontalOffset] = useState(0);
+  const [menuViewportPosition, setMenuViewportPosition] = useState({
+    left: 0,
+    top: 0,
+  });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const updatePlacement = useCallback(() => {
     const droppableElement = document.querySelector("[data-droppable]");
@@ -72,7 +84,7 @@ export function GestureMenu({
     const menuRect = menuElement.getBoundingClientRect();
 
     const margin = 8;
-    const baseLeft = markerX + 16;
+    const baseLeft = markerX + MARKER_RADIUS_PX + HORIZONTAL_GAP_PX;
     // Keep the annotation menu anchored to the right of the gesture marker.
     // If there is insufficient room near the right edge, allow right overflow
     // rather than shifting the menu left over the marker icon.
@@ -97,8 +109,23 @@ export function GestureMenu({
     if (shouldPlaceAbove !== placeTextareaAbove) {
       setPlaceTextareaAbove(shouldPlaceAbove);
     }
+    const nextViewportLeft = droppableRect.left + clampedLeft;
+    const nextViewportTop = droppableRect.top + markerY - MARKER_RADIUS_PX;
+    if (
+      Math.abs(nextViewportLeft - menuViewportPosition.left) > 0.5 ||
+      Math.abs(nextViewportTop - menuViewportPosition.top) > 0.5
+    ) {
+      setMenuViewportPosition({
+        left: nextViewportLeft,
+        top: nextViewportTop,
+      });
+    }
   }, [
+    HORIZONTAL_GAP_PX,
+    MARKER_RADIUS_PX,
     horizontalOffset,
+    menuViewportPosition.left,
+    menuViewportPosition.top,
     placeTextareaAbove,
     position.x,
     position.y,
@@ -127,10 +154,12 @@ export function GestureMenu({
     });
     resizeObserver.observe(menuElement);
     window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
     };
   }, [updatePlacement]);
 
@@ -139,16 +168,18 @@ export function GestureMenu({
     editorRef.current?.focusDescription();
   };
 
-  return (
+  if (!isMounted || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
     <div
       ref={menuRef}
-      className="absolute z-[140] ml-2"
+      className="fixed z-[140]"
       style={{
-        left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
-        top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
-        transform: `translate3d(${(transform?.x ?? 0) + horizontalOffset}px, ${
-          transform?.y ?? 0
-        }px, 0)`,
+        left: menuViewportPosition.left,
+        top: menuViewportPosition.top,
+        transform: `translate3d(${horizontalOffset}px, 0px, 0)`,
       }}
     >
       {placeTextareaAbove && (
@@ -170,7 +201,8 @@ export function GestureMenu({
           <GestureAnnotationEditor ref={editorRef} />
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
