@@ -153,6 +153,12 @@ function FilmstripItem({
   handleDeleteFrame: (index: number) => void;
   // children?: React.ReactNode;
 } & React.HTMLAttributes<HTMLLIElement>) {
+  const hasGestureCoordinates =
+    gesture?.x !== null &&
+    gesture?.x !== undefined &&
+    gesture?.y !== null &&
+    gesture?.y !== undefined;
+
   return (
     <motion.div
       className="min-w-fit h-full max-w-full"
@@ -276,8 +282,23 @@ function FilmstripItem({
               />
             ))}
             {gesture?.type && (
-              <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full border border-black/20 flex items-center justify-center">
+              <div
+                className={cn(
+                  "absolute pointer-events-none z-20",
+                  hasGestureCoordinates
+                    ? "left-0 top-0 -translate-x-1/2 -translate-y-1/2"
+                    : "inset-0 flex items-center justify-center",
+                )}
+                style={
+                  hasGestureCoordinates
+                    ? {
+                        left: `${(gesture.x ?? 0) * 100}%`,
+                        top: `${(gesture.y ?? 0) * 100}%`,
+                      }
+                    : undefined
+                }
+              >
+                <div className="size-6 rounded-full border border-black/20 bg-yellow-300/85 shadow-xs flex items-center justify-center">
                   {findGestureOption(gesture.type)?.icon}
                 </div>
               </div>
