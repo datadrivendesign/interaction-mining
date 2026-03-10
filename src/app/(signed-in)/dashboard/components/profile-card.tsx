@@ -10,14 +10,14 @@ import { DevicePreferenceControl } from "./iphone-preference-control";
 
 export function ProfileCard({
   user,
-  totalCaptures,
-  approvedCaptures,
-  pendingCaptures,
+  createdCaptures,
+  processingCaptures,
+  reviewingCaptures,
 }: {
   user: User;
-  totalCaptures: number;
-  approvedCaptures: number;
-  pendingCaptures: number;
+  createdCaptures: number;
+  processingCaptures: number;
+  reviewingCaptures: number;
 }) {
   return (
     <Card className="flex flex-col w-80 p-6 h-fit">
@@ -46,28 +46,28 @@ export function ProfileCard({
             <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
               <div className="flex items-center">
                 <CircleDot className="mr-2 size-4 text-blue-500" />
-                <span className="text-sm">Total Captures</span>
+                <span className="text-sm">New Created Captures</span>
               </div>
               <span className="font-semibold tabular-nums">
-                {totalCaptures}
+                {createdCaptures}
               </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
               <div className="flex items-center">
                 <CheckCircle className="mr-2 size-4 text-green-500" />
-                <span className="text-sm">Approved Traces</span>
+                <span className="text-sm">Captures in Processing</span>
               </div>
               <span className="font-semibold tabular-nums">
-                {approvedCaptures}
+                {processingCaptures}
               </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-muted-background rounded-lg">
               <div className="flex items-center">
                 <Clock className="mr-2 size-4 text-yellow-500" />
-                <span className="text-sm">Pending Captures</span>
+                <span className="text-sm">Captures in Review</span>
               </div>
               <span className="font-semibold tabular-nums">
-                {pendingCaptures}
+                {reviewingCaptures}
               </span>
             </div>
           </div>

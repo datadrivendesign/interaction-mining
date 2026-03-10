@@ -57,9 +57,15 @@ export async function updateUser(userId: string, data: Prisma.UserUpdateInput) {
   }
 }
 
+const nonEmptyVersionString = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100);
+
 const UpdatePreferredDeviceVersionsInputSchema = z.object({
-  preferredIOSVersion: z.string().trim().min(1).max(100).nullable(),
-  preferredIPhoneVersion: z.string().trim().min(1).max(100).nullable(),
+  preferredIOSVersion: z.union([nonEmptyVersionString, z.null()]),
+  preferredIPhoneVersion: z.union([nonEmptyVersionString, z.null()]),
 });
 
 type PreferredDeviceVersions = {
