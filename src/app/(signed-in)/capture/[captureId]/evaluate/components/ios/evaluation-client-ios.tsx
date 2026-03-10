@@ -24,12 +24,24 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
+  const [isCompactLayout, setIsCompactLayout] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isProcessingRef = useRef(false);
+
+  useEffect(() => {
+    const updateLayoutMode = () => {
+      setIsCompactLayout(window.innerWidth < 1024);
+    };
+    updateLayoutMode();
+    window.addEventListener("resize", updateLayoutMode);
+    return () => {
+      window.removeEventListener("resize", updateLayoutMode);
+    };
+  }, []);
 
   const populateDraftScreens = useCallback(
     async (video: HTMLVideoElement, screens: FrameData[]) => {
@@ -189,11 +201,14 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   return (
     <main className="relative w-full h-[calc(100dvh-64px)] flex flex-grow">
       {!isTraceLoading && (
-        <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+        <ResizablePanelGroup
+          direction={isCompactLayout ? "vertical" : "horizontal"}
+          className="w-full h-full"
+        >
           <ResizablePanel
-            defaultSize={25}
-            minSize={25}
-            maxSize={30}
+            defaultSize={isCompactLayout ? 38 : 25}
+            minSize={isCompactLayout ? 28 : 25}
+            maxSize={isCompactLayout ? 55 : 30}
             className="min-h-0 bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full overflow-hidden flex flex-col"
           >
             {traceData && capture && (
@@ -207,9 +222,9 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel
-            defaultSize={75}
-            minSize={70}
-            maxSize={75}
+            defaultSize={isCompactLayout ? 62 : 75}
+            minSize={isCompactLayout ? 45 : 70}
+            maxSize={isCompactLayout ? 72 : 75}
             className="bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full"
           >
             {traceData && (

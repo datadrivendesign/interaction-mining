@@ -24,8 +24,8 @@ export function ReviewGalleryAndroid({
   traceData: TraceFormData;
 }) {
   return (
-    <section className="block w-full h-full p-5">
-      <Badge variant="default" className="bg-black my-5">
+    <section className="block w-full h-full px-3 py-3 md:p-5">
+      <Badge variant="default" className="bg-black my-3 md:my-5">
         <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
             Description: {traceData.description ?? "No description provided."}
@@ -33,7 +33,7 @@ export function ReviewGalleryAndroid({
         </article>
       </Badge>
       <article className="flex w-full overflow-x-scroll touch-pan-x">
-        <div className="flex min-w-full gap-5">
+        <div className="flex min-w-full gap-3 md:gap-5 pb-2">
           {traceData.screens
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((screen, index) => (
@@ -87,9 +87,12 @@ function ReviewFigureAndroid({
   const endY = isDrag
     ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
     : 0;
+  const cardWidthClass = "w-[min(19rem,84vw)] sm:w-[min(20rem,70vw)] lg:w-[min(22rem,34vw)]";
 
   return (
-    <figure className="relative flex flex-col shrink-0 shadow-xs w-1/4">
+    <figure
+      className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}
+    >
       <div className="relative w-full cursor-pointer" ref={containerRef}>
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
           {index + 1}

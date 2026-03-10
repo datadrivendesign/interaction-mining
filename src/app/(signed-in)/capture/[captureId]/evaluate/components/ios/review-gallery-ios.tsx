@@ -30,8 +30,8 @@ export function ReviewGalleryIOS({
   >({});
 
   return (
-    <section className="block w-full h-full p-5">
-      <Badge variant="default" className="bg-black my-5">
+    <section className="block w-full h-full px-3 py-3 md:p-5">
+      <Badge variant="default" className="bg-black my-3 md:my-5">
         <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
             Description: {traceData.description ?? "No description provided."}
@@ -39,7 +39,7 @@ export function ReviewGalleryIOS({
         </article>
       </Badge>
       <article className="flex w-full overflow-x-scroll touch-pan-x">
-        <div className="flex min-w-full gap-5">
+        <div className="flex min-w-full gap-3 md:gap-5 pb-2">
           {[...traceData.screens]
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((screen, index) => (
@@ -111,8 +111,8 @@ function ReviewFigureIOS({
   const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
   const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
   const cardWidthClass = isLandscape
-    ? "w-[min(38rem,88vw)]"
-    : "w-[min(18rem,42vw)]";
+    ? "w-[min(34rem,92vw)] lg:w-[min(38rem,80vw)]"
+    : "w-[min(16rem,78vw)] sm:w-[min(18rem,62vw)] lg:w-[min(20rem,42vw)]";
 
   return (
     <figure
