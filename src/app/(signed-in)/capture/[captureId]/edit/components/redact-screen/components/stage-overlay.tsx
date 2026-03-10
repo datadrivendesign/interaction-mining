@@ -40,6 +40,7 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
   isPanning,
   setIsPanning,
 }) => {
+  const ANNOTATION_BOTTOM_SAFE_INSET = 72;
   const containerRef = useRef<HTMLDivElement>(null);
   const [positions, setPositions] = useState<
     Record<string, { x: number; y: number; width: number; height: number }>
@@ -173,13 +174,54 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
     setIsPanning(true);
   };
 
+  const measureOverlaySize = useCallback(
+    (nodeId: string, node: HTMLDivElement) => {
+      let nextWidth = node.offsetWidth;
+      let nextHeight = node.offsetHeight;
+
+      // If the overlay content is absolutely positioned, parent offset size may be 0.
+      // Fall back to measuring the first child directly.
+      const contentNode = node.firstElementChild;
+      if (
+        (nextWidth === 0 || nextHeight === 0) &&
+        contentNode instanceof HTMLElement
+      ) {
+        const rect = contentNode.getBoundingClientRect();
+        if (nextWidth === 0) {
+          nextWidth = Math.round(rect.width);
+        }
+        if (nextHeight === 0) {
+          nextHeight = Math.round(rect.height);
+        }
+      }
+
+      setOverlaySizes((prev) => {
+        const curr = prev[nodeId];
+        if (curr && curr.width === nextWidth && curr.height === nextHeight) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [nodeId]: {
+            width: nextWidth,
+            height: nextHeight,
+          },
+        };
+      });
+    },
+    [],
+  );
+
   const getOverlayPosition = useCallback(
     (
+      overlayType: string | undefined,
       nodeId: string,
       box: { x: number; y: number; width: number; height: number },
     ) => {
       const margin = 8;
       const gap = 16;
+      const bottomInset =
+        overlayType === "annotation" ? ANNOTATION_BOTTOM_SAFE_INSET : 0;
       const size = overlaySizes[nodeId] ?? { width: 0, height: 0 };
 
       let left = box.x + box.width + gap;
@@ -201,15 +243,21 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
         top = box.y + box.height - size.height;
       }
       if (size.height > 0) {
-        top = Math.max(
+        const maxTop = Math.max(
           margin,
-          Math.min(top, containerSize.height - size.height - margin),
+          containerSize.height - size.height - margin - bottomInset,
         );
+        top = Math.max(margin, Math.min(top, maxTop));
       }
 
       return { left, top };
     },
-    [containerSize.height, containerSize.width, overlaySizes],
+    [
+      ANNOTATION_BOTTOM_SAFE_INSET,
+      containerSize.height,
+      containerSize.width,
+      overlaySizes,
+    ],
   );
 
   return (
@@ -227,31 +275,17 @@ const OverlayContainer: React.FC<OverlayContainerProps> = ({
       {overlays.map((overlay) => {
         const box = positions[overlay.nodeId];
         if (!box) return null;
-        const { left, top } = getOverlayPosition(overlay.nodeId, box);
+        const { left, top } = getOverlayPosition(
+          overlay.type,
+          overlay.nodeId,
+          box,
+        );
         return (
           <div
             key={overlay.nodeId}
             ref={(node) => {
               if (!node) return;
-              const nextWidth = node.offsetWidth;
-              const nextHeight = node.offsetHeight;
-              setOverlaySizes((prev) => {
-                const curr = prev[overlay.nodeId];
-                if (
-                  curr &&
-                  curr.width === nextWidth &&
-                  curr.height === nextHeight
-                ) {
-                  return prev;
-                }
-                return {
-                  ...prev,
-                  [overlay.nodeId]: {
-                    width: nextWidth,
-                    height: nextHeight,
-                  },
-                };
-              });
+              measureOverlaySize(overlay.nodeId, node);
             }}
             style={{
               position: "absolute",

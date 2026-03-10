@@ -58,25 +58,25 @@ export default async function Page() {
     if (!captureCountsData.ok) {
       console.error(
         "Failed to fetch capture counts:",
-        captureCountsData.message
+        captureCountsData.message,
       );
     }
     if (!createdCapturesPaginatedData.ok) {
       console.error(
         "Failed to fetch created captures:",
-        createdCapturesPaginatedData.message
+        createdCapturesPaginatedData.message,
       );
     }
     if (!processingCapturesPaginatedData.ok) {
       console.error(
         "Failed to fetch processing captures:",
-        processingCapturesPaginatedData.message
+        processingCapturesPaginatedData.message,
       );
     }
     if (!reviewingCapturesPaginatedData.ok) {
       console.error(
         "Failed to fetch reviewing captures:",
-        reviewingCapturesPaginatedData.message
+        reviewingCapturesPaginatedData.message,
       );
     }
     notFound();
@@ -91,14 +91,17 @@ export default async function Page() {
       }
       return acc;
     },
-    {} as Record<CaptureStatus, number>
+    {} as Record<CaptureStatus, number>,
   );
   const totalCaptures = Object.values(capturesByStatus).reduce(
     (a, b) => a + (b ?? 0),
-    0
+    0,
   );
-  const approvedCaptures = capturesByStatus[CaptureStatus.APPROVED] ?? 0;
-  const pendingCaptures = totalCaptures - approvedCaptures;
+  // const approvedCaptures = capturesByStatus[CaptureStatus.APPROVED] ?? 0;
+  // const pendingCaptures = totalCaptures - approvedCaptures;
+  const createdCaptures = capturesByStatus[CaptureStatus.CREATED] ?? 0;
+  const processingCaptures = capturesByStatus[CaptureStatus.PROCESSING] ?? 0;
+  const reviewingCaptures = capturesByStatus[CaptureStatus.REVIEWING] ?? 0;
 
   // Get initial captures by status
   const initialCapturesByStatus = {
@@ -112,9 +115,9 @@ export default async function Page() {
       <div className="flex w-full max-w-screen-xl p-6 gap-6">
         <ProfileCard
           user={user}
-          totalCaptures={totalCaptures}
-          approvedCaptures={approvedCaptures}
-          pendingCaptures={pendingCaptures}
+          createdCaptures={createdCaptures}
+          processingCaptures={processingCaptures}
+          reviewingCaptures={reviewingCaptures}
         />
 
         {/* Main Content */}

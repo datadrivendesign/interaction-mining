@@ -24,16 +24,16 @@ export function ReviewGalleryAndroid({
   traceData: TraceFormData;
 }) {
   return (
-    <section className="block w-full h-full p-5">
-      <Badge variant="default" className="bg-black my-5">
+    <section className="block w-full h-full px-3 sm:py-2 md:py-3 lg:py-4">
+      <Badge variant="default" className="bg-black my-1 md:my-3">
         <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
           <p className="text-center">
             Description: {traceData.description ?? "No description provided."}
           </p>
         </article>
       </Badge>
-      <article className="flex w-full overflow-x-scroll touch-pan-x">
-        <div className="flex min-w-full gap-5">
+      <article className="flex w-full overflow-x-auto touch-auto">
+        <div className="flex min-w-full gap-3 md:gap-5 pb-2">
           {traceData.screens
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((screen, index) => (
@@ -87,9 +87,12 @@ function ReviewFigureAndroid({
   const endY = isDrag
     ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
     : 0;
+  const cardWidthClass = "w-[62%] sm:w-[54%] md:w-[44%] lg:w-[34%] xl:w-[28%]";
 
   return (
-    <figure className="relative flex flex-col shrink-0 shadow-xs w-1/4">
+    <figure
+      className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}
+    >
       <div className="relative w-full cursor-pointer" ref={containerRef}>
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
           {index + 1}
@@ -235,7 +238,7 @@ const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
   return (
     <div className="w-full h-full">
       <Image
-        className="relative z-0 w-full h-full rounded-lg object-contain border-blue-500 border-2"
+        className="relative z-0 w-full h-auto rounded-lg object-contain border-blue-500 border-2"
         src={screen.src}
         alt={screen.id}
         width={0}
