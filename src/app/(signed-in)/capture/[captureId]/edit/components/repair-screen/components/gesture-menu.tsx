@@ -54,15 +54,25 @@ export function GestureMenu({
   position: { x: number | null; y: number | null };
   transform: { x: number; y: number; scaleX: number; scaleY: number } | null;
 }) {
+  const ANNOTATION_GAP_PX = 4;
   const editorRef = useRef<GestureAnnotationEditorHandle>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const selectionRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
   const [horizontalOffset, setHorizontalOffset] = useState(0);
 
   const updatePlacement = useCallback(() => {
     const droppableElement = document.querySelector("[data-droppable]");
     const menuElement = menuRef.current;
-    if (!droppableElement || !menuElement) {
+    const selectionElement = selectionRef.current;
+    const editorElement = editorContainerRef.current;
+    if (
+      !droppableElement ||
+      !menuElement ||
+      !selectionElement ||
+      !editorElement
+    ) {
       return;
     }
 
@@ -90,14 +100,20 @@ export function GestureMenu({
       setHorizontalOffset(nextHorizontalOffset);
     }
 
+    const selectionRect = selectionElement.getBoundingClientRect();
+    const editorRect = editorElement.getBoundingClientRect();
+    const totalMenuHeight =
+      selectionRect.height + editorRect.height + ANNOTATION_GAP_PX;
+
     const roomBelow = droppableRect.height - markerY;
     const roomAbove = markerY;
     const shouldPlaceAbove =
-      roomBelow < menuRect.height + margin && roomAbove > roomBelow;
+      roomBelow < totalMenuHeight + margin && roomAbove > roomBelow;
     if (shouldPlaceAbove !== placeTextareaAbove) {
       setPlaceTextareaAbove(shouldPlaceAbove);
     }
   }, [
+    ANNOTATION_GAP_PX,
     horizontalOffset,
     placeTextareaAbove,
     position.x,
@@ -113,7 +129,9 @@ export function GestureMenu({
 
   useEffect(() => {
     const menuElement = menuRef.current;
-    if (!menuElement) {
+    const selectionElement = selectionRef.current;
+    const editorElement = editorContainerRef.current;
+    if (!menuElement || !selectionElement || !editorElement) {
       return;
     }
     if (typeof ResizeObserver === "undefined") {
@@ -126,6 +144,8 @@ export function GestureMenu({
       updatePlacement();
     });
     resizeObserver.observe(menuElement);
+    resizeObserver.observe(selectionElement);
+    resizeObserver.observe(editorElement);
     window.addEventListener("resize", updatePlacement);
 
     return () => {
@@ -142,7 +162,7 @@ export function GestureMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute z-[140] ml-2"
+      className="absolute z-50 ml-2"
       style={{
         left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
         top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
@@ -151,25 +171,33 @@ export function GestureMenu({
         }px, 0)`,
       }}
     >
-      {placeTextareaAbove && (
-        <div
-          className="absolute w-full"
-          style={{ top: 0, transform: "translateY(calc(-100% - 0.25rem))" }}
-        >
-          <GestureAnnotationEditor ref={editorRef} />
-        </div>
-      )}
+      {/* Measure selection row here from ref. Editor overlay is absolutely placed so its out of flow, and does not contribute to parent height. */}
+      <div ref={selectionRef} className="relative w-full">
+        {placeTextareaAbove && (
+          <div
+            ref={editorContainerRef}
+            className="absolute left-0 w-full"
+            style={{ bottom: `calc(100% + ${ANNOTATION_GAP_PX}px)` }}
+          >
+            <GestureAnnotationEditor ref={editorRef} />
+          </div>
+        )}
 
-      <GestureSelection
-        focusDescriptionField={focusDescriptionField}
-        openAbove={placeTextareaAbove}
-      />
+        <GestureSelection
+          focusDescriptionField={focusDescriptionField}
+          openAbove={placeTextareaAbove}
+        />
 
-      {!placeTextareaAbove && (
-        <div className="absolute mt-1 w-full">
-          <GestureAnnotationEditor ref={editorRef} />
-        </div>
-      )}
+        {!placeTextareaAbove && (
+          <div
+            ref={editorContainerRef}
+            className="absolute left-0 w-full"
+            style={{ top: `calc(100% + ${ANNOTATION_GAP_PX}px)` }}
+          >
+            <GestureAnnotationEditor ref={editorRef} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -132,13 +132,6 @@ export function ReviewPanelAndroid({
         <Badge variant={isAdmin ? "default" : "secondary"}>
           {isAdmin ? "Admin Review" : "Owner Review"}
         </Badge>
-        <Badge variant="default" className="bg-gray-500 block w-full">
-          <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
-            <p className="text-center">
-              Task: {capture.task.description ?? "No task provided."}
-            </p>
-          </article>
-        </Badge>
       </div>
 
       {/* Scrollable content */}

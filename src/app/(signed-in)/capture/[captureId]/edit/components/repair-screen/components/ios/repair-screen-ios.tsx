@@ -48,6 +48,9 @@ export function RepairScreenIOS({
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Live photo: replay ±1s around a screen's timestamp in the video player
+  const livePhotoEndRef = useRef<number | null>(null);
+  const [isLivePhotoActive, setIsLivePhotoActive] = useState(false);
   const [thumbnails, setThumbnails] = useState<
     {
       src: string;
@@ -170,7 +173,16 @@ export function RepairScreenIOS({
     if (isPlaying) {
       const loop = () => {
         if (videoRef.current) {
-          setCurrentTime(videoRef.current.currentTime);
+          const t = videoRef.current.currentTime;
+          setCurrentTime(t);
+
+          // Auto-stop for live photo playback
+          const endTime = livePhotoEndRef.current;
+          if (endTime !== null && t >= endTime) {
+            videoRef.current.pause();
+            livePhotoEndRef.current = null;
+            setIsLivePhotoActive(false);
+          }
         }
         rafRef.current = requestAnimationFrame(loop);
       };
@@ -185,6 +197,9 @@ export function RepairScreenIOS({
   const handlePlayPause = async () => {
     const video = videoRef.current;
     if (!video) return;
+    // Cancel any active live photo auto-stop on manual toggle
+    livePhotoEndRef.current = null;
+    setIsLivePhotoActive(false);
     video.paused ? await video.play() : video.pause();
   };
 
@@ -192,6 +207,10 @@ export function RepairScreenIOS({
     (t: number) => {
       // Sanity check
       if (!Number.isFinite(t)) return;
+
+      // Cancel any active live photo auto-stop on manual seek
+      livePhotoEndRef.current = null;
+      setIsLivePhotoActive(false);
 
       // Clamp to video duration
       if (t < 0) {
@@ -222,6 +241,31 @@ export function RepairScreenIOS({
     );
   };
 
+  // Live photo: seek to timestamp-1s and play for 2s in the left-panel video
+  const handleLivePhoto = useCallback(
+    async (timestamp: number) => {
+      const video = videoRef.current;
+      if (!video || videoDuration <= 0) return;
+
+      const startTime = Math.max(0, timestamp - 1);
+      const endTime = Math.min(videoDuration, timestamp + 1);
+
+      livePhotoEndRef.current = endTime;
+      setIsLivePhotoActive(true);
+
+      video.currentTime = startTime;
+      setCurrentTime(startTime);
+      await video.play();
+    },
+    [videoDuration],
+  );
+
+  // Cancel live photo on screen navigation
+  useEffect(() => {
+    livePhotoEndRef.current = null;
+    setIsLivePhotoActive(false);
+  }, [focusViewIndex]);
+
   // Workspace keybinds
   useHotkeys("space", async (e) => {
     e.preventDefault();
@@ -232,6 +276,16 @@ export function RepairScreenIOS({
     e.preventDefault();
     await handlePlayPause();
   });
+
+  useHotkeys(
+    "r",
+    (e) => {
+      e.preventDefault();
+      if (focusViewIndex < 0 || focusViewIndex >= screens.length) return;
+      handleLivePhoto(screens[focusViewIndex].timestamp);
+    },
+    [focusViewIndex, screens, handleLivePhoto],
+  );
 
   useHotkeys(
     "left",
@@ -355,6 +409,8 @@ export function RepairScreenIOS({
                   key={focusViewIndex}
                   screen={screens[focusViewIndex]}
                   isLastScreen={focusViewIndex === screens.length - 1}
+                  onLivePhoto={handleLivePhoto}
+                  isLivePhotoActive={isLivePhotoActive}
                 />
               ) : (
                 <div className="flex justify-center items-center w-full h-full">
