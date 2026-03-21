@@ -12,34 +12,42 @@ import {
 } from "@/lib/utils/gesture-options";
 import Image from "next/image";
 import { TraceFormData } from "../../../edit/components/types";
-import { Badge } from "@/components/ui/badge";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
 import { useState } from "react";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { cn } from "@/lib/utils";
 
 export function ReviewGalleryIOS({
   traceData,
   videoRef,
+  activeScreenId,
+  onScreenSelect,
 }: {
   traceData: TraceFormData;
   videoRef: React.RefObject<HTMLVideoElement>;
+  activeScreenId: string | null;
+  onScreenSelect: (id: string) => void;
 }) {
   const [orientationByScreenId, setOrientationByScreenId] = useState<
     Record<string, "portrait" | "landscape">
   >({});
 
   return (
-    <section className="block w-full h-full px-3 sm:py-2 md:py-3 lg:py-4">
-      <Badge variant="default" className="bg-black my-2 md:my-3 lg:my-5">
-        <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
-          <p className="text-center">
-            Description: {traceData.description ?? "No description provided."}
-          </p>
-        </article>
-      </Badge>
-      <article className="flex w-full overflow-x-auto touch-auto">
-        <div className="flex min-w-full gap-3 md:gap-5 pb-2">
+    <section className="flex flex-col w-full h-full">
+      {/* Description strip — matches panel header style */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+        <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-600 shrink-0">
+          Task
+        </span>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+          {traceData.description ?? "No description provided."}
+        </p>
+      </div>
+
+      {/* Scroll area */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
+        <div className="flex h-full items-start gap-3 pb-1">
           {[...traceData.screens]
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((screen, index) => (
@@ -49,11 +57,10 @@ export function ReviewGalleryIOS({
                 screen={screen}
                 gesture={traceData.gestures[screen.id]}
                 redactions={traceData.redactions[screen.id] || []}
+                isActive={screen.id === activeScreenId}
                 isLandscape={orientationByScreenId[screen.id] === "landscape"}
                 onImageLoad={(img) => {
-                  if (!img.naturalWidth || !img.naturalHeight) {
-                    return;
-                  }
+                  if (!img.naturalWidth || !img.naturalHeight) return;
                   setOrientationByScreenId((prev) => ({
                     ...prev,
                     [screen.id]:
@@ -63,6 +70,7 @@ export function ReviewGalleryIOS({
                   }));
                 }}
                 onJump={() => {
+                  onScreenSelect(screen.id);
                   if (videoRef.current) {
                     videoRef.current.currentTime = screen.timestamp;
                   }
@@ -70,7 +78,7 @@ export function ReviewGalleryIOS({
               />
             ))}
         </div>
-      </article>
+      </div>
     </section>
   );
 }
@@ -80,6 +88,7 @@ function ReviewFigureIOS({
   screen,
   gesture,
   redactions,
+  isActive,
   isLandscape,
   onImageLoad,
   onJump,
@@ -88,6 +97,7 @@ function ReviewFigureIOS({
   screen: TraceFormData["screens"][number];
   gesture?: ScreenGesture;
   redactions: TraceFormData["redactions"][string];
+  isActive: boolean;
   isLandscape: boolean;
   onImageLoad: (img: HTMLImageElement) => void;
   onJump: () => void;
@@ -110,34 +120,44 @@ function ReviewFigureIOS({
   const startY = isDrag ? gesture.y! * canvasHeight : 0;
   const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
   const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
+
   const cardWidthClass = isLandscape
-    ? "w-[74%] sm:w-[66%] md:w-[58%] lg:w-[50%] xl:w-[42%]"
-    : "w-[46%] sm:w-[40%] md:w-[34%] lg:w-[30%] xl:w-[26%]";
+    ? "w-[80%] sm:w-[70%] md:w-[62%] lg:w-[54%] xl:w-[46%]"
+    : "w-[52%] sm:w-[46%] md:w-[40%] lg:w-[34%] xl:w-[30%]";
 
   return (
-    <figure
-      className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}
-    >
+    <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
       <div
         className="relative w-full cursor-pointer"
         onClick={onJump}
         ref={containerRef}
       >
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+        {/* Screen number */}
+        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
         </div>
 
         <TooltipProvider delayDuration={100}>
-          {screen.src.length > 0 && (
+          {screen.src.length > 0 ? (
             <Image
               src={screen.src}
               alt={screen.id}
               width={0}
               height={0}
               sizes="100vw"
-              className="relative z-0 w-full h-auto rounded-lg object-contain border-blue-500 border-2"
+              className={cn(
+                "relative z-0 w-full h-auto rounded-lg object-contain border-2 transition-all duration-150",
+                isActive
+                  ? "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
+                  : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500",
+              )}
               onLoad={(event) => onImageLoad(event.currentTarget)}
             />
+          ) : (
+            <div className={cn(
+              "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
+              isActive ? "border-neutral-900 dark:border-white" : "border-neutral-200 dark:border-neutral-700",
+            )} />
           )}
 
           {isDrag && (
@@ -224,13 +244,13 @@ function ReviewFigureIOS({
         </TooltipProvider>
       </div>
 
-      {gesture && (
-        <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
-          <p className="text-sm text-center dark:text-neutral-300">
-            {gesture.description ?? ""}
-          </p>
-        </div>
-      )}
+      {/* Label — always visible */}
+      <p className={cn(
+        "text-[11px] text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+        isActive ? "text-neutral-700 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-500",
+      )}>
+        {gesture?.description ?? "—"}
+      </p>
     </figure>
   );
 }

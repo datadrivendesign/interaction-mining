@@ -19,11 +19,13 @@ import { getDraftFiles } from "../../../edit/util";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 import { extractVideoFrame } from "../../../edit/components/repair-screen/util/ios-video-operations";
 import { fetchVideoFile } from "../../utils/file-fetch";
+import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
 
 export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
+  const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
@@ -47,14 +49,12 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     async (video: HTMLVideoElement, screens: FrameData[]) => {
       const frames: FrameData[] = [];
       try {
-        // Create a copy of screens to avoid mutation issues
         const screensCopy = screens.map((screen) => ({ ...screen }));
-        // Before the loop, do a "warm-up" seek to ensure video is loaded:
         await extractVideoFrame(video, 0.1);
         for (const s of screensCopy) {
           if (!s.src) {
             const f = await extractVideoFrame(video, s.timestamp);
-            s.src = f.src; // Safe to mutate the copy
+            s.src = f.src;
           }
           frames.push(s);
         }
@@ -63,7 +63,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
       }
       return frames;
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -73,24 +73,20 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
 
     const loadVideoAndPopulateScreens = async () => {
       if (isProcessingRef.current) {
-        // video is already being processed
         return;
       }
       try {
-        // start load video
         isProcessingRef.current = true;
         const videoFiles = await fetchVideoFile(`uploads/${capture.id}`);
         if (videoFiles.length === 0 || !videoRef.current) {
-          // video files not found or video ref not found
           return;
         }
         const video = videoRef.current;
         video.src = videoFiles[0].fileUrl;
-        // wait for video to be ready
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("Video load timeout"));
-          }, 30000); // 30 second timeout
+          }, 30000);
 
           const onLoadedData = () => {
             clearTimeout(timeout);
@@ -108,14 +104,11 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
 
           video.addEventListener("loadeddata", onLoadedData, { once: true });
           video.addEventListener("error", onError, { once: true });
-          // Check if already loaded
           if (video.readyState >= 2) {
             onLoadedData();
           }
         });
-        // check if need to populate data
         if (traceData.screens.filter((s) => s.src.length === 0).length === 0) {
-          // All screens already have src, skip frame extraction
           return;
         }
         const frames = await populateDraftScreens(video, traceData.screens);
@@ -149,7 +142,6 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         console.error("No draft files found");
         return;
       }
-      // grab json file from the fileKey
       const regexFileVersionRule = /draft-(\d+)\.json$/;
       const draftFiles = files.data;
       files.data.sort((a, b) => {
@@ -162,14 +154,14 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
       const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
-        latestDraftFile.fileKey
+        latestDraftFile.fileKey,
       );
       if (!signedLatestDraftFileRes.ok) {
         console.error("Failed to generate signed URL");
         return;
       }
       const draftFileResponse = await fetch(
-        signedLatestDraftFileRes.data.signedUrl
+        signedLatestDraftFileRes.data.signedUrl,
       );
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
       const screens = draftFormData.screens.map((s) => {
@@ -185,8 +177,11 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
       const description = draftFormData.description;
       const iOSVersion = draftFormData.iOSVersion ?? undefined;
       const iPhoneVersion = draftFormData.iPhoneVersion ?? undefined;
+      const sortedScreens = screens.sort(
+        (a, b) => a.timestamp - b.timestamp,
+      );
       setTraceData({
-        screens,
+        screens: sortedScreens,
         vhs,
         gestures,
         redactions,
@@ -194,6 +189,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         iOSVersion,
         iPhoneVersion,
       });
+      setActiveScreenId(sortedScreens[0]?.id ?? null);
     };
     fetchDraftFiles();
   }, [captureId]);
@@ -205,6 +201,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
           direction={isCompactLayout ? "vertical" : "horizontal"}
           className="w-full h-full"
         >
+          {/* Left: Video + Feedback + Approve/Deny */}
           <ResizablePanel
             defaultSize={isCompactLayout ? 38 : 25}
             minSize={isCompactLayout ? 28 : 25}
@@ -220,16 +217,51 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
               />
             )}
           </ResizablePanel>
+
           <ResizableHandle withHandle />
+
+          {/* Right: Gallery + Screen Comments (nested horizontal split) */}
           <ResizablePanel
             defaultSize={isCompactLayout ? 62 : 75}
-            minSize={isCompactLayout ? 45 : 70}
-            maxSize={isCompactLayout ? 72 : 75}
-            className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full"
+            minSize={isCompactLayout ? 45 : 65}
+            maxSize={isCompactLayout ? 72 : 80}
+            className="min-h-0 box-border w-full h-full"
           >
-            {traceData && (
-              <ReviewGalleryIOS traceData={traceData} videoRef={videoRef} />
-            )}
+            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+              {/* Gallery — left/center */}
+              <ResizablePanel
+                defaultSize={70}
+                minSize={50}
+                maxSize={85}
+                className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950"
+              >
+                {traceData && (
+                  <ReviewGalleryIOS
+                    traceData={traceData}
+                    videoRef={videoRef}
+                    activeScreenId={activeScreenId}
+                    onScreenSelect={setActiveScreenId}
+                  />
+                )}
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              {/* Screen Comments Panel — right */}
+              <ResizablePanel
+                defaultSize={30}
+                minSize={20}
+                maxSize={45}
+                className="min-h-0 overflow-hidden"
+              >
+                {traceData && (
+                  <ScreenCommentsPanel
+                    screens={traceData.screens}
+                    activeScreenId={activeScreenId}
+                  />
+                )}
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
       )}

@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCallback, useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
@@ -16,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { useHotkeys } from "react-hotkeys-hook";
-import Kbd from "@/components/ui/kbd";
+import { cn } from "@/lib/utils";
 
 export function ReviewPanelIOS({
   traceData,
@@ -132,17 +131,28 @@ export function ReviewPanelIOS({
   const videoSizeClass = videoOrientation === "landscape" ? "w-[95%]" : "w-1/2";
 
   return (
-    <aside className="w-full h-full flex flex-col min-h-0 p-3">
-      {/* Header: badges — fixed at top */}
-      <div className="flex-shrink-0 space-y-2">
-        <Badge variant={isAdmin ? "default" : "secondary"}>
+    <aside className="w-full h-full flex flex-col min-h-0">
+      {/* Header strip */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+        <span className={cn("size-1.5 rounded-full shrink-0", isAdmin ? "bg-amber-500" : "bg-neutral-400")} />
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
           {isAdmin ? "Admin Review" : "Owner Review"}
-        </Badge>
+        </span>
       </div>
 
       {/* Scrollable content: video + feedback textareas */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="flex flex-col gap-4 py-3">
+        <div className="flex flex-col gap-4 p-3">
+          {traceData.description && (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+                Task
+              </span>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-snug">
+                {traceData.description}
+              </p>
+            </div>
+          )}
           <div className="flex justify-center w-full">
             <video
               ref={videoRef}
@@ -164,33 +174,16 @@ export function ReviewPanelIOS({
             />
           </div>
           {isAdmin && (
-            <div className="flex flex-col gap-3 w-full">
-              <div className="flex flex-col gap-1.5 w-full">
-                <Label htmlFor="annotateFeedback">Annotate:</Label>
+            <div className="flex flex-col gap-0 w-full rounded-md border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+              {/* Summarize */}
+              <div className="flex flex-col gap-1.5 p-3 border-l-2 border-l-violet-500">
+                <Label htmlFor="summarizeFeedback" className="text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400 font-semibold">
+                  Summarize
+                </Label>
                 <Textarea
-                  className="w-full min-h-[4rem] resize-y"
-                  id="annotateFeedback"
-                  placeholder="Annotate feedback"
-                  value={annotateFeedback}
-                  onChange={(e) => setAnnotateFeedback(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 w-full">
-                <Label htmlFor="redactFeedback">Redact:</Label>
-                <Textarea
-                  className="w-full min-h-[4rem] resize-y"
-                  id="redactFeedback"
-                  placeholder="Redact feedback"
-                  value={redactFeedback}
-                  onChange={(e) => setRedactFeedback(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 w-full">
-                <Label htmlFor="summarizeFeedback">Summarize:</Label>
-                <Textarea
-                  className="w-full min-h-[4rem] resize-y"
+                  className="w-full min-h-[3.5rem] resize-y text-xs border-0 p-0 shadow-none focus-visible:ring-0 bg-transparent"
                   id="summarizeFeedback"
-                  placeholder="Description feedback"
+                  placeholder="Feedback on task description…"
                   value={summarizeFeedback}
                   onChange={(e) => setSummarizeFeedback(e.target.value)}
                 />
@@ -202,28 +195,22 @@ export function ReviewPanelIOS({
 
       {/* Sticky footer: Approve/Deny always reachable (admin only) */}
       {isAdmin && (
-        <div className="flex-shrink-0 flex flex-row w-full justify-center gap-2 pt-3 mt-auto border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex-shrink-0 flex flex-row w-full gap-2 px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
           <Button
-            variant="outline"
-            className="flex-1 min-w-0 h-auto py-2 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800 dark:text-white flex flex-col items-center justify-center gap-1"
+            size="sm"
+            className="flex-1 min-w-0 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800! dark:text-white!"
             onClick={handleApprove}
             disabled={isSubmitting}
           >
-            <span className="leading-none">Approve</span>
-            <Kbd className="h-4 px-1 text-[10px] leading-none border-white/50 bg-green-700 text-white dark:bg-green-800 whitespace-nowrap">
-              Ctrl+Shift+A
-            </Kbd>
+            Approve
           </Button>
           <Button
-            variant="outline"
-            className="flex-1 min-w-0 h-auto py-2 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800 dark:text-white flex flex-col items-center justify-center gap-1"
+            size="sm"
+            className="flex-1 min-w-0 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800! dark:text-white!"
             onClick={handleDeny}
             disabled={isSubmitting}
           >
-            <span className="leading-none">Deny</span>
-            <Kbd className="h-4 px-1 text-[10px] leading-none border-white/50 bg-red-600 text-white dark:bg-red-800 whitespace-nowrap">
-              Ctrl+Shift+D
-            </Kbd>
+            Deny
           </Button>
         </div>
       )}

@@ -12,28 +12,36 @@ import {
 } from "@/lib/utils/gesture-options";
 import Image from "next/image";
 import { FrameData, TraceFormData } from "../../../edit/components/types";
-import { Badge } from "@/components/ui/badge";
 import { useMemo } from "react";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { cn } from "@/lib/utils";
 
 export function ReviewGalleryAndroid({
   traceData,
+  activeScreenId,
+  onScreenSelect,
 }: {
   traceData: TraceFormData;
+  activeScreenId: string | null;
+  onScreenSelect: (id: string) => void;
 }) {
   return (
-    <section className="block w-full h-full px-3 sm:py-2 md:py-3 lg:py-4">
-      <Badge variant="default" className="bg-black my-1 md:my-3">
-        <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
-          <p className="text-center">
-            Description: {traceData.description ?? "No description provided."}
-          </p>
-        </article>
-      </Badge>
-      <article className="flex w-full overflow-x-auto touch-auto">
-        <div className="flex min-w-full gap-3 md:gap-5 pb-2">
+    <section className="flex flex-col w-full h-full">
+      {/* Description strip — matches panel header style */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+        <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-600 shrink-0">
+          Task
+        </span>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+          {traceData.description ?? "No description provided."}
+        </p>
+      </div>
+
+      {/* Scroll area */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
+        <div className="flex h-full items-start gap-3 pb-1">
           {traceData.screens
             .sort((a, b) => a.timestamp - b.timestamp)
             .map((screen, index) => (
@@ -44,10 +52,12 @@ export function ReviewGalleryAndroid({
                 vh={traceData.vhs?.[screen.id]}
                 gesture={traceData.gestures[screen.id]}
                 redactions={traceData.redactions[screen.id] || []}
+                isActive={screen.id === activeScreenId}
+                onSelect={() => onScreenSelect(screen.id)}
               />
             ))}
         </div>
-      </article>
+      </div>
     </section>
   );
 }
@@ -58,12 +68,16 @@ function ReviewFigureAndroid({
   vh,
   gesture,
   redactions,
+  isActive,
+  onSelect,
 }: {
   index: number;
   screen: FrameData;
   vh: any;
   gesture?: ScreenGesture;
   redactions: TraceFormData["redactions"][string];
+  isActive: boolean;
+  onSelect: () => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -87,19 +101,26 @@ function ReviewFigureAndroid({
   const endY = isDrag
     ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
     : 0;
-  const cardWidthClass = "w-[62%] sm:w-[54%] md:w-[44%] lg:w-[34%] xl:w-[28%]";
+
+  const cardWidthClass = "w-[68%] sm:w-[58%] md:w-[50%] lg:w-[40%] xl:w-[32%]";
 
   return (
-    <figure
-      className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}
-    >
-      <div className="relative w-full cursor-pointer" ref={containerRef}>
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+    <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
+      <div className="relative w-full cursor-pointer" ref={containerRef} onClick={onSelect}>
+        {/* Screen number */}
+        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
         </div>
 
         <TooltipProvider delayDuration={100}>
-          {screen.src.length > 0 && <ImageWithVH screen={screen} vh={vh} />}
+          {screen.src.length > 0 ? (
+            <ImageWithVH screen={screen} vh={vh} isActive={isActive} />
+          ) : (
+            <div className={cn(
+              "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
+              isActive ? "border-neutral-900 dark:border-white" : "border-neutral-200 dark:border-neutral-700",
+            )} />
+          )}
 
           {isDrag && (
             <svg
@@ -185,18 +206,18 @@ function ReviewFigureAndroid({
         </TooltipProvider>
       </div>
 
-      {gesture && (
-        <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
-          <p className="text-sm text-center dark:text-neutral-300">
-            {gesture.description ?? ""}
-          </p>
-        </div>
-      )}
+      {/* Label — always visible */}
+      <p className={cn(
+        "text-[11px] text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+        isActive ? "text-neutral-700 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-500",
+      )}>
+        {gesture?.description ?? "—"}
+      </p>
     </figure>
   );
 }
 
-const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
+const ImageWithVH = ({ screen, vh, isActive }: { screen: FrameData; vh: any; isActive: boolean }) => {
   const { boxes, rootBounds } = useMemo(() => {
     if (!vh) return { boxes: [], rootBounds: null };
 
@@ -236,9 +257,14 @@ const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
   }, [vh]);
 
   return (
-    <div className="w-full h-full">
+    <div className="relative w-full">
       <Image
-        className="relative z-0 w-full h-auto rounded-lg object-contain border-blue-500 border-2"
+        className={cn(
+          "relative z-0 w-full h-auto rounded-lg object-contain border-2 transition-all duration-150",
+          isActive
+            ? "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
+            : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500",
+        )}
         src={screen.src}
         alt={screen.id}
         width={0}
