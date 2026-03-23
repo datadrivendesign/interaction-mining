@@ -19,13 +19,19 @@ import { getDraftFiles } from "../../../edit/util";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 import { extractVideoFrame } from "../../../edit/components/repair-screen/util/ios-video-operations";
 import { fetchVideoFile } from "../../utils/file-fetch";
-import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
+import {
+  ScreenComment,
+  ScreenCommentsPanel,
+} from "../shared/screen-comments-panel";
 
 export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
+  const [commentsByScreen, setCommentsByScreen] = useState<
+    Record<string, ScreenComment[]>
+  >({});
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
@@ -177,9 +183,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
       const description = draftFormData.description;
       const iOSVersion = draftFormData.iOSVersion ?? undefined;
       const iPhoneVersion = draftFormData.iPhoneVersion ?? undefined;
-      const sortedScreens = screens.sort(
-        (a, b) => a.timestamp - b.timestamp,
-      );
+      const sortedScreens = screens.sort((a, b) => a.timestamp - b.timestamp);
       setTraceData({
         screens: sortedScreens,
         vhs,
@@ -190,6 +194,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         iPhoneVersion,
       });
       setActiveScreenId(sortedScreens[0]?.id ?? null);
+      setCommentsByScreen({});
     };
     fetchDraftFiles();
   }, [captureId]);
@@ -227,7 +232,10 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
             maxSize={isCompactLayout ? 72 : 80}
             className="min-h-0 box-border w-full h-full"
           >
-            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="w-full h-full"
+            >
               {/* Gallery — left/center */}
               <ResizablePanel
                 defaultSize={70}
@@ -240,6 +248,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                     traceData={traceData}
                     videoRef={videoRef}
                     activeScreenId={activeScreenId}
+                    commentsByScreen={commentsByScreen}
                     onScreenSelect={setActiveScreenId}
                   />
                 )}
@@ -258,6 +267,8 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                   <ScreenCommentsPanel
                     screens={traceData.screens}
                     activeScreenId={activeScreenId}
+                    commentsByScreen={commentsByScreen}
+                    onCommentsChange={setCommentsByScreen}
                   />
                 )}
               </ResizablePanel>

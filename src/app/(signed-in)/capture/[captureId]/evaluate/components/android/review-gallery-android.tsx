@@ -17,14 +17,17 @@ import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 import { cn } from "@/lib/utils";
+import { ScreenComment } from "../shared/screen-comments-panel";
 
 export function ReviewGalleryAndroid({
   traceData,
   activeScreenId,
+  commentsByScreen,
   onScreenSelect,
 }: {
   traceData: TraceFormData;
   activeScreenId: string | null;
+  commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string) => void;
 }) {
   return (
@@ -53,6 +56,7 @@ export function ReviewGalleryAndroid({
                 gesture={traceData.gestures[screen.id]}
                 redactions={traceData.redactions[screen.id] || []}
                 isActive={screen.id === activeScreenId}
+                issueCount={commentsByScreen[screen.id]?.length ?? 0}
                 onSelect={() => onScreenSelect(screen.id)}
               />
             ))}
@@ -69,6 +73,7 @@ function ReviewFigureAndroid({
   gesture,
   redactions,
   isActive,
+  issueCount,
   onSelect,
 }: {
   index: number;
@@ -77,6 +82,7 @@ function ReviewFigureAndroid({
   gesture?: ScreenGesture;
   redactions: TraceFormData["redactions"][string];
   isActive: boolean;
+  issueCount: number;
   onSelect: () => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
@@ -103,10 +109,31 @@ function ReviewFigureAndroid({
     : 0;
 
   const cardWidthClass = "w-[68%] sm:w-[58%] md:w-[50%] lg:w-[40%] xl:w-[32%]";
+  const hasIssues = issueCount > 0;
+  const borderClass = isActive
+    ? hasIssues
+      ? "border-red-500 dark:border-red-400 shadow-md ring-2 ring-red-500/20 dark:ring-red-400/20 ring-offset-1"
+      : "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
+    : hasIssues
+      ? "border-red-300 dark:border-red-700 hover:border-red-400 dark:hover:border-red-600"
+      : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500";
+  const placeholderBorderClass = isActive
+    ? hasIssues
+      ? "border-red-500 dark:border-red-400"
+      : "border-neutral-900 dark:border-white"
+    : hasIssues
+      ? "border-red-300 dark:border-red-700"
+      : "border-neutral-200 dark:border-neutral-700";
 
   return (
     <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
       <div className="relative w-full cursor-pointer" ref={containerRef} onClick={onSelect}>
+        {hasIssues && (
+          <div className="absolute top-1 left-1 z-20 min-w-[1.25rem] rounded-full bg-red-500 px-1 py-0.5 text-center font-mono text-[10px] leading-none text-white shadow-sm">
+            {issueCount}
+          </div>
+        )}
+
         {/* Screen number */}
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
@@ -114,11 +141,11 @@ function ReviewFigureAndroid({
 
         <TooltipProvider delayDuration={100}>
           {screen.src.length > 0 ? (
-            <ImageWithVH screen={screen} vh={vh} isActive={isActive} />
+            <ImageWithVH screen={screen} vh={vh} borderClass={borderClass} />
           ) : (
             <div className={cn(
               "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
-              isActive ? "border-neutral-900 dark:border-white" : "border-neutral-200 dark:border-neutral-700",
+              placeholderBorderClass,
             )} />
           )}
 
@@ -217,7 +244,15 @@ function ReviewFigureAndroid({
   );
 }
 
-const ImageWithVH = ({ screen, vh, isActive }: { screen: FrameData; vh: any; isActive: boolean }) => {
+const ImageWithVH = ({
+  screen,
+  vh,
+  borderClass,
+}: {
+  screen: FrameData;
+  vh: any;
+  borderClass: string;
+}) => {
   const { boxes, rootBounds } = useMemo(() => {
     if (!vh) return { boxes: [], rootBounds: null };
 
@@ -261,9 +296,7 @@ const ImageWithVH = ({ screen, vh, isActive }: { screen: FrameData; vh: any; isA
       <Image
         className={cn(
           "relative z-0 w-full h-auto rounded-lg object-contain border-2 transition-all duration-150",
-          isActive
-            ? "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
-            : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500",
+          borderClass,
         )}
         src={screen.src}
         alt={screen.id}

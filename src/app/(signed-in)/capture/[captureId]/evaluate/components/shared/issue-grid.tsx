@@ -46,7 +46,9 @@ export function IssueGrid({
                       {issue.shortcutKey}
                     </span>
                   )}
-                  <span title={issue.label}>{issue.chipLabel ?? issue.label}</span>
+                  <span title={issue.label}>
+                    {issue.chipLabel ?? issue.label}
+                  </span>
                 </button>
               ))}
             </div>

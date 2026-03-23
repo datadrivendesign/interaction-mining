@@ -17,16 +17,19 @@ import type { ScreenGesture } from "@prisma/client";
 import { useState } from "react";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 import { cn } from "@/lib/utils";
+import { ScreenComment } from "../shared/screen-comments-panel";
 
 export function ReviewGalleryIOS({
   traceData,
   videoRef,
   activeScreenId,
+  commentsByScreen,
   onScreenSelect,
 }: {
   traceData: TraceFormData;
   videoRef: React.RefObject<HTMLVideoElement>;
   activeScreenId: string | null;
+  commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string) => void;
 }) {
   const [orientationByScreenId, setOrientationByScreenId] = useState<
@@ -58,6 +61,7 @@ export function ReviewGalleryIOS({
                 gesture={traceData.gestures[screen.id]}
                 redactions={traceData.redactions[screen.id] || []}
                 isActive={screen.id === activeScreenId}
+                issueCount={commentsByScreen[screen.id]?.length ?? 0}
                 isLandscape={orientationByScreenId[screen.id] === "landscape"}
                 onImageLoad={(img) => {
                   if (!img.naturalWidth || !img.naturalHeight) return;
@@ -89,6 +93,7 @@ function ReviewFigureIOS({
   gesture,
   redactions,
   isActive,
+  issueCount,
   isLandscape,
   onImageLoad,
   onJump,
@@ -98,6 +103,7 @@ function ReviewFigureIOS({
   gesture?: ScreenGesture;
   redactions: TraceFormData["redactions"][string];
   isActive: boolean;
+  issueCount: number;
   isLandscape: boolean;
   onImageLoad: (img: HTMLImageElement) => void;
   onJump: () => void;
@@ -124,6 +130,21 @@ function ReviewFigureIOS({
   const cardWidthClass = isLandscape
     ? "w-[80%] sm:w-[70%] md:w-[62%] lg:w-[54%] xl:w-[46%]"
     : "w-[52%] sm:w-[46%] md:w-[40%] lg:w-[34%] xl:w-[30%]";
+  const hasIssues = issueCount > 0;
+  const imageBorderClass = isActive
+    ? hasIssues
+      ? "border-red-500 dark:border-red-400 shadow-md ring-2 ring-red-500/20 dark:ring-red-400/20 ring-offset-1"
+      : "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
+    : hasIssues
+      ? "border-red-300 dark:border-red-700 hover:border-red-400 dark:hover:border-red-600"
+      : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500";
+  const placeholderBorderClass = isActive
+    ? hasIssues
+      ? "border-red-500 dark:border-red-400"
+      : "border-neutral-900 dark:border-white"
+    : hasIssues
+      ? "border-red-300 dark:border-red-700"
+      : "border-neutral-200 dark:border-neutral-700";
 
   return (
     <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
@@ -132,6 +153,12 @@ function ReviewFigureIOS({
         onClick={onJump}
         ref={containerRef}
       >
+        {hasIssues && (
+          <div className="absolute top-1 left-1 z-20 min-w-[1.25rem] rounded-full bg-red-500 px-1 py-0.5 text-center font-mono text-[10px] leading-none text-white shadow-sm">
+            {issueCount}
+          </div>
+        )}
+
         {/* Screen number */}
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
@@ -147,17 +174,17 @@ function ReviewFigureIOS({
               sizes="100vw"
               className={cn(
                 "relative z-0 w-full h-auto rounded-lg object-contain border-2 transition-all duration-150",
-                isActive
-                  ? "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
-                  : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500",
+                imageBorderClass,
               )}
               onLoad={(event) => onImageLoad(event.currentTarget)}
             />
           ) : (
-            <div className={cn(
-              "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
-              isActive ? "border-neutral-900 dark:border-white" : "border-neutral-200 dark:border-neutral-700",
-            )} />
+            <div
+              className={cn(
+                "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
+                placeholderBorderClass,
+              )}
+            />
           )}
 
           {isDrag && (
@@ -245,10 +272,14 @@ function ReviewFigureIOS({
       </div>
 
       {/* Label — always visible */}
-      <p className={cn(
-        "text-[11px] text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
-        isActive ? "text-neutral-700 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-500",
-      )}>
+      <p
+        className={cn(
+          "text-[11px] text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+          isActive
+            ? "text-neutral-700 dark:text-neutral-200 font-medium"
+            : "text-neutral-400 dark:text-neutral-500",
+        )}
+      >
         {gesture?.description ?? "—"}
       </p>
     </figure>
