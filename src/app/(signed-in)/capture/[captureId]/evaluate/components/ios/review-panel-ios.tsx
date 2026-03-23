@@ -1,133 +1,29 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
-import { CaptureStatus } from "@prisma/client";
-import {
-  validateApprovePermissions,
-  denyCapture,
-} from "../../utils/capture-actions";
-import { toast } from "sonner";
-import { handleTraceSave } from "../../../edit/util";
-import { Capture, revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
-import { useHotkeys } from "react-hotkeys-hook";
 import { cn } from "@/lib/utils";
 
 export function ReviewPanelIOS({
   traceData,
-  capture,
   isAdmin,
   videoRef,
+  summarizeFeedback,
+  onSummarizeFeedbackChange,
+  isSubmitting,
 }: {
   traceData: TraceFormData;
-  capture: Capture;
   isAdmin: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
+  summarizeFeedback: string;
+  onSummarizeFeedbackChange: (value: string) => void;
+  isSubmitting: boolean;
 }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [annotateFeedback, setAnnotateFeedback] = useState(
-    capture.annotateFeedback ?? "",
-  );
-  const [redactFeedback, setRedactFeedback] = useState(
-    capture.redactFeedback ?? "",
-  );
-  const [summarizeFeedback, setSummarizeFeedback] = useState(
-    capture.summarizeFeedback ?? "",
-  );
   const [videoOrientation, setVideoOrientation] = useState<
     "portrait" | "landscape" | null
   >(null);
-
-  const router = useRouter();
-
-  const handleApprove = useCallback(async () => {
-    try {
-      setIsSubmitting(true);
-      const approveRes = await validateApprovePermissions();
-      if (!approveRes.ok) {
-        throw new Error(approveRes.message);
-      }
-      const saveRes = await handleTraceSave(traceData, capture);
-      if (!saveRes.ok) {
-        throw new Error(saveRes.message);
-      }
-      const updateRes = await updateCapture(capture.id, {
-        status: CaptureStatus.APPROVED,
-      });
-      if (!updateRes.ok) {
-        throw new Error(updateRes.message);
-      }
-      await revalidateCaptureCaches();
-      toast.success("Capture approved successfully");
-      router.push(`/admin/tasks`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "An unknown error occurred",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [capture, router, traceData]);
-
-  const handleDeny = useCallback(async () => {
-    try {
-      setIsSubmitting(true);
-      const denyRes = await denyCapture(
-        capture,
-        annotateFeedback,
-        redactFeedback,
-        summarizeFeedback,
-      );
-      if (!denyRes.ok) {
-        throw new Error(denyRes.message);
-      }
-      await revalidateCaptureCaches();
-      toast.success("Capture denied successfully");
-      router.push(`/admin/tasks`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "An unknown error occurred",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [annotateFeedback, capture, redactFeedback, router, summarizeFeedback]);
-
-  useHotkeys(
-    "ctrl+shift+a",
-    (event) => {
-      event.preventDefault();
-      void handleApprove();
-    },
-    {
-      enabled: isAdmin && !isSubmitting,
-      enableOnFormTags: false,
-      enableOnContentEditable: false,
-      ignoreEventWhen: (event) => event.repeat,
-      preventDefault: true,
-    },
-    [handleApprove, isAdmin, isSubmitting],
-  );
-
-  useHotkeys(
-    "ctrl+shift+d",
-    (event) => {
-      event.preventDefault();
-      void handleDeny();
-    },
-    {
-      enabled: isAdmin && !isSubmitting,
-      enableOnFormTags: false,
-      enableOnContentEditable: false,
-      ignoreEventWhen: (event) => event.repeat,
-      preventDefault: true,
-    },
-    [handleDeny, isAdmin, isSubmitting],
-  );
   const videoSizeClass = videoOrientation === "landscape" ? "w-[95%]" : "w-1/2";
 
   return (
@@ -185,35 +81,14 @@ export function ReviewPanelIOS({
                   id="summarizeFeedback"
                   placeholder="Feedback on task description…"
                   value={summarizeFeedback}
-                  onChange={(e) => setSummarizeFeedback(e.target.value)}
+                  onChange={(e) => onSummarizeFeedbackChange(e.target.value)}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Sticky footer: Approve/Deny always reachable (admin only) */}
-      {isAdmin && (
-        <div className="flex-shrink-0 flex flex-row w-full gap-2 px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
-          <Button
-            size="sm"
-            className="flex-1 min-w-0 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:hover:bg-green-800! dark:text-white!"
-            onClick={handleApprove}
-            disabled={isSubmitting}
-          >
-            Approve
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1 min-w-0 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:hover:bg-red-800! dark:text-white!"
-            onClick={handleDeny}
-            disabled={isSubmitting}
-          >
-            Deny
-          </Button>
-        </div>
-      )}
     </aside>
   );
 }

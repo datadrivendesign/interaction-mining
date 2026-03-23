@@ -5,13 +5,14 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DraftTraceFormData,
   FrameData,
   TraceFormData,
 } from "../../../edit/components/types";
+import { CaptureStatus } from "@prisma/client";
 import { useCapture } from "@/lib/hooks/capture";
 import { ReviewPanelIOS } from "./review-panel-ios";
 import { ReviewGalleryIOS } from "./review-gallery-ios";
@@ -20,12 +21,22 @@ import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 import { extractVideoFrame } from "../../../edit/components/repair-screen/util/ios-video-operations";
 import { fetchVideoFile } from "../../utils/file-fetch";
 import {
+  denyCapture,
+  validateApprovePermissions,
+} from "../../utils/capture-actions";
+import { toast } from "sonner";
+import { handleTraceSave } from "../../../edit/util";
+import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
+import {
   ScreenComment,
   ScreenCommentsPanel,
 } from "../shared/screen-comments-panel";
+import { useHotkeys } from "react-hotkeys-hook";
+import { VerdictBar } from "../shared/verdict-bar";
 
 export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
+  const router = useRouter();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
@@ -33,12 +44,18 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     Record<string, ScreenComment[]>
   >({});
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [summarizeFeedback, setSummarizeFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isProcessingRef = useRef(false);
+
+  useEffect(() => {
+    setSummarizeFeedback(capture?.summarizeFeedback ?? "");
+  }, [capture?.id, capture?.summarizeFeedback]);
 
   useEffect(() => {
     const updateLayoutMode = () => {
@@ -199,12 +216,117 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     fetchDraftFiles();
   }, [captureId]);
 
+  const handleApprove = useCallback(async () => {
+    if (!capture || !traceData) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const approveRes = await validateApprovePermissions();
+      if (!approveRes.ok) {
+        throw new Error(approveRes.message);
+      }
+      const saveRes = await handleTraceSave(traceData, capture);
+      if (!saveRes.ok) {
+        throw new Error(saveRes.message);
+      }
+      const updateRes = await updateCapture(capture.id, {
+        status: CaptureStatus.APPROVED,
+      });
+      if (!updateRes.ok) {
+        throw new Error(updateRes.message);
+      }
+      await revalidateCaptureCaches();
+      toast.success("Capture approved successfully");
+      router.push("/admin/tasks");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [capture, router, traceData]);
+
+  const handleDeny = useCallback(async () => {
+    if (!capture) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const denyRes = await denyCapture(
+        capture,
+        capture.annotateFeedback ?? "",
+        capture.redactFeedback ?? "",
+        summarizeFeedback,
+      );
+      if (!denyRes.ok) {
+        throw new Error(denyRes.message);
+      }
+      await revalidateCaptureCaches();
+      toast.success("Capture denied successfully");
+      router.push("/admin/tasks");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [capture, router, summarizeFeedback]);
+
+  useHotkeys(
+    "ctrl+shift+a",
+    (event) => {
+      event.preventDefault();
+      void handleApprove();
+    },
+    {
+      enabled: isAdmin && !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleApprove, isAdmin, isSubmitting],
+  );
+
+  useHotkeys(
+    "ctrl+shift+d",
+    (event) => {
+      event.preventDefault();
+      void handleDeny();
+    },
+    {
+      enabled: isAdmin && !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleDeny, isAdmin, isSubmitting],
+  );
+
+  const totalIssues = Object.values(commentsByScreen).reduce(
+    (count, comments) => count + comments.length,
+    0,
+  );
+  const screensWithIssues = Object.values(commentsByScreen).filter(
+    (comments) => comments.length > 0,
+  ).length;
+  const issueSummary =
+    totalIssues === 0
+      ? "No issues flagged"
+      : `${totalIssues} issue${totalIssues === 1 ? "" : "s"} across ${screensWithIssues} screen${screensWithIssues === 1 ? "" : "s"}`;
+
   return (
-    <main className="relative w-full h-[calc(100dvh-64px)] flex flex-grow">
+    <main className="relative flex h-[calc(100dvh-64px)] w-full flex-grow flex-col">
       {!isTraceLoading && (
         <ResizablePanelGroup
           direction={isCompactLayout ? "vertical" : "horizontal"}
-          className="w-full h-full"
+          className="min-h-0 h-full w-full flex-1"
         >
           {/* Left: Video + Feedback + Approve/Deny */}
           <ResizablePanel
@@ -216,9 +338,11 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
             {traceData && capture && (
               <ReviewPanelIOS
                 traceData={traceData}
-                capture={capture}
                 isAdmin={isAdmin}
                 videoRef={videoRef}
+                summarizeFeedback={summarizeFeedback}
+                onSummarizeFeedbackChange={setSummarizeFeedback}
+                isSubmitting={isSubmitting}
               />
             )}
           </ResizablePanel>
@@ -275,6 +399,14 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
             </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
+      )}
+      {isAdmin && capture && traceData && (
+        <VerdictBar
+          issueSummary={issueSummary}
+          isSubmitting={isSubmitting}
+          onApprove={() => void handleApprove()}
+          onDeny={() => void handleDeny()}
+        />
       )}
     </main>
   );
