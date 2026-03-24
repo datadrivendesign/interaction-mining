@@ -4,7 +4,6 @@ import { useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { FrameData } from "../../../edit/components/types";
 import { ScreenComment } from "./screen-comments-panel";
-import Kbd from "@/components/ui/kbd";
 
 function getMarkerPosition(timestamp: number, duration: number) {
   if (!Number.isFinite(duration) || duration <= 0) {
@@ -112,17 +111,14 @@ export function ScreenMarkerStrip({
     <div className="space-y-2 rounded-xl border border-neutral-200 bg-white/90 px-3 py-3 dark:border-neutral-800 dark:bg-neutral-900/70">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+          <p className="text-[12px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
             Screen Markers
           </p>
-          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
             Drag anywhere on the strip or press{" "}
-            <Kbd className="font-medium">[ ]</Kbd> to jump screens.
+            <span className="font-medium">[ ]</span> to jump screens.
           </p>
         </div>
-        <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-          {sortedScreens.length} screens
-        </span>
       </div>
 
       <div

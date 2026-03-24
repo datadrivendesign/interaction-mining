@@ -38,7 +38,8 @@ export function ReviewPanelIOS({
   const [videoOrientation, setVideoOrientation] = useState<
     "portrait" | "landscape" | null
   >(null);
-  const videoSizeClass = videoOrientation === "landscape" ? "w-[95%]" : "w-1/2";
+  const videoSizeClass =
+    videoOrientation === "landscape" ? "w-full" : "w-[68%]";
 
   return (
     <aside className="w-full h-full flex flex-col min-h-0">

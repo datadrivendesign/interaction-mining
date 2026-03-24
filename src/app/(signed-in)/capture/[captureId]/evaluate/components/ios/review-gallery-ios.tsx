@@ -33,49 +33,54 @@ export function ReviewGalleryIOS({
   const [orientationByScreenId, setOrientationByScreenId] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const sortedScreens = [...traceData.screens].sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+  const screensWithIssues = sortedScreens.filter(
+    (screen) => (commentsByScreen[screen.id]?.length ?? 0) > 0,
+  ).length;
 
   return (
     <section className="flex flex-col w-full h-full">
       {/* Description strip — matches panel header style */}
       <div className="flex-shrink-0 flex items-center gap-2 px-4 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
         <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-600 shrink-0">
-          Task
+          Gallery
         </span>
         <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
-          {traceData.description ?? "No description provided."}
+          {sortedScreens.length} screen{sortedScreens.length === 1 ? "" : "s"}
+          {screensWithIssues > 0 ? ` • ${screensWithIssues} flagged` : ""}
         </p>
       </div>
 
       {/* Scroll area */}
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
         <div className="flex h-full items-start gap-3 pb-1">
-          {[...traceData.screens]
-            .sort((a, b) => a.timestamp - b.timestamp)
-            .map((screen, index) => (
-              <ReviewFigureIOS
-                key={screen.id}
-                index={index}
-                screen={screen}
-                gesture={traceData.gestures[screen.id]}
-                redactions={traceData.redactions[screen.id] || []}
-                isActive={screen.id === activeScreenId}
-                issueCount={commentsByScreen[screen.id]?.length ?? 0}
-                isLandscape={orientationByScreenId[screen.id] === "landscape"}
-                onImageLoad={(img) => {
-                  if (!img.naturalWidth || !img.naturalHeight) return;
-                  setOrientationByScreenId((prev) => ({
-                    ...prev,
-                    [screen.id]:
-                      img.naturalWidth > img.naturalHeight
-                        ? "landscape"
-                        : "portrait",
-                  }));
-                }}
-                onJump={() => {
-                  onScreenSelect(screen.id, screen.timestamp);
-                }}
-              />
-            ))}
+          {sortedScreens.map((screen, index) => (
+            <ReviewFigureIOS
+              key={screen.id}
+              index={index}
+              screen={screen}
+              gesture={traceData.gestures[screen.id]}
+              redactions={traceData.redactions[screen.id] || []}
+              isActive={screen.id === activeScreenId}
+              issueCount={commentsByScreen[screen.id]?.length ?? 0}
+              isLandscape={orientationByScreenId[screen.id] === "landscape"}
+              onImageLoad={(img) => {
+                if (!img.naturalWidth || !img.naturalHeight) return;
+                setOrientationByScreenId((prev) => ({
+                  ...prev,
+                  [screen.id]:
+                    img.naturalWidth > img.naturalHeight
+                      ? "landscape"
+                      : "portrait",
+                }));
+              }}
+              onJump={() => {
+                onScreenSelect(screen.id, screen.timestamp);
+              }}
+            />
+          ))}
         </div>
       </div>
     </section>
@@ -132,14 +137,14 @@ function ReviewFigureIOS({
       : "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
     : hasIssues
       ? "border-red-300 dark:border-red-700 hover:border-red-400 dark:hover:border-red-600"
-      : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500";
+      : "border-neutral-300 dark:border-neutral-700 hover:border-neutral-500 dark:hover:border-neutral-500";
   const placeholderBorderClass = isActive
     ? hasIssues
       ? "border-red-500 dark:border-red-400"
       : "border-neutral-900 dark:border-white"
     : hasIssues
       ? "border-red-300 dark:border-red-700"
-      : "border-neutral-200 dark:border-neutral-700";
+      : "border-neutral-300 dark:border-neutral-700";
 
   return (
     <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
@@ -269,10 +274,10 @@ function ReviewFigureIOS({
       {/* Label — always visible */}
       <p
         className={cn(
-          "text-[11px] text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+          "text-xs text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
           isActive
             ? "text-neutral-700 dark:text-neutral-200 font-medium"
-            : "text-neutral-400 dark:text-neutral-500",
+            : "text-neutral-400 dark:text-neutral-400",
         )}
       >
         {gesture?.description ?? "—"}

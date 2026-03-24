@@ -529,7 +529,7 @@ export function ScreenCommentsPanel({
             <span className="font-medium text-neutral-700 dark:text-neutral-300">
               Other...
             </span>{" "}
-            to write a custom annotate, redact, or summarize note.
+            to write a custom note.
           </p>
           <IssueGrid
             onSelectIssue={handleIssueSelect}

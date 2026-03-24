@@ -30,36 +30,42 @@ export function ReviewGalleryAndroid({
   commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string) => void;
 }) {
+  const sortedScreens = [...traceData.screens].sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+  const screensWithIssues = sortedScreens.filter(
+    (screen) => (commentsByScreen[screen.id]?.length ?? 0) > 0,
+  ).length;
+
   return (
     <section className="flex flex-col w-full h-full">
       {/* Description strip — matches panel header style */}
       <div className="flex-shrink-0 flex items-center gap-2 px-4 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
         <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-600 shrink-0">
-          Task
+          Gallery
         </span>
         <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
-          {traceData.description ?? "No description provided."}
+          {sortedScreens.length} screen{sortedScreens.length === 1 ? "" : "s"}
+          {screensWithIssues > 0 ? ` • ${screensWithIssues} flagged` : ""}
         </p>
       </div>
 
       {/* Scroll area */}
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
         <div className="flex h-full items-start gap-3 pb-1">
-          {traceData.screens
-            .sort((a, b) => a.timestamp - b.timestamp)
-            .map((screen, index) => (
-              <ReviewFigureAndroid
-                key={screen.id}
-                index={index}
-                screen={screen}
-                vh={traceData.vhs?.[screen.id]}
-                gesture={traceData.gestures[screen.id]}
-                redactions={traceData.redactions[screen.id] || []}
-                isActive={screen.id === activeScreenId}
-                issueCount={commentsByScreen[screen.id]?.length ?? 0}
-                onSelect={() => onScreenSelect(screen.id)}
-              />
-            ))}
+          {sortedScreens.map((screen, index) => (
+            <ReviewFigureAndroid
+              key={screen.id}
+              index={index}
+              screen={screen}
+              vh={traceData.vhs?.[screen.id]}
+              gesture={traceData.gestures[screen.id]}
+              redactions={traceData.redactions[screen.id] || []}
+              isActive={screen.id === activeScreenId}
+              issueCount={commentsByScreen[screen.id]?.length ?? 0}
+              onSelect={() => onScreenSelect(screen.id)}
+            />
+          ))}
         </div>
       </div>
     </section>
@@ -116,18 +122,22 @@ function ReviewFigureAndroid({
       : "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
     : hasIssues
       ? "border-red-300 dark:border-red-700 hover:border-red-400 dark:hover:border-red-600"
-      : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500";
+      : "border-neutral-300 dark:border-neutral-700 hover:border-neutral-500 dark:hover:border-neutral-500";
   const placeholderBorderClass = isActive
     ? hasIssues
       ? "border-red-500 dark:border-red-400"
       : "border-neutral-900 dark:border-white"
     : hasIssues
       ? "border-red-300 dark:border-red-700"
-      : "border-neutral-200 dark:border-neutral-700";
+      : "border-neutral-300 dark:border-neutral-700";
 
   return (
     <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
-      <div className="relative w-full cursor-pointer" ref={containerRef} onClick={onSelect}>
+      <div
+        className="relative w-full cursor-pointer"
+        ref={containerRef}
+        onClick={onSelect}
+      >
         {hasIssues && (
           <div className="absolute top-1 left-1 z-20 min-w-[1.25rem] rounded-full bg-red-500 px-1 py-0.5 text-center font-mono text-[10px] leading-none text-white shadow-sm">
             {issueCount}
@@ -143,10 +153,12 @@ function ReviewFigureAndroid({
           {screen.src.length > 0 ? (
             <ImageWithVH screen={screen} vh={vh} borderClass={borderClass} />
           ) : (
-            <div className={cn(
-              "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
-              placeholderBorderClass,
-            )} />
+            <div
+              className={cn(
+                "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
+                placeholderBorderClass,
+              )}
+            />
           )}
 
           {isDrag && (
@@ -234,10 +246,14 @@ function ReviewFigureAndroid({
       </div>
 
       {/* Label — always visible */}
-      <p className={cn(
-        "text-[11px] text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
-        isActive ? "text-neutral-700 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-500",
-      )}>
+      <p
+        className={cn(
+          "text-xs text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+          isActive
+            ? "text-neutral-700 dark:text-neutral-200 font-medium"
+            : "text-neutral-400 dark:text-neutral-400",
+        )}
+      >
         {gesture?.description ?? "—"}
       </p>
     </figure>
