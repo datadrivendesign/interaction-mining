@@ -12,42 +12,62 @@ import {
 } from "@/lib/utils/gesture-options";
 import Image from "next/image";
 import { FrameData, TraceFormData } from "../../../edit/components/types";
-import { Badge } from "@/components/ui/badge";
 import { useMemo } from "react";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { cn } from "@/lib/utils";
+import { ScreenComment } from "../shared/screen-comments-panel";
 
 export function ReviewGalleryAndroid({
   traceData,
+  activeScreenId,
+  commentsByScreen,
+  onScreenSelect,
 }: {
   traceData: TraceFormData;
+  activeScreenId: string | null;
+  commentsByScreen: Record<string, ScreenComment[]>;
+  onScreenSelect: (id: string) => void;
 }) {
+  const sortedScreens = [...traceData.screens].sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+  const screensWithIssues = sortedScreens.filter(
+    (screen) => (commentsByScreen[screen.id]?.length ?? 0) > 0,
+  ).length;
+
   return (
-    <section className="block w-full h-full px-3 sm:py-2 md:py-3 lg:py-4">
-      <Badge variant="default" className="bg-black my-1 md:my-3">
-        <article className="prose prose-neutral dark:prose-invert leading-snug font-sm text-white dark:text-neutral-900 overflow-auto w-full whitespace-pre-wrap">
-          <p className="text-center">
-            Description: {traceData.description ?? "No description provided."}
-          </p>
-        </article>
-      </Badge>
-      <article className="flex w-full overflow-x-auto touch-auto">
-        <div className="flex min-w-full gap-3 md:gap-5 pb-2">
-          {traceData.screens
-            .sort((a, b) => a.timestamp - b.timestamp)
-            .map((screen, index) => (
-              <ReviewFigureAndroid
-                key={screen.id}
-                index={index}
-                screen={screen}
-                vh={traceData.vhs?.[screen.id]}
-                gesture={traceData.gestures[screen.id]}
-                redactions={traceData.redactions[screen.id] || []}
-              />
-            ))}
+    <section className="flex flex-col w-full h-full">
+      {/* Description strip — matches panel header style */}
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+        <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-600 shrink-0">
+          Gallery
+        </span>
+        <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+          {sortedScreens.length} screen{sortedScreens.length === 1 ? "" : "s"}
+          {screensWithIssues > 0 ? ` • ${screensWithIssues} flagged` : ""}
+        </p>
+      </div>
+
+      {/* Scroll area */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
+        <div className="flex h-full items-start gap-3 pb-1">
+          {sortedScreens.map((screen, index) => (
+            <ReviewFigureAndroid
+              key={screen.id}
+              index={index}
+              screen={screen}
+              vh={traceData.vhs?.[screen.id]}
+              gesture={traceData.gestures[screen.id]}
+              redactions={traceData.redactions[screen.id] || []}
+              isActive={screen.id === activeScreenId}
+              issueCount={commentsByScreen[screen.id]?.length ?? 0}
+              onSelect={() => onScreenSelect(screen.id)}
+            />
+          ))}
         </div>
-      </article>
+      </div>
     </section>
   );
 }
@@ -58,12 +78,18 @@ function ReviewFigureAndroid({
   vh,
   gesture,
   redactions,
+  isActive,
+  issueCount,
+  onSelect,
 }: {
   index: number;
   screen: FrameData;
   vh: any;
   gesture?: ScreenGesture;
   redactions: TraceFormData["redactions"][string];
+  isActive: boolean;
+  issueCount: number;
+  onSelect: () => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -87,19 +113,53 @@ function ReviewFigureAndroid({
   const endY = isDrag
     ? (gesture!.y! + gesture!.scrollDeltaY!) * canvasHeight
     : 0;
-  const cardWidthClass = "w-[62%] sm:w-[54%] md:w-[44%] lg:w-[34%] xl:w-[28%]";
+
+  const cardWidthClass = "w-[68%] sm:w-[58%] md:w-[50%] lg:w-[40%] xl:w-[32%]";
+  const hasIssues = issueCount > 0;
+  const borderClass = isActive
+    ? hasIssues
+      ? "border-red-500 dark:border-red-400 shadow-md ring-2 ring-red-500/20 dark:ring-red-400/20 ring-offset-1"
+      : "border-neutral-900 dark:border-white shadow-md ring-2 ring-neutral-900/20 dark:ring-white/20 ring-offset-1"
+    : hasIssues
+      ? "border-red-300 dark:border-red-700 hover:border-red-400 dark:hover:border-red-600"
+      : "border-neutral-300 dark:border-neutral-700 hover:border-neutral-500 dark:hover:border-neutral-500";
+  const placeholderBorderClass = isActive
+    ? hasIssues
+      ? "border-red-500 dark:border-red-400"
+      : "border-neutral-900 dark:border-white"
+    : hasIssues
+      ? "border-red-300 dark:border-red-700"
+      : "border-neutral-300 dark:border-neutral-700";
 
   return (
-    <figure
-      className={`relative flex flex-col shrink-0 shadow-xs ${cardWidthClass}`}
-    >
-      <div className="relative w-full cursor-pointer" ref={containerRef}>
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-sm font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+    <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
+      <div
+        className="relative w-full cursor-pointer"
+        ref={containerRef}
+        onClick={onSelect}
+      >
+        {hasIssues && (
+          <div className="absolute top-1 left-1 z-20 min-w-[1.25rem] rounded-full bg-red-500 px-1 py-0.5 text-center font-mono text-[10px] leading-none text-white shadow-sm">
+            {issueCount}
+          </div>
+        )}
+
+        {/* Screen number */}
+        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
         </div>
 
         <TooltipProvider delayDuration={100}>
-          {screen.src.length > 0 && <ImageWithVH screen={screen} vh={vh} />}
+          {screen.src.length > 0 ? (
+            <ImageWithVH screen={screen} vh={vh} borderClass={borderClass} />
+          ) : (
+            <div
+              className={cn(
+                "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
+                placeholderBorderClass,
+              )}
+            />
+          )}
 
           {isDrag && (
             <svg
@@ -185,18 +245,30 @@ function ReviewFigureAndroid({
         </TooltipProvider>
       </div>
 
-      {gesture && (
-        <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
-          <p className="text-sm text-center dark:text-neutral-300">
-            {gesture.description ?? ""}
-          </p>
-        </div>
-      )}
+      {/* Label — always visible */}
+      <p
+        className={cn(
+          "text-xs text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+          isActive
+            ? "text-neutral-700 dark:text-neutral-200 font-medium"
+            : "text-neutral-400 dark:text-neutral-400",
+        )}
+      >
+        {gesture?.description ?? "—"}
+      </p>
     </figure>
   );
 }
 
-const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
+const ImageWithVH = ({
+  screen,
+  vh,
+  borderClass,
+}: {
+  screen: FrameData;
+  vh: any;
+  borderClass: string;
+}) => {
   const { boxes, rootBounds } = useMemo(() => {
     if (!vh) return { boxes: [], rootBounds: null };
 
@@ -236,9 +308,12 @@ const ImageWithVH = ({ screen, vh }: { screen: FrameData; vh: any }) => {
   }, [vh]);
 
   return (
-    <div className="w-full h-full">
+    <div className="relative w-full">
       <Image
-        className="relative z-0 w-full h-auto rounded-lg object-contain border-blue-500 border-2"
+        className={cn(
+          "relative z-0 w-full h-auto rounded-lg object-contain border-2 transition-all duration-150",
+          borderClass,
+        )}
         src={screen.src}
         alt={screen.id}
         width={0}
