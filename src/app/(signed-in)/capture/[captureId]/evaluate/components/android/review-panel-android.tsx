@@ -1,21 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 export function ReviewPanelAndroid({
   traceData,
   isAdmin,
-  summarizeFeedback,
-  isSubmitting,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
-  summarizeFeedback: string;
-  isSubmitting: boolean;
 }) {
   return (
     <aside className="w-full h-full flex flex-col min-h-0">
@@ -27,24 +20,24 @@ export function ReviewPanelAndroid({
         </span>
       </div>
 
-      {/* Scrollable content */}
-      {isAdmin && (
+      {isAdmin && traceData.description && (
         <div className="flex-1 min-h-0 overflow-y-auto p-3">
-          <div className="flex flex-col gap-0 w-full rounded-md border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-            {/* Summarize */}
-            <div className="flex flex-col gap-1.5 p-3 border-l-2 border-l-violet-500">
-              <Label htmlFor="summarizeFeedback" className="text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400 font-semibold">
-                Summarize Preview
-              </Label>
-              <Textarea
-                className="w-full min-h-[3.5rem] resize-y text-xs border-0 p-0 shadow-none focus-visible:ring-0 bg-transparent"
-                id="summarizeFeedback"
-                placeholder="Generated from summarize issues…"
-                value={summarizeFeedback}
-                readOnly={true}
-                disabled={isSubmitting}
-              />
-            </div>
+          <div className="rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+              Task
+            </span>
+            <p className="mt-1 text-xs leading-snug text-neutral-600 dark:text-neutral-400">
+              {traceData.description}
+            </p>
+          </div>
+          <div className="mt-3 rounded-md border border-dashed border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+            <p className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
+              Feedback is authored in the right panel.
+            </p>
+            <p className="mt-1 text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">
+              Use issue chips or Other to add annotate, redact, and summarize
+              feedback.
+            </p>
           </div>
         </div>
       )}

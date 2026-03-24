@@ -446,11 +446,12 @@ export function ScreenCommentsPanel({
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 space-y-2.5 p-3">
           <p className="text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">
-            Click a chip to flag an issue immediately. Pick{" "}
+            Add all review feedback here. Click a chip to flag an issue
+            immediately, or pick{" "}
             <span className="font-medium text-neutral-700 dark:text-neutral-300">
               Other...
             </span>{" "}
-            to write a custom note.
+            to write a custom annotate, redact, or summarize note.
           </p>
           <IssueGrid
             onSelectIssue={handleIssueSelect}
@@ -554,7 +555,7 @@ export function ScreenCommentsPanel({
               </div>
               <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
                 {customDestination === "summarize"
-                  ? "This note will be saved as flow-level feedback."
+                  ? "This note will be saved as flow-level summarize feedback."
                   : `This note will be saved under ${screenLabel}.`}
               </p>
               <Textarea
@@ -594,13 +595,13 @@ export function ScreenCommentsPanel({
             title: "Flow Feedback",
             comments: flowComments,
             target: "flow",
-            emptyMessage: "No flow-level feedback added.",
+            emptyMessage: "No flow-level feedback added yet.",
           })}
           {renderCommentSection({
             title: screenLabel,
             comments: screenComments,
             target: "screen",
-            emptyMessage: `No issues flagged for ${screenLabel}.`,
+            emptyMessage: `No screen-specific feedback added for ${screenLabel}.`,
           })}
         </div>
       </div>

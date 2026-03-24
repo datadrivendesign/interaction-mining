@@ -333,13 +333,6 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     totalIssues === 0
       ? "No issues flagged"
       : `${totalIssues} issue${totalIssues === 1 ? "" : "s"} across ${screensWithIssues} screen${screensWithIssues === 1 ? "" : "s"}${flowIssueCount > 0 ? ` and ${flowIssueCount} flow-level issue${flowIssueCount === 1 ? "" : "s"}` : ""}`;
-  const summarizeFeedbackPreview = traceData
-    ? serializeReviewFeedbackState({
-        feedbackState,
-        screens: traceData.screens,
-      }).summarizeFeedback
-    : "";
-
   return (
     <main className="relative flex h-[calc(100dvh-64px)] w-full flex-grow flex-col">
       {!isTraceLoading && (
@@ -358,8 +351,6 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
               <ReviewPanelAndroid
                 traceData={traceData}
                 isAdmin={isAdmin}
-                summarizeFeedback={summarizeFeedbackPreview}
-                isSubmitting={isSubmitting}
               />
             )}
           </ResizablePanel>

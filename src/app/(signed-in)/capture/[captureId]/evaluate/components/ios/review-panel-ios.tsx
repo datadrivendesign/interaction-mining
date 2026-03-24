@@ -2,22 +2,16 @@
 
 import { useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 export function ReviewPanelIOS({
   traceData,
   isAdmin,
   videoRef,
-  summarizeFeedback,
-  isSubmitting,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
-  summarizeFeedback: string;
-  isSubmitting: boolean;
 }) {
   const [videoOrientation, setVideoOrientation] = useState<
     "portrait" | "landscape" | null
@@ -34,7 +28,7 @@ export function ReviewPanelIOS({
         </span>
       </div>
 
-      {/* Scrollable content: video + feedback textareas */}
+      {/* Scrollable content: reference only */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-4 p-3">
           {traceData.description && (
@@ -67,24 +61,6 @@ export function ReviewPanelIOS({
               }}
             />
           </div>
-          {isAdmin && (
-            <div className="flex flex-col gap-0 w-full rounded-md border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-              {/* Summarize */}
-              <div className="flex flex-col gap-1.5 p-3 border-l-2 border-l-violet-500">
-                <Label htmlFor="summarizeFeedback" className="text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400 font-semibold">
-                  Summarize Preview
-                </Label>
-                <Textarea
-                  className="w-full min-h-[3.5rem] resize-y text-xs border-0 p-0 shadow-none focus-visible:ring-0 bg-transparent"
-                  id="summarizeFeedback"
-                  placeholder="Generated from summarize issues…"
-                  value={summarizeFeedback}
-                  readOnly={true}
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </aside>
