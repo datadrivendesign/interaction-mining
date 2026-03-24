@@ -10,13 +10,11 @@ export function ReviewPanelAndroid({
   traceData,
   isAdmin,
   summarizeFeedback,
-  onSummarizeFeedbackChange,
   isSubmitting,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
   summarizeFeedback: string;
-  onSummarizeFeedbackChange: (value: string) => void;
   isSubmitting: boolean;
 }) {
   return (
@@ -36,14 +34,14 @@ export function ReviewPanelAndroid({
             {/* Summarize */}
             <div className="flex flex-col gap-1.5 p-3 border-l-2 border-l-violet-500">
               <Label htmlFor="summarizeFeedback" className="text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400 font-semibold">
-                Summarize
+                Summarize Preview
               </Label>
               <Textarea
                 className="w-full min-h-[3.5rem] resize-y text-xs border-0 p-0 shadow-none focus-visible:ring-0 bg-transparent"
                 id="summarizeFeedback"
-                placeholder="Feedback on task description…"
+                placeholder="Generated from summarize issues…"
                 value={summarizeFeedback}
-                onChange={(e) => onSummarizeFeedbackChange(e.target.value)}
+                readOnly={true}
                 disabled={isSubmitting}
               />
             </div>

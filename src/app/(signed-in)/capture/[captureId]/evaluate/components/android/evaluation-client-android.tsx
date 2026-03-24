@@ -26,12 +26,15 @@ import {
 import { toast } from "sonner";
 import { handleTraceSave } from "../../../edit/util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import {
-  ScreenComment,
-  ScreenCommentsPanel,
-} from "../shared/screen-comments-panel";
+import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
 import { useHotkeys } from "react-hotkeys-hook";
 import { VerdictBar } from "../shared/verdict-bar";
+import {
+  EMPTY_REVIEW_FEEDBACK_STATE,
+  mergeFeedbackStrings,
+  ReviewFeedbackState,
+  serializeReviewFeedbackState,
+} from "../../utils/review-feedback";
 
 export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -39,20 +42,15 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
-  const [commentsByScreen, setCommentsByScreen] = useState<
-    Record<string, ScreenComment[]>
-  >({});
+  const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
+    EMPTY_REVIEW_FEEDBACK_STATE,
+  );
   const [isCompactLayout, setIsCompactLayout] = useState(false);
-  const [summarizeFeedback, setSummarizeFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
   const isProcessingRef = useRef(false);
-
-  useEffect(() => {
-    setSummarizeFeedback(capture?.summarizeFeedback ?? "");
-  }, [capture?.id, capture?.summarizeFeedback]);
 
   const populateDraftScreens = useCallback(
     async (
@@ -202,7 +200,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         iPhoneVersion,
       });
       setActiveScreenId(sortedScreens[0]?.id ?? null);
-      setCommentsByScreen({});
+      setFeedbackState(EMPTY_REVIEW_FEEDBACK_STATE);
     };
     fetchDraftFiles();
   }, [captureId]);
@@ -241,17 +239,30 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   }, [capture, router, traceData]);
 
   const handleDeny = useCallback(async () => {
-    if (!capture) {
+    if (!capture || !traceData) {
       return;
     }
 
     try {
       setIsSubmitting(true);
+      const serializedFeedback = serializeReviewFeedbackState({
+        feedbackState,
+        screens: traceData.screens,
+      });
       const denyRes = await denyCapture(
         capture,
-        capture.annotateFeedback ?? "",
-        capture.redactFeedback ?? "",
-        summarizeFeedback,
+        mergeFeedbackStrings(
+          capture.annotateFeedback,
+          serializedFeedback.annotateFeedback,
+        ),
+        mergeFeedbackStrings(
+          capture.redactFeedback,
+          serializedFeedback.redactFeedback,
+        ),
+        mergeFeedbackStrings(
+          capture.summarizeFeedback,
+          serializedFeedback.summarizeFeedback,
+        ),
       );
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
@@ -266,7 +277,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [capture, router, summarizeFeedback]);
+  }, [capture, feedbackState, router, traceData]);
 
   useHotkeys(
     "ctrl+shift+a",
@@ -300,17 +311,29 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     [handleDeny, isAdmin, isSubmitting],
   );
 
-  const totalIssues = Object.values(commentsByScreen).reduce(
+  const totalScreenIssues = Object.values(feedbackState.commentsByScreen).reduce(
     (count, comments) => count + comments.length,
     0,
   );
-  const screensWithIssues = Object.values(commentsByScreen).filter(
+  const flowIssueCount = feedbackState.flowComments.length;
+  const totalIssues = totalScreenIssues + flowIssueCount;
+  const screensWithIssues = Object.values(feedbackState.commentsByScreen).filter(
     (comments) => comments.length > 0,
   ).length;
   const issueSummary =
     totalIssues === 0
       ? "No issues flagged"
-      : `${totalIssues} issue${totalIssues === 1 ? "" : "s"} across ${screensWithIssues} screen${screensWithIssues === 1 ? "" : "s"}`;
+      : `${totalIssues} issue${totalIssues === 1 ? "" : "s"} across ${screensWithIssues} screen${screensWithIssues === 1 ? "" : "s"}${flowIssueCount > 0 ? ` and ${flowIssueCount} flow-level issue${flowIssueCount === 1 ? "" : "s"}` : ""}`;
+  const summarizeFeedbackPreview =
+    capture && traceData
+      ? mergeFeedbackStrings(
+          capture.summarizeFeedback,
+          serializeReviewFeedbackState({
+            feedbackState,
+            screens: traceData.screens,
+          }).summarizeFeedback,
+        )
+      : "";
 
   return (
     <main className="relative flex h-[calc(100dvh-64px)] w-full flex-grow flex-col">
@@ -330,8 +353,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
               <ReviewPanelAndroid
                 traceData={traceData}
                 isAdmin={isAdmin}
-                summarizeFeedback={summarizeFeedback}
-                onSummarizeFeedbackChange={setSummarizeFeedback}
+                summarizeFeedback={summarizeFeedbackPreview}
                 isSubmitting={isSubmitting}
               />
             )}
@@ -358,7 +380,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                   <ReviewGalleryAndroid
                     traceData={traceData}
                     activeScreenId={activeScreenId}
-                    commentsByScreen={commentsByScreen}
+                    commentsByScreen={feedbackState.commentsByScreen}
                     onScreenSelect={setActiveScreenId}
                   />
                 )}
@@ -377,8 +399,8 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                   <ScreenCommentsPanel
                     screens={traceData.screens}
                     activeScreenId={activeScreenId}
-                    commentsByScreen={commentsByScreen}
-                    onCommentsChange={setCommentsByScreen}
+                    feedbackState={feedbackState}
+                    onFeedbackStateChange={setFeedbackState}
                   />
                 )}
               </ResizablePanel>

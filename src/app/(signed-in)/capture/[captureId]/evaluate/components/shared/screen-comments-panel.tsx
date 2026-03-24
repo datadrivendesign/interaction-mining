@@ -14,6 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FrameData } from "../../../edit/components/types";
 import {
+  EMPTY_REVIEW_FEEDBACK_STATE,
+  ReviewComment,
+  ReviewFeedbackState,
+} from "../../utils/review-feedback";
+import {
   findTraceIssue,
   TraceIssue,
   TraceIssueDestination,
@@ -51,29 +56,25 @@ function formatPlaceholderLabel(token: string) {
     .replace(/^\w/, (char) => char.toUpperCase());
 }
 
-export interface ScreenComment {
-  id: string;
-  text: string;
-  issueId?: string;
-  destination?: TraceIssueDestination;
-}
+export type ScreenComment = ReviewComment;
 
 export function ScreenCommentsPanel({
   screens,
   activeScreenId,
-  commentsByScreen,
-  onCommentsChange,
+  feedbackState,
+  onFeedbackStateChange,
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
-  commentsByScreen?: Record<string, ScreenComment[]>;
-  onCommentsChange?: (comments: Record<string, ScreenComment[]>) => void;
+  feedbackState?: ReviewFeedbackState;
+  onFeedbackStateChange?: (feedback: ReviewFeedbackState) => void;
 }) {
-  const [internalCommentsByScreen, setInternalCommentsByScreen] = useState<
-    Record<string, ScreenComment[]>
-  >({});
+  const [internalFeedbackState, setInternalFeedbackState] =
+    useState<ReviewFeedbackState>(EMPTY_REVIEW_FEEDBACK_STATE);
   const [draft, setDraft] = useState("");
   const [showTextarea, setShowTextarea] = useState(false);
+  const [customDestination, setCustomDestination] =
+    useState<TraceIssueDestination>("annotation");
   const [pendingIssue, setPendingIssue] = useState<TraceIssue | null>(null);
   const [placeholderValues, setPlaceholderValues] = useState<
     Record<string, string>
@@ -82,31 +83,29 @@ export function ScreenCommentsPanel({
     null,
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const resolvedCommentsByScreen = commentsByScreen ?? internalCommentsByScreen;
+  const resolvedFeedbackState = feedbackState ?? internalFeedbackState;
 
-  const setCommentsByScreen = (
-    nextComments:
-      | Record<string, ScreenComment[]>
-      | ((
-          prev: Record<string, ScreenComment[]>,
-        ) => Record<string, ScreenComment[]>),
+  const setFeedbackState = (
+    nextFeedback:
+      | ReviewFeedbackState
+      | ((prev: ReviewFeedbackState) => ReviewFeedbackState),
   ) => {
-    const updatedComments =
-      typeof nextComments === "function"
-        ? nextComments(resolvedCommentsByScreen)
-        : nextComments;
+    const updatedFeedback =
+      typeof nextFeedback === "function"
+        ? nextFeedback(resolvedFeedbackState)
+        : nextFeedback;
 
-    if (onCommentsChange) {
-      onCommentsChange(updatedComments);
+    if (onFeedbackStateChange) {
+      onFeedbackStateChange(updatedFeedback);
       return;
     }
 
-    setInternalCommentsByScreen(updatedComments);
+    setInternalFeedbackState(updatedFeedback);
   };
 
   const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
   const activeScreen =
-    sortedScreens.find((s) => s.id === activeScreenId) ??
+    sortedScreens.find((screen) => screen.id === activeScreenId) ??
     sortedScreens[0] ??
     null;
   const activeIndex = activeScreen ? sortedScreens.indexOf(activeScreen) : -1;
@@ -114,9 +113,10 @@ export function ScreenCommentsPanel({
   const screenLabel = activeScreen
     ? `Screen ${screenNumber}`
     : "No screen selected";
-  const comments = activeScreen
-    ? (resolvedCommentsByScreen[activeScreen.id] ?? [])
+  const screenComments = activeScreen
+    ? (resolvedFeedbackState.commentsByScreen[activeScreen.id] ?? [])
     : [];
+  const flowComments = resolvedFeedbackState.flowComments;
   const pendingPlaceholders = pendingIssue
     ? getTemplatePlaceholders(pendingIssue.annotation)
     : [];
@@ -131,6 +131,7 @@ export function ScreenCommentsPanel({
   const resetComposer = () => {
     setDraft("");
     setShowTextarea(false);
+    setCustomDestination("annotation");
     setPendingIssue(null);
     setPlaceholderValues({});
   };
@@ -139,62 +140,131 @@ export function ScreenCommentsPanel({
     text,
     issueId,
     destination,
+    target,
   }: {
     text: string;
     issueId?: string;
     destination?: TraceIssueDestination;
+    target: "screen" | "flow";
   }) => {
-    if (!text.trim() || !activeScreen) return;
-    const nextComment = {
+    if (!text.trim() || !destination) {
+      return;
+    }
+
+    const nextComment: ReviewComment = {
       id: crypto.randomUUID(),
       text: text.trim(),
       issueId,
       destination,
     };
 
-    setCommentsByScreen((prev) => ({
-      ...prev,
-      [activeScreen.id]: [...(prev[activeScreen.id] ?? []), nextComment],
-    }));
+    setFeedbackState((prev) => {
+      if (target === "flow") {
+        return {
+          ...prev,
+          flowComments: [...prev.flowComments, nextComment],
+        };
+      }
+
+      if (!activeScreen) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        commentsByScreen: {
+          ...prev.commentsByScreen,
+          [activeScreen.id]: [
+            ...(prev.commentsByScreen[activeScreen.id] ?? []),
+            nextComment,
+          ],
+        },
+      };
+    });
+
     resetComposer();
-    setExpandedCommentId(nextComment.id);
+    setExpandedCommentId(`${target}:${nextComment.id}`);
   };
 
-  const removeComment = (id: string) => {
-    if (!activeScreen) return;
-    setCommentsByScreen((prev) => ({
-      ...prev,
-      [activeScreen.id]: (prev[activeScreen.id] ?? []).filter(
-        (c) => c.id !== id,
-      ),
-    }));
-    if (expandedCommentId === id) {
+  const removeComment = (target: "screen" | "flow", id: string) => {
+    setFeedbackState((prev) => {
+      if (target === "flow") {
+        return {
+          ...prev,
+          flowComments: prev.flowComments.filter((comment) => comment.id !== id),
+        };
+      }
+
+      if (!activeScreen) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        commentsByScreen: {
+          ...prev.commentsByScreen,
+          [activeScreen.id]: (prev.commentsByScreen[activeScreen.id] ?? []).filter(
+            (comment) => comment.id !== id,
+          ),
+        },
+      };
+    });
+
+    if (expandedCommentId === `${target}:${id}`) {
       setExpandedCommentId(null);
     }
   };
 
-  const updateComment = (id: string, text: string) => {
-    if (!activeScreen) return;
-    setCommentsByScreen((prev) => ({
-      ...prev,
-      [activeScreen.id]: (prev[activeScreen.id] ?? []).map((comment) =>
-        comment.id === id ? { ...comment, text } : comment,
-      ),
-    }));
+  const updateComment = (
+    target: "screen" | "flow",
+    id: string,
+    text: string,
+  ) => {
+    setFeedbackState((prev) => {
+      if (target === "flow") {
+        return {
+          ...prev,
+          flowComments: prev.flowComments.map((comment) =>
+            comment.id === id ? { ...comment, text } : comment,
+          ),
+        };
+      }
+
+      if (!activeScreen) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        commentsByScreen: {
+          ...prev.commentsByScreen,
+          [activeScreen.id]: (prev.commentsByScreen[activeScreen.id] ?? []).map(
+            (comment) => (comment.id === id ? { ...comment, text } : comment),
+          ),
+        },
+      };
+    });
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      addComment({ text: draft });
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      addComment({
+        text: draft,
+        destination: customDestination,
+        target: customDestination === "summarize" ? "flow" : "screen",
+      });
     }
-    if (e.key === "Escape") {
+    if (event.key === "Escape") {
       resetComposer();
     }
   };
 
   const handleIssueSelect = (issue: TraceIssue) => {
-    if (!activeScreen) return;
+    if (issue.scope === "screen" && !activeScreen) {
+      return;
+    }
+
     const placeholders = getTemplatePlaceholders(issue.annotation);
     if (placeholders.length > 0) {
       setPendingIssue(issue);
@@ -212,6 +282,7 @@ export function ScreenCommentsPanel({
       text: fillIssueTemplate(issue.annotation, screenNumber),
       issueId: issue.id,
       destination: issue.destination,
+      target: issue.scope,
     });
   };
 
@@ -219,6 +290,7 @@ export function ScreenCommentsPanel({
     setPendingIssue(null);
     setPlaceholderValues({});
     setDraft("");
+    setCustomDestination("annotation");
     setShowTextarea(true);
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
@@ -247,10 +319,11 @@ export function ScreenCommentsPanel({
       text: pendingPreview,
       issueId: pendingIssue.id,
       destination: pendingIssue.destination,
+      target: pendingIssue.scope,
     });
   };
 
-  const getCommentLabel = (comment: ScreenComment) => {
+  const getCommentLabel = (comment: ReviewComment) => {
     return findTraceIssue(comment.issueId ?? "")?.label ?? "Custom issue";
   };
 
@@ -260,26 +333,119 @@ export function ScreenCommentsPanel({
     return "Annotation";
   };
 
-  return (
-    <aside className="w-full h-full flex flex-col min-h-0 border-l border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
-      {/* ── Header ── */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 h-9 border-b border-neutral-200 dark:border-neutral-800">
-        <MessageSquare className="size-3 text-red-500 dark:text-red-400 shrink-0" />
-        <span className="flex-1 text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400 truncate">
-          {screenLabel}
+  const renderCommentSection = ({
+    title,
+    comments,
+    target,
+    emptyMessage,
+  }: {
+    title: string;
+    comments: ReviewComment[];
+    target: "screen" | "flow";
+    emptyMessage: string;
+  }) => (
+    <div className="border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-between px-3 py-2">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+          {title}
         </span>
         {comments.length > 0 && (
-          <span className="text-[10px] bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-full px-1.5 py-0.5 font-mono shrink-0 leading-none">
+          <span className="rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[10px] leading-none text-red-600 dark:bg-red-950 dark:text-red-400">
             {comments.length}
           </span>
         )}
       </div>
 
-      {/* ── Main content ── */}
-      <div className="flex flex-col flex-1 min-h-0">
-        {/* Issue picker — the hero of this panel */}
-        <div className="flex-shrink-0 p-3 space-y-2.5">
-          <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug">
+      {comments.length === 0 ? (
+        <p className="px-3 pb-3 text-[10px] text-neutral-400 dark:text-neutral-600">
+          {emptyMessage}
+        </p>
+      ) : (
+        <div className="space-y-1 px-2 pb-2">
+          {comments.map((comment) => {
+            const commentKey = `${target}:${comment.id}`;
+
+            return (
+              <div
+                key={comment.id}
+                className="rounded border border-transparent bg-white/70 transition-colors dark:bg-neutral-900/60"
+              >
+                <div className="flex items-start gap-1 p-1.5">
+                  <button
+                    type="button"
+                    className="flex flex-1 items-start gap-1.5 text-left"
+                    onClick={() =>
+                      setExpandedCommentId((prev) =>
+                        prev === commentKey ? null : commentKey,
+                      )
+                    }
+                  >
+                    {expandedCommentId === commentKey ? (
+                      <ChevronDown className="mt-0.5 size-3 shrink-0 text-neutral-400" />
+                    ) : (
+                      <ChevronRight className="mt-0.5 size-3 shrink-0 text-neutral-400" />
+                    )}
+                    <AlertCircle className="mt-0.5 size-3 shrink-0 text-red-400" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
+                          {getCommentLabel(comment)}
+                        </span>
+                        <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                          {getDestinationLabel(comment.destination)}
+                        </span>
+                      </div>
+                      <p className="line-clamp-2 text-[11px] leading-snug text-neutral-600 dark:text-neutral-400">
+                        {comment.text}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remove"
+                    className="shrink-0 p-1 text-neutral-400 transition-colors hover:text-red-500"
+                    onClick={() => removeComment(target, comment.id)}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+
+                {expandedCommentId === commentKey && (
+                  <div className="px-2 pb-2">
+                    <Textarea
+                      className="min-h-[5.5rem] resize-y text-xs"
+                      value={comment.text}
+                      onChange={(event) =>
+                        updateComment(target, comment.id, event.target.value)
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <aside className="flex h-full min-h-0 w-full flex-col border-l border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800">
+        <MessageSquare className="size-3 shrink-0 text-red-500 dark:text-red-400" />
+        <span className="flex-1 truncate text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+          {screenLabel}
+        </span>
+        {screenComments.length > 0 && (
+          <span className="rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[10px] leading-none text-red-600 dark:bg-red-950 dark:text-red-400">
+            {screenComments.length}
+          </span>
+        )}
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0 space-y-2.5 p-3">
+          <p className="text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">
             Click a chip to flag an issue immediately. Pick{" "}
             <span className="font-medium text-neutral-700 dark:text-neutral-300">
               Other...
@@ -339,13 +505,14 @@ export function ScreenCommentsPanel({
                       text: pendingPreview,
                       issueId: pendingIssue.id,
                       destination: pendingIssue.destination,
+                      target: pendingIssue.scope,
                     })
                   }
                   disabled={pendingPlaceholders.some(
                     (token) => !placeholderValues[token]?.trim(),
                   )}
                 >
-                  <Plus className="size-3 mr-1" />
+                  <Plus className="mr-1 size-3" />
                   Add Issue
                 </Button>
                 <Button
@@ -362,102 +529,80 @@ export function ScreenCommentsPanel({
           )}
 
           {showTextarea && (
-            <>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                {(
+                  [
+                    ["annotation", "Annotate"],
+                    ["redaction", "Redact"],
+                    ["summarize", "Summarize"],
+                  ] as const
+                ).map(([destination, label]) => (
+                  <Button
+                    key={destination}
+                    type="button"
+                    size="sm"
+                    variant={
+                      customDestination === destination ? "default" : "outline"
+                    }
+                    className="flex-1 text-xs"
+                    onClick={() => setCustomDestination(destination)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                {customDestination === "summarize"
+                  ? "This note will be saved as flow-level feedback."
+                  : `This note will be saved under ${screenLabel}.`}
+              </p>
               <Textarea
                 ref={textareaRef}
                 className="h-14 min-h-0 resize-none text-xs"
                 placeholder="Describe the issue... (Enter to add)"
                 value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleKeyDown}
-                disabled={!activeScreen}
+                disabled={!activeScreen && customDestination !== "summarize"}
               />
               <Button
                 size="sm"
-                className="w-full h-7 text-xs"
-                onClick={() => addComment({ text: draft })}
-                disabled={!draft.trim() || !activeScreen}
+                className="h-7 w-full text-xs"
+                onClick={() =>
+                  addComment({
+                    text: draft,
+                    destination: customDestination,
+                    target:
+                      customDestination === "summarize" ? "flow" : "screen",
+                  })
+                }
+                disabled={
+                  !draft.trim() ||
+                  (!activeScreen && customDestination !== "summarize")
+                }
               >
-                <Plus className="size-3 mr-1" />
+                <Plus className="mr-1 size-3" />
                 Add Issue
               </Button>
-            </>
+            </div>
           )}
         </div>
 
-        {/* ── Comments list — compact rows ── */}
-        {comments.length > 0 && (
-          <div className="flex-1 min-h-0 overflow-y-auto border-t border-neutral-200 dark:border-neutral-800">
-            <div className="p-2 space-y-1">
-              {comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="rounded border border-transparent bg-white/70 transition-colors dark:bg-neutral-900/60"
-                >
-                  <div className="flex items-start gap-1 p-1.5">
-                    <button
-                      type="button"
-                      className="flex flex-1 items-start gap-1.5 text-left"
-                      onClick={() =>
-                        setExpandedCommentId((prev) =>
-                          prev === comment.id ? null : comment.id,
-                        )
-                      }
-                    >
-                      {expandedCommentId === comment.id ? (
-                        <ChevronDown className="mt-0.5 size-3 shrink-0 text-neutral-400" />
-                      ) : (
-                        <ChevronRight className="mt-0.5 size-3 shrink-0 text-neutral-400" />
-                      )}
-                      <AlertCircle className="mt-0.5 size-3 shrink-0 text-red-400" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
-                            {getCommentLabel(comment)}
-                          </span>
-                          <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                            {getDestinationLabel(comment.destination)}
-                          </span>
-                        </div>
-                        <p className="line-clamp-2 text-[11px] leading-snug text-neutral-600 dark:text-neutral-400">
-                          {comment.text}
-                        </p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => removeComment(comment.id)}
-                      className="shrink-0 p-1 text-neutral-400 transition-colors hover:text-red-500"
-                      aria-label="Remove"
-                      type="button"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-
-                  {expandedCommentId === comment.id && (
-                    <div className="px-2 pb-2">
-                      <Textarea
-                        className="min-h-[5.5rem] resize-y text-xs"
-                        value={comment.text}
-                        onChange={(e) =>
-                          updateComment(comment.id, e.target.value)
-                        }
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {comments.length === 0 && (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-[10px] text-neutral-400 dark:text-neutral-600 text-center px-4">
-              No issues flagged for {screenLabel}
-            </p>
-          </div>
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {renderCommentSection({
+            title: "Flow Feedback",
+            comments: flowComments,
+            target: "flow",
+            emptyMessage: "No flow-level feedback added.",
+          })}
+          {renderCommentSection({
+            title: screenLabel,
+            comments: screenComments,
+            target: "screen",
+            emptyMessage: `No issues flagged for ${screenLabel}.`,
+          })}
+        </div>
       </div>
     </aside>
   );

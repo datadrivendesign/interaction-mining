@@ -5,6 +5,7 @@ export type TraceIssueCategory =
   | "task_recording";
 
 export type TraceIssueDestination = "annotation" | "redaction" | "summarize";
+export type TraceIssueScope = "screen" | "flow";
 
 export interface TraceIssue {
   id: string;
@@ -13,6 +14,7 @@ export interface TraceIssue {
   category: TraceIssueCategory;
   annotation: string;
   destination: TraceIssueDestination;
+  scope: TraceIssueScope;
   shortcutKey?: number;
 }
 
@@ -32,6 +34,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     category: "gesture_annotation",
     annotation: "Screen #: Gesture is not placed in the correct area.",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 1,
   },
   {
@@ -42,6 +45,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen #: Fix swipe direction, it should be where your finger is moving, not how the screen moves.",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 2,
   },
   {
@@ -52,6 +56,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen #: Typing action should be placed on the focused input box not on the keyboard",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 3,
   },
   {
@@ -62,6 +67,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen #: Please capture the screen before you did [gesture], not after",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 4,
   },
   {
@@ -73,6 +79,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       'Selected "swipe" to open a tab from menu when it seems to have been a tap',
     destination: "annotation",
+    scope: "screen",
   },
 
   // Annotation Description Quality Issues
@@ -84,6 +91,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen #: Please be more descriptive describing intention behind annotation was",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 5,
   },
   {
@@ -93,6 +101,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     category: "description_quality",
     annotation: "Screen #: Fix misspelling of [word]",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 6,
   },
   {
@@ -104,6 +113,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Annotation should be description of task not a comment about the task itself",
     destination: "summarize",
+    scope: "flow",
   },
 
   // Missing Screens / Redaction Issues
@@ -116,6 +126,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen #: Please include screen tapping text box to open up keyboard before typing",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 7,
   },
   {
@@ -127,6 +138,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen #: Please capture screen after the app has finished loading content or animation",
     destination: "annotation",
+    scope: "screen",
     shortcutKey: 8,
   },
   {
@@ -136,6 +148,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     category: "missing_screens",
     annotation: "Screen #: You forgot to redact [ITEM], please cover it.",
     destination: "redaction",
+    scope: "screen",
     shortcutKey: 9,
   },
   {
@@ -146,6 +159,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       "Screen 1: Please include screen opening up app from home screen",
     destination: "annotation",
+    scope: "screen",
   },
   {
     id: "missing_keyboard_submit",
@@ -155,6 +169,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       'Screen #: Please capture tapping "Enter" or "Done" on the keyboard if you did this after typing.',
     destination: "annotation",
+    scope: "screen",
   },
 
   // Task Recording Issues
@@ -166,6 +181,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       'This task flow is too similar to some other tasks in this app. Please change the task recording to something both different and realistic to what a user would do in this app, such as: "[INSERT_TASK_HERE]"',
     destination: "annotation",
+    scope: "flow",
   },
   {
     id: "unrealistic_flow",
@@ -175,6 +191,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation:
       'This task flow is not very realistic to what a user would normally do in an app. Please change the task recording to something both different and realistic to what a user would do in this app, such as: "[INSERT_TASK_HERE]"',
     destination: "annotation",
+    scope: "flow",
   },
 ];
 
