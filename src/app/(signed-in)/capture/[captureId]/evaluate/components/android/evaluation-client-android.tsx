@@ -31,7 +31,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { VerdictBar } from "../shared/verdict-bar";
 import {
   EMPTY_REVIEW_FEEDBACK_STATE,
-  mergeFeedbackStrings,
+  hydrateReviewFeedbackState,
   ReviewFeedbackState,
   serializeReviewFeedbackState,
 } from "../../utils/review-feedback";
@@ -45,6 +45,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
   );
+  const [hasHydratedFeedback, setHasHydratedFeedback] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
@@ -201,9 +202,26 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
       });
       setActiveScreenId(sortedScreens[0]?.id ?? null);
       setFeedbackState(EMPTY_REVIEW_FEEDBACK_STATE);
+      setHasHydratedFeedback(false);
     };
     fetchDraftFiles();
   }, [captureId]);
+
+  useEffect(() => {
+    if (!capture || !traceData || hasHydratedFeedback) {
+      return;
+    }
+
+    setFeedbackState(
+      hydrateReviewFeedbackState({
+        screens: traceData.screens,
+        annotateFeedback: capture.annotateFeedback,
+        redactFeedback: capture.redactFeedback,
+        summarizeFeedback: capture.summarizeFeedback,
+      }),
+    );
+    setHasHydratedFeedback(true);
+  }, [capture, hasHydratedFeedback, traceData]);
 
   const handleApprove = useCallback(async () => {
     if (!capture || !traceData) {
@@ -251,18 +269,9 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
       });
       const denyRes = await denyCapture(
         capture,
-        mergeFeedbackStrings(
-          capture.annotateFeedback,
-          serializedFeedback.annotateFeedback,
-        ),
-        mergeFeedbackStrings(
-          capture.redactFeedback,
-          serializedFeedback.redactFeedback,
-        ),
-        mergeFeedbackStrings(
-          capture.summarizeFeedback,
-          serializedFeedback.summarizeFeedback,
-        ),
+        serializedFeedback.annotateFeedback,
+        serializedFeedback.redactFeedback,
+        serializedFeedback.summarizeFeedback,
       );
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
@@ -324,16 +333,12 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     totalIssues === 0
       ? "No issues flagged"
       : `${totalIssues} issue${totalIssues === 1 ? "" : "s"} across ${screensWithIssues} screen${screensWithIssues === 1 ? "" : "s"}${flowIssueCount > 0 ? ` and ${flowIssueCount} flow-level issue${flowIssueCount === 1 ? "" : "s"}` : ""}`;
-  const summarizeFeedbackPreview =
-    capture && traceData
-      ? mergeFeedbackStrings(
-          capture.summarizeFeedback,
-          serializeReviewFeedbackState({
-            feedbackState,
-            screens: traceData.screens,
-          }).summarizeFeedback,
-        )
-      : "";
+  const summarizeFeedbackPreview = traceData
+    ? serializeReviewFeedbackState({
+        feedbackState,
+        screens: traceData.screens,
+      }).summarizeFeedback
+    : "";
 
   return (
     <main className="relative flex h-[calc(100dvh-64px)] w-full flex-grow flex-col">

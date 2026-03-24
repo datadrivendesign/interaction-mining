@@ -6,6 +6,7 @@ export interface ReviewComment {
   text: string;
   issueId?: string;
   destination?: TraceIssueDestination;
+  imported?: boolean;
 }
 
 export interface ReviewFeedbackState {
@@ -33,13 +34,83 @@ function normalizeFeedbackLine(text: string) {
   return text.replace(/^\s*(?:[-*•]\s+|\d+\.\s+)?/, "").trim();
 }
 
+function normalizeSerializedText(text: string) {
+  return text.replace(/\s*\n+\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
 function ensureScreenPrefix(text: string, screenNumber: number) {
-  const normalizedText = normalizeFeedbackLine(text);
+  const normalizedText = normalizeSerializedText(normalizeFeedbackLine(text));
   if (/^Screen \d+:/i.test(normalizedText)) {
     return normalizedText;
   }
 
   return `Screen ${screenNumber}: ${normalizedText}`;
+}
+
+function createImportedComment({
+  text,
+  destination,
+}: {
+  text: string;
+  destination: TraceIssueDestination;
+}): ReviewComment {
+  return {
+    id: crypto.randomUUID(),
+    text,
+    destination,
+    imported: true,
+  };
+}
+
+function parseFeedbackLines({
+  text,
+  destination,
+  screens,
+}: {
+  text?: string | null;
+  destination: TraceIssueDestination;
+  screens: FrameData[];
+}) {
+  const commentsByScreen: Record<string, ReviewComment[]> = {};
+  const flowComments: ReviewComment[] = [];
+  const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
+
+  getFeedbackLines(text).forEach((line) => {
+    const normalizedLine = normalizeFeedbackLine(line);
+    const screenMatch = normalizedLine.match(/^Screen\s+(\d+):?\s*(.*)$/i);
+
+    if (!screenMatch) {
+      flowComments.push(
+        createImportedComment({
+          text: normalizedLine,
+          destination,
+        }),
+      );
+      return;
+    }
+
+    const screenNumber = Number.parseInt(screenMatch[1], 10);
+    const mappedScreen = sortedScreens[screenNumber - 1];
+    if (!mappedScreen) {
+      flowComments.push(
+        createImportedComment({
+          text: normalizedLine,
+          destination,
+        }),
+      );
+      return;
+    }
+
+    commentsByScreen[mappedScreen.id] = [
+      ...(commentsByScreen[mappedScreen.id] ?? []),
+      createImportedComment({
+        text: normalizedLine,
+        destination,
+      }),
+    ];
+  });
+
+  return { commentsByScreen, flowComments };
 }
 
 export function serializeReviewFeedbackState({
@@ -80,7 +151,7 @@ export function serializeReviewFeedbackState({
       return;
     }
 
-    const serializedLine = comment.text.trim();
+    const serializedLine = normalizeSerializedText(comment.text);
     if (!serializedLine) {
       return;
     }
@@ -103,21 +174,54 @@ export function serializeReviewFeedbackState({
   };
 }
 
-export function mergeFeedbackStrings(existing?: string | null, next?: string) {
-  const mergedLines = [
-    ...getFeedbackLines(existing),
-    ...getFeedbackLines(next),
-  ];
-  const dedupedLines: string[] = [];
-  const seen = new Set<string>();
-
-  mergedLines.forEach((line) => {
-    if (seen.has(line)) {
-      return;
-    }
-    seen.add(line);
-    dedupedLines.push(line);
+export function hydrateReviewFeedbackState({
+  screens,
+  annotateFeedback,
+  redactFeedback,
+  summarizeFeedback,
+}: {
+  screens: FrameData[];
+  annotateFeedback?: string | null;
+  redactFeedback?: string | null;
+  summarizeFeedback?: string | null;
+}) {
+  const annotateState = parseFeedbackLines({
+    text: annotateFeedback,
+    destination: "annotation",
+    screens,
+  });
+  const redactState = parseFeedbackLines({
+    text: redactFeedback,
+    destination: "redaction",
+    screens,
+  });
+  const summarizeState = parseFeedbackLines({
+    text: summarizeFeedback,
+    destination: "summarize",
+    screens,
   });
 
-  return dedupedLines.join("\n");
+  const commentsByScreen: Record<string, ReviewComment[]> = {};
+  const allScreenIds = new Set<string>([
+    ...Object.keys(annotateState.commentsByScreen),
+    ...Object.keys(redactState.commentsByScreen),
+    ...Object.keys(summarizeState.commentsByScreen),
+  ]);
+
+  allScreenIds.forEach((screenId) => {
+    commentsByScreen[screenId] = [
+      ...(annotateState.commentsByScreen[screenId] ?? []),
+      ...(redactState.commentsByScreen[screenId] ?? []),
+      ...(summarizeState.commentsByScreen[screenId] ?? []),
+    ];
+  });
+
+  return {
+    commentsByScreen,
+    flowComments: [
+      ...annotateState.flowComments,
+      ...redactState.flowComments,
+      ...summarizeState.flowComments,
+    ],
+  };
 }
