@@ -3,15 +3,37 @@
 import { useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
 import { cn } from "@/lib/utils";
+import { ScreenComment } from "../shared/screen-comments-panel";
+import { ScreenMarkerStrip } from "../shared/screen-marker-strip";
 
 export function ReviewPanelIOS({
   traceData,
   isAdmin,
   videoRef,
+  activeScreenId,
+  commentsByScreen,
+  currentTime,
+  videoDuration,
+  onScreenSelect,
+  onScrubVideo,
+  onVideoLoadedMetadata,
+  onVideoTimeUpdate,
+  onVideoPlay,
+  onVideoPause,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
+  activeScreenId: string | null;
+  commentsByScreen: Record<string, ScreenComment[]>;
+  currentTime: number;
+  videoDuration: number;
+  onScreenSelect: (screenId: string, timestamp: number) => void;
+  onScrubVideo: (timestamp: number) => void;
+  onVideoLoadedMetadata: (video: HTMLVideoElement) => void;
+  onVideoTimeUpdate: (video: HTMLVideoElement) => void;
+  onVideoPlay: () => void;
+  onVideoPause: () => void;
 }) {
   const [videoOrientation, setVideoOrientation] = useState<
     "portrait" | "landscape" | null
@@ -22,7 +44,12 @@ export function ReviewPanelIOS({
     <aside className="w-full h-full flex flex-col min-h-0">
       {/* Header strip */}
       <div className="flex-shrink-0 flex items-center gap-2 px-3 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
-        <span className={cn("size-1.5 rounded-full shrink-0", isAdmin ? "bg-amber-500" : "bg-neutral-400")} />
+        <span
+          className={cn(
+            "size-1.5 rounded-full shrink-0",
+            isAdmin ? "bg-amber-500" : "bg-neutral-400",
+          )}
+        />
         <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
           {isAdmin ? "Admin Review" : "Owner Review"}
         </span>
@@ -50,6 +77,7 @@ export function ReviewPanelIOS({
               controls={true}
               onLoadedMetadata={(event) => {
                 const videoElement = event.currentTarget;
+                onVideoLoadedMetadata(videoElement);
                 if (!videoElement.videoWidth || !videoElement.videoHeight) {
                   return;
                 }
@@ -59,8 +87,20 @@ export function ReviewPanelIOS({
                     : "portrait",
                 );
               }}
+              onTimeUpdate={(event) => onVideoTimeUpdate(event.currentTarget)}
+              onPlay={onVideoPlay}
+              onPause={onVideoPause}
             />
           </div>
+          <ScreenMarkerStrip
+            screens={traceData.screens}
+            activeScreenId={activeScreenId}
+            commentsByScreen={commentsByScreen}
+            currentTime={currentTime}
+            duration={videoDuration}
+            onSelectScreen={onScreenSelect}
+            onScrub={onScrubVideo}
+          />
         </div>
       </div>
     </aside>

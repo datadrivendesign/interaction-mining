@@ -14,11 +14,13 @@ export function VerdictBar({
   isSubmitting,
   onApprove,
   onDeny,
+  additionalShortcuts = [],
 }: {
   issueSummary: string;
   isSubmitting: boolean;
   onApprove: () => void;
   onDeny: () => void;
+  additionalShortcuts?: { label: string; keys: string }[];
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between gap-3 border-t border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
@@ -79,6 +81,20 @@ export function VerdictBar({
                 <span>Deny capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+D</Kbd>
               </div>
+              {additionalShortcuts.length > 0 && (
+                <>
+                  <div className="border-t border-neutral-200 pt-2 dark:border-neutral-800" />
+                  {additionalShortcuts.map((shortcut) => (
+                    <div
+                      key={`${shortcut.label}-${shortcut.keys}`}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span>{shortcut.label}</span>
+                      <Kbd className="text-[10px]">{shortcut.keys}</Kbd>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </PopoverContent>
         </Popover>

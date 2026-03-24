@@ -21,16 +21,14 @@ import { ScreenComment } from "../shared/screen-comments-panel";
 
 export function ReviewGalleryIOS({
   traceData,
-  videoRef,
   activeScreenId,
   commentsByScreen,
   onScreenSelect,
 }: {
   traceData: TraceFormData;
-  videoRef: React.RefObject<HTMLVideoElement>;
   activeScreenId: string | null;
   commentsByScreen: Record<string, ScreenComment[]>;
-  onScreenSelect: (id: string) => void;
+  onScreenSelect: (id: string, timestamp: number) => void;
 }) {
   const [orientationByScreenId, setOrientationByScreenId] = useState<
     Record<string, "portrait" | "landscape">
@@ -74,10 +72,7 @@ export function ReviewGalleryIOS({
                   }));
                 }}
                 onJump={() => {
-                  onScreenSelect(screen.id);
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = screen.timestamp;
-                  }
+                  onScreenSelect(screen.id, screen.timestamp);
                 }}
               />
             ))}

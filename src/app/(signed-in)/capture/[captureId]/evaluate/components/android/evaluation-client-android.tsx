@@ -6,7 +6,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DraftTraceFormData,
   FrameData,
@@ -26,7 +26,10 @@ import {
 import { toast } from "sonner";
 import { handleTraceSave } from "../../../edit/util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
+import {
+  ScreenCommentsHotkeyAction,
+  ScreenCommentsPanel,
+} from "../shared/screen-comments-panel";
 import { useHotkeys } from "react-hotkeys-hook";
 import { VerdictBar } from "../shared/verdict-bar";
 import {
@@ -35,6 +38,7 @@ import {
   ReviewFeedbackState,
   serializeReviewFeedbackState,
 } from "../../utils/review-feedback";
+import { findTraceIssueByShortcut } from "../shared/trace-issues";
 
 export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -48,10 +52,14 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const [hasHydratedFeedback, setHasHydratedFeedback] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [screenCommentsHotkeyAction, setScreenCommentsHotkeyAction] =
+    useState<ScreenCommentsHotkeyAction | null>(null);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
   const isProcessingRef = useRef(false);
+  const hotkeyActionNonceRef = useRef(0);
+  const captureDbId = capture?.id ?? null;
 
   const populateDraftScreens = useCallback(
     async (
@@ -94,7 +102,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (!capture || !traceData) {
+    if (!captureDbId || !traceData) {
       return;
     }
 
@@ -114,10 +122,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         const frameFiles = captureFiles.data.filter((f) =>
           regexRule.test(f.fileName.toLowerCase()),
         );
-        if (
-          traceData.screens.filter((s) => s.src.length === 0).length === 0 ||
-          traceData.vhs?.length === 0
-        ) {
+        if (traceData.screens.every((screen) => screen.src.length > 0)) {
           return;
         }
         const { screens, vhs } = await populateDraftScreens(
@@ -142,7 +147,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     };
 
     loadFramesAndPopulateCapture();
-  }, [capture?.id, traceData?.screens, traceData?.vhs, populateDraftScreens]);
+  }, [captureDbId, captureId, populateDraftScreens, traceData]);
 
   useEffect(() => {
     const fetchDraftFiles = async () => {
@@ -222,6 +227,52 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     );
     setHasHydratedFeedback(true);
   }, [capture, hasHydratedFeedback, traceData]);
+
+  const sortedScreens = useMemo(
+    () =>
+      [...(traceData?.screens ?? [])].sort((a, b) => a.timestamp - b.timestamp),
+    [traceData?.screens],
+  );
+  const activeScreenIndex = activeScreenId
+    ? sortedScreens.findIndex((screen) => screen.id === activeScreenId)
+    : -1;
+
+  const queueScreenCommentsHotkeyAction = useCallback(
+    (
+      action:
+        | { type: "select-issue"; issueId: string }
+        | { type: "select-other" }
+        | { type: "remove-last-screen-comment" },
+    ) => {
+      hotkeyActionNonceRef.current += 1;
+      setScreenCommentsHotkeyAction({
+        ...action,
+        nonce: hotkeyActionNonceRef.current,
+      });
+    },
+    [],
+  );
+
+  const handleScreenStep = useCallback(
+    (offset: number) => {
+      if (sortedScreens.length === 0) {
+        return;
+      }
+
+      const nextIndex =
+        activeScreenIndex === -1
+          ? 0
+          : Math.max(
+              0,
+              Math.min(activeScreenIndex + offset, sortedScreens.length - 1),
+            );
+      const nextScreen = sortedScreens[nextIndex];
+      if (nextScreen) {
+        setActiveScreenId(nextScreen.id);
+      }
+    },
+    [activeScreenIndex, sortedScreens],
+  );
 
   const handleApprove = useCallback(async () => {
     if (!capture || !traceData) {
@@ -320,15 +371,106 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     [handleDeny, isAdmin, isSubmitting],
   );
 
-  const totalScreenIssues = Object.values(feedbackState.commentsByScreen).reduce(
-    (count, comments) => count + comments.length,
-    0,
+  useHotkeys(
+    "bracketleft", // refers to [ key
+    (event) => {
+      event.preventDefault();
+      handleScreenStep(-1);
+    },
+    {
+      enabled: !isSubmitting && sortedScreens.length > 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleScreenStep, isSubmitting, sortedScreens.length],
   );
+
+  useHotkeys(
+    "bracketright", // refers to ] key
+    (event) => {
+      event.preventDefault();
+      handleScreenStep(1);
+    },
+    {
+      enabled: !isSubmitting && sortedScreens.length > 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleScreenStep, isSubmitting, sortedScreens.length],
+  );
+
+  useHotkeys(
+    "o",
+    (event) => {
+      event.preventDefault();
+      queueScreenCommentsHotkeyAction({ type: "select-other" });
+    },
+    {
+      enabled: !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [isSubmitting, queueScreenCommentsHotkeyAction],
+  );
+
+  useHotkeys(
+    "backspace",
+    (event) => {
+      event.preventDefault();
+      queueScreenCommentsHotkeyAction({
+        type: "remove-last-screen-comment",
+      });
+    },
+    {
+      enabled: !isSubmitting && !!activeScreenId,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [activeScreenId, isSubmitting, queueScreenCommentsHotkeyAction],
+  );
+
+  useHotkeys(
+    "1,2,3,4,5,6,7,8,9",
+    (event) => {
+      const shortcutIssue = findTraceIssueByShortcut(
+        Number.parseInt(event.key, 10),
+      );
+      if (!shortcutIssue) {
+        return;
+      }
+
+      event.preventDefault();
+      queueScreenCommentsHotkeyAction({
+        type: "select-issue",
+        issueId: shortcutIssue.id,
+      });
+    },
+    {
+      enabled: !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [isSubmitting, queueScreenCommentsHotkeyAction],
+  );
+
+  const totalScreenIssues = Object.values(
+    feedbackState.commentsByScreen,
+  ).reduce((count, comments) => count + comments.length, 0);
   const flowIssueCount = feedbackState.flowComments.length;
   const totalIssues = totalScreenIssues + flowIssueCount;
-  const screensWithIssues = Object.values(feedbackState.commentsByScreen).filter(
-    (comments) => comments.length > 0,
-  ).length;
+  const screensWithIssues = Object.values(
+    feedbackState.commentsByScreen,
+  ).filter((comments) => comments.length > 0).length;
   const issueSummary =
     totalIssues === 0
       ? "No issues flagged"
@@ -348,10 +490,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             className="min-h-0 bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full overflow-hidden flex flex-col"
           >
             {traceData && capture && (
-              <ReviewPanelAndroid
-                traceData={traceData}
-                isAdmin={isAdmin}
-              />
+              <ReviewPanelAndroid traceData={traceData} isAdmin={isAdmin} />
             )}
           </ResizablePanel>
 
@@ -364,7 +503,10 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             maxSize={isCompactLayout ? 72 : 80}
             className="min-h-0 box-border w-full h-full"
           >
-            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="w-full h-full"
+            >
               {/* Gallery — left/center */}
               <ResizablePanel
                 defaultSize={70}
@@ -397,6 +539,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                     activeScreenId={activeScreenId}
                     feedbackState={feedbackState}
                     onFeedbackStateChange={setFeedbackState}
+                    hotkeyAction={screenCommentsHotkeyAction}
                   />
                 )}
               </ResizablePanel>
@@ -410,6 +553,13 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
           isSubmitting={isSubmitting}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
+          additionalShortcuts={[
+            { label: "Previous screen", keys: "[" },
+            { label: "Next screen", keys: "]" },
+            { label: "Custom issue", keys: "O" },
+            { label: "Remove last screen issue", keys: "Backspace" },
+            { label: "Issue chips", keys: "1-9" },
+          ]}
         />
       )}
     </main>

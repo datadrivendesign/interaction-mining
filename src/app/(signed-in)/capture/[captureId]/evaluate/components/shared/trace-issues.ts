@@ -207,3 +207,7 @@ export const ISSUES_BY_CATEGORY = TRACE_ISSUES.reduce(
 export function findTraceIssue(issueId: string) {
   return TRACE_ISSUES.find((issue) => issue.id === issueId);
 }
+
+export function findTraceIssueByShortcut(shortcutKey: number) {
+  return TRACE_ISSUES.find((issue) => issue.shortcutKey === shortcutKey);
+}

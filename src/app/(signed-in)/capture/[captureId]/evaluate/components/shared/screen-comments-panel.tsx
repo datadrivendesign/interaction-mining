@@ -1,6 +1,13 @@
 "use client";
 
-import { KeyboardEvent, useRef, useState } from "react";
+import {
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AlertCircle,
   ChevronDown,
@@ -58,16 +65,33 @@ function formatPlaceholderLabel(token: string) {
 
 export type ScreenComment = ReviewComment;
 
+export type ScreenCommentsHotkeyAction =
+  | {
+      nonce: number;
+      type: "select-issue";
+      issueId: string;
+    }
+  | {
+      nonce: number;
+      type: "select-other";
+    }
+  | {
+      nonce: number;
+      type: "remove-last-screen-comment";
+    };
+
 export function ScreenCommentsPanel({
   screens,
   activeScreenId,
   feedbackState,
   onFeedbackStateChange,
+  hotkeyAction,
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
   feedbackState?: ReviewFeedbackState;
   onFeedbackStateChange?: (feedback: ReviewFeedbackState) => void;
+  hotkeyAction?: ScreenCommentsHotkeyAction | null;
 }) {
   const [internalFeedbackState, setInternalFeedbackState] =
     useState<ReviewFeedbackState>(EMPTY_REVIEW_FEEDBACK_STATE);
@@ -82,26 +106,30 @@ export function ScreenCommentsPanel({
   const [expandedCommentId, setExpandedCommentId] = useState<string | null>(
     null,
   );
+  const lastProcessedHotkeyActionRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const resolvedFeedbackState = feedbackState ?? internalFeedbackState;
 
-  const setFeedbackState = (
-    nextFeedback:
-      | ReviewFeedbackState
-      | ((prev: ReviewFeedbackState) => ReviewFeedbackState),
-  ) => {
-    const updatedFeedback =
-      typeof nextFeedback === "function"
-        ? nextFeedback(resolvedFeedbackState)
-        : nextFeedback;
+  const setFeedbackState = useCallback(
+    (
+      nextFeedback:
+        | ReviewFeedbackState
+        | ((prev: ReviewFeedbackState) => ReviewFeedbackState),
+    ) => {
+      const updatedFeedback =
+        typeof nextFeedback === "function"
+          ? nextFeedback(resolvedFeedbackState)
+          : nextFeedback;
 
-    if (onFeedbackStateChange) {
-      onFeedbackStateChange(updatedFeedback);
-      return;
-    }
+      if (onFeedbackStateChange) {
+        onFeedbackStateChange(updatedFeedback);
+        return;
+      }
 
-    setInternalFeedbackState(updatedFeedback);
-  };
+      setInternalFeedbackState(updatedFeedback);
+    },
+    [onFeedbackStateChange, resolvedFeedbackState],
+  );
 
   const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
   const activeScreen =
@@ -113,9 +141,13 @@ export function ScreenCommentsPanel({
   const screenLabel = activeScreen
     ? `Screen ${screenNumber}`
     : "No screen selected";
-  const screenComments = activeScreen
-    ? (resolvedFeedbackState.commentsByScreen[activeScreen.id] ?? [])
-    : [];
+  const screenComments = useMemo(
+    () =>
+      activeScreen
+        ? (resolvedFeedbackState.commentsByScreen[activeScreen.id] ?? [])
+        : [],
+    [activeScreen, resolvedFeedbackState.commentsByScreen],
+  );
   const flowComments = resolvedFeedbackState.flowComments;
   const pendingPlaceholders = pendingIssue
     ? getTemplatePlaceholders(pendingIssue.annotation)
@@ -128,123 +160,132 @@ export function ScreenCommentsPanel({
       )
     : "";
 
-  const resetComposer = () => {
+  const resetComposer = useCallback(() => {
     setDraft("");
     setShowTextarea(false);
     setCustomDestination("annotation");
     setPendingIssue(null);
     setPlaceholderValues({});
-  };
+  }, []);
 
-  const addComment = ({
-    text,
-    issueId,
-    destination,
-    target,
-  }: {
-    text: string;
-    issueId?: string;
-    destination?: TraceIssueDestination;
-    target: "screen" | "flow";
-  }) => {
-    if (!text.trim() || !destination) {
-      return;
-    }
-
-    const nextComment: ReviewComment = {
-      id: crypto.randomUUID(),
-      text: text.trim(),
+  const addComment = useCallback(
+    ({
+      text,
       issueId,
       destination,
-    };
+      target,
+    }: {
+      text: string;
+      issueId?: string;
+      destination?: TraceIssueDestination;
+      target: "screen" | "flow";
+    }) => {
+      if (!text.trim() || !destination) {
+        return;
+      }
 
-    setFeedbackState((prev) => {
-      if (target === "flow") {
+      const nextComment: ReviewComment = {
+        id: crypto.randomUUID(),
+        text: text.trim(),
+        issueId,
+        destination,
+      };
+
+      setFeedbackState((prev) => {
+        if (target === "flow") {
+          return {
+            ...prev,
+            flowComments: [...prev.flowComments, nextComment],
+          };
+        }
+
+        if (!activeScreen) {
+          return prev;
+        }
+
         return {
           ...prev,
-          flowComments: [...prev.flowComments, nextComment],
+          commentsByScreen: {
+            ...prev.commentsByScreen,
+            [activeScreen.id]: [
+              ...(prev.commentsByScreen[activeScreen.id] ?? []),
+              nextComment,
+            ],
+          },
         };
-      }
+      });
 
-      if (!activeScreen) {
-        return prev;
-      }
+      resetComposer();
+      setExpandedCommentId(`${target}:${nextComment.id}`);
+    },
+    [activeScreen, resetComposer, setFeedbackState],
+  );
 
-      return {
-        ...prev,
-        commentsByScreen: {
-          ...prev.commentsByScreen,
-          [activeScreen.id]: [
-            ...(prev.commentsByScreen[activeScreen.id] ?? []),
-            nextComment,
-          ],
-        },
-      };
-    });
+  const removeComment = useCallback(
+    (target: "screen" | "flow", id: string) => {
+      setFeedbackState((prev) => {
+        if (target === "flow") {
+          return {
+            ...prev,
+            flowComments: prev.flowComments.filter(
+              (comment) => comment.id !== id,
+            ),
+          };
+        }
 
-    resetComposer();
-    setExpandedCommentId(`${target}:${nextComment.id}`);
-  };
+        if (!activeScreen) {
+          return prev;
+        }
 
-  const removeComment = (target: "screen" | "flow", id: string) => {
-    setFeedbackState((prev) => {
-      if (target === "flow") {
         return {
           ...prev,
-          flowComments: prev.flowComments.filter((comment) => comment.id !== id),
+          commentsByScreen: {
+            ...prev.commentsByScreen,
+            [activeScreen.id]: (
+              prev.commentsByScreen[activeScreen.id] ?? []
+            ).filter((comment) => comment.id !== id),
+          },
         };
+      });
+
+      if (expandedCommentId === `${target}:${id}`) {
+        setExpandedCommentId(null);
       }
+    },
+    [activeScreen, expandedCommentId, setFeedbackState],
+  );
 
-      if (!activeScreen) {
-        return prev;
-      }
+  const updateComment = useCallback(
+    (target: "screen" | "flow", id: string, text: string) => {
+      setFeedbackState((prev) => {
+        if (target === "flow") {
+          return {
+            ...prev,
+            flowComments: prev.flowComments.map((comment) =>
+              comment.id === id ? { ...comment, text } : comment,
+            ),
+          };
+        }
 
-      return {
-        ...prev,
-        commentsByScreen: {
-          ...prev.commentsByScreen,
-          [activeScreen.id]: (prev.commentsByScreen[activeScreen.id] ?? []).filter(
-            (comment) => comment.id !== id,
-          ),
-        },
-      };
-    });
+        if (!activeScreen) {
+          return prev;
+        }
 
-    if (expandedCommentId === `${target}:${id}`) {
-      setExpandedCommentId(null);
-    }
-  };
-
-  const updateComment = (
-    target: "screen" | "flow",
-    id: string,
-    text: string,
-  ) => {
-    setFeedbackState((prev) => {
-      if (target === "flow") {
         return {
           ...prev,
-          flowComments: prev.flowComments.map((comment) =>
-            comment.id === id ? { ...comment, text } : comment,
-          ),
+          commentsByScreen: {
+            ...prev.commentsByScreen,
+            [activeScreen.id]: (
+              prev.commentsByScreen[activeScreen.id] ?? []
+            ).map((comment) =>
+              comment.id === id ? { ...comment, text } : comment,
+            ),
+          },
         };
-      }
-
-      if (!activeScreen) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        commentsByScreen: {
-          ...prev.commentsByScreen,
-          [activeScreen.id]: (prev.commentsByScreen[activeScreen.id] ?? []).map(
-            (comment) => (comment.id === id ? { ...comment, text } : comment),
-          ),
-        },
-      };
-    });
-  };
+      });
+    },
+    [activeScreen, setFeedbackState],
+  );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -260,40 +301,43 @@ export function ScreenCommentsPanel({
     }
   };
 
-  const handleIssueSelect = (issue: TraceIssue) => {
-    if (issue.scope === "screen" && !activeScreen) {
-      return;
-    }
+  const handleIssueSelect = useCallback(
+    (issue: TraceIssue) => {
+      if (issue.scope === "screen" && !activeScreen) {
+        return;
+      }
 
-    const placeholders = getTemplatePlaceholders(issue.annotation);
-    if (placeholders.length > 0) {
-      setPendingIssue(issue);
-      setShowTextarea(false);
-      setPlaceholderValues(
-        placeholders.reduce<Record<string, string>>((acc, token) => {
-          acc[token] = "";
-          return acc;
-        }, {}),
-      );
-      return;
-    }
+      const placeholders = getTemplatePlaceholders(issue.annotation);
+      if (placeholders.length > 0) {
+        setPendingIssue(issue);
+        setShowTextarea(false);
+        setPlaceholderValues(
+          placeholders.reduce<Record<string, string>>((acc, token) => {
+            acc[token] = "";
+            return acc;
+          }, {}),
+        );
+        return;
+      }
 
-    addComment({
-      text: fillIssueTemplate(issue.annotation, screenNumber),
-      issueId: issue.id,
-      destination: issue.destination,
-      target: issue.scope,
-    });
-  };
+      addComment({
+        text: fillIssueTemplate(issue.annotation, screenNumber),
+        issueId: issue.id,
+        destination: issue.destination,
+        target: issue.scope,
+      });
+    },
+    [activeScreen, addComment, screenNumber],
+  );
 
-  const handleOtherSelect = () => {
+  const handleOtherSelect = useCallback(() => {
     setPendingIssue(null);
     setPlaceholderValues({});
     setDraft("");
     setCustomDestination("annotation");
     setShowTextarea(true);
     requestAnimationFrame(() => textareaRef.current?.focus());
-  };
+  }, []);
 
   const handlePlaceholderValueChange = (token: string, value: string) => {
     setPlaceholderValues((prev) => ({
@@ -322,6 +366,40 @@ export function ScreenCommentsPanel({
       target: pendingIssue.scope,
     });
   };
+
+  useEffect(() => {
+    if (!hotkeyAction) {
+      return;
+    }
+    if (lastProcessedHotkeyActionRef.current === hotkeyAction.nonce) {
+      return;
+    }
+    lastProcessedHotkeyActionRef.current = hotkeyAction.nonce;
+
+    if (hotkeyAction.type === "select-other") {
+      handleOtherSelect();
+      return;
+    }
+
+    if (hotkeyAction.type === "remove-last-screen-comment") {
+      const lastComment = screenComments.at(-1);
+      if (lastComment) {
+        removeComment("screen", lastComment.id);
+      }
+      return;
+    }
+
+    const selectedIssue = findTraceIssue(hotkeyAction.issueId);
+    if (selectedIssue) {
+      handleIssueSelect(selectedIssue);
+    }
+  }, [
+    handleIssueSelect,
+    handleOtherSelect,
+    hotkeyAction,
+    removeComment,
+    screenComments,
+  ]);
 
   const getCommentLabel = (comment: ReviewComment) => {
     return findTraceIssue(comment.issueId ?? "")?.label ?? "Custom issue";

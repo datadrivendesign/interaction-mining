@@ -6,7 +6,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DraftTraceFormData,
   FrameData,
@@ -27,7 +27,10 @@ import {
 import { toast } from "sonner";
 import { handleTraceSave } from "../../../edit/util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
+import {
+  ScreenCommentsHotkeyAction,
+  ScreenCommentsPanel,
+} from "../shared/screen-comments-panel";
 import { useHotkeys } from "react-hotkeys-hook";
 import { VerdictBar } from "../shared/verdict-bar";
 import {
@@ -36,6 +39,7 @@ import {
   ReviewFeedbackState,
   serializeReviewFeedbackState,
 } from "../../utils/review-feedback";
+import { findTraceIssueByShortcut } from "../shared/trace-issues";
 
 export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -49,12 +53,23 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const [hasHydratedFeedback, setHasHydratedFeedback] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [screenCommentsHotkeyAction, setScreenCommentsHotkeyAction] =
+    useState<ScreenCommentsHotkeyAction | null>(null);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const isProcessingRef = useRef(false);
+  const hotkeyActionNonceRef = useRef(0);
+  const rafRef = useRef<number>(0);
+  const scrubRafRef = useRef<number | null>(null);
+  const pendingScrubTimeRef = useRef<number | null>(null);
+  const livePhotoEndRef = useRef<number | null>(null);
+  const captureDbId = capture?.id ?? null;
 
   useEffect(() => {
     const updateLayoutMode = () => {
@@ -89,7 +104,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   );
 
   useEffect(() => {
-    if (!capture || !traceData) {
+    if (!captureDbId || !traceData) {
       return;
     }
 
@@ -99,7 +114,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
       }
       try {
         isProcessingRef.current = true;
-        const videoFiles = await fetchVideoFile(`uploads/${capture.id}`);
+        const videoFiles = await fetchVideoFile(`uploads/${captureDbId}`);
         if (videoFiles.length === 0 || !videoRef.current) {
           return;
         }
@@ -151,7 +166,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     };
 
     loadVideoAndPopulateScreens();
-  }, [capture?.id, traceData?.screens, populateDraftScreens]);
+  }, [captureDbId, populateDraftScreens, traceData]);
 
   useEffect(() => {
     const fetchDraftFiles = async () => {
@@ -231,6 +246,203 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     );
     setHasHydratedFeedback(true);
   }, [capture, hasHydratedFeedback, traceData]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      cancelAnimationFrame(rafRef.current);
+      return;
+    }
+
+    const syncCurrentTime = () => {
+      const video = videoRef.current;
+      if (!video) {
+        return;
+      }
+
+      const nextTime = video.currentTime;
+      setCurrentTime(nextTime);
+
+      const replayEnd = livePhotoEndRef.current;
+      if (replayEnd !== null && nextTime >= replayEnd) {
+        video.pause();
+        livePhotoEndRef.current = null;
+        return;
+      }
+
+      rafRef.current = requestAnimationFrame(syncCurrentTime);
+    };
+
+    rafRef.current = requestAnimationFrame(syncCurrentTime);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (scrubRafRef.current !== null) {
+        cancelAnimationFrame(scrubRafRef.current);
+      }
+    };
+  }, []);
+
+  const sortedScreens = useMemo(
+    () =>
+      [...(traceData?.screens ?? [])].sort((a, b) => a.timestamp - b.timestamp),
+    [traceData?.screens],
+  );
+  const activeScreen =
+    sortedScreens.find((screen) => screen.id === activeScreenId) ??
+    sortedScreens[0] ??
+    null;
+  const activeScreenIndex = activeScreen
+    ? sortedScreens.findIndex((screen) => screen.id === activeScreen.id)
+    : -1;
+
+  const queueScreenCommentsHotkeyAction = useCallback(
+    (
+      action:
+        | { type: "select-issue"; issueId: string }
+        | { type: "select-other" }
+        | { type: "remove-last-screen-comment" },
+    ) => {
+      hotkeyActionNonceRef.current += 1;
+      setScreenCommentsHotkeyAction({
+        ...action,
+        nonce: hotkeyActionNonceRef.current,
+      });
+    },
+    [],
+  );
+
+  const clearReplayWindow = useCallback(() => {
+    livePhotoEndRef.current = null;
+  }, []);
+
+  const seekVideoToTime = useCallback(
+    (timestamp: number, options?: { pause?: boolean }) => {
+      const video = videoRef.current;
+      if (!video) {
+        return;
+      }
+
+      clearReplayWindow();
+      const maxDuration = videoDuration > 0 ? videoDuration : timestamp;
+      const clampedTimestamp = Math.max(0, Math.min(timestamp, maxDuration));
+
+      if (options?.pause ?? true) {
+        video.pause();
+      }
+      video.currentTime = clampedTimestamp;
+      setCurrentTime(clampedTimestamp);
+    },
+    [clearReplayWindow, videoDuration],
+  );
+
+  const handleScreenSelect = useCallback(
+    (screenId: string, timestamp: number) => {
+      setActiveScreenId(screenId);
+      seekVideoToTime(timestamp);
+    },
+    [seekVideoToTime],
+  );
+
+  const handleScreenStep = useCallback(
+    (offset: number) => {
+      if (sortedScreens.length === 0) {
+        return;
+      }
+
+      const nextIndex =
+        activeScreenIndex === -1
+          ? 0
+          : Math.max(
+              0,
+              Math.min(activeScreenIndex + offset, sortedScreens.length - 1),
+            );
+      const nextScreen = sortedScreens[nextIndex];
+      if (!nextScreen) {
+        return;
+      }
+
+      handleScreenSelect(nextScreen.id, nextScreen.timestamp);
+    },
+    [activeScreenIndex, handleScreenSelect, sortedScreens],
+  );
+
+  const getNearestScreenId = useCallback(
+    (timestamp: number) => {
+      if (sortedScreens.length === 0) {
+        return null;
+      }
+
+      return sortedScreens.reduce((nearestScreen, candidateScreen) => {
+        if (!nearestScreen) {
+          return candidateScreen;
+        }
+
+        return Math.abs(candidateScreen.timestamp - timestamp) <
+          Math.abs(nearestScreen.timestamp - timestamp)
+          ? candidateScreen
+          : nearestScreen;
+      }, sortedScreens[0]).id;
+    },
+    [sortedScreens],
+  );
+
+  const commitScrubTime = useCallback(
+    (timestamp: number) => {
+      const nearestScreenId = getNearestScreenId(timestamp);
+      if (nearestScreenId) {
+        setActiveScreenId(nearestScreenId);
+      }
+      seekVideoToTime(timestamp);
+    },
+    [getNearestScreenId, seekVideoToTime],
+  );
+
+  const handleMarkerStripScrub = useCallback(
+    (timestamp: number) => {
+      pendingScrubTimeRef.current = timestamp;
+
+      if (scrubRafRef.current !== null) {
+        return;
+      }
+
+      scrubRafRef.current = requestAnimationFrame(() => {
+        scrubRafRef.current = null;
+        const nextTimestamp = pendingScrubTimeRef.current;
+        pendingScrubTimeRef.current = null;
+        if (nextTimestamp === null) {
+          return;
+        }
+
+        commitScrubTime(nextTimestamp);
+      });
+    },
+    [commitScrubTime],
+  );
+
+  const handleReplayActiveScreen = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || !activeScreen || videoDuration <= 0) {
+      return;
+    }
+
+    const replayStart = Math.max(0, activeScreen.timestamp - 1);
+    const replayEnd = Math.min(videoDuration, activeScreen.timestamp + 1);
+
+    livePhotoEndRef.current = replayEnd;
+    video.currentTime = replayStart;
+    setCurrentTime(replayStart);
+
+    try {
+      await video.play();
+    } catch (error) {
+      livePhotoEndRef.current = null;
+      console.error(`Error replaying screen context: ${error}`);
+    }
+  }, [activeScreen, videoDuration]);
 
   const handleApprove = useCallback(async () => {
     if (!capture || !traceData) {
@@ -329,15 +541,122 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     [handleDeny, isAdmin, isSubmitting],
   );
 
-  const totalScreenIssues = Object.values(feedbackState.commentsByScreen).reduce(
-    (count, comments) => count + comments.length,
-    0,
+  useHotkeys(
+    "bracketleft",
+    (event) => {
+      event.preventDefault();
+      handleScreenStep(-1);
+    },
+    {
+      enabled: !isSubmitting && sortedScreens.length > 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleScreenStep, isSubmitting, sortedScreens.length],
   );
+
+  useHotkeys(
+    "bracketright",
+    (event) => {
+      event.preventDefault();
+      handleScreenStep(1);
+    },
+    {
+      enabled: !isSubmitting && sortedScreens.length > 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleScreenStep, isSubmitting, sortedScreens.length],
+  );
+
+  useHotkeys(
+    "r",
+    (event) => {
+      event.preventDefault();
+      void handleReplayActiveScreen();
+    },
+    {
+      enabled: !isSubmitting && !!activeScreen && videoDuration > 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [activeScreen, handleReplayActiveScreen, isSubmitting, videoDuration],
+  );
+
+  useHotkeys(
+    "o",
+    (event) => {
+      event.preventDefault();
+      queueScreenCommentsHotkeyAction({ type: "select-other" });
+    },
+    {
+      enabled: !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [isSubmitting, queueScreenCommentsHotkeyAction],
+  );
+
+  useHotkeys(
+    "backspace",
+    (event) => {
+      event.preventDefault();
+      queueScreenCommentsHotkeyAction({
+        type: "remove-last-screen-comment",
+      });
+    },
+    {
+      enabled: !isSubmitting && !!activeScreen,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [activeScreen, isSubmitting, queueScreenCommentsHotkeyAction],
+  );
+
+  useHotkeys(
+    "1,2,3,4,5,6,7,8,9",
+    (event) => {
+      const shortcutIssue = findTraceIssueByShortcut(
+        Number.parseInt(event.key, 10),
+      );
+      if (!shortcutIssue) {
+        return;
+      }
+
+      event.preventDefault();
+      queueScreenCommentsHotkeyAction({
+        type: "select-issue",
+        issueId: shortcutIssue.id,
+      });
+    },
+    {
+      enabled: !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [isSubmitting, queueScreenCommentsHotkeyAction],
+  );
+
+  const totalScreenIssues = Object.values(
+    feedbackState.commentsByScreen,
+  ).reduce((count, comments) => count + comments.length, 0);
   const flowIssueCount = feedbackState.flowComments.length;
   const totalIssues = totalScreenIssues + flowIssueCount;
-  const screensWithIssues = Object.values(feedbackState.commentsByScreen).filter(
-    (comments) => comments.length > 0,
-  ).length;
+  const screensWithIssues = Object.values(
+    feedbackState.commentsByScreen,
+  ).filter((comments) => comments.length > 0).length;
   const issueSummary =
     totalIssues === 0
       ? "No issues flagged"
@@ -361,6 +680,23 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                 traceData={traceData}
                 isAdmin={isAdmin}
                 videoRef={videoRef}
+                activeScreenId={activeScreenId}
+                commentsByScreen={feedbackState.commentsByScreen}
+                currentTime={currentTime}
+                videoDuration={videoDuration}
+                onScreenSelect={handleScreenSelect}
+                onScrubVideo={handleMarkerStripScrub}
+                onVideoLoadedMetadata={(video) => {
+                  setVideoDuration(video.duration || 0);
+                }}
+                onVideoTimeUpdate={(video) => {
+                  setCurrentTime(video.currentTime);
+                }}
+                onVideoPlay={() => setIsPlaying(true)}
+                onVideoPause={() => {
+                  setIsPlaying(false);
+                  clearReplayWindow();
+                }}
               />
             )}
           </ResizablePanel>
@@ -388,10 +724,9 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                 {traceData && (
                   <ReviewGalleryIOS
                     traceData={traceData}
-                    videoRef={videoRef}
                     activeScreenId={activeScreenId}
                     commentsByScreen={feedbackState.commentsByScreen}
-                    onScreenSelect={setActiveScreenId}
+                    onScreenSelect={handleScreenSelect}
                   />
                 )}
               </ResizablePanel>
@@ -411,6 +746,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                     activeScreenId={activeScreenId}
                     feedbackState={feedbackState}
                     onFeedbackStateChange={setFeedbackState}
+                    hotkeyAction={screenCommentsHotkeyAction}
                   />
                 )}
               </ResizablePanel>
@@ -424,6 +760,14 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
           isSubmitting={isSubmitting}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
+          additionalShortcuts={[
+            { label: "Previous screen", keys: "[" },
+            { label: "Next screen", keys: "]" },
+            { label: "Replay around screen", keys: "R" },
+            { label: "Custom issue", keys: "O" },
+            { label: "Remove last screen issue", keys: "Backspace" },
+            { label: "Issue chips", keys: "1-9" },
+          ]}
         />
       )}
     </main>
