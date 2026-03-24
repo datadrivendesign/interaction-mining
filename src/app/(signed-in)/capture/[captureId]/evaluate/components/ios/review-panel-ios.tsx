@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { TraceFormData } from "../../../edit/components/types";
 import { cn } from "@/lib/utils";
 import { ScreenComment } from "../shared/screen-comments-panel";
 import { ScreenMarkerStrip } from "../shared/screen-marker-strip";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export function ReviewPanelIOS({
   traceData,
@@ -54,6 +57,15 @@ export function ReviewPanelIOS({
         <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
           {isAdmin ? "Admin Review" : "Owner Review"}
         </span>
+        {isAdmin && (
+          <Button
+            size="sm"
+            className="ml-auto text-[10px] font-semibold uppercase tracking-widest text-neutral-300 transition-colors hover:text-neutral-100 dark:text-neutral-700 dark:hover:text-neutral-800"
+          >
+            <ArrowLeft className="w-2 h-2" />
+            <Link href="/admin/tasks">Back to list</Link>
+          </Button>
+        )}
       </div>
 
       {/* Scrollable content: reference only */}

@@ -22,6 +22,7 @@ import { extractVideoFrame } from "../../../edit/components/repair-screen/util/i
 import { fetchVideoFile } from "../../utils/file-fetch";
 import {
   denyCapture,
+  getNextReviewingCaptureId,
   validateApprovePermissions,
 } from "../../utils/capture-actions";
 import { toast } from "sonner";
@@ -444,6 +445,36 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     }
   }, [activeScreen, videoDuration]);
 
+  const navigateAfterVerdict = useCallback(
+    async (successMessage: string) => {
+      if (!capture) {
+        router.push("/admin/tasks");
+        return;
+      }
+
+      const nextCaptureRes = await getNextReviewingCaptureId(capture.id);
+      if (!nextCaptureRes.ok) {
+        console.error(
+          "Failed to fetch next reviewing capture:",
+          nextCaptureRes.message,
+        );
+        toast.success(`${successMessage} Returning to task list.`);
+        router.push("/admin/tasks");
+        return;
+      }
+
+      if (nextCaptureRes.data) {
+        toast.success(`${successMessage} Loading next capture...`);
+        router.push(`/capture/${nextCaptureRes.data}/evaluate`);
+        return;
+      }
+
+      toast.success(`${successMessage} Review queue complete.`);
+      router.push("/admin/tasks");
+    },
+    [capture, router],
+  );
+
   const handleApprove = useCallback(async () => {
     if (!capture || !traceData) {
       return;
@@ -466,8 +497,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         throw new Error(updateRes.message);
       }
       await revalidateCaptureCaches();
-      toast.success("Capture approved successfully");
-      router.push("/admin/tasks");
+      await navigateAfterVerdict("Capture approved.");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "An unknown error occurred",
@@ -475,7 +505,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [capture, router, traceData]);
+  }, [capture, navigateAfterVerdict, traceData]);
 
   const handleDeny = useCallback(async () => {
     if (!capture || !traceData) {
@@ -498,8 +528,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         throw new Error(denyRes.message);
       }
       await revalidateCaptureCaches();
-      toast.success("Capture denied successfully");
-      router.push("/admin/tasks");
+      await navigateAfterVerdict("Capture denied.");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "An unknown error occurred",
@@ -507,7 +536,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [capture, feedbackState, router, traceData]);
+  }, [capture, feedbackState, navigateAfterVerdict, traceData]);
 
   useHotkeys(
     "ctrl+shift+a",

@@ -77,7 +77,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     chipLabel: "Swipe should be tap",
     category: "gesture_annotation",
     annotation:
-      'Selected "swipe" to open a tab from menu when it seems to have been a tap',
+      "Screen #: This gesture looks like a tap, not a swipe. Please change it to a tap.",
     destination: "annotation",
     scope: "screen",
   },
@@ -89,14 +89,14 @@ export const TRACE_ISSUES: TraceIssue[] = [
     chipLabel: "Too little description",
     category: "description_quality",
     annotation:
-      "Screen #: Please be more descriptive describing intention behind annotation was",
+      "Screen #: Please describe what you are doing and why, not just the gesture.",
     destination: "annotation",
     scope: "screen",
     shortcutKey: 5,
   },
   {
     id: "typos_in_annotation",
-    label: "Typos in the annotation description for gesture annotation",
+    label: "Typos in the gesture annotation description",
     chipLabel: "Typos in annotation",
     category: "description_quality",
     annotation: "Screen #: Fix misspelling of [word]",
@@ -111,7 +111,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     chipLabel: "Task description is commentary",
     category: "description_quality",
     annotation:
-      "Annotation should be description of task not a comment about the task itself",
+      "Describe what you are doing on screen, not a comment about the task itself.",
     destination: "summarize",
     scope: "flow",
   },
