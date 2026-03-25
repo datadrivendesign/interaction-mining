@@ -60,3 +60,4 @@ prisma/scripts/stats.json
 
 # agent plans
 plans/
+.claude/*

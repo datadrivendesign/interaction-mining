@@ -2,8 +2,8 @@
 
 import { ActionPayload } from "@/lib/actions/types";
 import { prisma } from "@/lib/prisma";
-import { CaptureStatus, Role } from "@prisma/client";
-import { CaptureAdminView } from "./types";
+import { CaptureStatus, Prisma, Role } from "@prisma/client";
+import { CaptureAdminView, REVIEWING_CAPTURE_ORDER_BY } from "./types";
 import { isValidObjectId } from "mongoose";
 import { requireAuth } from "@/lib/auth";
 
@@ -79,6 +79,7 @@ export const getReviewingCaptures = async ({
         },
       },
     },
+    orderBy: REVIEWING_CAPTURE_ORDER_BY,
     take: limit,
     skip: (page - 1) * limit,
   });

@@ -20,3 +20,7 @@ export type CaptureAdminView = Prisma.CaptureGetPayload<{
     };
   };
 }>;
+
+export const REVIEWING_CAPTURE_ORDER_BY = {
+  id: "desc",
+} satisfies Prisma.CaptureOrderByWithRelationInput;
