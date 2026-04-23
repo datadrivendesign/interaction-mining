@@ -1,10 +1,8 @@
 import { cn, Platform, prettyNumber } from "@/lib/utils";
-import { FrameData, Redaction, TraceFormData } from "../../types";
+import { FrameData, Redaction } from "../../types";
 import type { ScreenGesture } from "@prisma/client";
 import { useNavigation } from "../repair-screen";
-import { useFormContext } from "react-hook-form";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -23,79 +21,17 @@ export function Filmstrip({
   screens,
   gestures,
   redactions,
-  vhs,
   os,
   handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
-  vhs?: { [key: string]: any };
   os: Platform;
   handleSetTime: (t: number) => void;
 }) {
-  const { focusViewIndex, setFocusViewIndex } = useNavigation();
-  const { setValue } = useFormContext<TraceFormData>();
-
-  const setFrameData = useCallback(
-    (value: FrameData[]) => setValue("screens", value),
-    [setValue],
-  );
-  const setGestureData = useCallback(
-    (value: { [key: string]: ScreenGesture }) => setValue("gestures", value),
-    [setValue],
-  );
-  const setRedactionData = useCallback(
-    (value: { [key: string]: Redaction[] }) => setValue("redactions", value),
-    [setValue],
-  );
-  const setVHData = useCallback(
-    (value: { [key: string]: any }) => setValue("vhs", value),
-    [setValue],
-  );
-
-  const handleDeleteFrame = useCallback(
-    (index: number) => {
-      // Reset focus view to -1 upon deletion
-      setFocusViewIndex(-1);
-      // remove frame from view
-      const newFrameData = [...screens];
-      newFrameData.splice(index, 1);
-      // remove frame from gestures and redactions
-      const updatedGestures: { [key: string]: ScreenGesture } = {};
-      const updatedRedactions: { [key: string]: Redaction[] } = {};
-      const updatedVHS: { [key: string]: any } = {};
-      for (const frame of newFrameData) {
-        if (gestures[frame.id]) {
-          updatedGestures[frame.id] = gestures[frame.id];
-        }
-        if (redactions[frame.id]) {
-          updatedRedactions[frame.id] = redactions[frame.id];
-        }
-        if (vhs && vhs[frame.id]) {
-          updatedVHS[frame.id] = vhs[frame.id];
-        }
-      }
-      // update frame data, gestures, and redactions
-      setFrameData(newFrameData);
-      setGestureData(updatedGestures);
-      setRedactionData(updatedRedactions);
-      if (vhs) {
-        setVHData(updatedVHS);
-      }
-    },
-    [
-      screens,
-      gestures,
-      redactions,
-      vhs,
-      setFrameData,
-      setGestureData,
-      setRedactionData,
-      setFocusViewIndex,
-      setVHData,
-    ],
-  );
+  const { focusViewIndex, setFocusViewIndex, handleDeleteScreen } =
+    useNavigation();
 
   return (
     <AnimatePresence mode="popLayout">
@@ -120,7 +56,7 @@ export function Filmstrip({
               }
               onClick={() => setFocusViewIndex(index)}
               handleSetTime={handleSetTime}
-              handleDeleteFrame={handleDeleteFrame}
+              handleDeleteFrame={handleDeleteScreen}
             ></FilmstripItem>
           );
         })}
@@ -225,7 +161,7 @@ function FilmstripItem({
                   </div>
                 )}
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent side="bottom">
                 <div className="text-sm">Add a gesture.</div>
                 <div className="flex w-full justify-between items-center gap-2 text-sm">
                   <span>

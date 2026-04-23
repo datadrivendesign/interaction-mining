@@ -3,11 +3,12 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Button } from "@/components/ui/button";
 import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
 import { FocusViewIOS } from "./focus-view-ios";
 import { Card, CardDescription, CardHeader } from "@/components/ui/card";
-import { CirclePlay } from "lucide-react";
+import { Aperture, CirclePlay } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { extractThumbnails, extractVideoFrame } from "../../util";
@@ -17,9 +18,9 @@ import { ListedFiles } from "@/lib/actions";
 import { ScreenGesture } from "@prisma/client";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useNavigation } from "../../repair-screen";
-import { Platform } from "@/lib/utils";
-import { InstructionCardIOS } from "../instruction-card";
+import { cn, Platform } from "@/lib/utils";
 import { DraftFetchResults } from "../../../../util";
+import { InstructionCardIOS } from "../instruction-card";
 
 export function RepairScreenIOS({
   taskDescription,
@@ -41,8 +42,13 @@ export function RepairScreenIOS({
   const screens = watchScreens as FrameData[];
   const gestures = watchGestures as { [key: string]: ScreenGesture };
   const redactions = watchRedactions as { [key: string]: Redaction[] };
+  const focusedScreen =
+    focusViewIndex > -1 && focusViewIndex < screens.length
+      ? screens[focusViewIndex]
+      : null;
   // video controls
   const videoRef = useRef<HTMLVideoElement>(null);
+  const screensRef = useRef<FrameData[]>(screens);
   const rafRef = useRef<number>(0);
   const isProcessingRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -70,29 +76,9 @@ export function RepairScreenIOS({
     return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
 
-  const populateDraftScreens = useCallback(
-    async (video: HTMLVideoElement) => {
-      const frames: FrameData[] = [];
-      try {
-        // Create a copy of screens to avoid mutation issues
-        const screensCopy = screens.map((screen) => ({ ...screen }));
-
-        // Before the loop, do a "warm-up" seek to ensure video is loaded:
-        await extractVideoFrame(video, 0.1);
-        for (const s of screensCopy) {
-          if (!s.src) {
-            const f = await extractVideoFrame(video, s.timestamp);
-            s.src = f.src; // Safe to mutate the copy
-          }
-          frames.push(s);
-        }
-      } catch (error) {
-        console.error(`Error extracting video frames: ${error}`);
-      }
-      return frames;
-    },
-    [screens],
-  );
+  useEffect(() => {
+    screensRef.current = screens;
+  }, [screens]);
 
   useEffect(() => {
     const loadVideoAndPopulate = async () => {
@@ -152,7 +138,25 @@ export function RepairScreenIOS({
           THUMB_HEIGHT,
         );
         setThumbnails(thumbs);
-        const draftScreens = await populateDraftScreens(video);
+        const screensSnapshot = screensRef.current.map((screen) => ({
+          ...screen,
+        }));
+        const draftScreens: FrameData[] = [];
+
+        try {
+          // Warm the video decoder once before extracting any missing frames.
+          await extractVideoFrame(video, 0.1);
+          for (const screen of screensSnapshot) {
+            if (!screen.src) {
+              const frame = await extractVideoFrame(video, screen.timestamp);
+              screen.src = frame.src;
+            }
+            draftScreens.push(screen);
+          }
+        } catch (error) {
+          console.error(`Error extracting video frames: ${error}`);
+        }
+
         setValue(
           "screens",
           draftScreens.sort((a, b) => a.timestamp - b.timestamp),
@@ -165,7 +169,7 @@ export function RepairScreenIOS({
       }
     };
     loadVideoAndPopulate();
-  }, [videoFiles, videoRef, setValue, videoDuration, draftFetchResult]);
+  }, [videoFiles, setValue, draftFetchResult]);
 
   // RAF to update currentTime
   useEffect(() => {
@@ -288,28 +292,10 @@ export function RepairScreenIOS({
   );
 
   useHotkeys(
-    "left",
-    (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime - 5);
-    },
-    [currentTime, handleSetTime],
-  );
-
-  useHotkeys(
     "j",
     (e) => {
       e.preventDefault();
       handleSetTime(currentTime - 5);
-    },
-    [currentTime, handleSetTime],
-  );
-
-  useHotkeys(
-    "right",
-    (e) => {
-      e.preventDefault();
-      handleSetTime(currentTime + 5);
     },
     [currentTime, handleSetTime],
   );
@@ -403,14 +389,28 @@ export function RepairScreenIOS({
               maxSize={67}
               className="relative overflow-visible"
             >
-              <InstructionCardIOS taskDescription={taskDescription} />
-              {focusViewIndex > -1 && focusViewIndex < screens.length ? (
+              <div className="pointer-events-none absolute top-2 left-2 z-40 flex flex-col items-start gap-2">
+                {focusedScreen ? (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className={cn(
+                      "pointer-events-auto rounded-full bg-background/80 backdrop-blur-sm shadow-sm border",
+                      isLivePhotoActive && "text-amber-500 animate-pulse",
+                    )}
+                    onClick={() => handleLivePhoto(focusedScreen.timestamp)}
+                    tooltip="Replay ±1s around this frame"
+                  >
+                    <Aperture className="size-4" />
+                  </Button>
+                ) : null}
+                <InstructionCardIOS taskDescription={taskDescription} />
+              </div>
+              {focusedScreen ? (
                 <FocusViewIOS
                   key={focusViewIndex}
-                  screen={screens[focusViewIndex]}
+                  screen={focusedScreen}
                   isLastScreen={focusViewIndex === screens.length - 1}
-                  onLivePhoto={handleLivePhoto}
-                  isLivePhotoActive={isLivePhotoActive}
                 />
               ) : (
                 <div className="flex justify-center items-center w-full h-full">

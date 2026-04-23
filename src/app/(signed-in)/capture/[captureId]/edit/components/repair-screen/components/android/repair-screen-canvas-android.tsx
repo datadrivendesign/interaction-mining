@@ -26,7 +26,6 @@ import {
   DroppableArea,
   GestureContext,
 } from "../gesture-menu";
-import { InstructionCardAndroid } from "../instruction-card";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 
 export type FocusedBox = {
@@ -45,7 +44,7 @@ export default function RepairScreenCanvasAndroid({
   setGesture,
   gestureOptions,
   isLastScreen,
-  taskDescription,
+  showBoxes,
 }: {
   screen: FrameData;
   vh: any;
@@ -53,7 +52,7 @@ export default function RepairScreenCanvasAndroid({
   setGesture: React.Dispatch<React.SetStateAction<ScreenGesture>>;
   gestureOptions: GestureOption[];
   isLastScreen: boolean;
-  taskDescription: string | undefined;
+  showBoxes: boolean;
 }) {
   const [imageRef, { width, height }] = useMeasure();
   const [mouse, ref] = useMouse();
@@ -61,7 +60,6 @@ export default function RepairScreenCanvasAndroid({
     return mergeRefs(ref, imageRef);
   }, [ref, imageRef]);
 
-  const [showBoxes, setShowBoxes] = useState<boolean>(true);
   // const [focusedBox, setFocusedBox] = useState<FocusedBox>({});
   // memoize gesture and setGesture to avoid unnecessary re-renders
   const memoizedGestureState = useMemo(() => {
@@ -295,11 +293,6 @@ export default function RepairScreenCanvasAndroid({
                 />
               </DroppableArea>
             </div>
-            <InstructionCardAndroid
-              taskDescription={taskDescription}
-              showBoxes={showBoxes}
-              setShowBoxes={setShowBoxes}
-            />
           </div>
         </DndContext>
       </GestureContext.Provider>

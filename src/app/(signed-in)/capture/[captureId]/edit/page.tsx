@@ -370,8 +370,6 @@ export default function Page() {
     }
   };
 
-  // usePreventTwoFingerBack();
-
   return (
     <>
       <FormProvider {...methods}>

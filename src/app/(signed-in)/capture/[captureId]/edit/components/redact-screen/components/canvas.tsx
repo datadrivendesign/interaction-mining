@@ -375,6 +375,10 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Shift") {
           setShiftDown(true);
+          return;
+        }
+        if (e.key === "Escape") {
+          setNewRect(null);
         }
       };
       const handleKeyUp = (e: KeyboardEvent) => {

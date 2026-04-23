@@ -12,22 +12,20 @@ export const InstructionCardIOS = ({
     <Card
       key="task"
       className={
-        "hidden lg:block right-4 absolute top-0 w-64 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
+        "h-fit w-52 max-w-[calc(100vw-2rem)] p-0 shadow-md sm:w-56 lg:w-64 bg-background border rounded-md pointer-events-auto"
       }
     >
-      <CardHeader className="flex flex-col items-center p-2">
+      <CardHeader className="flex flex-col items-start p-2">
         <CardDescription>
-          <Badge>
-            <article className="prose prose-neutral dark:prose-invert leading-snug text-sm font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
-              <p>
-                Task:{" "}
-                <span className="text-xs">
-                  {taskDescription ?? "No task provided."}
-                </span>
-              </p>
-            </article>
-          </Badge>
-          <p className="mt-2 text-xs font-semibold text-muted-foreground">
+          <div className="w-full rounded-md border border-neutral-200/80 bg-neutral-50/95 px-2.5 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/95">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Task
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-xs font-medium leading-snug text-neutral-900 dark:text-neutral-100">
+              {taskDescription ?? "No task provided."}
+            </p>
+          </div>
+          <p className="mt-2 text-[11px] font-semibold leading-snug text-muted-foreground lg:text-xs">
             Shortcuts: Arrow Left / Right to move between screens. Tab to move
             to next card input.
           </p>
@@ -50,34 +48,30 @@ export const InstructionCardAndroid = ({
     <Card
       key="task"
       className={
-        "hidden lg:block right-4 absolute top-0 w-64 p-0 z-10 shadow-md bg-background border rounded-md h-fit"
+        "h-fit w-64 max-w-[calc(100vw-2rem)] p-0 shadow-md sm:w-72 lg:w-80 bg-background border rounded-md pointer-events-auto"
       }
     >
-      <CardHeader className="flex flex-col items-center p-2">
+      <CardHeader className="flex flex-col items-start p-2">
         <CardDescription>
-          <Badge>
-            <article className="prose prose-neutral dark:prose-invert leading-snug text-sm font-semibold text-white dark:text-neutral-900 w-full whitespace-pre-wrap">
-              <p>
-                Task:{" "}
-                <span className="text-xs">
-                  {taskDescription ?? "No task provided."}
-                </span>
-              </p>
-            </article>
-          </Badge>
-          <p className="mt-2 text-xs font-semibold text-muted-foreground">
+          <div className="w-full rounded-md border border-neutral-200/80 bg-neutral-50/95 px-2.5 py-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/95">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Task
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-xs font-medium leading-snug text-neutral-900 dark:text-neutral-100">
+              {taskDescription ?? "No task provided."}
+            </p>
+          </div>
+          <p className="mt-2 text-[11px] font-semibold leading-snug text-muted-foreground lg:text-xs">
             Shortcuts: Tab / Left / Right to move between screens
           </p>
-          <div className="space-y-1 mt-3">
+          <div className="mt-3 flex items-center gap-2">
             <Switch
               checked={showBoxes}
               onCheckedChange={(checked) => {
                 setShowBoxes(checked);
               }}
             />
-            <span className="pl-3 text-xs font-medium">
-              Show Bounding Boxes
-            </span>
+            <span className="text-xs font-medium">Show Bounding Boxes</span>
           </div>
         </CardDescription>
       </CardHeader>
