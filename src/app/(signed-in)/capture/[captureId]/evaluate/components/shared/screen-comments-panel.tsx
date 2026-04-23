@@ -108,6 +108,7 @@ export function ScreenCommentsPanel({
   );
   const lastProcessedHotkeyActionRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const resolvedFeedbackState = feedbackState ?? internalFeedbackState;
 
   const setFeedbackState = useCallback(
@@ -149,6 +150,41 @@ export function ScreenCommentsPanel({
     [activeScreen, resolvedFeedbackState.commentsByScreen],
   );
   const flowComments = resolvedFeedbackState.flowComments;
+  const allComments = useMemo(
+    () => [
+      ...flowComments,
+      ...Object.values(resolvedFeedbackState.commentsByScreen).flat(),
+    ],
+    [flowComments, resolvedFeedbackState.commentsByScreen],
+  );
+  const usedIssueIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allComments
+            .map((comment) => comment.issueId)
+            .filter((issueId): issueId is string => Boolean(issueId)),
+        ),
+      ),
+    [allComments],
+  );
+  const recentIssueIds = useMemo(() => {
+    const seen = new Set<string>();
+    const orderedIssueIds = [...allComments]
+      .slice()
+      .reverse()
+      .map((comment) => comment.issueId)
+      .filter((issueId): issueId is string => Boolean(issueId))
+      .filter((issueId) => {
+        if (seen.has(issueId)) {
+          return false;
+        }
+        seen.add(issueId);
+        return true;
+      });
+
+    return orderedIssueIds;
+  }, [allComments]);
   const pendingPlaceholders = pendingIssue
     ? getTemplatePlaceholders(pendingIssue.annotation)
     : [];
@@ -159,6 +195,16 @@ export function ScreenCommentsPanel({
         placeholderValues,
       )
     : "";
+
+  useEffect(() => {
+    if (!pendingIssue && !showTextarea) {
+      return;
+    }
+
+    composerRef.current?.scrollIntoView({
+      block: "nearest",
+    });
+  }, [pendingIssue, showTextarea]);
 
   const resetComposer = useCallback(() => {
     setDraft("");
@@ -522,150 +568,193 @@ export function ScreenCommentsPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 space-y-2.5 p-3">
-          <p className="text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">
-            Add all review feedback here. Click a chip to flag an issue
-            immediately, or pick{" "}
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">
-              Other...
-            </span>{" "}
-            to write a custom note.
-          </p>
-          <IssueGrid
-            onSelectIssue={handleIssueSelect}
-            onSelectOther={handleOtherSelect}
-            disabled={!activeScreen}
-          />
-
-          {pendingIssue && (
-            <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="space-y-1">
-                <p className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
-                  {pendingIssue.label}
-                </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                  Fill in the required details before adding this issue.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                {pendingPlaceholders.map((token) => (
-                  <div key={token} className="space-y-1">
-                    <label className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                      {formatPlaceholderLabel(token)}
-                    </label>
-                    <Input
-                      value={placeholderValues[token] ?? ""}
-                      onChange={(event) =>
-                        handlePlaceholderValueChange(token, event.target.value)
-                      }
-                      onKeyDown={handlePlaceholderKeyDown}
-                      placeholder={`Enter ${formatPlaceholderLabel(token).toLowerCase()}...`}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  Preview
-                </p>
-                <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
-                  {pendingPreview}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() =>
-                    addComment({
-                      text: pendingPreview,
-                      issueId: pendingIssue.id,
-                      destination: pendingIssue.destination,
-                      target: pendingIssue.scope,
-                    })
-                  }
-                  disabled={pendingPlaceholders.some(
-                    (token) => !placeholderValues[token]?.trim(),
-                  )}
-                >
-                  <Plus className="mr-1 size-3" />
-                  Add Issue
-                </Button>
-                <Button
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                  className="text-xs"
-                  onClick={resetComposer}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {showTextarea && (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                {(
-                  [
-                    ["annotation", "Annotate"],
-                    ["redaction", "Redact"],
-                    ["summarize", "Summarize"],
-                  ] as const
-                ).map(([destination, label]) => (
-                  <Button
-                    key={destination}
-                    type="button"
-                    size="sm"
-                    variant={
-                      customDestination === destination ? "default" : "outline"
-                    }
-                    className="flex-1 text-xs"
-                    onClick={() => setCustomDestination(destination)}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                {customDestination === "summarize"
-                  ? "This note will be saved as flow-level summarize feedback."
-                  : `This note will be saved under ${screenLabel}.`}
-              </p>
-              <Textarea
-                ref={textareaRef}
-                className="h-14 min-h-0 resize-none text-xs"
-                placeholder="Describe the issue... (Enter to add)"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={!activeScreen && customDestination !== "summarize"}
-              />
-              <Button
-                size="sm"
-                className="h-7 w-full text-xs"
-                onClick={() =>
-                  addComment({
-                    text: draft,
-                    destination: customDestination,
-                    target:
-                      customDestination === "summarize" ? "flow" : "screen",
-                  })
-                }
-                disabled={
-                  !draft.trim() ||
-                  (!activeScreen && customDestination !== "summarize")
-                }
+        <div className="flex min-h-0 shrink-0 flex-col border-b border-neutral-200 dark:border-neutral-800 max-h-[48%]">
+          <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
+            <p className="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+              Add all review feedback here. Click a chip to flag an issue
+              immediately, or pick{" "}
+              <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                Other...
+              </span>{" "}
+              to write a custom note.
+            </p>
+            {(pendingIssue || showTextarea) && (
+              <div
+                ref={composerRef}
+                className="space-y-2 rounded-lg border border-red-200 bg-white p-3 shadow-sm dark:border-red-900/60 dark:bg-neutral-900"
               >
-                <Plus className="mr-1 size-3" />
-                Add Issue
-              </Button>
+                {pendingIssue && (
+                  <>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-red-600 dark:text-red-300">
+                        Complete selected issue
+                      </p>
+                      <p className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
+                        {pendingIssue.label}
+                      </p>
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                        Fill in the required details, then add the issue to the
+                        review.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {pendingPlaceholders.map((token) => (
+                        <div key={token} className="space-y-1">
+                          <label className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                            {formatPlaceholderLabel(token)}
+                          </label>
+                          <Input
+                            value={placeholderValues[token] ?? ""}
+                            onChange={(event) =>
+                              handlePlaceholderValueChange(
+                                token,
+                                event.target.value,
+                              )
+                            }
+                            onKeyDown={handlePlaceholderKeyDown}
+                            placeholder={`Enter ${formatPlaceholderLabel(token).toLowerCase()}...`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                        Preview
+                      </p>
+                      <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
+                        {pendingPreview}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() =>
+                          addComment({
+                            text: pendingPreview,
+                            issueId: pendingIssue.id,
+                            destination: pendingIssue.destination,
+                            target: pendingIssue.scope,
+                          })
+                        }
+                        disabled={pendingPlaceholders.some(
+                          (token) => !placeholderValues[token]?.trim(),
+                        )}
+                      >
+                        <Plus className="mr-1 size-3" />
+                        Add Issue
+                      </Button>
+                      <Button
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={resetComposer}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {showTextarea && (
+                  <>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-red-600 dark:text-red-300">
+                        Add custom issue
+                      </p>
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                        {customDestination === "summarize"
+                          ? "This note will be saved as flow-level summarize feedback."
+                          : `This note will be saved under ${screenLabel}.`}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {(
+                        [
+                          ["annotation", "Annotate"],
+                          ["redaction", "Redact"],
+                          ["summarize", "Summarize"],
+                        ] as const
+                      ).map(([destination, label]) => (
+                        <Button
+                          key={destination}
+                          type="button"
+                          size="sm"
+                          variant={
+                            customDestination === destination
+                              ? "default"
+                              : "outline"
+                          }
+                          className="flex-1 text-xs"
+                          onClick={() => setCustomDestination(destination)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                    <Textarea
+                      ref={textareaRef}
+                      className="h-14 min-h-0 resize-none text-xs"
+                      placeholder="Describe the issue... (Enter to add)"
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={handleKeyDown}
+                      disabled={
+                        !activeScreen && customDestination !== "summarize"
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 flex-1 text-xs"
+                        onClick={() =>
+                          addComment({
+                            text: draft,
+                            destination: customDestination,
+                            target:
+                              customDestination === "summarize"
+                                ? "flow"
+                                : "screen",
+                          })
+                        }
+                        disabled={
+                          !draft.trim() ||
+                          (!activeScreen && customDestination !== "summarize")
+                        }
+                      >
+                        <Plus className="mr-1 size-3" />
+                        Add Issue
+                      </Button>
+                      <Button
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={resetComposer}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <IssueGrid
+                onSelectIssue={handleIssueSelect}
+                onSelectOther={handleOtherSelect}
+                disableScreenIssues={!activeScreen}
+                selectedIssueId={pendingIssue?.id ?? null}
+                usedIssueIds={usedIssueIds}
+                recentIssueIds={recentIssueIds}
+              />
             </div>
-          )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">

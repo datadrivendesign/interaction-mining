@@ -276,8 +276,8 @@ function ReviewFigureIOS({
         className={cn(
           "text-xs text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
           isActive
-            ? "text-neutral-700 dark:text-neutral-200 font-medium"
-            : "text-neutral-400 dark:text-neutral-400",
+            ? "text-neutral-900 dark:text-neutral-200 font-medium"
+            : "text-neutral-600 dark:text-neutral-400",
         )}
       >
         {gesture?.description ?? "—"}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { FrameData } from "../../../edit/components/types";
 import { ScreenComment } from "./screen-comments-panel";
+import { findTraceIssue } from "./trace-issues";
 
 function getMarkerPosition(timestamp: number, duration: number) {
   if (!Number.isFinite(duration) || duration <= 0) {
@@ -32,6 +33,7 @@ export function ScreenMarkerStrip({
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const isScrubbingRef = useRef(false);
+  const [hoveredScreenId, setHoveredScreenId] = useState<string | null>(null);
   const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
   const fallbackDuration =
     duration > 0
@@ -123,7 +125,7 @@ export function ScreenMarkerStrip({
 
       <div
         ref={trackRef}
-        className="relative h-12 cursor-ew-resize touch-none"
+        className="relative h-12 cursor-ew-resize touch-none select-none"
         onPointerDown={handleTrackPointerDown}
         onPointerMove={handleTrackPointerMove}
         onPointerUp={handleTrackPointerUp}
@@ -140,20 +142,58 @@ export function ScreenMarkerStrip({
             screen.timestamp,
             fallbackDuration,
           );
-          const issueCount = commentsByScreen[screen.id]?.length ?? 0;
+          const comments = commentsByScreen[screen.id] ?? [];
+          const issueCount = comments.length;
           const hasIssues = issueCount > 0;
           const isActive = screen.id === activeScreenId;
+          const previewLines = comments.slice(0, 3).map((comment, commentIndex) => {
+            const issue = findTraceIssue(comment.issueId ?? "");
+            return {
+              key: `${comment.id}:${commentIndex}`,
+              text: issue?.chipLabel ?? issue?.label ?? comment.text,
+            };
+          });
+          const hiddenCount = comments.length - previewLines.length;
+          const isPreviewVisible = hoveredScreenId === screen.id || isActive;
 
           return (
             <button
               key={screen.id}
               type="button"
-              title={`Screen ${index + 1} at ${screen.timestamp.toFixed(1)}s`}
               className="absolute top-0 -translate-x-1/2 text-center"
               style={{ left: `${position}%` }}
               onPointerDown={(event) => event.stopPropagation()}
+              onMouseEnter={() => setHoveredScreenId(screen.id)}
+              onMouseLeave={() => setHoveredScreenId((prev) =>
+                prev === screen.id ? null : prev,
+              )}
+              onFocus={() => setHoveredScreenId(screen.id)}
+              onBlur={() =>
+                setHoveredScreenId((prev) =>
+                  prev === screen.id ? null : prev,
+                )
+              }
               onClick={() => onSelectScreen(screen.id, screen.timestamp)}
             >
+              {isPreviewVisible && hasIssues && (
+                <span className="pointer-events-none absolute left-1/2 top-5 z-20 w-44 -translate-x-1/2 select-none rounded-md border border-neutral-200 bg-white/95 px-2 py-1.5 text-left shadow-md dark:border-neutral-700 dark:bg-neutral-950/95">
+                  <span className="block text-[9px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                    Screen {index + 1} • {screen.timestamp.toFixed(1)}s
+                  </span>
+                  <span className="mt-1 block space-y-0.5 text-[10px] leading-snug text-neutral-700 dark:text-neutral-200">
+                    {previewLines.map((line) => (
+                      <span key={line.key} className="block truncate">
+                        {line.text}
+                      </span>
+                    ))}
+                    {hiddenCount > 0 && (
+                      <span className="block text-neutral-500 dark:text-neutral-400">
+                        +{hiddenCount} more
+                      </span>
+                    )}
+                  </span>
+                </span>
+              )}
               <span
                 className={cn(
                   "mx-auto block size-3 rounded-full border-2 transition-all",

@@ -12,7 +12,7 @@ export const InstructionCardIOS = ({
     <Card
       key="task"
       className={
-        "h-fit w-52 max-w-[calc(100vw-2rem)] p-0 shadow-md sm:w-56 lg:w-64 bg-background border rounded-md pointer-events-auto"
+        "h-fit w-64 max-w-[calc(100vw-2rem)] p-0 shadow-md sm:w-72 lg:w-80 bg-background border rounded-md pointer-events-auto"
       }
     >
       <CardHeader className="flex flex-col items-start p-2">
