@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { AlertCircle, Check, ChevronDown } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertCircle, Check, ChevronDown, ExternalLink } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
@@ -11,16 +10,29 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { FrameData } from "./types";
+import { parseFeedbackChecklistItems } from "../../evaluate/utils/review-feedback";
 
 /**
  * Split a newline-separated feedback string into individual items.
  * Trims whitespace and drops empty lines.
  */
-function parseFeedbackItems(feedback: string): string[] {
-  return feedback
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+function getChecklistItemId({
+  screenId,
+  originalScreenNumber,
+  index,
+}: {
+  screenId: string | null;
+  originalScreenNumber: number | null;
+  index: number;
+}) {
+  if (screenId) {
+    return `screen:${screenId}:${index}`;
+  }
+  if (originalScreenNumber !== null) {
+    return `legacy:${originalScreenNumber}:${index}`;
+  }
+  return `flow:${index}`;
 }
 
 /**
@@ -77,6 +89,8 @@ interface FeedbackChecklistProps {
   feedback: string;
   /** Human-readable step name shown in the header, e.g. "Annotate". */
   stepLabel: string;
+  screens: FrameData[];
+  onJumpToScreen?: (screenId: string) => void;
 }
 
 /**
@@ -90,9 +104,18 @@ interface FeedbackChecklistProps {
 export function FeedbackChecklist({
   feedback,
   stepLabel,
+  screens,
+  onJumpToScreen,
 }: FeedbackChecklistProps) {
-  const items = parseFeedbackItems(feedback);
-  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
+  const items = useMemo(
+    () =>
+      parseFeedbackChecklistItems({
+        text: feedback,
+        screens,
+      }),
+    [feedback, screens],
+  );
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(true);
 
   const remaining = items.length - checkedItems.size;
@@ -108,11 +131,11 @@ export function FeedbackChecklist({
   // Nothing to show → render nothing.
   if (items.length === 0) return null;
 
-  const handleToggle = (index: number, checked: boolean) => {
+  const handleToggle = (itemId: string, checked: boolean) => {
     setCheckedItems((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(index);
-      else next.delete(index);
+      if (checked) next.add(itemId);
+      else next.delete(itemId);
       return next;
     });
   };
@@ -160,27 +183,70 @@ export function FeedbackChecklist({
         <CollapsibleContent>
           <ul className="px-4 pb-3 space-y-1 max-h-35 overflow-y-auto">
             {items.map((item, index) => {
-              const isChecked = checkedItems.has(index);
-              const id = `feedback-${index}`;
+              const itemId = getChecklistItemId({
+                screenId: item.screenId,
+                originalScreenNumber: item.originalScreenNumber,
+                index,
+              });
+              const isJumpable = Boolean(
+                item.screenId && !item.unresolved && onJumpToScreen,
+              );
+              const isChecked = checkedItems.has(itemId);
+              const id = `feedback-${itemId}`;
               return (
                 <li key={index} className="flex items-start gap-3 py-1.5">
                   <Checkbox
                     id={id}
                     checked={isChecked}
-                    onCheckedChange={(v) => handleToggle(index, v === true)}
-                    className="mt-0.5"
+                    onCheckedChange={(v) => handleToggle(itemId, v === true)}
+                    className="mt-0.5 shrink-0"
                   />
-                  <Label
-                    htmlFor={id}
-                    className={cn(
-                      "text-sm leading-snug cursor-pointer",
-                      isChecked
-                        ? "line-through text-muted-foreground"
-                        : "text-neutral-800 dark:text-neutral-200",
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="text-sm leading-snug">
+                      {isJumpable ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-start gap-1 text-left cursor-pointer"
+                          onClick={() => onJumpToScreen?.(item.screenId!)}
+                        >
+                          <span
+                            className={cn(
+                              "underline decoration-1 underline-offset-2 transition-colors",
+                              isChecked
+                                ? "line-through text-muted-foreground decoration-muted-foreground"
+                                : "text-violet-700 decoration-violet-400 hover:text-violet-800 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200",
+                            )}
+                          >
+                            {renderInlineMarkdown(item.text)}
+                          </span>
+                          <ExternalLink
+                            className={cn(
+                              "mt-0.5 size-3 shrink-0 transition-colors",
+                              isChecked
+                                ? "text-muted-foreground"
+                                : "text-violet-700 dark:text-violet-300",
+                            )}
+                          />
+                        </button>
+                      ) : (
+                        <div
+                          className={cn(
+                            isChecked
+                              ? "line-through text-muted-foreground"
+                              : "text-neutral-800 dark:text-neutral-200",
+                          )}
+                        >
+                          {renderInlineMarkdown(item.text)}
+                        </div>
+                      )}
+                    </div>
+                    {item.unresolved && (
+                      <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                        This feedback could not be safely linked to a current
+                        screen.
+                      </p>
                     )}
-                  >
-                    {renderInlineMarkdown(item)}
-                  </Label>
+                  </div>
                 </li>
               );
             })}

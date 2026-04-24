@@ -20,6 +20,11 @@ import { DraftFetchResults } from "../../util";
 import { ListedFiles } from "@/lib/actions";
 import { validateGestureDescription } from "./util";
 
+export interface RepairScreenJumpTarget {
+  nonce: number;
+  screenId: string;
+}
+
 interface NavigationContextType {
   handleNext: () => void;
   handlePrevious: () => void;
@@ -55,6 +60,7 @@ export default function RepairScreen({
   capture,
   draftFetchResult,
   files,
+  jumpTarget,
 }: {
   capture:
     | Prisma.CaptureGetPayload<{
@@ -66,6 +72,7 @@ export default function RepairScreen({
     | undefined;
   draftFetchResult: DraftFetchResults;
   files: ListedFiles[];
+  jumpTarget?: RepairScreenJumpTarget | null;
 }) {
   const { getValues, setValue } = useFormContext<TraceFormData>();
   const [watchScreens, watchGestures] = useWatch({
@@ -198,6 +205,19 @@ export default function RepairScreen({
     },
     [focusViewIndex, handleDeleteScreen],
   );
+
+  React.useEffect(() => {
+    if (!jumpTarget) {
+      return;
+    }
+
+    const targetIndex = screens.findIndex(
+      (screen) => screen.id === jumpTarget.screenId,
+    );
+    if (targetIndex >= 0) {
+      setFocusViewIndex(targetIndex);
+    }
+  }, [jumpTarget, screens]);
 
   return (
     <NavigationProvider

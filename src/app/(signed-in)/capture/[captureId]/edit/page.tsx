@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
 import RepairScreen from "./components/repair-screen/index";
+import { RepairScreenJumpTarget } from "./components/repair-screen";
 import RepairDoc from "./components/repair-screen/doc.mdx";
 import Review from "./components/review/review";
 import ReviewDoc from "./components/review/doc.mdx";
@@ -34,6 +35,7 @@ import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 import { FeedbackChecklist } from "./components/feedback-checklist";
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
+import { upgradeLegacyFeedbackText } from "../evaluate/utils/review-feedback";
 
 enum TraceSteps {
   Capture = 0,
@@ -54,6 +56,13 @@ export default function Page() {
   const [files, setFiles] = useState<ListedFiles[]>([]);
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
+  const [feedbackOverrides, setFeedbackOverrides] = useState<{
+    annotateFeedback?: string;
+    redactFeedback?: string;
+    summarizeFeedback?: string;
+  }>({});
+  const [repairScreenJumpTarget, setRepairScreenJumpTarget] =
+    useState<RepairScreenJumpTarget | null>(null);
 
   const methods = useForm<TraceFormData>({
     defaultValues: {
@@ -67,6 +76,10 @@ export default function Page() {
     },
     resolver: zodResolver(TraceFormSchema),
   });
+  const watchedScreens = useWatch({
+    control: methods.control,
+    name: "screens",
+  }) as TraceFormData["screens"];
 
   // populate form with saved capture data if there is any
   useEffect(() => {
@@ -195,11 +208,76 @@ export default function Page() {
 
   const [stepIndex, setStepIndex] = useState(0);
 
+  useEffect(() => {
+    if (!capture || draftFetchResult !== DraftFetchResults.SUCCESS) {
+      return;
+    }
+
+    const screens = methods.getValues("screens");
+    if (screens.length === 0) {
+      return;
+    }
+
+    const nextOverrides: typeof feedbackOverrides = {};
+    let hasChanges = false;
+
+    const annotateUpgrade = upgradeLegacyFeedbackText({
+      text: capture.annotateFeedback,
+      screens,
+    });
+    if (annotateUpgrade.changed) {
+      if (feedbackOverrides.annotateFeedback !== annotateUpgrade.text) {
+        nextOverrides.annotateFeedback = annotateUpgrade.text;
+        hasChanges = true;
+      }
+    }
+
+    const redactUpgrade = upgradeLegacyFeedbackText({
+      text: capture.redactFeedback,
+      screens,
+    });
+    if (redactUpgrade.changed) {
+      if (feedbackOverrides.redactFeedback !== redactUpgrade.text) {
+        nextOverrides.redactFeedback = redactUpgrade.text;
+        hasChanges = true;
+      }
+    }
+
+    const summarizeUpgrade = upgradeLegacyFeedbackText({
+      text: capture.summarizeFeedback,
+      screens,
+    });
+    if (summarizeUpgrade.changed) {
+      if (feedbackOverrides.summarizeFeedback !== summarizeUpgrade.text) {
+        nextOverrides.summarizeFeedback = summarizeUpgrade.text;
+        hasChanges = true;
+      }
+    }
+
+    if (!hasChanges) {
+      return;
+    }
+
+    setFeedbackOverrides((prev) => ({
+      ...prev,
+      ...nextOverrides,
+    }));
+
+    void updateCapture(captureId, nextOverrides).then(async (result) => {
+      if (result.ok) {
+        await revalidateCaptureCaches();
+      }
+    });
+  }, [capture, captureId, draftFetchResult, feedbackOverrides, methods]);
+
   // Map each step to its relevant evaluator-feedback field.
   const stepFeedbackMap: Record<number, string | undefined> = {
-    [TraceSteps.Capture]: capture?.annotateFeedback ?? undefined,
-    [TraceSteps.Redact]: capture?.redactFeedback ?? undefined,
-    [TraceSteps.Review]: capture?.summarizeFeedback ?? undefined,
+    [TraceSteps.Capture]:
+      feedbackOverrides.annotateFeedback ?? capture?.annotateFeedback ?? undefined,
+    [TraceSteps.Redact]:
+      feedbackOverrides.redactFeedback ?? capture?.redactFeedback ?? undefined,
+    [TraceSteps.Review]:
+      feedbackOverrides.summarizeFeedback ?? capture?.summarizeFeedback ?? undefined,
   };
   const stepLabels: Record<number, string> = {
     [TraceSteps.Capture]: "Annotate",
@@ -359,6 +437,7 @@ export default function Page() {
             capture={capture}
             draftFetchResult={draftFetchResult}
             files={files}
+            jumpTarget={repairScreenJumpTarget}
           />
         );
       case 1:
@@ -385,6 +464,13 @@ export default function Page() {
                     key={stepIndex}
                     feedback={currentStepFeedback}
                     stepLabel={stepLabels[stepIndex]}
+                    screens={watchedScreens}
+                    onJumpToScreen={(screenId) =>
+                      setRepairScreenJumpTarget({
+                        screenId,
+                        nonce: Date.now(),
+                      })
+                    }
                   />
                 )}
                 <div className="flex flex-col w-full min-h-0 flex-1 items-center">
