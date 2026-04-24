@@ -9,7 +9,7 @@ import { ScreenMarkerStrip } from "../shared/screen-marker-strip";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export function ReviewPanelIOS({
+export function ReviewVideoPanelIOS({
   traceData,
   isAdmin,
   videoRef,
@@ -21,6 +21,7 @@ export function ReviewPanelIOS({
   onScrubVideo,
   onVideoLoadedMetadata,
   onVideoTimeUpdate,
+  onVideoSeeking,
   onVideoPlay,
   onVideoPause,
 }: {
@@ -35,6 +36,7 @@ export function ReviewPanelIOS({
   onScrubVideo: (timestamp: number) => void;
   onVideoLoadedMetadata: (video: HTMLVideoElement) => void;
   onVideoTimeUpdate: (video: HTMLVideoElement) => void;
+  onVideoSeeking: (video: HTMLVideoElement) => void;
   onVideoPlay: () => void;
   onVideoPause: () => void;
 }) {
@@ -72,11 +74,11 @@ export function ReviewPanelIOS({
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-4 p-3">
           {traceData.description && (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
                 Task
               </span>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-snug">
+              <p className="text-[15px] font-medium leading-6 text-neutral-800 dark:text-neutral-100">
                 {traceData.description}
               </p>
             </div>
@@ -101,6 +103,7 @@ export function ReviewPanelIOS({
                 );
               }}
               onTimeUpdate={(event) => onVideoTimeUpdate(event.currentTarget)}
+              onSeeking={(event) => onVideoSeeking(event.currentTarget)}
               onPlay={onVideoPlay}
               onPause={onVideoPause}
             />

@@ -12,7 +12,7 @@ import {
 } from "@/lib/utils/gesture-options";
 import Image from "next/image";
 import { FrameData, TraceFormData } from "../../../edit/components/types";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
@@ -30,12 +30,40 @@ export function ReviewGalleryAndroid({
   commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string) => void;
 }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const sortedScreens = [...traceData.screens].sort(
     (a, b) => a.timestamp - b.timestamp,
   );
   const screensWithIssues = sortedScreens.filter(
     (screen) => (commentsByScreen[screen.id]?.length ?? 0) > 0,
   ).length;
+
+  useEffect(() => {
+    if (!activeScreenId) {
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const activeCard = cardRefs.current[activeScreenId];
+    if (!container || !activeCard) {
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const cardRect = activeCard.getBoundingClientRect();
+    const isVisible =
+      cardRect.left >= containerRect.left &&
+      cardRect.right <= containerRect.right;
+
+    if (!isVisible) {
+      activeCard.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [activeScreenId]);
 
   return (
     <section className="flex flex-col w-full h-full">
@@ -51,11 +79,17 @@ export function ReviewGalleryAndroid({
       </div>
 
       {/* Scroll area */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3"
+      >
         <div className="flex h-full items-start gap-3 pb-1">
           {sortedScreens.map((screen, index) => (
             <ReviewFigureAndroid
               key={screen.id}
+              cardRef={(node) => {
+                cardRefs.current[screen.id] = node;
+              }}
               index={index}
               screen={screen}
               vh={traceData.vhs?.[screen.id]}
@@ -73,6 +107,7 @@ export function ReviewGalleryAndroid({
 }
 
 function ReviewFigureAndroid({
+  cardRef,
   index,
   screen,
   vh,
@@ -82,6 +117,7 @@ function ReviewFigureAndroid({
   issueCount,
   onSelect,
 }: {
+  cardRef?: (node: HTMLElement | null) => void;
   index: number;
   screen: FrameData;
   vh: any;
@@ -132,7 +168,10 @@ function ReviewFigureAndroid({
       : "border-neutral-300 dark:border-neutral-700";
 
   return (
-    <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
+    <figure
+      ref={cardRef}
+      className={`relative flex flex-col shrink-0 ${cardWidthClass}`}
+    >
       <div
         className="relative w-full cursor-pointer"
         ref={containerRef}

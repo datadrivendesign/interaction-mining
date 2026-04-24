@@ -117,7 +117,7 @@ export function ScreenMarkerStrip({
             Screen Markers
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            Drag anywhere on the strip or press{" "}
+            Click a marker, drag anywhere on the strip, or press{" "}
             <span className="font-medium">[ ]</span> to jump screens.
           </p>
         </div>
@@ -146,13 +146,15 @@ export function ScreenMarkerStrip({
           const issueCount = comments.length;
           const hasIssues = issueCount > 0;
           const isActive = screen.id === activeScreenId;
-          const previewLines = comments.slice(0, 3).map((comment, commentIndex) => {
-            const issue = findTraceIssue(comment.issueId ?? "");
-            return {
-              key: `${comment.id}:${commentIndex}`,
-              text: issue?.chipLabel ?? issue?.label ?? comment.text,
-            };
-          });
+          const previewLines = comments
+            .slice(0, 3)
+            .map((comment, commentIndex) => {
+              const issue = findTraceIssue(comment.issueId ?? "");
+              return {
+                key: `${comment.id}:${commentIndex}`,
+                text: issue?.chipLabel ?? issue?.label ?? comment.text,
+              };
+            });
           const hiddenCount = comments.length - previewLines.length;
           const isPreviewVisible = hoveredScreenId === screen.id || isActive;
 
@@ -162,16 +164,16 @@ export function ScreenMarkerStrip({
               type="button"
               className="absolute top-0 -translate-x-1/2 text-center"
               style={{ left: `${position}%` }}
+              title={`Focus Screen ${index + 1}`}
+              aria-label={`Focus Screen ${index + 1} at ${screen.timestamp.toFixed(1)} seconds`}
               onPointerDown={(event) => event.stopPropagation()}
               onMouseEnter={() => setHoveredScreenId(screen.id)}
-              onMouseLeave={() => setHoveredScreenId((prev) =>
-                prev === screen.id ? null : prev,
-              )}
+              onMouseLeave={() =>
+                setHoveredScreenId((prev) => (prev === screen.id ? null : prev))
+              }
               onFocus={() => setHoveredScreenId(screen.id)}
               onBlur={() =>
-                setHoveredScreenId((prev) =>
-                  prev === screen.id ? null : prev,
-                )
+                setHoveredScreenId((prev) => (prev === screen.id ? null : prev))
               }
               onClick={() => onSelectScreen(screen.id, screen.timestamp)}
             >
@@ -196,7 +198,7 @@ export function ScreenMarkerStrip({
               )}
               <span
                 className={cn(
-                  "mx-auto block size-3 rounded-full border-2 transition-all",
+                  "mx-auto block size-3 cursor-pointer rounded-full border-2 transition-all",
                   isActive
                     ? hasIssues
                       ? "border-red-600 bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.12)] dark:border-red-400 dark:bg-red-400"
