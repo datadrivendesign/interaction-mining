@@ -10,12 +10,12 @@ export function FocusViewAndroid({
   screen,
   vh,
   isLastScreen,
-  taskDescription,
+  showBoxes,
 }: {
   screen: FrameData;
   vh: any;
   isLastScreen: boolean;
-  taskDescription: string | undefined;
+  showBoxes: boolean;
 }) {
   const { watch, setValue } = useFormContext<TraceFormData>();
 
@@ -52,11 +52,11 @@ export function FocusViewAndroid({
           key={screen.id}
           screen={screen}
           vh={vh}
-          taskDescription={taskDescription}
           gesture={gesture}
           setGesture={setGesture}
           gestureOptions={gestureOptions}
           isLastScreen={isLastScreen}
+          showBoxes={showBoxes}
         />
       </div>
     </>

@@ -69,7 +69,7 @@ export function VerdictBar({
                 Keyboard shortcuts
               </p>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Verdict actions currently available in review.
+                Review and verdict shortcuts currently available in this view.
               </p>
             </div>
             <div className="space-y-1 text-xs text-neutral-700 dark:text-neutral-300">

@@ -19,6 +19,19 @@ export const EMPTY_REVIEW_FEEDBACK_STATE: ReviewFeedbackState = {
   flowComments: [],
 };
 
+const SCREEN_LINE_REGEX = /^Screen\s+(\d+):?\s*(.*)$/i;
+const SCREEN_ID_TOKEN_REGEX = /\s*\[\[screenId=([^\]]+)\]\]\s*$/i;
+
+export interface ParsedFeedbackLine {
+  rawText: string;
+  text: string;
+  body: string;
+  screenId: string | null;
+  originalScreenNumber: number | null;
+  hasEmbeddedScreenId: boolean;
+  unresolved: boolean;
+}
+
 function getFeedbackLines(text?: string | null) {
   if (!text) {
     return [];
@@ -38,6 +51,37 @@ function normalizeSerializedText(text: string) {
   return text.replace(/\s*\n+\s*/g, " ").replace(/\s{2,}/g, " ").trim();
 }
 
+function getEmbeddedScreenId(text: string) {
+  return text.match(SCREEN_ID_TOKEN_REGEX)?.[1] ?? null;
+}
+
+function stripScreenIdToken(text: string) {
+  return text.replace(SCREEN_ID_TOKEN_REGEX, "").trim();
+}
+
+function getSortedScreens(screens: FrameData[]) {
+  return [...screens].sort((a, b) => a.timestamp - b.timestamp);
+}
+
+function getScreenNumberById(screenId: string, screens: FrameData[]) {
+  const index = getSortedScreens(screens).findIndex((screen) => screen.id === screenId);
+  return index >= 0 ? index + 1 : null;
+}
+
+function buildScreenScopedText(body: string, screenNumber: number) {
+  const normalizedBody = normalizeSerializedText(body);
+  return normalizedBody
+    ? `Screen ${screenNumber}: ${normalizedBody}`
+    : `Screen ${screenNumber}`;
+}
+
+function buildUnresolvedScreenText(screenNumber: number, body: string) {
+  const normalizedBody = normalizeSerializedText(body);
+  return normalizedBody
+    ? `Original Screen ${screenNumber}: ${normalizedBody}`
+    : `Original Screen ${screenNumber}`;
+}
+
 function ensureScreenPrefix(text: string, screenNumber: number) {
   const normalizedText = normalizeSerializedText(normalizeFeedbackLine(text));
   if (/^Screen \d+:/i.test(normalizedText)) {
@@ -45,6 +89,145 @@ function ensureScreenPrefix(text: string, screenNumber: number) {
   }
 
   return `Screen ${screenNumber}: ${normalizedText}`;
+}
+
+function ensureScreenToken(text: string, screenId: string) {
+  const withoutToken = stripScreenIdToken(text);
+  return `${withoutToken} [[screenId=${screenId}]]`;
+}
+
+export function parseFeedbackLine({
+  text,
+  screens,
+}: {
+  text: string;
+  screens: FrameData[];
+}): ParsedFeedbackLine {
+  const rawText = text;
+  const normalizedLine = normalizeFeedbackLine(text);
+  const embeddedScreenId = getEmbeddedScreenId(normalizedLine);
+  const withoutToken = stripScreenIdToken(normalizedLine);
+  const screenMatch = withoutToken.match(SCREEN_LINE_REGEX);
+  const sortedScreens = getSortedScreens(screens);
+
+  if (embeddedScreenId) {
+    const currentScreenNumber = getScreenNumberById(embeddedScreenId, sortedScreens);
+    const body = screenMatch ? screenMatch[2] : withoutToken;
+
+    if (currentScreenNumber) {
+      return {
+        rawText,
+        text: buildScreenScopedText(body, currentScreenNumber),
+        body: normalizeSerializedText(body),
+        screenId: embeddedScreenId,
+        originalScreenNumber: screenMatch
+          ? Number.parseInt(screenMatch[1], 10)
+          : currentScreenNumber,
+        hasEmbeddedScreenId: true,
+        unresolved: false,
+      };
+    }
+
+    return {
+      rawText,
+      text: withoutToken,
+      body: screenMatch ? normalizeSerializedText(screenMatch[2]) : normalizeSerializedText(withoutToken),
+      screenId: embeddedScreenId,
+      originalScreenNumber: screenMatch
+        ? Number.parseInt(screenMatch[1], 10)
+        : null,
+      hasEmbeddedScreenId: true,
+      unresolved: true,
+    };
+  }
+
+  if (!screenMatch) {
+    return {
+      rawText,
+      text: withoutToken,
+      body: normalizeSerializedText(withoutToken),
+      screenId: null,
+      originalScreenNumber: null,
+      hasEmbeddedScreenId: false,
+      unresolved: false,
+    };
+  }
+
+  const originalScreenNumber = Number.parseInt(screenMatch[1], 10);
+  const body = screenMatch[2];
+  const mappedScreen = sortedScreens[originalScreenNumber - 1];
+  if (!mappedScreen) {
+    return {
+      rawText,
+      text: buildUnresolvedScreenText(originalScreenNumber, body),
+      body: normalizeSerializedText(body),
+      screenId: null,
+      originalScreenNumber,
+      hasEmbeddedScreenId: false,
+      unresolved: true,
+    };
+  }
+
+  return {
+    rawText,
+    text: buildScreenScopedText(body, originalScreenNumber),
+    body: normalizeSerializedText(body),
+    screenId: mappedScreen.id,
+    originalScreenNumber,
+    hasEmbeddedScreenId: false,
+    unresolved: false,
+  };
+}
+
+export function parseFeedbackChecklistItems({
+  text,
+  screens,
+}: {
+  text?: string | null;
+  screens: FrameData[];
+}) {
+  return getFeedbackLines(text).map((line) =>
+    parseFeedbackLine({
+      text: line,
+      screens,
+    }),
+  );
+}
+
+export function upgradeLegacyFeedbackText({
+  text,
+  screens,
+}: {
+  text?: string | null;
+  screens: FrameData[];
+}) {
+  if (!text) {
+    return { text: text ?? "", changed: false };
+  }
+
+  let changed = false;
+  const upgradedLines = getFeedbackLines(text).map((line) => {
+    const parsed = parseFeedbackLine({ text: line, screens });
+    if (
+      parsed.screenId &&
+      parsed.originalScreenNumber !== null &&
+      !parsed.hasEmbeddedScreenId &&
+      !parsed.unresolved
+    ) {
+      changed = true;
+      return ensureScreenToken(
+        buildScreenScopedText(parsed.body, parsed.originalScreenNumber),
+        parsed.screenId,
+      );
+    }
+
+    return normalizeFeedbackLine(line);
+  });
+
+  return {
+    text: upgradedLines.join("\n"),
+    changed,
+  };
 }
 
 function createImportedComment({
@@ -73,38 +256,28 @@ function parseFeedbackLines({
 }) {
   const commentsByScreen: Record<string, ReviewComment[]> = {};
   const flowComments: ReviewComment[] = [];
-  const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
+  const sortedScreens = getSortedScreens(screens);
 
   getFeedbackLines(text).forEach((line) => {
-    const normalizedLine = normalizeFeedbackLine(line);
-    const screenMatch = normalizedLine.match(/^Screen\s+(\d+):?\s*(.*)$/i);
+    const parsed = parseFeedbackLine({
+      text: line,
+      screens: sortedScreens,
+    });
 
-    if (!screenMatch) {
+    if (!parsed.screenId || parsed.unresolved) {
       flowComments.push(
         createImportedComment({
-          text: normalizedLine,
+          text: parsed.text,
           destination,
         }),
       );
       return;
     }
 
-    const screenNumber = Number.parseInt(screenMatch[1], 10);
-    const mappedScreen = sortedScreens[screenNumber - 1];
-    if (!mappedScreen) {
-      flowComments.push(
-        createImportedComment({
-          text: normalizedLine,
-          destination,
-        }),
-      );
-      return;
-    }
-
-    commentsByScreen[mappedScreen.id] = [
-      ...(commentsByScreen[mappedScreen.id] ?? []),
+    commentsByScreen[parsed.screenId] = [
+      ...(commentsByScreen[parsed.screenId] ?? []),
       createImportedComment({
-        text: normalizedLine,
+        text: parsed.text,
         destination,
       }),
     ];
@@ -133,7 +306,10 @@ export function serializeReviewFeedbackState({
         return;
       }
 
-      const serializedLine = ensureScreenPrefix(comment.text, index + 1);
+      const serializedLine = ensureScreenToken(
+        ensureScreenPrefix(comment.text, index + 1),
+        screen.id,
+      );
       if (comment.destination === "redaction") {
         redactLines.push(serializedLine);
         return;

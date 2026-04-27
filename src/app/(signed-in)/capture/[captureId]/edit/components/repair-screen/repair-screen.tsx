@@ -9,8 +9,8 @@ import React, {
 } from "react";
 
 import { Platform } from "@/lib/utils";
-import { useWatch } from "react-hook-form";
-import { FrameData } from "../types";
+import { useFormContext, useWatch } from "react-hook-form";
+import { FrameData, TraceFormData } from "../types";
 
 import { useHotkeys } from "react-hotkeys-hook";
 import { RepairScreenAndroid } from "./components/android/repair-screen-android";
@@ -20,9 +20,15 @@ import { DraftFetchResults } from "../../util";
 import { ListedFiles } from "@/lib/actions";
 import { validateGestureDescription } from "./util";
 
+export interface RepairScreenJumpTarget {
+  nonce: number;
+  screenId: string;
+}
+
 interface NavigationContextType {
   handleNext: () => void;
   handlePrevious: () => void;
+  handleDeleteScreen: (index: number) => void;
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
 }
@@ -54,6 +60,7 @@ export default function RepairScreen({
   capture,
   draftFetchResult,
   files,
+  jumpTarget,
 }: {
   capture:
     | Prisma.CaptureGetPayload<{
@@ -65,7 +72,9 @@ export default function RepairScreen({
     | undefined;
   draftFetchResult: DraftFetchResults;
   files: ListedFiles[];
+  jumpTarget?: RepairScreenJumpTarget | null;
 }) {
+  const { getValues, setValue } = useFormContext<TraceFormData>();
   const [watchScreens, watchGestures] = useWatch({
     name: ["screens", "gestures"],
   });
@@ -98,6 +107,9 @@ export default function RepairScreen({
 
   // handle focusing on previous screen in the filmstrip list
   const handlePrevious = useCallback(() => {
+    if (screens.length === 0) {
+      return;
+    }
     // javascript be stupid, negative modulo isn't a thing here
     let wrappedIndex = (focusViewIndex - 1) % screens.length;
     if (wrappedIndex < 0) {
@@ -108,12 +120,49 @@ export default function RepairScreen({
 
   // handle focusing on next screen in the filmstrip list
   const handleNext = useCallback(() => {
+    if (screens.length === 0) {
+      return;
+    }
     if (!canAdvanceFromCurrentScreen()) {
       return;
     }
     const wrappedIndex = (focusViewIndex + 1) % screens.length;
     setFocusViewIndex(wrappedIndex);
   }, [canAdvanceFromCurrentScreen, focusViewIndex, screens.length]);
+
+  const handleDeleteScreen = useCallback(
+    (index: number) => {
+      const currentScreens = getValues("screens");
+      if (index < 0 || index >= currentScreens.length) {
+        return;
+      }
+
+      const nextScreens = [...currentScreens];
+      const [removedScreen] = nextScreens.splice(index, 1);
+      if (!removedScreen) {
+        return;
+      }
+
+      const currentGestures = getValues("gestures");
+      const currentRedactions = getValues("redactions");
+      const currentVHs = getValues("vhs") ?? {};
+
+      const nextGestures = { ...currentGestures };
+      const nextRedactions = { ...currentRedactions };
+      const nextVHs = { ...currentVHs };
+
+      delete nextGestures[removedScreen.id];
+      delete nextRedactions[removedScreen.id];
+      delete nextVHs[removedScreen.id];
+
+      setValue("screens", nextScreens);
+      setValue("gestures", nextGestures);
+      setValue("redactions", nextRedactions);
+      setValue("vhs", nextVHs);
+      setFocusViewIndex(-1);
+    },
+    [getValues, setValue],
+  );
 
   useHotkeys(
     "left",
@@ -142,11 +191,40 @@ export default function RepairScreen({
     { enableOnFormTags: false },
   );
 
+  useHotkeys(
+    "backspace",
+    (event) => {
+      event.preventDefault();
+      handleDeleteScreen(focusViewIndex);
+    },
+    {
+      enabled: focusViewIndex >= 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      preventDefault: true,
+    },
+    [focusViewIndex, handleDeleteScreen],
+  );
+
+  React.useEffect(() => {
+    if (!jumpTarget) {
+      return;
+    }
+
+    const targetIndex = screens.findIndex(
+      (screen) => screen.id === jumpTarget.screenId,
+    );
+    if (targetIndex >= 0) {
+      setFocusViewIndex(targetIndex);
+    }
+  }, [jumpTarget, screens]);
+
   return (
     <NavigationProvider
       value={{
         handleNext,
         handlePrevious,
+        handleDeleteScreen,
         focusViewIndex,
         setFocusViewIndex,
       }}
