@@ -334,7 +334,7 @@ export default function RedactScreenCanvas({
         updateRedaction,
       }}
     >
-      <div className="relative flex h-full w-full min-w-0 items-center overflow-hidden bg-neutral-50 dark:bg-neutral-950">
+      <div className="relative flex items-center w-full h-full bg-neutral-50 dark:bg-neutral-950">
         <Toolbar mode={mode} setMode={setMode} />
         <Layers
           redactions={redactionsOnScreen}

@@ -133,7 +133,7 @@ export default function Page() {
                     value={
                       os === Platform.ANDROID
                         ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
-                        : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/qr-upload`
+                        : `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/capture/${captureId}/upload`
                     }
                   />
                 ) : (

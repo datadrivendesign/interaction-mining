@@ -63,9 +63,9 @@ function FilmstripItem({
             className={cn(
               "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
               isSelected
-                ? "ring-3 ring-inset ring-blue-500"
+                ? "ring-2 ring-inset ring-yellow-500"
                 : hasError
-                  ? "ring-3 ring-inset ring-red-500"
+                  ? "ring-2 ring-inset ring-red-500"
                   : "",
             )}
           >

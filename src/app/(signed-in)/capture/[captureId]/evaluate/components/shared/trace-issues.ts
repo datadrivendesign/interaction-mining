@@ -6,10 +6,6 @@ export type TraceIssueCategory =
 
 export type TraceIssueDestination = "annotation" | "redaction" | "summarize";
 export type TraceIssueScope = "screen" | "flow";
-export interface TraceIssueCategoryMeta {
-  label: string;
-  description: string;
-}
 
 export interface TraceIssue {
   id: string;
@@ -22,26 +18,11 @@ export interface TraceIssue {
   shortcutKey?: number;
 }
 
-export const TRACE_ISSUE_CATEGORIES: Record<
-  TraceIssueCategory,
-  TraceIssueCategoryMeta
-> = {
-  gesture_annotation: {
-    label: "Gesture Placement / Type",
-    description: "Fix gesture position, type, or capture timing around the action.",
-  },
-  description_quality: {
-    label: "Description Quality",
-    description: "Clarify what the worker is doing and remove weak or incorrect commentary.",
-  },
-  missing_screens: {
-    label: "Screen Capture / Privacy",
-    description: "Add missing states, wait for stable content, and catch privacy redaction issues.",
-  },
-  task_recording: {
-    label: "Flow Realism / Recording",
-    description: "Adjust the overall task or recording so it looks realistic and distinct.",
-  },
+export const TRACE_ISSUE_CATEGORIES: Record<TraceIssueCategory, string> = {
+  gesture_annotation: "Gesture Annotation Errors",
+  description_quality: "Annotation Description Quality Issues",
+  missing_screens: "Missing Screens / Redaction",
+  task_recording: "Task Recording Needs Changes",
 };
 
 export const TRACE_ISSUES: TraceIssue[] = [
@@ -81,7 +62,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
   {
     id: "screen_captured_after_gesture",
     label: "Captured screen AFTER gesture was done, not before",
-    chipLabel: "Screen captured after action",
+    chipLabel: "Captured after gesture",
     category: "gesture_annotation",
     annotation:
       "Screen #: Please capture the screen before you did [gesture], not after",
@@ -140,7 +121,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     id: "missing_tap_on_textbox_screen",
     label:
       "Didn't include screen that was tapping onto text box (before started typing)",
-    chipLabel: "Missing text-box tap",
+    chipLabel: "Missing text-box tap screen",
     category: "missing_screens",
     annotation:
       "Screen #: Please include screen tapping text box to open up keyboard before typing",
@@ -163,22 +144,12 @@ export const TRACE_ISSUES: TraceIssue[] = [
   {
     id: "forgot_redact_private_info",
     label: "Forgot to redact private information: email, address, map location",
-    chipLabel: "Missing private-info redaction",
+    chipLabel: "Missed private info redaction",
     category: "missing_screens",
     annotation: "Screen #: You forgot to redact [ITEM], please cover it.",
     destination: "redaction",
     scope: "screen",
     shortcutKey: 9,
-  },
-  {
-    id: "missing_intermediate_screen",
-    label: "Skipped an important intermediate screen between captured states",
-    chipLabel: "Missing intermediate screen",
-    category: "missing_screens",
-    annotation:
-      "Screen #: Please capture the missing intermediate screen between this state and the next one.",
-    destination: "annotation",
-    scope: "screen",
   },
   {
     id: "forgot_initial_screen",

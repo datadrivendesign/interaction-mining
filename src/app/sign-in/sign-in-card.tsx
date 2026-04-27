@@ -25,6 +25,7 @@ export default function SignInCard() {
   })();
 
   const handleGoogleSignIn = async () => {
+    console.log("safeCallbackUrl", safeCallbackUrl);
     await signIn("google", { redirectTo: safeCallbackUrl });
   };
 

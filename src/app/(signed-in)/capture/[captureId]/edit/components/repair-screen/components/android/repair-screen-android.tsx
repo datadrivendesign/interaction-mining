@@ -16,7 +16,6 @@ import { FocusViewAndroid } from "./focus-view-android";
 import { Filmstrip } from "../filmstrip";
 import { toast } from "sonner";
 import { DraftFetchResults } from "../../../../util";
-import { InstructionCardAndroid } from "../instruction-card";
 
 export function RepairScreenAndroid({
   taskDescription,
@@ -43,7 +42,6 @@ export function RepairScreenAndroid({
   const currVHs = watchVHs as { [key: string]: any };
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
   const currRedactions = watchRedactions as { [key: string]: Redaction[] };
-  const [showBoxes, setShowBoxes] = useState(true);
 
   const populateFrameData = async (
     files: ListedFiles[],
@@ -190,20 +188,13 @@ export function RepairScreenAndroid({
               defaultSize={75}
               className="relative overflow-visible"
             >
-              <div className="pointer-events-none absolute top-2 left-2 z-40 flex flex-col items-start gap-2">
-                <InstructionCardAndroid
-                  taskDescription={taskDescription}
-                  showBoxes={showBoxes}
-                  setShowBoxes={setShowBoxes}
-                />
-              </div>
               {focusViewIndex > -1 && focusViewIndex < currScreens.length ? (
                 <FocusViewAndroid
                   key={focusViewIndex}
                   vh={currVHs[currScreens[focusViewIndex].id]}
                   screen={currScreens[focusViewIndex]}
                   isLastScreen={focusViewIndex === currScreens.length - 1}
-                  showBoxes={showBoxes}
+                  taskDescription={taskDescription}
                 />
               ) : (
                 <div className="flex justify-center items-center w-full h-full">
@@ -228,6 +219,7 @@ export function RepairScreenAndroid({
             screens={currScreens}
             gestures={currGestures}
             redactions={currRedactions}
+            vhs={currVHs}
             os={os}
             handleSetTime={(_: number) => {}} // empty function
           />

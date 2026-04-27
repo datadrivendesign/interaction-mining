@@ -168,6 +168,7 @@ export async function getTracesPaginated({
   try {
     const { app = false, screens = false, task = false } = includes || {};
     const query: Prisma.TraceWhereInput = { ...(userId ? { userId } : {}) };
+    console.log("query", query);
     const traces = await prisma.trace.findMany({
       where: query,
       include: { app, screens, task },
@@ -198,7 +199,7 @@ export async function getTracesPaginated({
  */
 export async function getTrace(
   id: string,
-  { includes }: { includes?: Prisma.TraceInclude } = {},
+  { includes }: { includes?: Prisma.TraceInclude } = {}
 ): Promise<ActionPayload<Trace>> {
   const { app = false, screens = false, task = false } = includes || {};
 
@@ -255,7 +256,7 @@ export async function getTrace(
  */
 export async function createTrace(
   data: Prisma.TraceCreateWithoutUserInput,
-  { includes }: { includes?: Prisma.TraceInclude } = {},
+  { includes }: { includes?: Prisma.TraceInclude } = {}
 ): Promise<ActionPayload<TracePrimitive>> {
   let trace = {} as TracePrimitive;
 
@@ -315,7 +316,7 @@ export async function createTrace(
 export async function updateTrace(
   id: string,
   data: Prisma.TraceUpdateInput,
-  { includes }: { includes?: Prisma.TraceInclude } = {},
+  { includes }: { includes?: Prisma.TraceInclude } = {}
 ): Promise<ActionPayload<TracePrimitive>> {
   let trace = {} as TracePrimitive;
   // parameter validations

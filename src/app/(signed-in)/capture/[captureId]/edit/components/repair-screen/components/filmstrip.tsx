@@ -1,8 +1,10 @@
 import { cn, Platform, prettyNumber } from "@/lib/utils";
-import { FrameData, Redaction } from "../../types";
+import { FrameData, Redaction, TraceFormData } from "../../types";
 import type { ScreenGesture } from "@prisma/client";
 import { useNavigation } from "../repair-screen";
+import { useFormContext } from "react-hook-form";
 import { AnimatePresence, motion } from "motion/react";
+import { useCallback } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -16,94 +18,114 @@ import { card } from "../util";
 import { spring } from "@/lib/motion";
 import { findGestureOption } from "@/lib/utils/gesture-options";
 import { validateGestureDescription } from "../util";
-import { useEffect, useRef } from "react";
 
 export function Filmstrip({
   screens,
   gestures,
   redactions,
+  vhs,
   os,
   handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
+  vhs?: { [key: string]: any };
   os: Platform;
   handleSetTime: (t: number) => void;
 }) {
-  const { focusViewIndex, setFocusViewIndex, handleDeleteScreen } =
-    useNavigation();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { focusViewIndex, setFocusViewIndex } = useNavigation();
+  const { setValue } = useFormContext<TraceFormData>();
 
-  useEffect(() => {
-    if (focusViewIndex < 0) {
-      return;
-    }
+  const setFrameData = useCallback(
+    (value: FrameData[]) => setValue("screens", value),
+    [setValue],
+  );
+  const setGestureData = useCallback(
+    (value: { [key: string]: ScreenGesture }) => setValue("gestures", value),
+    [setValue],
+  );
+  const setRedactionData = useCallback(
+    (value: { [key: string]: Redaction[] }) => setValue("redactions", value),
+    [setValue],
+  );
+  const setVHData = useCallback(
+    (value: { [key: string]: any }) => setValue("vhs", value),
+    [setValue],
+  );
 
-    const frame = requestAnimationFrame(() => {
-      const container = containerRef.current;
-      if (!container) {
-        return;
+  const handleDeleteFrame = useCallback(
+    (index: number) => {
+      // Reset focus view to -1 upon deletion
+      setFocusViewIndex(-1);
+      // remove frame from view
+      const newFrameData = [...screens];
+      newFrameData.splice(index, 1);
+      // remove frame from gestures and redactions
+      const updatedGestures: { [key: string]: ScreenGesture } = {};
+      const updatedRedactions: { [key: string]: Redaction[] } = {};
+      const updatedVHS: { [key: string]: any } = {};
+      for (const frame of newFrameData) {
+        if (gestures[frame.id]) {
+          updatedGestures[frame.id] = gestures[frame.id];
+        }
+        if (redactions[frame.id]) {
+          updatedRedactions[frame.id] = redactions[frame.id];
+        }
+        if (vhs && vhs[frame.id]) {
+          updatedVHS[frame.id] = vhs[frame.id];
+        }
       }
-
-      const selectedItem = container.querySelector<HTMLElement>(
-        `[data-index="${focusViewIndex}"]`,
-      );
-      if (!selectedItem) {
-        return;
+      // update frame data, gestures, and redactions
+      setFrameData(newFrameData);
+      setGestureData(updatedGestures);
+      setRedactionData(updatedRedactions);
+      if (vhs) {
+        setVHData(updatedVHS);
       }
-
-      const containerRect = container.getBoundingClientRect();
-      const selectedRect = selectedItem.getBoundingClientRect();
-      const isOutOfView =
-        selectedRect.left < containerRect.left ||
-        selectedRect.right > containerRect.right;
-
-      if (isOutOfView) {
-        selectedItem.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "nearest",
-        });
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [focusViewIndex, screens.length]);
+    },
+    [
+      screens,
+      gestures,
+      redactions,
+      vhs,
+      setFrameData,
+      setGestureData,
+      setRedactionData,
+      setFocusViewIndex,
+      setVHData,
+    ],
+  );
 
   return (
-    <div ref={containerRef} className="h-full overflow-x-auto">
-      <ul className="relative z-0 flex h-full p-2 gap-1">
-        <AnimatePresence mode="popLayout">
-          {screens?.map((screen: FrameData, index: number) => {
-            const isLast = screens.length - 1 === index;
-            return (
-              <FilmstripItem
-                key={screen.id}
-                index={index}
-                screen={screen}
-                gesture={gestures[screen.id]}
-                redactions={redactions[screen.id] ?? []}
-                os={os}
-                isSelected={focusViewIndex === index}
-                hasError={
-                  isLast
-                    ? false
-                    : !gestures[screen.id] ||
-                      gestures[screen.id].type === null ||
-                      !validateGestureDescription(gestures[screen.id])
-                }
-                onClick={() => setFocusViewIndex(index)}
-                handleSetTime={handleSetTime}
-                handleDeleteFrame={handleDeleteScreen}
-              />
-            );
-          })}
-        </AnimatePresence>
+    <AnimatePresence mode="popLayout">
+      <ul className="relative z-0 flex h-full p-2 gap-1 overflow-x-auto">
+        {screens?.map((screen: FrameData, index: number) => {
+          const isLast = screens.length - 1 === index;
+          return (
+            <FilmstripItem
+              key={screen.id}
+              index={index}
+              screen={screen}
+              gesture={gestures[screen.id]}
+              redactions={redactions[screen.id] ?? []}
+              os={os}
+              isSelected={focusViewIndex === index}
+              hasError={
+                isLast
+                  ? false
+                  : !gestures[screen.id] ||
+                    gestures[screen.id].type === null ||
+                    !validateGestureDescription(gestures[screen.id])
+              }
+              onClick={() => setFocusViewIndex(index)}
+              handleSetTime={handleSetTime}
+              handleDeleteFrame={handleDeleteFrame}
+            ></FilmstripItem>
+          );
+        })}
       </ul>
-    </div>
+    </AnimatePresence>
   );
 }
 
@@ -117,7 +139,8 @@ function FilmstripItem({
   hasError = false,
   handleSetTime,
   handleDeleteFrame,
-  onClick,
+  // children,
+  ...props
 }: {
   screen: FrameData;
   gesture?: ScreenGesture;
@@ -128,8 +151,8 @@ function FilmstripItem({
   hasError?: boolean;
   handleSetTime: (t: number) => void;
   handleDeleteFrame: (index: number) => void;
-  onClick?: () => void;
-}) {
+  // children?: React.ReactNode;
+} & React.HTMLAttributes<HTMLLIElement>) {
   const hasGestureCoordinates =
     gesture?.x !== null &&
     gesture?.x !== undefined &&
@@ -137,9 +160,8 @@ function FilmstripItem({
     gesture?.y !== undefined;
 
   return (
-    <motion.li
-      className="cursor-pointer min-w-fit h-full max-w-full"
-      data-index={index}
+    <motion.div
+      className="min-w-fit h-full max-w-full"
       variants={card}
       initial="initial"
       animate="animate"
@@ -147,11 +169,13 @@ function FilmstripItem({
       layout="position"
       transition={spring}
       key={`${screen.timestamp}-${screen.id}`}
-      onClick={() => {
-        onClick?.();
-        handleSetTime(screen.timestamp);
-      }}
+      onClick={() => handleSetTime(screen.timestamp)}
     >
+      <li
+        className="cursor-pointer min-w-fit h-full"
+        data-index={index}
+        {...props}
+      >
         {/* Toolbar */}
         <div className="flex flex-row w-full items-center justify-between">
           <div className="flex justify-center items-center bg-background rounded-lg">
@@ -187,9 +211,9 @@ function FilmstripItem({
                     className={cn(
                       "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
                       isSelected
-                        ? "ring-3 ring-inset ring-blue-500"
+                        ? "ring-2 ring-inset ring-blue-500"
                         : hasError
-                          ? "ring-3 ring-inset ring-yellow-500"
+                          ? "ring-2 ring-inset ring-yellow-500"
                           : "",
                     )}
                   >
@@ -201,7 +225,7 @@ function FilmstripItem({
                   </div>
                 )}
               </TooltipTrigger>
-              <TooltipContent side="bottom">
+              <TooltipContent>
                 <div className="text-sm">Add a gesture.</div>
                 <div className="flex w-full justify-between items-center gap-2 text-sm">
                   <span>
@@ -281,6 +305,7 @@ function FilmstripItem({
             )}
           </div>
         </div>
-    </motion.li>
+      </li>
+    </motion.div>
   );
 }

@@ -1,52 +1,26 @@
 import { FrameData } from "../../types";
 import { ListedFiles } from "@/lib/actions";
 
-type ExtractedImageMimeType = "image/png" | "image/jpeg";
-
-type ExtractVideoFrameOptions = {
-  scale?: number;
-  mimeType?: ExtractedImageMimeType;
-  quality?: number;
-  output?: "data-url" | "object-url";
-  preferOffscreenCanvas?: boolean;
-};
-
-type FrameCanvas = HTMLCanvasElement | OffscreenCanvas;
-
-const DEFAULT_EXTRACT_OPTIONS: Required<ExtractVideoFrameOptions> = {
-  scale: 1,
-  mimeType: "image/png",
-  quality: 0.92,
-  output: "data-url",
-  preferOffscreenCanvas: false,
-};
-
-const resolveExtractOptions = (
-  scaleOrOptions?: number | ExtractVideoFrameOptions,
-  overrideOptions?: ExtractVideoFrameOptions
-): Required<ExtractVideoFrameOptions> => {
-  if (typeof scaleOrOptions === "number") {
-    return {
-      ...DEFAULT_EXTRACT_OPTIONS,
-      scale: scaleOrOptions,
-      ...overrideOptions,
-    };
-  }
-
-  return {
-    ...DEFAULT_EXTRACT_OPTIONS,
-    ...scaleOrOptions,
-  };
-};
-
-const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
+/**
+ * Fallback frame grabber using Canvas2D (works in Safari) to extract a frame from a video
+ * @param video - The HTML video element to extract frames from
+ * @param t - The timestamp to extract the frame from
+ * @param scale - The scale of the frame (default is 1)
+ * @returns The frame data (id, src, timestamp)
+ */
+async function grabFrameViaCanvas(
+  video: HTMLVideoElement,
+  t: number,
+  scale: number = 1
+): Promise<FrameData> {
+  // Seek to desired time
   await new Promise<void>((resolve, reject) => {
     const onSeeked = () => {
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("error", onError);
       resolve();
     };
-    const onError = (e: Event) => {
+    const onError = (e: any) => {
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("error", onError);
       reject(e);
@@ -55,107 +29,21 @@ const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
     video.addEventListener("error", onError, { once: true });
     video.currentTime = t;
   });
-};
 
-const drawFrameToCanvas = (
-  video: HTMLVideoElement,
-  scale: number,
-  preferOffscreenCanvas: boolean
-): FrameCanvas => {
+  // Draw the current frame into a Canvas
   const cw = Math.floor(video.videoWidth * scale);
   const ch = Math.floor(video.videoHeight * scale);
-
-  if (preferOffscreenCanvas && typeof OffscreenCanvas !== "undefined") {
-    const canvas = new OffscreenCanvas(cw, ch);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("OffscreenCanvas2D not supported");
-    }
-    ctx.drawImage(video, 0, 0, cw, ch);
-    return canvas;
-  }
-
   const canvas = document.createElement("canvas");
   canvas.width = cw;
   canvas.height = ch;
   const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Canvas2D not supported");
-  }
+  if (!ctx) throw new Error("Canvas2D not supported");
   ctx.drawImage(video, 0, 0, cw, ch);
-  return canvas;
-};
 
-const canvasToBlob = async (
-  canvas: FrameCanvas,
-  mimeType: ExtractedImageMimeType,
-  quality: number
-) => {
-  if ("convertToBlob" in canvas) {
-    return canvas.convertToBlob({
-      type: mimeType,
-      quality: mimeType === "image/jpeg" ? quality : undefined,
-    });
-  }
-
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error("Failed to convert canvas to blob"));
-          return;
-        }
-        resolve(blob);
-      },
-      mimeType,
-      mimeType === "image/jpeg" ? quality : undefined
-    );
-  });
-};
-
-const blobToDataUrl = async (blob: Blob) =>
-  await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error("Failed to convert blob to data URL"));
-        return;
-      }
-      resolve(reader.result);
-    };
-    reader.onerror = () => {
-      reject(new Error("Failed to read blob"));
-    };
-    reader.readAsDataURL(blob);
-  });
-
-/**
- * Fallback frame grabber using Canvas2D (works in Safari) to extract a frame from a video
- * @param video - The HTML video element to extract frames from
- * @param t - The timestamp to extract the frame from
- * @param options - The extraction options
- * @returns The frame data (id, src, timestamp)
- */
-async function grabFrameViaCanvas(
-  video: HTMLVideoElement,
-  t: number,
-  options: Required<ExtractVideoFrameOptions>
-): Promise<FrameData> {
-  await seekVideoToTime(video, t);
-  const canvas = drawFrameToCanvas(
-    video,
-    options.scale,
-    options.output === "object-url" && options.preferOffscreenCanvas
-  );
-  const blob = await canvasToBlob(canvas, options.mimeType, options.quality);
-  const src =
-    options.output === "object-url"
-      ? URL.createObjectURL(blob)
-      : await blobToDataUrl(blob);
-
+  const dataUrl = canvas.toDataURL("image/png");
   return {
     id: `${t}-${Math.random()}`,
-    src,
+    src: dataUrl,
     timestamp: t,
   };
 }
@@ -170,11 +58,10 @@ async function grabFrameViaCanvas(
 export async function extractVideoFrame(
   video: HTMLVideoElement,
   t: number,
-  scaleOrOptions?: number | ExtractVideoFrameOptions,
-  overrideOptions?: ExtractVideoFrameOptions
+  scale: number = 1
 ): Promise<FrameData> {
-  const options = resolveExtractOptions(scaleOrOptions, overrideOptions);
-  return grabFrameViaCanvas(video, t, options);
+  // Always use Canvas2D fallback for frame extraction
+  return grabFrameViaCanvas(video, t, scale);
 }
 
 /**
@@ -189,8 +76,7 @@ export async function extractVideoThumbnails(
   video: HTMLVideoElement,
   videoDuration: number,
   maxThumbs: number = 30,
-  thumbHeight: number = 128,
-  options?: ExtractVideoFrameOptions
+  thumbHeight: number = 128
 ): Promise<ListedFiles[]> {
   const thumbVideo = document.createElement("video");
   thumbVideo.crossOrigin = "anonymous";
@@ -206,28 +92,19 @@ export async function extractVideoThumbnails(
   const fps = 60;
   // extract maxThumbs thumbnails or every two frames, whichever is smaller
   const thumbnailCount = Math.min(Math.floor(duration * fps) / 2, maxThumbs);
-  const scale = Math.min(1, thumbHeight / thumbVideo.videoHeight);
+  const scale = thumbHeight / thumbVideo.videoHeight;
   // need to do sequentially, parallel messes up seeking
   const thumbsRes: FrameData[] = [];
   // Before the loop, do a "warm-up" seek to ensure video is loaded:
-  const warmupFrame = await extractVideoFrame(thumbVideo, 0.1, {
-    ...options,
-    scale,
-  });
-  if (warmupFrame.src.startsWith("blob:")) {
-    URL.revokeObjectURL(warmupFrame.src);
-  }
+  await extractVideoFrame(thumbVideo, 0.1, scale);
   for (let i = 0; i < thumbnailCount; i++) {
-    const t = (videoDuration / thumbnailCount) * i;
-    const frame = await extractVideoFrame(thumbVideo, t, {
-      ...options,
-      scale,
-    });
+    let t = (videoDuration / thumbnailCount) * i;
+    const frame = await extractVideoFrame(thumbVideo, t, scale);
     thumbsRes.push(frame);
   }
   return thumbsRes.map((f, index) => ({
     fileKey: "thumbs/",
-    fileName: `frame-${index}.${options?.mimeType === "image/jpeg" ? "jpg" : "png"}`,
+    fileName: `frame-${index}.png`,
     fileUrl: f.src!,
   }));
 }
@@ -244,15 +121,13 @@ export const extractThumbnails = async (
   video: HTMLVideoElement,
   videoDuration: number,
   maxThumbs: number = 30,
-  thumbHeight: number = 128,
-  options?: ExtractVideoFrameOptions
+  thumbHeight: number = 128
 ) => {
   const thumbnailFiles = await extractVideoThumbnails(
     video,
     videoDuration,
     maxThumbs,
-    thumbHeight,
-    options
+    thumbHeight
   );
   const thumbs = thumbnailFiles.map((f, index) => ({
     src: f.fileUrl,
