@@ -67,6 +67,12 @@ export function GestureMenu({
   const [horizontalOffset, setHorizontalOffset] = useState(0);
   const [verticalOffset, setVerticalOffset] = useState(0);
   const [editorMaxHeight, setEditorMaxHeight] = useState<number | null>(null);
+  const lastPlacementAnchorRef = useRef<{
+    markerX: number;
+    markerY: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const updatePlacement = useCallback(() => {
     const droppableElement = document.querySelector("[data-droppable]");
@@ -132,8 +138,24 @@ export function GestureMenu({
     const shouldPlaceAbove =
       roomBelow < boundedEditorHeight + ANNOTATION_GAP_PX &&
       roomAbove > roomBelow;
-    if (shouldPlaceAbove !== placeTextareaAbove) {
+    const previousAnchor = lastPlacementAnchorRef.current;
+    const placementAnchor = {
+      markerX,
+      markerY,
+      width: droppableRect.width,
+      height: droppableRect.height,
+    };
+    const shouldAllowSideFlip =
+      !previousAnchor ||
+      Math.abs(previousAnchor.markerX - placementAnchor.markerX) > 0.5 ||
+      Math.abs(previousAnchor.markerY - placementAnchor.markerY) > 0.5 ||
+      Math.abs(previousAnchor.width - placementAnchor.width) > 0.5 ||
+      Math.abs(previousAnchor.height - placementAnchor.height) > 0.5;
+    if (shouldAllowSideFlip && shouldPlaceAbove !== placeTextareaAbove) {
       setPlaceTextareaAbove(shouldPlaceAbove);
+    }
+    if (shouldAllowSideFlip) {
+      lastPlacementAnchorRef.current = placementAnchor;
     }
 
     const fullTop = shouldPlaceAbove

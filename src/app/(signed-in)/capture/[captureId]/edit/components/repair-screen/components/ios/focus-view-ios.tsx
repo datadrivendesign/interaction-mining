@@ -7,6 +7,21 @@ import { ScreenGesture } from "@prisma/client";
 import { gestureOptions } from "@/lib/utils/gesture-options";
 import RepairScreenCanvasIOS from "./repair-screen-canvas-ios";
 
+function getInitialGesture(
+  screenId: string,
+  gestures: { [key: string]: ScreenGesture },
+): ScreenGesture {
+  return (
+    gestures[screenId] ?? {
+      type: null,
+      x: null,
+      y: null,
+      scrollDeltaX: 0,
+      scrollDeltaY: 0,
+    }
+  );
+}
+
 export function FocusViewIOS({
   screen,
   isLastScreen,
@@ -20,14 +35,12 @@ export function FocusViewIOS({
 
   // Find applicable gesture for screen or set to default template
   const [gesture, setGesture] = useState<ScreenGesture>(
-    gestures[screen.id] ?? {
-      type: null,
-      x: null,
-      y: null,
-      scrollDeltaX: 0,
-      scrollDeltaY: 0,
-    },
+    getInitialGesture(screen.id, gestures),
   );
+
+  useEffect(() => {
+    setGesture(getInitialGesture(screen.id, gestures));
+  }, [gestures, screen.id]);
 
   // Update gesture in form data
   useEffect(() => {
