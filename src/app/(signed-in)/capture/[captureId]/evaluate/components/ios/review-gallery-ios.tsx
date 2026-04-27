@@ -179,7 +179,7 @@ function ReviewFigureIOS({
   const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
 
   const cardWidthClass = isLandscape
-    ? "w-[80%] sm:w-[70%] md:w-[62%] lg:w-[54%] xl:w-[46%]"
+    ? "w-[min(82vw,520px)] md:w-[min(68vw,600px)] lg:w-[min(54vw,640px)] xl:w-[min(46vw,680px)]"
     : "w-[52%] sm:w-[46%] md:w-[40%] lg:w-[34%] xl:w-[30%]";
   const hasIssues = issueCount > 0;
   const imageBorderClass = isActive

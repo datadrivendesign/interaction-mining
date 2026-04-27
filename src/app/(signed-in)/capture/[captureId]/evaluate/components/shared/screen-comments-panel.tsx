@@ -569,8 +569,8 @@ export function ScreenCommentsPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 shrink-0 flex-col border-b border-neutral-200 dark:border-neutral-800 max-h-[48%]">
-          <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3">
+        <div className="flex min-h-0 max-h-[48%] flex-none flex-col overflow-y-auto overscroll-contain border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex flex-col gap-2.5 p-3">
             <p className="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
               Add all review feedback here. Click a chip to flag an issue
               immediately, or pick{" "}
@@ -615,7 +615,7 @@ export function ScreenCommentsPanel({
               }
             />
 
-            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <div className="pr-1">
               <IssueGrid
                 onSelectIssue={handleIssueSelect}
                 onSelectOther={handleOtherSelect}

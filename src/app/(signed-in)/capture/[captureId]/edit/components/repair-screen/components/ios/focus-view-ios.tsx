@@ -57,7 +57,7 @@ export function FocusViewIOS({
 
   return (
     <>
-      <div className="relative z-20 flex justify-center w-full h-full overflow-visible">
+      <div className="relative z-20 flex min-h-0 min-w-0 justify-center w-full h-full overflow-visible">
         <RepairScreenCanvasIOS
           key={screen.id}
           screen={screen}

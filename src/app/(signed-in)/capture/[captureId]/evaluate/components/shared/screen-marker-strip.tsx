@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { FrameData } from "../../../edit/components/types";
 import { ScreenComment } from "./screen-comments-panel";
@@ -22,6 +22,7 @@ export function ScreenMarkerStrip({
   duration,
   onSelectScreen,
   onScrub,
+  headerAccessory,
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
@@ -30,6 +31,7 @@ export function ScreenMarkerStrip({
   duration: number;
   onSelectScreen: (screenId: string, timestamp: number) => void;
   onScrub: (timestamp: number) => void;
+  headerAccessory?: ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const isScrubbingRef = useRef(false);
@@ -111,16 +113,20 @@ export function ScreenMarkerStrip({
 
   return (
     <div className="space-y-2 rounded-xl border border-neutral-200 bg-white/90 px-3 py-3 dark:border-neutral-800 dark:bg-neutral-900/70">
-      <div className="flex items-center justify-between gap-2">
-        <div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-[12px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
             Screen Markers
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            Click a marker, drag anywhere on the strip, or press{" "}
-            <span className="font-medium">[ ]</span> to jump screens.
+            Click a marker, drag anywhere on the strip, press{" "}
+            <span className="font-medium">[ ]</span> to jump screens, or{" "}
+            <span className="font-medium">Space</span> to play or pause.
           </p>
         </div>
+        {headerAccessory ? (
+          <div className="shrink-0 self-center">{headerAccessory}</div>
+        ) : null}
       </div>
 
       <div

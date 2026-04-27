@@ -174,7 +174,14 @@ export function FeedbackChecklist({
 
   const ChecklistList = () => {
     return (
-      <ul className="max-h-28 space-y-0.5 overflow-y-auto border-t border-amber-200/70 px-3 py-2 dark:border-amber-800/60">
+      <ul
+        className={cn(
+          "space-y-0.5 overflow-y-auto border-t border-amber-200/70 px-3 py-2 dark:border-amber-800/60",
+          layoutMode === "side"
+            ? "min-h-0 flex-1 basis-0"
+            : "max-h-28",
+        )}
+      >
         {items.map((item, index) => {
           const itemId = getChecklistItemId({
             screenId: item.screenId,
@@ -286,7 +293,7 @@ export function FeedbackChecklist({
 
   const SideCollapsedFeedbackChecklist = () => {
     return (
-      <aside className="flex h-full w-12 shrink-0 flex-col items-center gap-2 border-l border-amber-200/80 bg-amber-50/80 px-1 py-2 dark:border-amber-800/60 dark:bg-amber-950/20">
+      <aside className="flex h-full min-h-0 w-12 shrink-0 flex-col items-center gap-2 border-l border-amber-200/80 bg-amber-50/80 px-1 py-2 dark:border-amber-800/60 dark:bg-amber-950/20">
         <Button
           type="button"
           variant="ghost"
@@ -323,7 +330,7 @@ export function FeedbackChecklist({
 
   const SideLayoutFeedbackExpandedChecklist = () => {
     return (
-      <aside className="flex h-full w-56 shrink-0 flex-col border-l border-amber-200/80 bg-amber-50/70 transition-[width] dark:border-amber-800/60 dark:bg-amber-950/15">
+      <aside className="flex h-full min-h-0 w-56 shrink-0 flex-col overflow-hidden border-l border-amber-200/80 bg-amber-50/70 transition-[width] dark:border-amber-800/60 dark:bg-amber-950/15">
         <div className="flex items-center justify-between gap-2 px-3 py-1.5">
           <LayoutToggleGroup />
           <Button
@@ -347,7 +354,7 @@ export function FeedbackChecklist({
               : `${remaining} items remaining in this step.`}
           </div>
         </div>
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ChecklistList />
         </div>
       </aside>
