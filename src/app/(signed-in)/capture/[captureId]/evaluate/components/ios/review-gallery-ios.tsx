@@ -6,6 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Play } from "lucide-react";
 import {
   findGestureOption,
   normalizeGestureType,
@@ -14,7 +15,7 @@ import Image from "next/image";
 import { TraceFormData } from "../../../edit/components/types";
 import { useMeasure } from "@uidotdev/usehooks";
 import type { ScreenGesture } from "@prisma/client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
 import { cn } from "@/lib/utils";
 import { ScreenComment } from "../shared/screen-comments-panel";
@@ -24,21 +25,53 @@ export function ReviewGalleryIOS({
   activeScreenId,
   commentsByScreen,
   onScreenSelect,
+  onReplayScreen,
+  canReplay = false,
 }: {
   traceData: TraceFormData;
   activeScreenId: string | null;
   commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string, timestamp: number) => void;
+  onReplayScreen?: (id: string, timestamp: number) => void;
+  canReplay?: boolean;
 }) {
   const [orientationByScreenId, setOrientationByScreenId] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const sortedScreens = [...traceData.screens].sort(
     (a, b) => a.timestamp - b.timestamp,
   );
   const screensWithIssues = sortedScreens.filter(
     (screen) => (commentsByScreen[screen.id]?.length ?? 0) > 0,
   ).length;
+
+  useEffect(() => {
+    if (!activeScreenId) {
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const activeCard = cardRefs.current[activeScreenId];
+    if (!container || !activeCard) {
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const cardRect = activeCard.getBoundingClientRect();
+    const isVisible =
+      cardRect.left >= containerRect.left &&
+      cardRect.right <= containerRect.right;
+
+    if (!isVisible) {
+      activeCard.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [activeScreenId]);
 
   return (
     <section className="flex flex-col w-full h-full">
@@ -54,11 +87,17 @@ export function ReviewGalleryIOS({
       </div>
 
       {/* Scroll area */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3"
+      >
         <div className="flex h-full items-start gap-3 pb-1">
           {sortedScreens.map((screen, index) => (
             <ReviewFigureIOS
               key={screen.id}
+              cardRef={(node) => {
+                cardRefs.current[screen.id] = node;
+              }}
               index={index}
               screen={screen}
               gesture={traceData.gestures[screen.id]}
@@ -79,6 +118,12 @@ export function ReviewGalleryIOS({
               onJump={() => {
                 onScreenSelect(screen.id, screen.timestamp);
               }}
+              onReplay={
+                onReplayScreen
+                  ? () => onReplayScreen(screen.id, screen.timestamp)
+                  : undefined
+              }
+              canReplay={canReplay}
             />
           ))}
         </div>
@@ -88,6 +133,7 @@ export function ReviewGalleryIOS({
 }
 
 function ReviewFigureIOS({
+  cardRef,
   index,
   screen,
   gesture,
@@ -97,7 +143,10 @@ function ReviewFigureIOS({
   isLandscape,
   onImageLoad,
   onJump,
+  onReplay,
+  canReplay,
 }: {
+  cardRef?: (node: HTMLElement | null) => void;
   index: number;
   screen: TraceFormData["screens"][number];
   gesture?: ScreenGesture;
@@ -107,6 +156,8 @@ function ReviewFigureIOS({
   isLandscape: boolean;
   onImageLoad: (img: HTMLImageElement) => void;
   onJump: () => void;
+  onReplay?: () => void;
+  canReplay: boolean;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -147,7 +198,10 @@ function ReviewFigureIOS({
       : "border-neutral-300 dark:border-neutral-700";
 
   return (
-    <figure className={`relative flex flex-col shrink-0 ${cardWidthClass}`}>
+    <figure
+      ref={cardRef}
+      className={`relative flex flex-col shrink-0 ${cardWidthClass}`}
+    >
       <div
         className="relative w-full cursor-pointer"
         onClick={onJump}
@@ -163,6 +217,22 @@ function ReviewFigureIOS({
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
         </div>
+
+        {onReplay && (
+          <button
+            type="button"
+            className="absolute cursor-pointer top-5 left-1 z-20 flex size-6 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/75 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={(event) => {
+              event.stopPropagation();
+              onReplay();
+            }}
+            disabled={!canReplay}
+            aria-label={`Replay around Screen ${index + 1}`}
+            title={`Replay around Screen ${index + 1}`}
+          >
+            <Play className="size-3.5 fill-current" />
+          </button>
+        )}
 
         <TooltipProvider delayDuration={100}>
           {screen.src.length > 0 ? (
@@ -276,8 +346,8 @@ function ReviewFigureIOS({
         className={cn(
           "text-xs text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
           isActive
-            ? "text-neutral-700 dark:text-neutral-200 font-medium"
-            : "text-neutral-400 dark:text-neutral-400",
+            ? "text-neutral-900 dark:text-neutral-200 font-medium"
+            : "text-neutral-600 dark:text-neutral-400",
         )}
       >
         {gesture?.description ?? "—"}
