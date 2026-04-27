@@ -78,7 +78,7 @@ export function ReviewVideoPanelIOS({
               <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
                 Task
               </span>
-              <p className="text-[15px] font-medium leading-6 text-neutral-800 dark:text-neutral-100">
+              <p className="text-[13px] font-medium leading-6 text-neutral-800 dark:text-neutral-100">
                 {traceData.description}
               </p>
             </div>
@@ -88,7 +88,7 @@ export function ReviewVideoPanelIOS({
               ref={videoRef}
               crossOrigin="anonymous"
               preload="auto"
-              className={`${videoSizeClass} min-w-0 h-auto rounded-lg object-contain`}
+              className={`${videoSizeClass} min-w-0 max-w-[55%] h-auto rounded-lg object-contain`}
               controls={true}
               onLoadedMetadata={(event) => {
                 const videoElement = event.currentTarget;
