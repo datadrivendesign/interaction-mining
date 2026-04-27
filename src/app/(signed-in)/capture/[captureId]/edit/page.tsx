@@ -84,9 +84,6 @@ export default function Page() {
         ? savedLayout
         : "top";
     });
-  const [isChecklistOpen, setIsChecklistOpen] = useState(true);
-  const [isSideChecklistCollapsed, setIsSideChecklistCollapsed] =
-    useState(false);
   const [checkedChecklistItems, setCheckedChecklistItems] = useState<Set<string>>(
     new Set(),
   );
@@ -332,14 +329,12 @@ export default function Page() {
 
       setChecklistLayoutMode(mode);
       setCheckedChecklistItems(new Set());
-      setIsChecklistOpen(true);
     },
     [checklistLayoutMode],
   );
 
   useEffect(() => {
     setCheckedChecklistItems(new Set());
-    setIsChecklistOpen(true);
   }, [currentStepFeedback, stepIndex]);
 
   const handleNext = async () => {
@@ -539,12 +534,8 @@ export default function Page() {
                         screens={watchedScreens}
                         layoutMode={checklistLayoutMode}
                         onLayoutModeChange={handleChecklistLayoutModeChange}
-                        isOpen={isChecklistOpen}
-                        onOpenChange={setIsChecklistOpen}
                         checkedItems={checkedChecklistItems}
                         onCheckedItemsChange={setCheckedChecklistItems}
-                        isSideCollapsed={isSideChecklistCollapsed}
-                        onSideCollapsedChange={setIsSideChecklistCollapsed}
                         onJumpToScreen={handleChecklistJump}
                       />
                     )}
@@ -559,12 +550,8 @@ export default function Page() {
                       screens={watchedScreens}
                       layoutMode={checklistLayoutMode}
                       onLayoutModeChange={handleChecklistLayoutModeChange}
-                      isOpen={isChecklistOpen}
-                      onOpenChange={setIsChecklistOpen}
                       checkedItems={checkedChecklistItems}
                       onCheckedItemsChange={setCheckedChecklistItems}
-                      isSideCollapsed={isSideChecklistCollapsed}
-                      onSideCollapsedChange={setIsSideChecklistCollapsed}
                       onJumpToScreen={handleChecklistJump}
                     />
                   )}
