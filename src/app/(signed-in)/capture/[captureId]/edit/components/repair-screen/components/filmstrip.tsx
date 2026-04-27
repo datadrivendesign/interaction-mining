@@ -16,6 +16,7 @@ import { card } from "../util";
 import { spring } from "@/lib/motion";
 import { findGestureOption } from "@/lib/utils/gesture-options";
 import { validateGestureDescription } from "../util";
+import { useEffect, useRef } from "react";
 
 export function Filmstrip({
   screens,
@@ -32,36 +33,77 @@ export function Filmstrip({
 }) {
   const { focusViewIndex, setFocusViewIndex, handleDeleteScreen } =
     useNavigation();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (focusViewIndex < 0) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+
+      const selectedItem = container.querySelector<HTMLElement>(
+        `[data-index="${focusViewIndex}"]`,
+      );
+      if (!selectedItem) {
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const selectedRect = selectedItem.getBoundingClientRect();
+      const isOutOfView =
+        selectedRect.left < containerRect.left ||
+        selectedRect.right > containerRect.right;
+
+      if (isOutOfView) {
+        selectedItem.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "nearest",
+        });
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [focusViewIndex, screens.length]);
 
   return (
-    <AnimatePresence mode="popLayout">
-      <ul className="relative z-0 flex h-full p-2 gap-1 overflow-x-auto">
-        {screens?.map((screen: FrameData, index: number) => {
-          const isLast = screens.length - 1 === index;
-          return (
-            <FilmstripItem
-              key={screen.id}
-              index={index}
-              screen={screen}
-              gesture={gestures[screen.id]}
-              redactions={redactions[screen.id] ?? []}
-              os={os}
-              isSelected={focusViewIndex === index}
-              hasError={
-                isLast
-                  ? false
-                  : !gestures[screen.id] ||
-                    gestures[screen.id].type === null ||
-                    !validateGestureDescription(gestures[screen.id])
-              }
-              onClick={() => setFocusViewIndex(index)}
-              handleSetTime={handleSetTime}
-              handleDeleteFrame={handleDeleteScreen}
-            ></FilmstripItem>
-          );
-        })}
+    <div ref={containerRef} className="h-full overflow-x-auto">
+      <ul className="relative z-0 flex h-full p-2 gap-1">
+        <AnimatePresence mode="popLayout">
+          {screens?.map((screen: FrameData, index: number) => {
+            const isLast = screens.length - 1 === index;
+            return (
+              <FilmstripItem
+                key={screen.id}
+                index={index}
+                screen={screen}
+                gesture={gestures[screen.id]}
+                redactions={redactions[screen.id] ?? []}
+                os={os}
+                isSelected={focusViewIndex === index}
+                hasError={
+                  isLast
+                    ? false
+                    : !gestures[screen.id] ||
+                      gestures[screen.id].type === null ||
+                      !validateGestureDescription(gestures[screen.id])
+                }
+                onClick={() => setFocusViewIndex(index)}
+                handleSetTime={handleSetTime}
+                handleDeleteFrame={handleDeleteScreen}
+              />
+            );
+          })}
+        </AnimatePresence>
       </ul>
-    </AnimatePresence>
+    </div>
   );
 }
 
@@ -75,8 +117,7 @@ function FilmstripItem({
   hasError = false,
   handleSetTime,
   handleDeleteFrame,
-  // children,
-  ...props
+  onClick,
 }: {
   screen: FrameData;
   gesture?: ScreenGesture;
@@ -87,8 +128,8 @@ function FilmstripItem({
   hasError?: boolean;
   handleSetTime: (t: number) => void;
   handleDeleteFrame: (index: number) => void;
-  // children?: React.ReactNode;
-} & React.HTMLAttributes<HTMLLIElement>) {
+  onClick?: () => void;
+}) {
   const hasGestureCoordinates =
     gesture?.x !== null &&
     gesture?.x !== undefined &&
@@ -96,8 +137,9 @@ function FilmstripItem({
     gesture?.y !== undefined;
 
   return (
-    <motion.div
-      className="min-w-fit h-full max-w-full"
+    <motion.li
+      className="cursor-pointer min-w-fit h-full max-w-full"
+      data-index={index}
       variants={card}
       initial="initial"
       animate="animate"
@@ -105,13 +147,11 @@ function FilmstripItem({
       layout="position"
       transition={spring}
       key={`${screen.timestamp}-${screen.id}`}
-      onClick={() => handleSetTime(screen.timestamp)}
+      onClick={() => {
+        onClick?.();
+        handleSetTime(screen.timestamp);
+      }}
     >
-      <li
-        className="cursor-pointer min-w-fit h-full"
-        data-index={index}
-        {...props}
-      >
         {/* Toolbar */}
         <div className="flex flex-row w-full items-center justify-between">
           <div className="flex justify-center items-center bg-background rounded-lg">
@@ -147,9 +187,9 @@ function FilmstripItem({
                     className={cn(
                       "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
                       isSelected
-                        ? "ring-2 ring-inset ring-blue-500"
+                        ? "ring-3 ring-inset ring-blue-500"
                         : hasError
-                          ? "ring-2 ring-inset ring-yellow-500"
+                          ? "ring-3 ring-inset ring-yellow-500"
                           : "",
                     )}
                   >
@@ -241,7 +281,6 @@ function FilmstripItem({
             )}
           </div>
         </div>
-      </li>
-    </motion.div>
+    </motion.li>
   );
 }

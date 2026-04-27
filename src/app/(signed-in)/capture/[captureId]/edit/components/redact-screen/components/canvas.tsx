@@ -38,6 +38,38 @@ import OverlayContainer, { Overlay } from "./stage-overlay";
 
 const MIN_PIXEL_SIZE = 10;
 
+const toEdges = (box: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}) => ({
+  left: box.x,
+  right: box.x + box.width,
+  top: box.y,
+  bottom: box.y + box.height,
+});
+
+const fromEdges = ({
+  left,
+  right,
+  top,
+  bottom,
+  rotation = 0,
+}: {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  rotation?: number;
+}) => ({
+  x: left,
+  y: top,
+  width: right - left,
+  height: bottom - top,
+  rotation,
+});
+
 export interface CanvasComponentProps {
   screen: FrameData;
   vh: {
@@ -305,15 +337,170 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
 
     const boundBoxFunc = useCallback(
       (oldBox: any, newBox: any) => {
-        const x0 = offsetX,
-          y0 = offsetY;
-        const maxW = displayWidth,
-          maxH = displayHeight;
-        const w = Math.max(MIN_PIXEL_SIZE, Math.min(newBox.width, maxW));
-        const h = Math.max(MIN_PIXEL_SIZE, Math.min(newBox.height, maxH));
-        const x = Math.min(Math.max(newBox.x, x0), x0 + maxW - w);
-        const y = Math.min(Math.max(newBox.y, y0), y0 + maxH - h);
-        return { ...oldBox, x, y, width: w, height: h };
+        const stage = stageRef.current;
+        const transformer = stage?.findOne(
+          "Transformer",
+        ) as Konva.Transformer | null;
+        const activeAnchor =
+          transformer && typeof transformer.getActiveAnchor === "function"
+            ? transformer.getActiveAnchor()
+            : null;
+        const scale = stage?.scaleX() ?? 1;
+        const boundsX = (stage?.x() ?? 0) + offsetX * scale;
+        const boundsY = (stage?.y() ?? 0) + offsetY * scale;
+        const boundsW = displayWidth * scale;
+        const boundsH = displayHeight * scale;
+        const minW = MIN_PIXEL_SIZE * scale;
+        const minH = MIN_PIXEL_SIZE * scale;
+        const boundsRight = boundsX + boundsW;
+        const boundsBottom = boundsY + boundsH;
+
+        const oldEdges = toEdges(oldBox);
+        const newEdges = toEdges(newBox);
+        const clamp = (value: number, min: number, max: number) =>
+          Math.min(Math.max(value, min), max);
+
+        let returnedBox;
+
+        switch (activeAnchor) {
+          case "middle-right": {
+            const left = oldEdges.left;
+            const right = clamp(newEdges.right, left + minW, boundsRight);
+            returnedBox = fromEdges({
+              left,
+              right,
+              top: oldEdges.top,
+              bottom: oldEdges.bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "middle-left": {
+            const right = oldEdges.right;
+            const left = clamp(newEdges.left, boundsX, right - minW);
+            returnedBox = fromEdges({
+              left,
+              right,
+              top: oldEdges.top,
+              bottom: oldEdges.bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "middle-bottom": {
+            const top = oldEdges.top;
+            const bottom = clamp(newEdges.bottom, top + minH, boundsBottom);
+            returnedBox = fromEdges({
+              left: oldEdges.left,
+              right: oldEdges.right,
+              top,
+              bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "middle-top": {
+            const bottom = oldEdges.bottom;
+            const top = clamp(newEdges.top, boundsY, bottom - minH);
+            returnedBox = fromEdges({
+              left: oldEdges.left,
+              right: oldEdges.right,
+              top,
+              bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "top-left": {
+            const right = oldEdges.right;
+            const bottom = oldEdges.bottom;
+            const left = clamp(newEdges.left, boundsX, right - minW);
+            const top = clamp(newEdges.top, boundsY, bottom - minH);
+            returnedBox = fromEdges({
+              left,
+              right,
+              top,
+              bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "top-right": {
+            const left = oldEdges.left;
+            const bottom = oldEdges.bottom;
+            const right = clamp(newEdges.right, left + minW, boundsRight);
+            const top = clamp(newEdges.top, boundsY, bottom - minH);
+            returnedBox = fromEdges({
+              left,
+              right,
+              top,
+              bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "bottom-left": {
+            const right = oldEdges.right;
+            const top = oldEdges.top;
+            const left = clamp(newEdges.left, boundsX, right - minW);
+            const bottom = clamp(newEdges.bottom, top + minH, boundsBottom);
+            returnedBox = fromEdges({
+              left,
+              right,
+              top,
+              bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          case "bottom-right": {
+            const left = oldEdges.left;
+            const top = oldEdges.top;
+            const right = clamp(newEdges.right, left + minW, boundsRight);
+            const bottom = clamp(newEdges.bottom, top + minH, boundsBottom);
+            returnedBox = fromEdges({
+              left,
+              right,
+              top,
+              bottom,
+              rotation: oldBox.rotation ?? 0,
+            });
+            break;
+          }
+          default: {
+            const w = Math.max(minW, Math.min(newBox.width, boundsW));
+            const h = Math.max(minH, Math.min(newBox.height, boundsH));
+            const x = Math.min(Math.max(newBox.x, boundsX), boundsRight - w);
+            const y = Math.min(Math.max(newBox.y, boundsY), boundsBottom - h);
+            returnedBox = { ...oldBox, x, y, width: w, height: h };
+          }
+        }
+
+        return returnedBox;
+      },
+      [offsetX, offsetY, displayWidth, displayHeight],
+    );
+
+    const clampLocalBox = useCallback(
+      (
+        oldBox: { x: number; y: number; width: number; height: number },
+        rawBox: { x: number; y: number; width: number; height: number },
+      ) => {
+        const x0 = offsetX;
+        const y0 = offsetY;
+        const maxW = displayWidth;
+        const maxH = displayHeight;
+        const w = Math.max(MIN_PIXEL_SIZE, Math.min(rawBox.width, maxW));
+        const h = Math.max(MIN_PIXEL_SIZE, Math.min(rawBox.height, maxH));
+        const x = Math.min(Math.max(rawBox.x, x0), x0 + maxW - w);
+        const y = Math.min(Math.max(rawBox.y, y0), y0 + maxH - h);
+        return {
+          ...oldBox,
+          x,
+          y,
+          width: w,
+          height: h,
+        };
       },
       [offsetX, offsetY, displayWidth, displayHeight],
     );
@@ -321,31 +508,31 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     const handleTransform = useCallback(
       (e: any, id: string) => {
         const node = e.target;
-        // read transform scale
-        const scaleX = node.scaleX();
-        const scaleY = node.scaleY();
-        // compute raw pixel dimensions (signed)
-        const rawW = node.width() * scaleX;
-        const rawH = node.height() * scaleY;
-        // build a raw box to clamp
+        const selectedRedaction = selectedRedactions.find((r) => r.id === id);
+        if (!selectedRedaction) return;
+
+        const oldBox = {
+          x: selectedRedaction.x * displayWidth + offsetX,
+          y: selectedRedaction.y * displayHeight + offsetY,
+          width: selectedRedaction.width * displayWidth,
+          height: selectedRedaction.height * displayHeight,
+        };
+
         const rawBox = {
           x: node.x(),
           y: node.y(),
-          width: rawW,
-          height: rawH,
+          width: node.width() * node.scaleX(),
+          height: node.height() * node.scaleY(),
         };
-        // clamp using our boundBoxFunc
-        const selectedRedaction = selectedRedactions.find((r) => r.id === id);
-        if (!selectedRedaction) return;
-        const clamped = boundBoxFunc(selectedRedaction, rawBox);
-        // convert to normalized coordinates
+
+        const clamped = clampLocalBox(oldBox, rawBox);
         const newX = (clamped.x - offsetX) / displayWidth;
         const newY = (clamped.y - offsetY) / displayHeight;
         const newW = clamped.width / displayWidth;
         const newH = clamped.height / displayHeight;
-        // update React state once
+
         updateRect(id, { x: newX, y: newY, width: newW, height: newH });
-        // reset scale and apply clamped pixel attrs
+
         node.scaleX(1);
         node.scaleY(1);
         node.setAttrs({
@@ -354,7 +541,8 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           width: clamped.width,
           height: clamped.height,
         });
-        node.getLayer().batchDraw();
+
+        node.getLayer()?.batchDraw();
       },
       [
         offsetX,
@@ -363,7 +551,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         displayHeight,
         selectedRedactions,
         updateRect,
-        boundBoxFunc,
+        clampLocalBox,
       ],
     );
 
