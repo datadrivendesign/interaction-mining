@@ -261,7 +261,7 @@ export function RepairScreenIOS({
               defaultSize={67}
               minSize={50}
               maxSize={67}
-              className="relative overflow-visible"
+              className="relative z-20 min-h-0 h-full overflow-visible"
             >
               <RepairFocusPanelIOS
                 taskDescription={taskDescription}
