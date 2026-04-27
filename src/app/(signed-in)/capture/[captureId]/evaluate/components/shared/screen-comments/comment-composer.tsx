@@ -56,7 +56,7 @@ export function CommentComposer({
   return (
     <div
       ref={composerRef}
-      className="space-y-2 rounded-lg border border-red-200 bg-white p-3 shadow-sm dark:border-red-900/60 dark:bg-neutral-900"
+      className="space-y-1.5 rounded-lg border border-red-200 bg-white p-2 shadow-sm dark:border-red-900/60 dark:bg-neutral-900"
     >
       {pendingIssue && (
         <>
@@ -94,7 +94,7 @@ export function CommentComposer({
             <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
               Preview
             </p>
-            <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
+            <div className="max-h-24 overflow-y-auto rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
               {pendingPreview}
             </div>
           </div>
@@ -136,7 +136,7 @@ export function CommentComposer({
                 : `This note will be saved under ${screenLabel}.`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="grid min-w-0 w-full grid-cols-3 gap-1 sm:gap-1.5">
             {(
               [
                 ["annotation", "Annotate"],
@@ -151,16 +151,17 @@ export function CommentComposer({
                 variant={
                   customDestination === destination ? "default" : "outline"
                 }
-                className="flex-1 text-xs"
+                title={label}
+                className="h-7 w-full min-w-0 max-w-full justify-center gap-0 px-1 text-[9px] leading-tight whitespace-normal sm:h-8 sm:px-1 sm:text-[11px]"
                 onClick={() => onSetCustomDestination(destination)}
               >
-                {label}
+                <span className="block min-w-0 truncate">{label}</span>
               </Button>
             ))}
           </div>
           <Textarea
             ref={textareaRef}
-            className="h-14 min-h-0 resize-none text-xs"
+            className="h-12 min-h-0 resize-none text-xs"
             placeholder="Describe the issue... (Enter to add)"
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}

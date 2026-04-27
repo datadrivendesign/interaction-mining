@@ -6,7 +6,8 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import type { ImperativePanelHandle } from "react-resizable-panels";
+import { useEffect, useRef, useState } from "react";
 import {
   DraftTraceFormData,
   TraceFormData,
@@ -28,6 +29,11 @@ import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
 
+const REVIEW_VIDEO_PANEL_DEFAULT_HORIZONTAL = 23;
+const REVIEW_VIDEO_PANEL_LANDSCAPE_HORIZONTAL = 31;
+const REVIEW_VIDEO_PANEL_DEFAULT_COMPACT = 35;
+const REVIEW_VIDEO_PANEL_LANDSCAPE_COMPACT = 44;
+
 export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
   const captureId = params.captureId as string;
@@ -38,6 +44,10 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   );
   const [hasHydratedFeedback, setHasHydratedFeedback] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [reviewVideoLandscape, setReviewVideoLandscape] = useState<
+    boolean | null
+  >(null);
+  const reviewVideoPanelRef = useRef<ImperativePanelHandle>(null);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
     includes: { app: true, task: true },
   });
@@ -54,6 +64,33 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
+  useEffect(() => {
+    setReviewVideoLandscape(null);
+  }, [captureId]);
+
+  useEffect(() => {
+    if (reviewVideoLandscape === null) {
+      return;
+    }
+    const panel = reviewVideoPanelRef.current;
+    if (!panel) {
+      return;
+    }
+    if (isCompactLayout) {
+      panel.resize(
+        reviewVideoLandscape
+          ? REVIEW_VIDEO_PANEL_LANDSCAPE_COMPACT
+          : REVIEW_VIDEO_PANEL_DEFAULT_COMPACT,
+      );
+    } else {
+      panel.resize(
+        reviewVideoLandscape
+          ? REVIEW_VIDEO_PANEL_LANDSCAPE_HORIZONTAL
+          : REVIEW_VIDEO_PANEL_DEFAULT_HORIZONTAL,
+      );
+    }
+  }, [reviewVideoLandscape, isCompactLayout]);
+
   const { isSubmitting, handleApprove, handleDeny } = useReviewVerdictActions({
     capture,
     traceData,
@@ -65,11 +102,13 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     videoRef,
     currentTime,
     videoDuration,
+    isPlaying,
     sortedScreens,
     handleScreenSelect,
     handleScreenStep,
     handleMarkerStripScrub,
     handleReplayScreen,
+    togglePlayback,
     handleVideoSeeking,
     handleOnVideoLoadedMetadata,
     handleOnVideoTimeUpdate,
@@ -179,9 +218,18 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         >
           {/* Left: Video + Feedback + Approve/Deny */}
           <ResizablePanel
-            defaultSize={isCompactLayout ? 38 : 25}
+            ref={reviewVideoPanelRef}
+            defaultSize={isCompactLayout ? 35 : 23}
             minSize={isCompactLayout ? 28 : 25}
-            maxSize={isCompactLayout ? 55 : 30}
+            maxSize={
+              isCompactLayout
+                ? reviewVideoLandscape
+                  ? 54
+                  : 51
+                : reviewVideoLandscape
+                  ? 37
+                  : 28
+            }
             className="min-h-0 bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full overflow-hidden flex flex-col"
           >
             {traceData && capture && (
@@ -200,6 +248,11 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                 onVideoSeeking={handleVideoSeeking}
                 onVideoPlay={handleOnVideoPlay}
                 onVideoPause={handleOnVideoPause}
+                isPlaying={isPlaying}
+                onTogglePlayback={togglePlayback}
+                onVideoLayoutOrientationChange={(orientation) =>
+                  setReviewVideoLandscape(orientation === "landscape")
+                }
               />
             )}
           </ResizablePanel>
@@ -208,8 +261,16 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
 
           {/* Right: Gallery + Screen Comments (nested horizontal split) */}
           <ResizablePanel
-            defaultSize={isCompactLayout ? 62 : 75}
-            minSize={isCompactLayout ? 45 : 65}
+            defaultSize={isCompactLayout ? 65 : 77}
+            minSize={
+              isCompactLayout
+                ? reviewVideoLandscape
+                  ? 42
+                  : 45
+                : reviewVideoLandscape
+                  ? 63
+                  : 65
+            }
             maxSize={isCompactLayout ? 72 : 80}
             className="min-h-0 box-border w-full h-full"
           >
@@ -279,6 +340,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
             { label: "Replay around screen", keys: "R" },
+            { label: "Play / pause", keys: "Space" },
             { label: "Custom issue", keys: "O" },
             { label: "Remove last screen issue", keys: "Backspace" },
             { label: "Issue chips", keys: "1-9" },

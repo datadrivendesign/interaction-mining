@@ -368,6 +368,35 @@ export function useIOSReviewPlayback({
     [replayScreenContext, sortedScreens],
   );
 
+  const togglePlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.src) {
+      return;
+    }
+
+    if (video.paused) {
+      void video.play();
+    } else {
+      video.pause();
+    }
+  }, []);
+
+  useHotkeys(
+    "space",
+    (event) => {
+      event.preventDefault();
+      togglePlayback();
+    },
+    {
+      enabled: !isSubmitting && videoDuration > 0,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [isSubmitting, togglePlayback, videoDuration],
+  );
+
   useHotkeys(
     "r",
     (event) => {
@@ -388,11 +417,13 @@ export function useIOSReviewPlayback({
     videoRef,
     currentTime,
     videoDuration,
+    isPlaying,
     sortedScreens,
     handleScreenSelect,
     handleScreenStep,
     handleMarkerStripScrub,
     handleReplayScreen,
+    togglePlayback,
     stopReplayWindowIfNeeded,
     clearReplayWindow,
     handleVideoSeeking,
