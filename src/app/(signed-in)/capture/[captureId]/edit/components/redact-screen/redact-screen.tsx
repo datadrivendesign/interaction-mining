@@ -15,16 +15,7 @@ import { FrameData } from "../types";
 import { Filmstrip } from "./components/filmstrip";
 import { FocusView } from "./components/focus-view";
 
-export interface RedactScreenJumpTarget {
-  nonce: number;
-  screenId: string;
-}
-
-export default function RedactScreen({
-  jumpTarget,
-}: {
-  jumpTarget?: RedactScreenJumpTarget | null;
-}) {
+export default function RedactScreen() {
   const { getValues } = useFormContext<TraceFormData>();
   const screens = getValues("screens") as FrameData[];
   const vhs = getValues("vhs") as { [key: string]: any };
@@ -50,25 +41,12 @@ export default function RedactScreen({
   useHotkeys("right", handleNext);
   useHotkeys("tab", handleNext);
 
-  React.useEffect(() => {
-    if (!jumpTarget) {
-      return;
-    }
-
-    const targetIndex = screens.findIndex(
-      (screen) => screen.id === jumpTarget.screenId,
-    );
-    if (targetIndex >= 0) {
-      setFocusViewIndex(targetIndex);
-    }
-  }, [jumpTarget, screens]);
-
   return (
-    <div className="flex h-full w-full min-w-0 overflow-hidden">
+    <div className="flex w-full h-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel
           defaultSize={75}
-          className="relative z-20 min-w-0 overflow-hidden"
+          className="relative z-20 overflow-visible"
         >
           {focusViewIndex > -1 ? (
             <FocusView
@@ -91,7 +69,7 @@ export default function RedactScreen({
           defaultSize={20}
           minSize={20}
           maxSize={50}
-          className="relative z-10 min-w-0"
+          className="relative z-10"
         >
           <Filmstrip
             screens={screens}

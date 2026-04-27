@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Play,
   Pause,
@@ -37,14 +43,6 @@ export type FrameTimelineProps = {
   handleSetTime: (t: number) => void;
   handlePlayPause: () => void;
   handleCapture: () => void;
-  onScrubPreviewTimeChange?: (t: number | null) => void;
-  onScrubActiveChange?: (active: boolean) => void;
-  onScrubCommit?: (t: number) => void;
-  captureMarkers?: {
-    id: string;
-    timestamp: number;
-    isFocused?: boolean;
-  }[];
 };
 
 export default function FrameTimeline({
@@ -55,15 +53,50 @@ export default function FrameTimeline({
   handleSetTime,
   handlePlayPause,
   handleCapture,
-  onScrubPreviewTimeChange,
-  onScrubActiveChange,
-  onScrubCommit,
-  captureMarkers = [],
 }: FrameTimelineProps) {
-  const TARGET_THUMBNAIL_SLOT_WIDTH = 36;
   const [timelineRef, timelineMeasure] = useMeasure<HTMLDivElement>();
   const [dragging, setDragging] = useState(false);
   const activePointerIdRef = useRef<number | null>(null);
+  const scrubRafRef = useRef<number | null>(null);
+  const pendingScrubTimeRef = useRef<number | null>(null);
+
+  const commitScrubTime = useCallback(
+    (t: number) => {
+      if (Math.abs(t - currentTime) < 0.001) {
+        return;
+      }
+      handleSetTime(t);
+    },
+    [currentTime, handleSetTime],
+  );
+
+  const flushPendingScrubTime = useCallback(() => {
+    scrubRafRef.current = null;
+    const pendingTime = pendingScrubTimeRef.current;
+    pendingScrubTimeRef.current = null;
+    if (pendingTime !== null) {
+      commitScrubTime(pendingTime);
+    }
+  }, [commitScrubTime]);
+
+  const queueScrubTime = useCallback(
+    (t: number) => {
+      pendingScrubTimeRef.current = t;
+      if (scrubRafRef.current !== null) {
+        return;
+      }
+      scrubRafRef.current = requestAnimationFrame(flushPendingScrubTime);
+    },
+    [flushPendingScrubTime],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (scrubRafRef.current !== null) {
+        cancelAnimationFrame(scrubRafRef.current);
+      }
+    };
+  }, []);
 
   // Map pointer X -> video time
   const getTimeFromClientX = useCallback(
@@ -92,24 +125,15 @@ export default function FrameTimeline({
       if (shouldCommit && dragging) {
         const t = getTimeFromClientX(e.clientX);
         if (t !== undefined) {
-          onScrubPreviewTimeChange?.(t);
-          onScrubCommit?.(t);
+          pendingScrubTimeRef.current = null;
+          commitScrubTime(t);
         }
-      } else {
-        onScrubPreviewTimeChange?.(null);
       }
+      pendingScrubTimeRef.current = null;
       activePointerIdRef.current = null;
       setDragging(false);
-      onScrubActiveChange?.(false);
     },
-    [
-      dragging,
-      getTimeFromClientX,
-      onScrubActiveChange,
-      onScrubCommit,
-      onScrubPreviewTimeChange,
-      timelineRef,
-    ],
+    [commitScrubTime, dragging, getTimeFromClientX, timelineRef],
   );
 
   // Start scrub on pointer down
@@ -122,11 +146,8 @@ export default function FrameTimeline({
     activePointerIdRef.current = e.pointerId;
     timelineRef.current?.setPointerCapture(e.pointerId);
     setDragging(true);
-    onScrubActiveChange?.(true);
     const t = getTimeFromClientX(e.clientX);
-    if (t !== undefined) {
-      onScrubPreviewTimeChange?.(t);
-    }
+    if (t !== undefined) commitScrubTime(t);
   };
 
   // Scrub on pointer move when dragging
@@ -141,10 +162,7 @@ export default function FrameTimeline({
     e.preventDefault();
     e.stopPropagation();
     const t = getTimeFromClientX(e.clientX);
-    if (t === undefined) {
-      return;
-    }
-    onScrubPreviewTimeChange?.(t);
+    if (t !== undefined) queueScrubTime(t);
   };
 
   // End scrub on pointer up
@@ -156,13 +174,6 @@ export default function FrameTimeline({
     videoDuration > 0
       ? Math.min(Math.max((currentTime / videoDuration) * 100, 0), 100)
       : 0;
-  const scrubOffsetPx =
-    timelineMeasure && timelineMeasure.width > 0
-      ? (scrubProgressPercent / 100) * timelineMeasure.width
-      : 0;
-  const scrubMotionTransition = dragging
-    ? { type: "tween" as const, ease: "linear" as const, duration: 0.04 }
-    : spring({ duration: 0.12 });
 
   const handleSkipForward = () => {
     const newTime = Math.min(currentTime + 5, videoDuration);
@@ -176,15 +187,23 @@ export default function FrameTimeline({
 
   const displayedThumbnails = useMemo(() => {
     if (!thumbnails || thumbnails.length === 0) return [];
-    const { width: timelineWidth } = timelineMeasure ?? { width: 0 };
-    const slotCount =
-      timelineWidth > 0
-        ? Math.max(1, Math.ceil(timelineWidth / TARGET_THUMBNAIL_SLOT_WIDTH))
-        : 0;
+    const { width: timelineWidth, height: timelineHeight } =
+      timelineMeasure ?? { width: 0, height: 0 };
 
-    return Array.from({ length: slotCount }, (_, i) => {
+    const { width: videoWidth, height: videoHeight } = thumbnails[0];
+
+    const displayHeight = timelineHeight;
+    const thumbnailWidth =
+      timelineHeight > 0 ? (videoWidth / videoHeight) * displayHeight : 0;
+    const slotCount =
+      timelineWidth > 0 ? Math.ceil(timelineWidth / thumbnailWidth) + 1 : 0;
+
+    // Build quantized thumbnails list
+    const res = Array.from({ length: slotCount }, (_, i) => {
+      // Compute target time for this slot
       const targetTime =
         slotCount === 1 ? 0 : (i / (slotCount - 1)) * videoDuration;
+      // Select the thumbnail closest to the target time
       return thumbnails.reduce((prev, curr) =>
         Math.abs(curr.timestamp - targetTime) <
         Math.abs(prev.timestamp - targetTime)
@@ -192,28 +211,14 @@ export default function FrameTimeline({
           : prev,
       );
     });
+
+    return res;
   }, [thumbnails, timelineMeasure, videoDuration]);
-
-  const visibleCaptureMarkers = useMemo(() => {
-    if (videoDuration <= 0 || captureMarkers.length === 0) {
-      return [];
-    }
-
-    return captureMarkers
-      .filter((marker) => Number.isFinite(marker.timestamp))
-      .map((marker) => ({
-        ...marker,
-        percent: Math.min(
-          Math.max((marker.timestamp / videoDuration) * 100, 0),
-          100,
-        ),
-      }));
-  }, [captureMarkers, videoDuration]);
 
   return (
     <div className="flex items-center h-12 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
       {/* Play/Pause */}
-      <div className="flex shrink-0 items-center gap-1 bg-neutral-50 p-1 dark:bg-neutral-950">
+      <div className="flex items-center gap-1 p-1">
         <span className="hidden md:inline-flex gap-1 tabular-nums text-xs text-muted-foreground font-medium px-2">
           {DateTime.fromSeconds(currentTime).toFormat("mm:ss")}/
           {videoDuration
@@ -273,109 +278,55 @@ export default function FrameTimeline({
         </Button>
       </div>
 
-      <div className="h-full min-w-0 flex-1 basis-0 overflow-hidden">
-        <div
-          ref={timelineRef}
-          className="relative flex h-full w-full bg-muted-background overflow-hidden cursor-pointer touch-none select-none"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={(e) => endScrub(e, false)}
-          onLostPointerCapture={(e) => endScrub(e, false)}
-          onDragStart={(e) => e.preventDefault()}
+      <div
+        ref={timelineRef}
+        className="relative flex w-full h-full bg-muted-background overflow-clip whitespace-nowrap cursor-pointer touch-none select-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={(e) => endScrub(e, false)}
+        onLostPointerCapture={(e) => endScrub(e, false)}
+        onDragStart={(e) => e.preventDefault()}
+      >
+        {displayedThumbnails.map((thumb, index) => (
+          <Image
+            key={thumb.src + index}
+            src={thumb.src}
+            alt={`${thumb.timestamp.toFixed(2)}s`}
+            className="w-auto h-full pointer-events-none select-none"
+            width={0}
+            height={0}
+            sizes="100vw"
+            draggable={false}
+            style={{ imageRendering: "crisp-edges" }}
+          />
+        ))}
+
+        <motion.div
+          className="absolute top-0 bottom-0 w-full h-full pointer-events-auto"
+          animate={{
+            opacity: dragging ? 0.5 : 1,
+            x: `${scrubProgressPercent}%`,
+          }}
+          transition={dragging ? { duration: 0 } : spring({ duration: 0.125 })}
         >
-          <div
-            className="grid h-full w-full pointer-events-none select-none overflow-hidden"
-            style={{
-              gridTemplateColumns: `repeat(${Math.max(displayedThumbnails.length, 1)}, minmax(0, 1fr))`,
-            }}
-          >
-            {displayedThumbnails.map((thumb, index) => (
-              <div key={thumb.src + index} className="relative h-full min-w-0">
-                <Image
-                  src={thumb.src}
-                  alt={`${thumb.timestamp.toFixed(2)}s`}
-                  className="h-full w-full object-cover"
-                  width={thumb.width}
-                  height={thumb.height}
-                  sizes="100vw"
-                  draggable={false}
-                  style={{ imageRendering: "crisp-edges" }}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="pointer-events-none absolute inset-0">
-            {visibleCaptureMarkers.map((marker) => (
-              <div
-                key={marker.id}
-                className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${marker.percent}%` }}
-              >
-                <div
-                  className={
-                    marker.isFocused
-                      ? "size-2.5 rounded-full bg-yellow-500 border-2 border-black shadow-[0_0_0_1px_rgba(255,255,255,0.6),0_0_8px_rgba(234,179,8,0.22)]"
-                      : "size-2 rounded-full border-2 border-black bg-white/58"
-                  }
-                />
-              </div>
-            ))}
-          </div>
-
-          <motion.div
-            className="absolute inset-y-0 left-0 pointer-events-none bg-yellow-400/20"
-            animate={{ width: scrubOffsetPx }}
-            transition={scrubMotionTransition}
-            style={{ willChange: "width" }}
-          />
-
-          <motion.div
-            className="absolute inset-y-0 left-0 pointer-events-none border-r border-yellow-500/35"
-            animate={{ width: scrubOffsetPx }}
-            transition={scrubMotionTransition}
-            style={{ willChange: "width" }}
-          />
-
-          <motion.div
-            className="absolute top-0 bottom-0 left-0 pointer-events-auto"
-            animate={{
-              opacity: dragging ? 0.92 : 1,
-              x: scrubOffsetPx,
-              scale: dragging ? 1.03 : 1,
-            }}
-            transition={scrubMotionTransition}
-            style={{ willChange: "transform" }}
-          >
-            {dragging ? (
-              <div className="relative h-full -translate-x-1/2">
-                <div className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.45)]" />
-                <div className="absolute top-1/2 left-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-yellow-100/80 bg-yellow-400 shadow-sm" />
-              </div>
-            ) : (
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="relative h-full -translate-x-1/2">
-                      <div className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.45)]" />
-                      <div className="absolute top-1/2 left-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-yellow-100/80 bg-yellow-400 shadow-sm" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="flex w-full justify-between items-center gap-4 text-sm">
-                      <span>Drag yellow bar to scrub</span>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </motion.div>
-        </div>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-[5px] h-full bg-yellow-500 rounded" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="flex w-full justify-between items-center gap-4 text-sm">
+                  <span>Drag yellow bar to scrub</span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </motion.div>
       </div>
 
       {/* Capture */}
-      <div className="flex h-full shrink-0 items-center gap-4 bg-neutral-50 p-2 dark:bg-neutral-950">
+      <div className="flex items-center w-auto h-full p-2 gap-4">
         <Button
           variant="default"
           size="sm"

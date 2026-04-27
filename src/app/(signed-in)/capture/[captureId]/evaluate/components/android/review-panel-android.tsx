@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export function ReviewContextPanelAndroid({
+export function ReviewPanelAndroid({
   traceData,
   isAdmin,
 }: {
@@ -39,11 +39,11 @@ export function ReviewContextPanelAndroid({
 
       {isAdmin && traceData.description && (
         <div className="flex-1 min-h-0 overflow-y-auto p-3">
-          <div className="flex flex-col gap-1">
+          <div className="rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
               Task
             </span>
-            <p className="text-[15px] font-medium leading-6 text-neutral-800 dark:text-neutral-100">
+            <p className="mt-1 text-xs leading-snug text-neutral-600 dark:text-neutral-400">
               {traceData.description}
             </p>
           </div>

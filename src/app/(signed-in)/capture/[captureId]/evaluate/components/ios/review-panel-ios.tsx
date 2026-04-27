@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import { ScreenComment } from "../shared/screen-comments-panel";
 import { ScreenMarkerStrip } from "../shared/screen-marker-strip";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pause, Play } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
-export function ReviewVideoPanelIOS({
+export function ReviewPanelIOS({
   traceData,
   isAdmin,
   videoRef,
@@ -21,12 +21,8 @@ export function ReviewVideoPanelIOS({
   onScrubVideo,
   onVideoLoadedMetadata,
   onVideoTimeUpdate,
-  onVideoSeeking,
   onVideoPlay,
   onVideoPause,
-  isPlaying,
-  onTogglePlayback,
-  onVideoLayoutOrientationChange,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
@@ -39,22 +35,14 @@ export function ReviewVideoPanelIOS({
   onScrubVideo: (timestamp: number) => void;
   onVideoLoadedMetadata: (video: HTMLVideoElement) => void;
   onVideoTimeUpdate: (video: HTMLVideoElement) => void;
-  onVideoSeeking: (video: HTMLVideoElement) => void;
   onVideoPlay: () => void;
   onVideoPause: () => void;
-  isPlaying: boolean;
-  onTogglePlayback: () => void;
-  onVideoLayoutOrientationChange?: (
-    orientation: "portrait" | "landscape",
-  ) => void;
 }) {
   const [videoOrientation, setVideoOrientation] = useState<
     "portrait" | "landscape" | null
   >(null);
-  const videoLayoutClass =
-    videoOrientation === "landscape"
-      ? "w-full max-w-full h-auto"
-      : "w-[75%] max-w-[60%] h-auto";
+  const videoSizeClass =
+    videoOrientation === "landscape" ? "w-full" : "w-[68%]";
 
   return (
     <aside className="w-full h-full flex flex-col min-h-0">
@@ -84,41 +72,35 @@ export function ReviewVideoPanelIOS({
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-4 p-3">
           {traceData.description && (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
                 Task
               </span>
-              <p className="text-[13px] font-medium leading-6 text-neutral-800 dark:text-neutral-100">
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-snug">
                 {traceData.description}
               </p>
             </div>
           )}
-          <div className="flex w-full justify-center overflow-x-auto pb-1">
+          <div className="flex justify-center w-full">
             <video
               ref={videoRef}
               crossOrigin="anonymous"
               preload="auto"
-              className={cn(
-                videoLayoutClass,
-                "min-w-0 rounded-lg border border-neutral-300 object-contain dark:border-neutral-600",
-              )}
-              controls={false}
-              playsInline
+              className={`${videoSizeClass} min-w-0 h-auto rounded-lg object-contain`}
+              controls={true}
               onLoadedMetadata={(event) => {
                 const videoElement = event.currentTarget;
                 onVideoLoadedMetadata(videoElement);
                 if (!videoElement.videoWidth || !videoElement.videoHeight) {
                   return;
                 }
-                const nextOrientation =
+                setVideoOrientation(
                   videoElement.videoWidth > videoElement.videoHeight
                     ? "landscape"
-                    : "portrait";
-                setVideoOrientation(nextOrientation);
-                onVideoLayoutOrientationChange?.(nextOrientation);
+                    : "portrait",
+                );
               }}
               onTimeUpdate={(event) => onVideoTimeUpdate(event.currentTarget)}
-              onSeeking={(event) => onVideoSeeking(event.currentTarget)}
               onPlay={onVideoPlay}
               onPause={onVideoPause}
             />
@@ -131,24 +113,6 @@ export function ReviewVideoPanelIOS({
             duration={videoDuration}
             onSelectScreen={onScreenSelect}
             onScrub={onScrubVideo}
-            headerAccessory={
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="outline"
-                className="size-6 shrink-0 rounded-md"
-                disabled={videoDuration <= 0}
-                onClick={() => onTogglePlayback()}
-                aria-label={isPlaying ? "Pause video" : "Play video"}
-                title={isPlaying ? "Pause video (Space)" : "Play video (Space)"}
-              >
-                {isPlaying ? (
-                  <Pause className="size-3 shrink-0" />
-                ) : (
-                  <Play className="size-3 shrink-0" />
-                )}
-              </Button>
-            }
           />
         </div>
       </div>

@@ -19,18 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
-function hasReviewerFeedback(capture: {
-  annotateFeedback?: string | null;
-  redactFeedback?: string | null;
-  summarizeFeedback?: string | null;
-}) {
-  return [
-    capture.annotateFeedback,
-    capture.redactFeedback,
-    capture.summarizeFeedback,
-  ].some((value) => value?.trim());
-}
-
 // Separate components for each action type
 function StartButton({ captureId }: { captureId: string }) {
   return (
@@ -128,9 +116,6 @@ export function CaptureCard({
   status: CaptureStatus;
   onDelete: (id: string) => void;
 }) {
-  const showRevisionRequested =
-    status === CaptureStatus.PROCESSING && hasReviewerFeedback(capture);
-
   const renderActionButtons = () => {
     switch (status) {
       case CaptureStatus.CREATED:
@@ -175,11 +160,6 @@ export function CaptureCard({
       </div>
       <div className="flex flex-col h-full justify-evenly content-evenly items-center text-center ml-2">
         {renderActionButtons()}
-        {showRevisionRequested && (
-          <Badge className="self-start mt-1 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300">
-            Revision requested
-          </Badge>
-        )}
         <p className="text-xs text-muted-foreground self-start mt-1">
           {capture.task?.description?.slice(0, 18)}
           {`${capture.task?.description?.length > 18 ? "..." : ""}`}
