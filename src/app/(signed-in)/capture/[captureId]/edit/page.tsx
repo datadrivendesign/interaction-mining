@@ -39,6 +39,7 @@ import {
 } from "./components/feedback-checklist";
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
+import { ScreenBlobRegistryProvider } from "./screen-blob-registry";
 import { upgradeLegacyFeedbackText } from "../evaluate/utils/review-feedback";
 
 enum TraceSteps {
@@ -521,6 +522,7 @@ export default function Page() {
   return (
     <>
       <FormProvider {...methods}>
+        <ScreenBlobRegistryProvider>
         <main
           className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
@@ -649,6 +651,7 @@ export default function Page() {
             </div>
           )}
         </main>
+        </ScreenBlobRegistryProvider>
       </FormProvider>
     </>
   );

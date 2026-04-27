@@ -36,6 +36,11 @@ const shortcutChips = [
     ),
     label: "Delete screen",
   },
+  {
+    key: "replay",
+    shortcut: <Kbd className="rounded-sm text-muted-foreground">R</Kbd>,
+    label: "Replay selected screen",
+  },
 ] as const;
 
 const COMPACT_VIEWPORT_HEIGHT = 820;
@@ -69,12 +74,7 @@ function ShortcutSection({
   isCompact: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-md px-2 py-1.5",
-        isCompact && "px-1.5 py-1",
-      )}
-    >
+    <div className={cn("rounded-md px-2 py-1.5", isCompact && "px-1.5 py-1")}>
       <div
         className={cn(
           "mb-1 flex items-center justify-between gap-2",
@@ -172,10 +172,7 @@ export const InstructionCardIOS = ({
               </p>
             </div>
 
-            <ShortcutSection
-              rows={shortcutChips}
-              isCompact={isCompact}
-            />
+            <ShortcutSection rows={shortcutChips} isCompact={isCompact} />
           </div>
         </CardDescription>
       </CardHeader>
@@ -234,10 +231,7 @@ export const InstructionCardAndroid = ({
               </p>
             </div>
 
-            <ShortcutSection
-              rows={shortcutChips}
-              isCompact={isCompact}
-            />
+            <ShortcutSection rows={shortcutChips} isCompact={isCompact} />
           </div>
         </CardDescription>
       </CardHeader>
