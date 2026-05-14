@@ -8,17 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  AlertCircle,
-  ChevronDown,
-  ChevronRight,
-  MessageSquare,
-  Plus,
-  X,
-} from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { FrameData } from "../../../edit/components/types";
 import {
   EMPTY_REVIEW_FEEDBACK_STATE,
@@ -31,54 +22,18 @@ import {
   TraceIssueDestination,
 } from "./trace-issues";
 import { IssueGrid } from "./issue-grid";
-
-const SCREEN_NUMBER_TOKEN = /Screen #/g;
-const PLACEHOLDER_TOKEN = /\[([^\]]+)\]/g;
-
-function getTemplatePlaceholders(template: string) {
-  return Array.from(
-    new Set(
-      Array.from(template.matchAll(PLACEHOLDER_TOKEN), (match) => match[1]),
-    ),
-  );
-}
-
-function fillIssueTemplate(
-  template: string,
-  screenNumber: number,
-  placeholderValues: Record<string, string> = {},
-) {
-  return template
-    .replace(SCREEN_NUMBER_TOKEN, `Screen ${screenNumber}`)
-    .replace(PLACEHOLDER_TOKEN, (match, token: string) => {
-      const value = placeholderValues[token]?.trim();
-      return value ? value : match;
-    });
-}
-
-function formatPlaceholderLabel(token: string) {
-  return token
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .replace(/^\w/, (char) => char.toUpperCase());
-}
+import { CommentCard } from "./screen-comments/comment-card";
+import { CommentComposer } from "./screen-comments/comment-composer";
+import { CommentSection } from "./screen-comments/comment-section";
+import {
+  fillIssueTemplate,
+  getTemplatePlaceholders,
+  ReviewCommentTarget,
+} from "./screen-comments/comment-utils";
+import { ReviewCommentHotkeyAction } from "./use-review-comment-hotkeys";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 export type ScreenComment = ReviewComment;
-
-export type ScreenCommentsHotkeyAction =
-  | {
-      nonce: number;
-      type: "select-issue";
-      issueId: string;
-    }
-  | {
-      nonce: number;
-      type: "select-other";
-    }
-  | {
-      nonce: number;
-      type: "remove-last-screen-comment";
-    };
 
 export function ScreenCommentsPanel({
   screens,
@@ -86,12 +41,14 @@ export function ScreenCommentsPanel({
   feedbackState,
   onFeedbackStateChange,
   hotkeyAction,
+  onJumpToScreen,
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
   feedbackState?: ReviewFeedbackState;
   onFeedbackStateChange?: (feedback: ReviewFeedbackState) => void;
-  hotkeyAction?: ScreenCommentsHotkeyAction | null;
+  hotkeyAction?: ReviewCommentHotkeyAction | null;
+  onJumpToScreen?: (screenId: string) => void;
 }) {
   const [internalFeedbackState, setInternalFeedbackState] =
     useState<ReviewFeedbackState>(EMPTY_REVIEW_FEEDBACK_STATE);
@@ -106,8 +63,10 @@ export function ScreenCommentsPanel({
   const [expandedCommentId, setExpandedCommentId] = useState<string | null>(
     null,
   );
+  const [viewMode, setViewMode] = useState<"focused" | "all">("focused");
   const lastProcessedHotkeyActionRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const resolvedFeedbackState = feedbackState ?? internalFeedbackState;
 
   const setFeedbackState = useCallback(
@@ -132,6 +91,23 @@ export function ScreenCommentsPanel({
   );
 
   const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
+  const screenMetaById = useMemo(
+    () =>
+      Object.fromEntries(
+        sortedScreens.map((screen, index) => [
+          screen.id,
+          {
+            screen,
+            screenNumber: index + 1,
+            screenLabel: `Screen ${index + 1}`,
+          },
+        ]),
+      ) as Record<
+        string,
+        { screen: FrameData; screenNumber: number; screenLabel: string }
+      >,
+    [sortedScreens],
+  );
   const activeScreen =
     sortedScreens.find((screen) => screen.id === activeScreenId) ??
     sortedScreens[0] ??
@@ -149,6 +125,62 @@ export function ScreenCommentsPanel({
     [activeScreen, resolvedFeedbackState.commentsByScreen],
   );
   const flowComments = resolvedFeedbackState.flowComments;
+  const allComments = useMemo(
+    () => [
+      ...flowComments,
+      ...Object.values(resolvedFeedbackState.commentsByScreen).flat(),
+    ],
+    [flowComments, resolvedFeedbackState.commentsByScreen],
+  );
+  const usedIssueIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allComments
+            .map((comment) => comment.issueId)
+            .filter((issueId): issueId is string => Boolean(issueId)),
+        ),
+      ),
+    [allComments],
+  );
+  const recentIssueIds = useMemo(() => {
+    const seen = new Set<string>();
+    const orderedIssueIds = [...allComments]
+      .slice()
+      .reverse()
+      .map((comment) => comment.issueId)
+      .filter((issueId): issueId is string => Boolean(issueId))
+      .filter((issueId) => {
+        if (seen.has(issueId)) {
+          return false;
+        }
+        seen.add(issueId);
+        return true;
+      });
+
+    return orderedIssueIds;
+  }, [allComments]);
+  const allIssueEntries = useMemo(
+    () => [
+      ...flowComments.map((comment) => ({
+        comment,
+        target: "flow" as const,
+        screenId: null,
+        screenLabel: "Flow",
+      })),
+      ...sortedScreens.flatMap((screen, index) =>
+        (resolvedFeedbackState.commentsByScreen[screen.id] ?? []).map(
+          (comment) => ({
+            comment,
+            target: "screen" as const,
+            screenId: screen.id,
+            screenLabel: `Screen ${index + 1}`,
+          }),
+        ),
+      ),
+    ],
+    [flowComments, resolvedFeedbackState.commentsByScreen, sortedScreens],
+  );
   const pendingPlaceholders = pendingIssue
     ? getTemplatePlaceholders(pendingIssue.annotation)
     : [];
@@ -159,6 +191,16 @@ export function ScreenCommentsPanel({
         placeholderValues,
       )
     : "";
+
+  useEffect(() => {
+    if (!pendingIssue && !showTextarea) {
+      return;
+    }
+
+    composerRef.current?.scrollIntoView({
+      block: "nearest",
+    });
+  }, [pendingIssue, showTextarea]);
 
   const resetComposer = useCallback(() => {
     setDraft("");
@@ -222,7 +264,7 @@ export function ScreenCommentsPanel({
   );
 
   const removeComment = useCallback(
-    (target: "screen" | "flow", id: string) => {
+    (target: "screen" | "flow", id: string, screenId?: string | null) => {
       setFeedbackState((prev) => {
         if (target === "flow") {
           return {
@@ -233,7 +275,8 @@ export function ScreenCommentsPanel({
           };
         }
 
-        if (!activeScreen) {
+        const targetScreenId = screenId ?? activeScreen?.id;
+        if (!targetScreenId) {
           return prev;
         }
 
@@ -241,8 +284,8 @@ export function ScreenCommentsPanel({
           ...prev,
           commentsByScreen: {
             ...prev.commentsByScreen,
-            [activeScreen.id]: (
-              prev.commentsByScreen[activeScreen.id] ?? []
+            [targetScreenId]: (
+              prev.commentsByScreen[targetScreenId] ?? []
             ).filter((comment) => comment.id !== id),
           },
         };
@@ -256,7 +299,12 @@ export function ScreenCommentsPanel({
   );
 
   const updateComment = useCallback(
-    (target: "screen" | "flow", id: string, text: string) => {
+    (
+      target: "screen" | "flow",
+      id: string,
+      text: string,
+      screenId?: string | null,
+    ) => {
       setFeedbackState((prev) => {
         if (target === "flow") {
           return {
@@ -267,7 +315,8 @@ export function ScreenCommentsPanel({
           };
         }
 
-        if (!activeScreen) {
+        const targetScreenId = screenId ?? activeScreen?.id;
+        if (!targetScreenId) {
           return prev;
         }
 
@@ -275,10 +324,8 @@ export function ScreenCommentsPanel({
           ...prev,
           commentsByScreen: {
             ...prev.commentsByScreen,
-            [activeScreen.id]: (
-              prev.commentsByScreen[activeScreen.id] ?? []
-            ).map((comment) =>
-              comment.id === id ? { ...comment, text } : comment,
+            [targetScreenId]: (prev.commentsByScreen[targetScreenId] ?? []).map(
+              (comment) => (comment.id === id ? { ...comment, text } : comment),
             ),
           },
         };
@@ -401,14 +448,59 @@ export function ScreenCommentsPanel({
     screenComments,
   ]);
 
-  const getCommentLabel = (comment: ReviewComment) => {
-    return findTraceIssue(comment.issueId ?? "")?.label ?? "Custom issue";
-  };
+  const handleJumpToScreen = useCallback(
+    (screenId: string) => {
+      setViewMode("focused");
+      onJumpToScreen?.(screenId);
+    },
+    [onJumpToScreen],
+  );
 
-  const getDestinationLabel = (destination?: TraceIssueDestination) => {
-    if (destination === "redaction") return "Redaction";
-    if (destination === "summarize") return "Summarize";
-    return "Annotation";
+  const renderCommentCard = ({
+    comment,
+    target,
+    screenId,
+    screenLabelOverride,
+    showJumpAction = false,
+  }: {
+    comment: ReviewComment;
+    target: ReviewCommentTarget;
+    screenId?: string | null;
+    screenLabelOverride?: string;
+    showJumpAction?: boolean;
+  }) => {
+    const commentKey = `${target}:${comment.id}`;
+    const screenMeta =
+      screenId && screenId in screenMetaById ? screenMetaById[screenId] : null;
+    const screenLabelForComment =
+      screenLabelOverride ?? screenMeta?.screenLabel ?? "Screen";
+
+    return (
+      <CommentCard
+        key={comment.id}
+        comment={comment}
+        target={target}
+        isExpanded={expandedCommentId === commentKey}
+        onToggleExpanded={() =>
+          setExpandedCommentId((prev) =>
+            prev === commentKey ? null : commentKey,
+          )
+        }
+        onRemove={() => removeComment(target, comment.id, screenId)}
+        onUpdateText={(text) =>
+          updateComment(target, comment.id, text, screenId)
+        }
+        screenLabel={
+          target === "screen" && screenId ? screenLabelForComment : undefined
+        }
+        showJumpAction={showJumpAction}
+        onJumpToScreen={
+          showJumpAction && target === "screen" && screenId
+            ? () => handleJumpToScreen(screenId)
+            : undefined
+        }
+      />
+    );
   };
 
   const renderCommentSection = ({
@@ -419,268 +511,158 @@ export function ScreenCommentsPanel({
   }: {
     title: string;
     comments: ReviewComment[];
-    target: "screen" | "flow";
+    target: ReviewCommentTarget;
     emptyMessage: string;
   }) => (
-    <div className="border-t border-neutral-200 dark:border-neutral-800">
-      <div className="flex items-center justify-between px-3 py-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-          {title}
-        </span>
-        {comments.length > 0 && (
-          <span className="rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[10px] leading-none text-red-600 dark:bg-red-950 dark:text-red-400">
-            {comments.length}
-          </span>
-        )}
-      </div>
-
-      {comments.length === 0 ? (
-        <p className="px-3 pb-3 text-[10px] text-neutral-400 dark:text-neutral-600">
-          {emptyMessage}
-        </p>
-      ) : (
-        <div className="space-y-1 px-2 pb-2">
-          {comments.map((comment) => {
-            const commentKey = `${target}:${comment.id}`;
-
-            return (
-              <div
-                key={comment.id}
-                className="rounded border border-transparent bg-white/70 transition-colors dark:bg-neutral-900/60"
-              >
-                <div className="flex items-start gap-1 p-1.5">
-                  <button
-                    type="button"
-                    className="flex flex-1 items-start gap-1.5 text-left"
-                    onClick={() =>
-                      setExpandedCommentId((prev) =>
-                        prev === commentKey ? null : commentKey,
-                      )
-                    }
-                  >
-                    {expandedCommentId === commentKey ? (
-                      <ChevronDown className="mt-0.5 size-3 shrink-0 text-neutral-400" />
-                    ) : (
-                      <ChevronRight className="mt-0.5 size-3 shrink-0 text-neutral-400" />
-                    )}
-                    <AlertCircle className="mt-0.5 size-3 shrink-0 text-red-400" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
-                          {getCommentLabel(comment)}
-                        </span>
-                        <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                          {getDestinationLabel(comment.destination)}
-                        </span>
-                      </div>
-                      <p className="line-clamp-2 text-[11px] leading-snug text-neutral-600 dark:text-neutral-400">
-                        {comment.text}
-                      </p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Remove"
-                    className="shrink-0 p-1 text-neutral-400 transition-colors hover:text-red-500"
-                    onClick={() => removeComment(target, comment.id)}
-                  >
-                    <X className="size-3" />
-                  </button>
-                </div>
-
-                {expandedCommentId === commentKey && (
-                  <div className="px-2 pb-2">
-                    <Textarea
-                      className="min-h-[5.5rem] resize-y text-xs"
-                      value={comment.text}
-                      onChange={(event) =>
-                        updateComment(target, comment.id, event.target.value)
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+    <CommentSection
+      title={title}
+      count={comments.length}
+      emptyMessage={emptyMessage}
+    >
+      {comments.map((comment) =>
+        renderCommentCard({
+          comment,
+          target,
+          screenId: target === "screen" ? (activeScreen?.id ?? null) : null,
+        }),
       )}
-    </div>
+    </CommentSection>
   );
+
+  const panelIssueCount =
+    viewMode === "all" ? allComments.length : screenComments.length;
 
   return (
     <aside className="flex h-full min-h-0 w-full flex-col border-l border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800">
         <MessageSquare className="size-3 shrink-0 text-red-500 dark:text-red-400" />
         <span className="flex-1 truncate text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-          {screenLabel}
+          {viewMode === "all" ? "All Issues" : screenLabel}
         </span>
-        {screenComments.length > 0 && (
+        {panelIssueCount > 0 && (
           <span className="rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[10px] leading-none text-red-600 dark:bg-red-950 dark:text-red-400">
-            {screenComments.length}
+            {panelIssueCount}
           </span>
         )}
+        <div className="ml-1 flex items-center gap-1">
+          <ButtonGroup>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "focused" ? "default" : "outline"}
+              className="h-6 px-2 text-[12px] cursor-pointer hover:"
+              onClick={() => setViewMode("focused")}
+            >
+              Focused
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "all" ? "default" : "outline"}
+              className="h-6 px-2 text-[12px] cursor-pointer"
+              onClick={() => setViewMode("all")}
+            >
+              All issues
+            </Button>
+          </ButtonGroup>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 space-y-2.5 p-3">
-          <p className="text-[10px] leading-snug text-neutral-500 dark:text-neutral-400">
-            Add all review feedback here. Click a chip to flag an issue
-            immediately, or pick{" "}
-            <span className="font-medium text-neutral-700 dark:text-neutral-300">
-              Other...
-            </span>{" "}
-            to write a custom note.
-          </p>
-          <IssueGrid
-            onSelectIssue={handleIssueSelect}
-            onSelectOther={handleOtherSelect}
-            disabled={!activeScreen}
-          />
+        <div className="flex min-h-0 max-h-[48%] flex-none flex-col overflow-y-auto overscroll-contain border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex flex-col gap-2.5 p-3">
+            <p className="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+              Add all review feedback here. Click a chip to flag an issue
+              immediately, or pick{" "}
+              <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                Other...
+              </span>{" "}
+              to write a custom note.
+            </p>
+            <CommentComposer
+              composerRef={composerRef}
+              textareaRef={textareaRef}
+              pendingIssue={pendingIssue}
+              pendingPlaceholders={pendingPlaceholders}
+              placeholderValues={placeholderValues}
+              pendingPreview={pendingPreview}
+              showTextarea={showTextarea}
+              customDestination={customDestination}
+              draft={draft}
+              screenLabel={screenLabel}
+              hasActiveScreen={!!activeScreen}
+              onPlaceholderValueChange={handlePlaceholderValueChange}
+              onPlaceholderKeyDown={handlePlaceholderKeyDown}
+              onAddPendingIssue={() =>
+                pendingIssue &&
+                addComment({
+                  text: pendingPreview,
+                  issueId: pendingIssue.id,
+                  destination: pendingIssue.destination,
+                  target: pendingIssue.scope,
+                })
+              }
+              onResetComposer={resetComposer}
+              onSetCustomDestination={setCustomDestination}
+              onDraftChange={setDraft}
+              onDraftKeyDown={handleKeyDown}
+              onAddCustomIssue={() =>
+                addComment({
+                  text: draft,
+                  destination: customDestination,
+                  target: customDestination === "summarize" ? "flow" : "screen",
+                })
+              }
+            />
 
-          {pendingIssue && (
-            <div className="space-y-2 rounded-md border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-              <div className="space-y-1">
-                <p className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
-                  {pendingIssue.label}
-                </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                  Fill in the required details before adding this issue.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                {pendingPlaceholders.map((token) => (
-                  <div key={token} className="space-y-1">
-                    <label className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                      {formatPlaceholderLabel(token)}
-                    </label>
-                    <Input
-                      value={placeholderValues[token] ?? ""}
-                      onChange={(event) =>
-                        handlePlaceholderValueChange(token, event.target.value)
-                      }
-                      onKeyDown={handlePlaceholderKeyDown}
-                      placeholder={`Enter ${formatPlaceholderLabel(token).toLowerCase()}...`}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  Preview
-                </p>
-                <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
-                  {pendingPreview}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() =>
-                    addComment({
-                      text: pendingPreview,
-                      issueId: pendingIssue.id,
-                      destination: pendingIssue.destination,
-                      target: pendingIssue.scope,
-                    })
-                  }
-                  disabled={pendingPlaceholders.some(
-                    (token) => !placeholderValues[token]?.trim(),
-                  )}
-                >
-                  <Plus className="mr-1 size-3" />
-                  Add Issue
-                </Button>
-                <Button
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                  className="text-xs"
-                  onClick={resetComposer}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {showTextarea && (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                {(
-                  [
-                    ["annotation", "Annotate"],
-                    ["redaction", "Redact"],
-                    ["summarize", "Summarize"],
-                  ] as const
-                ).map(([destination, label]) => (
-                  <Button
-                    key={destination}
-                    type="button"
-                    size="sm"
-                    variant={
-                      customDestination === destination ? "default" : "outline"
-                    }
-                    className="flex-1 text-xs"
-                    onClick={() => setCustomDestination(destination)}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                {customDestination === "summarize"
-                  ? "This note will be saved as flow-level summarize feedback."
-                  : `This note will be saved under ${screenLabel}.`}
-              </p>
-              <Textarea
-                ref={textareaRef}
-                className="h-14 min-h-0 resize-none text-xs"
-                placeholder="Describe the issue... (Enter to add)"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={!activeScreen && customDestination !== "summarize"}
+            <div className="pr-1">
+              <IssueGrid
+                onSelectIssue={handleIssueSelect}
+                onSelectOther={handleOtherSelect}
+                disableScreenIssues={!activeScreen}
+                selectedIssueId={pendingIssue?.id ?? null}
+                usedIssueIds={usedIssueIds}
+                recentIssueIds={recentIssueIds}
               />
-              <Button
-                size="sm"
-                className="h-7 w-full text-xs"
-                onClick={() =>
-                  addComment({
-                    text: draft,
-                    destination: customDestination,
-                    target:
-                      customDestination === "summarize" ? "flow" : "screen",
-                  })
-                }
-                disabled={
-                  !draft.trim() ||
-                  (!activeScreen && customDestination !== "summarize")
-                }
-              >
-                <Plus className="mr-1 size-3" />
-                Add Issue
-              </Button>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {renderCommentSection({
-            title: "Flow Feedback",
-            comments: flowComments,
-            target: "flow",
-            emptyMessage: "No flow-level feedback added yet.",
-          })}
-          {renderCommentSection({
-            title: screenLabel,
-            comments: screenComments,
-            target: "screen",
-            emptyMessage: `No screen-specific feedback added for ${screenLabel}.`,
-          })}
+          {viewMode === "all" ? (
+            allIssueEntries.length === 0 ? (
+              <p className="px-3 py-3 text-[10px] text-neutral-400 dark:text-neutral-600">
+                No review feedback added yet.
+              </p>
+            ) : (
+              <div className="space-y-1 px-2 py-2">
+                {allIssueEntries.map((entry) =>
+                  renderCommentCard({
+                    comment: entry.comment,
+                    target: entry.target,
+                    screenId: entry.screenId,
+                    screenLabelOverride: entry.screenLabel,
+                    showJumpAction: entry.target === "screen",
+                  }),
+                )}
+              </div>
+            )
+          ) : (
+            <>
+              {renderCommentSection({
+                title: "Flow Feedback",
+                comments: flowComments,
+                target: "flow",
+                emptyMessage: "No flow-level feedback added yet.",
+              })}
+              {renderCommentSection({
+                title: screenLabel,
+                comments: screenComments,
+                target: "screen",
+                emptyMessage: `No screen-specific feedback added for ${screenLabel}.`,
+              })}
+            </>
+          )}
         </div>
       </div>
     </aside>

@@ -1,5 +1,9 @@
 export const iosOptions = [
   {
+    value: "iOS 26",
+    label: "iOS 26",
+  },
+  {
     value: "iOS 18",
     label: "iOS 18",
   },
@@ -28,7 +32,6 @@ export const iosOptions = [
     label: "iOS 12",
   },
 ];
-
 export const iphoneOptions = [
   {
     value: "iPhone 16",

@@ -298,7 +298,7 @@ export const GestureAnnotationEditor =
       );
 
       return (
-        <div className="relative z-[150] w-full rounded-md border bg-background p-2 shadow-lg">
+        <div className="relative z-[150] w-full rounded-xl border bg-background p-3 text-foreground shadow-lg">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
               Annotation
@@ -307,7 +307,7 @@ export const GestureAnnotationEditor =
               type="button"
               size="icon"
               variant="ghost"
-              className="size-6"
+              className="size-6 text-muted-foreground"
               onClick={() => setIsCollapsed((prev) => !prev)}
               aria-label={
                 isCollapsed
@@ -333,7 +333,7 @@ export const GestureAnnotationEditor =
               {isFreeformGestureType(gesture.type) || !activeTemplate ? (
                 <Textarea
                   ref={textareaRef}
-                  className="text-sm w-full h-full bg-background!"
+                  className="h-full w-full text-sm"
                   placeholder="Describe this gesture in your own words."
                   maxLength={GESTURE_DESCRIPTION_MAX_LENGTH}
                   value={gesture.description ?? ""}
@@ -341,7 +341,7 @@ export const GestureAnnotationEditor =
                   onChange={(e) => handleFreeformChange(e.target.value)}
                 />
               ) : (
-                <div className="rounded-md border bg-background p-2 space-y-2">
+                <div className="space-y-2">
                   <div className="text-xs text-muted-foreground">
                     Fill in the missing fields.
                   </div>
@@ -351,7 +351,7 @@ export const GestureAnnotationEditor =
                       return (
                         <React.Fragment key={`${fixedPart}-${index}`}>
                           {fixedPart ? (
-                            <span className="text-xs font-semibold tracking-wide text-foreground/90 whitespace-pre">
+                            <span className="whitespace-pre text-xs font-semibold tracking-wide text-foreground">
                               {fixedPart}
                             </span>
                           ) : null}
@@ -380,7 +380,7 @@ export const GestureAnnotationEditor =
                                   index === 0 ? firstSlotInputRef : undefined
                                 }
                                 className={cn(
-                                  "h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs",
+                                  "h-7 min-w-24 max-w-40 rounded border border-input bg-background px-2 text-xs text-foreground",
                                   slot.key === "destination" &&
                                     shouldShowDestinationError
                                     ? "border-red-500"
@@ -425,12 +425,12 @@ export const GestureAnnotationEditor =
                   ) : null}
                 </div>
               )}
-              <div className="w-full flex flex-col mt-2">
+              <div className="mt-2 flex w-full flex-col">
                 <Progress
                   className="w-full"
                   value={(annotateLen / GESTURE_DESCRIPTION_MAX_LENGTH) * 100}
                 />
-                <div className="text-sm flex justify-end text-muted-foreground z-10">
+                <div className="z-10 flex justify-end text-sm text-muted-foreground">
                   {`${annotateLen}/${GESTURE_DESCRIPTION_MAX_LENGTH}`}
                 </div>
               </div>

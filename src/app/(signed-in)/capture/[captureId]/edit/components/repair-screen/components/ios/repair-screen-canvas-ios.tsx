@@ -15,6 +15,7 @@ import { restrictToParentElement } from "@dnd-kit/modifiers";
 import { ScreenGesture } from "@prisma/client";
 
 import mergeRefs from "@/lib/utils/merge-refs";
+import { cn } from "@/lib/utils";
 import { FrameData } from "../../../types";
 import {
   GestureOption,
@@ -148,12 +149,14 @@ export default function RepairScreenCanvasIOS({
     }
   }, [gesture, markerPixelPosition, width, height]);
 
-  // Portrait frames are capped to roughly half the focus area so they do not
-  // dominate the workspace or collide with absolute overlays.
+  // Landscape: cap visual weight (~55% of focus area) but use max-* + contain
+  // so when the workspace narrows (e.g. side feedback checklist), the frame
+  // shrinks with the parent instead of overflowing. Portrait: fit height,
+  // limit width.
   const frameContainerClass =
     imageOrientation === "landscape"
-      ? "relative inline-flex w-[55%] h-[55%] min-w-[12rem] min-h-[12rem]"
-      : "relative w-fit inline-flex h-full";
+      ? "relative flex min-h-0 min-w-0 max-h-[55%] max-w-[55%] items-center justify-center"
+      : "relative inline-flex h-full min-h-0 min-w-0 max-w-full w-fit";
 
   return (
     <>
@@ -169,7 +172,7 @@ export default function RepairScreenCanvasIOS({
           onDragEnd={handleDragEnd}
           modifiers={[restrictToParentElement]}
         >
-          <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
+          <div className="flex min-h-0 min-w-0 items-center justify-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
             <div
               className={frameContainerClass}
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
@@ -221,7 +224,13 @@ export default function RepairScreenCanvasIOS({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair "} w-auto h-full rounded-lg select-none`}
+                  className={cn(
+                    isLastScreen ? "cursor-default" : "cursor-crosshair",
+                    "rounded-lg select-none",
+                    imageOrientation === "landscape"
+                      ? "h-auto w-auto max-h-full max-w-full object-contain"
+                      : "h-full w-auto max-w-full",
+                  )}
                   width={0}
                   height={0}
                   sizes="100vw"
