@@ -34,10 +34,10 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
             return [];
           }
           return prevData.filter(
-            (file: ListedFiles) => file.fileKey !== fileKey
+            (file: ListedFiles) => file.fileKey !== fileKey,
           );
         },
-      }
+      },
     );
   } else {
     console.error("Failed to delete file", res.message);
@@ -53,7 +53,6 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
 export async function fileFetcher([_, captureId]: [string, string]): Promise<
   ListedFiles[]
 > {
-  console.log("[FILE FETCHER] Fetching files for capture", captureId);
   let res = await listFromS3(`uploads/${captureId}`, true);
 
   if (res.ok) {
@@ -73,7 +72,7 @@ export async function fileFetcher([_, captureId]: [string, string]): Promise<
  */
 export const getSWRConfig = (
   operation: CaptureSWROperations,
-  captureId: string
+  captureId: string,
 ): SWRConfiguration<ListedFiles[]> => ({
   refreshInterval: 8000,
   dedupingInterval: 2000, // Prevent duplicate requests within 2 seconds
@@ -98,16 +97,6 @@ export const getSWRConfig = (
       }
       return true;
     })();
-
-    // Log comparison result (SWR may call compare multiple times during validation cycles)
-    // Consider removing in production if too verbose
-    console.log("[SWR COMPARE]", {
-      operation,
-      prefix,
-      prevLength: prevFiles?.length || 0,
-      currLength: currFiles?.length || 0,
-      result,
-    });
 
     return result;
   },

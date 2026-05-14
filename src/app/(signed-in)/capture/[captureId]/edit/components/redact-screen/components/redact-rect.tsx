@@ -103,7 +103,6 @@ export default function RedactRectangle({
     }
 
     selectRedaction(redaction.id);
-    handleTransform(e, redaction.id);
   };
 
   const onTransformEnd = (e: any) => {
@@ -111,6 +110,7 @@ export default function RedactRectangle({
     if (node) {
       node.opacity(1);
     }
+
     handleTransform(e, redaction.id);
   };
 
@@ -127,10 +127,11 @@ export default function RedactRectangle({
         onClick={(e) => handleRectClick(e, redaction.id)}
         onTap={(e) => handleRectClick(e, redaction.id)}
         onTransformStart={onTransformStart}
-        onTransform={(e) => handleTransform(e, redaction.id)}
         onTransformEnd={onTransformEnd}
         onDragStart={onTransformStart}
-        onDragMove={(e) => handleTransform(e, redaction.id)}
+        onDragMove={(e) => {
+          handleTransform(e, redaction.id);
+        }}
         onDragEnd={onTransformEnd}
       />
       <CloseButton

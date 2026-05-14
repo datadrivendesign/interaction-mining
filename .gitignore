@@ -53,10 +53,12 @@ prisma/scripts/delete-trace.mjs
 prisma/scripts/transition-to-cloudfront.mjs
 prisma/scripts/archive-duplicate-tasks.mjs
 prisma/scripts/explore-capture-stats.mjs
+prisma/scripts/repair-disjoint-traces.mjs
+prisma/scripts/match-disjoint-traces.mjs
+prisma/scripts/diff-trace-sets.mjs
+prisma/scripts/check-disjoint-traces.mjs
+prisma/scripts/metrics-*.json
 
-# script outputs
-prisma/scripts/stats.txt
-prisma/scripts/stats.json
 
 # agent plans
 plans/
