@@ -186,7 +186,7 @@ function DescriptionField({ taskDescription }: { taskDescription: string }) {
         id="description"
         onBlur={onBlur}
         name={name}
-        maxLength={75}
+        maxLength={110}
         onChange={(e) => {
           onChange(e);
           setDescriptionLen(e.target.value.length);
