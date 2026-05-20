@@ -21,6 +21,8 @@
 *.pem
 public/*.mp4
 *_b64.txt
+fix-annotations-pipeline.sh
+ios-apps-with-traces.json
 
 # debug
 npm-debug.log*
@@ -44,20 +46,20 @@ next-env.d.ts
 mongo.conf
 mongo_db/*
 
-# scripts (for now)
-prisma/scripts/reorg-s3-dirs.mjs
-prisma/scripts/check-review.ipynb
-prisma/scripts/add-capture-task.mjs
-prisma/scripts/add-ios-app-to-db.mjs
-prisma/scripts/delete-trace.mjs
-prisma/scripts/transition-to-cloudfront.mjs
-prisma/scripts/archive-duplicate-tasks.mjs
-prisma/scripts/explore-capture-stats.mjs
-prisma/scripts/repair-disjoint-traces.mjs
-prisma/scripts/match-disjoint-traces.mjs
-prisma/scripts/diff-trace-sets.mjs
-prisma/scripts/check-disjoint-traces.mjs
-prisma/scripts/metrics-*.json
+# prisma/scripts — generated data and gitignored reference files
+prisma/scripts/data/
+prisma/scripts/logs/
+prisma/scripts/capture-store/CAPTURE_STORE_SYNC.md
+
+# curation-pipeline — large data files and local-only scripts
+scripts/curation-pipeline/run_pipeline.sh
+scripts/curation-pipeline/candidate-task-apps-export.json
+scripts/curation-pipeline/candidate-task-apps-export-curated.json
+scripts/curation-pipeline/ios-apps-with-captures-or-traces.json
+scripts/curation-pipeline/worker-assignments/
+
+# worker onboarding materials (kept locally, not for repo)
+/onboarding_materials/
 
 
 # agent plans
