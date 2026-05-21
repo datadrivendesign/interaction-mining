@@ -52,7 +52,6 @@ prisma/scripts/logs/
 prisma/scripts/capture-store/CAPTURE_STORE_SYNC.md
 
 # curation-pipeline — large data files and local-only scripts
-scripts/curation-pipeline/run_pipeline.sh
 scripts/curation-pipeline/candidate-task-apps-export.json
 scripts/curation-pipeline/candidate-task-apps-export-curated.json
 scripts/curation-pipeline/ios-apps-with-captures-or-traces.json
