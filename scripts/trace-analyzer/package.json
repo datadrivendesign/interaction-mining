@@ -1,0 +1,15 @@
+{
+  "name": "trace-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "from-dcc": "tsx from-dcc/bin.ts",
+    "test": "tsx --test from-dcc/tests/map.test.ts from-dcc/tests/convert.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "platform": "web",
+  "viewport": { "width": 1280, "height": 800 },
+  "locator": "http://localhost:3000/results",
+  "capturedAt": "2026-05-23T10:00:05.000Z",
+  "semanticTree": null
+}

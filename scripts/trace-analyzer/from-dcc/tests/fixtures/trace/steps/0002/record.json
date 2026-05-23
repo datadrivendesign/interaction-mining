@@ -1,0 +1,8 @@
+{
+  "step": 2,
+  "reason": "type Chicago into the search field",
+  "reflection": "The search box is focused, now I will type the query.",
+  "action": { "type": "type", "text": "Chicago", "target": { "by": "pixel", "x": 0.5, "y": 0.3 } },
+  "latencyMs": 800,
+  "capturedAt": "2026-05-23T10:00:03.000Z"
+}

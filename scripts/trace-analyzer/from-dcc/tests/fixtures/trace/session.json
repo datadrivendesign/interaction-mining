@@ -1,0 +1,5 @@
+{
+  "goal": "Type Chicago into the search box and click search",
+  "startedAt": "2026-05-23T10:00:00.000Z",
+  "budget": { "maxSteps": 20, "maxWallClockMs": 300000 }
+}

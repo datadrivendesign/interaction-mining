@@ -63,3 +63,6 @@ prisma/scripts/metrics-*.json
 # agent plans
 plans/
 .claude/*
+
+# LLM context (local only)
+LLM_CONTEXT.md

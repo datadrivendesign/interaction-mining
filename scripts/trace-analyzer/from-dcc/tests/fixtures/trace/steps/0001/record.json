@@ -1,0 +1,8 @@
+{
+  "step": 1,
+  "reason": "tap the search box to focus it",
+  "reflection": "The search box is visible, I will click it.",
+  "action": { "type": "click", "target": { "by": "pixel", "x": 0.5, "y": 0.3 } },
+  "latencyMs": 1200,
+  "capturedAt": "2026-05-23T10:00:01.000Z"
+}
