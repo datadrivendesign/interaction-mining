@@ -233,7 +233,7 @@ def main(args: argparse.Namespace) -> None:
                     "genre": e.get("meta", {}).get("genre"),
                     "selectedCount": len(e["selected"]),
                     "generatedCount": sum(1 for t in e["selected"] if t.get("generated")),
-                    "paywallCount": sum(1 for t in e["flagged"] if t.get("reason") == "paywall"),
+                    "paywallCount": sum(1 for t in e.get("flagged", []) if t.get("reason") == "paywall"),
                     "appStoreUrl": e.get("meta", {}).get("url"),
                 }
                 for i, e in enumerate(ranked)
