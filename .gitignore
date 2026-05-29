@@ -50,12 +50,17 @@ mongo_db/*
 prisma/scripts/data/
 prisma/scripts/logs/
 prisma/scripts/capture-store/CAPTURE_STORE_SYNC.md
+prisma/scripts/capture-store/logs/
+prisma/scripts/admin/find-all-processing-captures.json
 
 # curation-pipeline — large data files and local-only scripts
 scripts/curation-pipeline/candidate-task-apps-export.json
 scripts/curation-pipeline/candidate-task-apps-export-curated.json
 scripts/curation-pipeline/ios-apps-with-captures-or-traces.json
 scripts/curation-pipeline/worker-assignments/
+scripts/curation-pipeline/new-apps.json
+scripts/curation-pipeline/generated-tasks.json
+scripts/curation-pipeline/curated-tasks-new.json
 
 # worker onboarding materials (kept locally, not for repo)
 /onboarding_materials/
