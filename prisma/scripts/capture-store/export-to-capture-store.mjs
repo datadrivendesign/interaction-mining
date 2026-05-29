@@ -118,8 +118,9 @@ async function downloadJson(key) {
  * find-processing-user-apps-not-in-traces.mjs.
  *
  * Newer exports use captureIds; older exports use taskIds. Both are supported.
- * Expected shape:
- *   { users: [{ apps: [{ captureIds?: string[], taskIds?: string[] }] }] }
+ * Supported shapes:
+ *   { captureIds: string[] }                                       — flat manifest
+ *   { users: [{ apps: [{ captureIds?: string[], taskIds?: string[] }] }] }  — grouped
  */
 function extractIdsFromJson(filePath) {
   let raw;
@@ -131,6 +132,11 @@ function extractIdsFromJson(filePath) {
   }
   const captureIds = [];
   const taskIds = [];
+  // Flat manifest (find-all-processing-captures.mjs output)
+  for (const id of raw.captureIds ?? []) {
+    if (id) captureIds.push(id);
+  }
+  // Grouped manifest (find-processing-user-apps-not-in-traces.mjs output)
   for (const user of raw.users ?? []) {
     for (const app of user.apps ?? []) {
       for (const id of app.captureIds ?? []) {

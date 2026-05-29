@@ -30,7 +30,7 @@ import { resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: resolve(__dirname, "../../.env.local") });
+dotenv.config({ path: resolve(__dirname, "../../../.env.local") });
 
 import {
   S3Client,
@@ -90,7 +90,9 @@ function applyDiff(history, diff) {
   for (const change of diff.changes ?? []) {
     const gesture = corrected.gestures?.[change.screenId];
     if (!gesture) {
-      console.log(`    [warn] screenId ${change.screenId} not in draft, skipping`);
+      console.log(
+        `    [warn] screenId ${change.screenId} not in draft, skipping`,
+      );
       continue;
     }
     for (const f of change.fields ?? []) {
@@ -125,7 +127,7 @@ async function uploadDraftToS3(captureId, draftData, dryRun) {
       Key: key,
       Body: body,
       ContentType: "application/json",
-    })
+    }),
   );
   console.log(`  ✓ uploaded → ${key}`);
 }
@@ -140,7 +142,9 @@ async function importCapture(captureId, storeDir, analyzerOutput, dryRun) {
     return false;
   }
 
-  const diffFile = analyzerOutput ? join(analyzerOutput, `${captureId}.diff.json`) : null;
+  const diffFile = analyzerOutput
+    ? join(analyzerOutput, `${captureId}.diff.json`)
+    : null;
   const diff = diffFile ? readJson(diffFile) : null;
 
   let draftData;
@@ -148,7 +152,7 @@ async function importCapture(captureId, storeDir, analyzerOutput, dryRun) {
     const changeCount =
       (diff.changes?.length ?? 0) + (diff.globalChanges?.description ? 1 : 0);
     console.log(
-      `  applying diff (${changeCount} change(s), provider: ${diff.provider})`
+      `  applying diff (${changeCount} change(s), provider: ${diff.provider})`,
     );
     draftData = applyDiff(history, diff);
   } else {
@@ -166,11 +170,11 @@ async function main() {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
-      store:             { type: "string" },
+      store: { type: "string" },
       "analyzer-output": { type: "string" },
-      "capture-ids":     { type: "string" },
-      "dry-run":         { type: "boolean", default: false },
-      help:              { type: "boolean", short: "h" },
+      "capture-ids": { type: "string" },
+      "dry-run": { type: "boolean", default: false },
+      help: { type: "boolean", short: "h" },
     },
     allowPositionals: false,
   });
@@ -197,7 +201,10 @@ Options:
   const dryRun = values["dry-run"];
 
   const ids = values["capture-ids"]
-    ? values["capture-ids"].split(",").map((s) => s.trim()).filter(Boolean)
+    ? values["capture-ids"]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : getCaptureIds(storeDir);
 
   console.log(`Found ${ids.length} capture(s) to import`);
@@ -219,12 +226,11 @@ Options:
   }
 
   console.log(
-    `\nDone. ${processed} processed, ${skipped} skipped, ${errors} errors.`
+    `\nDone. ${processed} processed, ${skipped} skipped, ${errors} errors.`,
   );
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
