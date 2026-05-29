@@ -5,9 +5,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, odim-dev-env]
   push:
-    branches: [main]
+    branches: [main, odim-dev-env]
 
 # Cancel superseded runs on the same ref to save minutes.
 concurrency:
