@@ -27,6 +27,12 @@ const SetCandidateTaskAppTakenStatusInputSchema = z.object({
   isTaken: z.boolean(),
 });
 
+const SetCandidateTaskStatusInputSchema = z.object({
+  id: ObjectIdSchema,
+  taskIndex: z.number().int().nonnegative(),
+  status: z.enum(["open", "hidden"]),
+});
+
 /**
  * Fetches candidate task apps from the database.
  * @param isTaken Whether the candidate task app is taken.
@@ -165,6 +171,77 @@ export const setCandidateTaskAppTakenStatus = async ({
     return {
       ok: false,
       message: "Failed to set candidate task app taken status",
+      data: null,
+    };
+  }
+};
+
+export const setCandidateTaskStatus = async ({
+  id,
+  taskIndex,
+  status,
+}: {
+  id: string;
+  taskIndex: number;
+  status: "open" | "hidden";
+}): Promise<ActionPayload<{ candidateTaskApp: CandidateTaskApp }>> => {
+  const parsedInput = SetCandidateTaskStatusInputSchema.safeParse({
+    id,
+    taskIndex,
+    status,
+  });
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: "Invalid candidate task status input.",
+      data: null,
+    };
+  }
+
+  const input = parsedInput.data;
+
+  try {
+    const candidateTaskApp = await prisma.candidateTaskApp.findUnique({
+      where: { id: input.id },
+      include: { app: true },
+    });
+
+    if (!candidateTaskApp) {
+      return {
+        ok: false,
+        message: "Candidate task app not found.",
+        data: null,
+      };
+    }
+
+    if (input.taskIndex >= candidateTaskApp.tasks.length) {
+      return {
+        ok: false,
+        message: "Candidate task index is out of range.",
+        data: null,
+      };
+    }
+
+    const tasks = candidateTaskApp.tasks.map((task, index) =>
+      index === input.taskIndex ? { ...task, status: input.status } : task
+    );
+
+    const updated = await prisma.candidateTaskApp.update({
+      where: { id: input.id },
+      data: { tasks },
+      include: { app: true },
+    });
+
+    return {
+      ok: true,
+      message: "Candidate task status updated successfully",
+      data: { candidateTaskApp: updated },
+    };
+  } catch (error) {
+    console.error("Error setting candidate task status:", error);
+    return {
+      ok: false,
+      message: "Failed to set candidate task status",
       data: null,
     };
   }
