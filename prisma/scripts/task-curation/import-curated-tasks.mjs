@@ -2,17 +2,17 @@
  * import-curated-tasks.mjs — Write curated tasks back into CandidateTaskApp.
  *
  * Reads a curated JSON array (output of curate_tasks.py / curate_db_apps.py,
- * after filtering) and updates each matching CandidateTaskApp's candidateTasks
- * to the curated `selected` task strings.
+ * after filtering) and updates each matching CandidateTaskApp's tasks to the
+ * curated `selected` tasks.
  *
- * IMPORTANT: only the candidateTasks field is written. isTaken is never
+ * IMPORTANT: only the tasks field is written. isTaken is never
  * touched — reconciling isTaken is the job of audit-istaken.mjs.
  *
  * Matching: by appId (App._id), which is @unique on CandidateTaskApp. Entries
  * whose appId has no CandidateTaskApp are reported as unmatched and skipped.
  *
  * Curated entry shape (only these fields are used):
- *   { "appId": str, "appName": str, "selected": [ { "task": str, ... } ] }
+ *   { "appId": str, "appName": str, "selected": [ { "task": str, "generated": bool } ] }
  *
  * Usage:
  *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/import-curated-tasks.mjs --in <file>
@@ -67,15 +67,81 @@ const outputPath = path.resolve(
 // MongoDB ObjectId — 24 hex chars. Guards against malformed appIds blowing up
 // the unique-where lookup.
 const OBJECT_ID_RE = /^[a-f0-9]{24}$/i;
+const VALID_STATUSES = new Set(["open", "started", "hidden"]);
+
+function objectIdToString(value) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && typeof value.$oid === "string") {
+    return value.$oid;
+  }
+  if (value && typeof value === "object" && typeof value.toHexString === "function") {
+    return value.toHexString();
+  }
+  return null;
+}
 
 function tasksFromEntry(entry) {
   return (entry.selected ?? [])
-    .map((s) => (typeof s === "string" ? s : s?.task))
-    .filter((t) => typeof t === "string" && t.trim().length > 0);
+    .map((selected) => {
+      const description = typeof selected === "string" ? selected : selected?.task;
+      if (typeof description !== "string" || description.trim().length === 0) {
+        return null;
+      }
+      return {
+        description: description.trim(),
+        generated: typeof selected === "object" ? selected.generated === true : false,
+        status: "open",
+      };
+    })
+    .filter(Boolean);
 }
 
 function sameTasks(a, b) {
-  return a.length === b.length && a.every((t, i) => t === b[i]);
+  return (
+    a.length === b.length &&
+    a.every(
+      (task, i) =>
+        task.description === b[i].description &&
+        task.generated === b[i].generated &&
+        task.status === b[i].status,
+    )
+  );
+}
+
+function normalizeExistingTask(task) {
+  if (typeof task === "string") {
+    return { description: task.trim(), generated: false, status: "open" };
+  }
+  if (!task || typeof task !== "object" || typeof task.description !== "string") {
+    return null;
+  }
+  return {
+    description: task.description.trim(),
+    generated: task.generated === true,
+    status: VALID_STATUSES.has(task.status) ? task.status : "open",
+  };
+}
+
+function normalizeExistingTasks(row) {
+  const source = Array.isArray(row.tasks)
+    ? row.tasks
+    : Array.isArray(row.candidateTasks)
+      ? row.candidateTasks
+      : [];
+  return source.map(normalizeExistingTask).filter(Boolean);
+}
+
+function preserveCurrentStatuses(currentTasks, importedTasks) {
+  const byKey = new Map(
+    currentTasks.map((task) => [
+      `${task.description}\u0000${task.generated ? "1" : "0"}`,
+      task.status,
+    ]),
+  );
+  return importedTasks.map((task) => ({
+    ...task,
+    status: byKey.get(`${task.description}\u0000${task.generated ? "1" : "0"}`) ?? "open",
+  }));
 }
 
 async function main() {
@@ -86,12 +152,30 @@ async function main() {
   }
   console.log(`Loaded ${entries.length} curated entries from ${inputPath}.`);
 
-  // Preload existing CandidateTaskApp rows so we can diff and detect unmatched
-  // appIds without a per-entry round trip.
-  const existing = await prisma.candidateTaskApp.findMany({
-    select: { id: true, appId: true, candidateTasks: true },
+  // Raw read keeps the importer usable before/after the legacy candidateTasks
+  // field is removed from Prisma's typed schema.
+  const existing = await prisma.candidateTaskApp.findRaw({
+    options: {
+      projection: { _id: 1, app: 1, tasks: 1, candidateTasks: 1 },
+    },
   });
-  const byAppId = new Map(existing.map((c) => [c.appId, c]));
+  const byAppId = new Map(
+    existing
+      .map((row) => {
+        const appId = objectIdToString(row.app);
+        const id = objectIdToString(row._id);
+        if (!appId || !id) return null;
+        return [
+          appId,
+          {
+            id,
+            appId,
+            tasks: normalizeExistingTasks(row),
+          },
+        ];
+      })
+      .filter(Boolean),
+  );
 
   const plan = { willUpdate: [], unchanged: [], unmatched: [], empty: [], invalidId: [] };
 
@@ -102,8 +186,8 @@ async function main() {
       plan.invalidId.push({ appId: appId ?? null, appName });
       continue;
     }
-    const tasks = tasksFromEntry(entry);
-    if (tasks.length === 0) {
+    const importedTasks = tasksFromEntry(entry);
+    if (importedTasks.length === 0) {
       plan.empty.push({ appId, appName });
       continue;
     }
@@ -112,14 +196,15 @@ async function main() {
       plan.unmatched.push({ appId, appName });
       continue;
     }
-    if (sameTasks(current.candidateTasks, tasks)) {
+    const tasks = preserveCurrentStatuses(current.tasks, importedTasks);
+    if (sameTasks(current.tasks, tasks)) {
       plan.unchanged.push({ appId, appName });
     } else {
       plan.willUpdate.push({
         id: current.id,
         appId: String(appId),
         appName,
-        fromCount: current.candidateTasks.length,
+        fromCount: current.tasks.length,
         toCount: tasks.length,
         tasks,
       });
@@ -179,12 +264,12 @@ async function main() {
   for (const u of plan.willUpdate) {
     await prisma.candidateTaskApp.update({
       where: { appId: u.appId },
-      data: { candidateTasks: u.tasks }, // isTaken intentionally omitted
+      data: { tasks: u.tasks }, // isTaken intentionally omitted
     });
     done += 1;
     if (done % 200 === 0) console.log(`  …updated ${done}/${plan.willUpdate.length}`);
   }
-  console.log(`\n--apply: updated candidateTasks for ${done} apps (isTaken untouched).`);
+  console.log(`\n--apply: updated tasks for ${done} apps (isTaken untouched).`);
 }
 
 main()

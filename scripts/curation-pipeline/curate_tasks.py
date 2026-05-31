@@ -231,7 +231,17 @@ def build_prompt(entry: dict) -> str:
     name = meta.get("name", "Unknown App")
     category = entry["app"].get("category", {}).get("name", "Unknown")
     description = (meta.get("description") or "")[:2000]
-    candidates = entry.get("candidateTasks", [])
+    candidates = [
+        task.get("description", "").strip()
+        for task in entry.get("tasks", [])
+        if isinstance(task, dict) and task.get("description", "").strip()
+    ]
+    if not candidates:
+        candidates = [
+            task.strip()
+            for task in entry.get("candidateTasks", [])
+            if isinstance(task, str) and task.strip()
+        ]
 
     if candidates:
         candidate_list = "\n".join(f"  {i+1}. {t}" for i, t in enumerate(candidates))

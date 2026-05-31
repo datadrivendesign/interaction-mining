@@ -57,6 +57,12 @@ type AppMetadata {
   url         String?
 }
 
+type CandidateTask {
+  description String
+  generated   Boolean @default(false)
+  status      String  @default("open")
+}
+
 model App {
   id               String            @id @default(auto()) @map("_id") @db.ObjectId
   v                Int               @default(0) @map("__v")
@@ -76,11 +82,11 @@ model App {
 }
 
 model CandidateTaskApp {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  appId          String   @unique @map("app") @db.ObjectId
-  app            App      @relation(fields: [appId], references: [id])
-  candidateTasks String[]
-  isTaken        Boolean
+  id      String          @id @default(auto()) @map("_id") @db.ObjectId
+  appId   String          @unique @map("app") @db.ObjectId
+  app     App             @relation(fields: [appId], references: [id])
+  tasks   CandidateTask[]
+  isTaken Boolean
 
   @@map("candidate_task_apps")
 }

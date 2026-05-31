@@ -61,6 +61,10 @@ const CandidateGalleryAppCard = ({
 }) => {
   const [copyIcon, setCopyIcon] = useState<"copy" | "check">("copy");
   const { handleSetAppTaken } = useCandidateTask();
+  const taskDescriptions = candidateTaskApp.tasks.map(
+    (task) => task.description
+  );
+
   const handleCopy = (tasks: string[]) => {
     navigator.clipboard.writeText(tasks.join("\n"));
     setCopyIcon("check");
@@ -73,7 +77,7 @@ const CandidateGalleryAppCard = ({
     return copyIcon === "copy" ? (
       <Copy
         className="w-4 h-4 text-muted-foreground cursor-pointer"
-        onClick={() => handleCopy(candidateTaskApp.candidateTasks)}
+        onClick={() => handleCopy(taskDescriptions)}
       />
     ) : (
       <Check
@@ -107,7 +111,7 @@ const CandidateGalleryAppCard = ({
               variant="destructive"
               className="absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center text-xs p-0 font-bold shadow-lg z-10 bg-blue-500 text-white"
             >
-              {candidateTaskApp.candidateTasks.length}
+              {candidateTaskApp.tasks.length}
             </Badge>
           </div>
         </CollapsibleTrigger>
@@ -153,9 +157,9 @@ const CandidateGalleryAppCard = ({
             {handleCopyIcon()}
           </div>
           <ul className="list-disc list-inside">
-            {candidateTaskApp.candidateTasks.map((task, index) => (
+            {candidateTaskApp.tasks.map((task, index) => (
               <li className="text-xs text-muted-foreground mb-1" key={index}>
-                {task}
+                {task.description}
               </li>
             ))}
           </ul>

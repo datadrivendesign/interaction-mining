@@ -178,9 +178,12 @@ def run_import(
             continue
 
         candidates_col.insert_one({
-            "app":            app_object_id,
-            "candidateTasks": task_strings,
-            "isTaken":        False,
+            "app": app_object_id,
+            "tasks": [
+                {"description": task, "generated": False, "status": "open"}
+                for task in task_strings
+            ],
+            "isTaken": False,
         })
         inserted_cands += 1
         print(f"  [imported] {name} | {len(task_strings)} tasks")
