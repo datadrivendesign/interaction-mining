@@ -11,18 +11,19 @@
  *   under-marked          isTaken=false, HAS evidence   → should be true (risk: re-issued)
  *   over-marked           isTaken=true,  NO evidence     → review (maybe reserved/stale)
  *
- * Default is a read-only dry run. With --apply, ONLY under-marked apps are
- * flipped false→true (the safe direction); over-marked apps are never changed
- * automatically. Only the isTaken field is written — candidateTasks is untouched.
+ * Default is a read-only dry run. With --apply, under-marked apps are flipped
+ * false→true. With --apply --release-over-marked, over-marked apps are also
+ * flipped true→false. Only the isTaken field is written.
  *
  * Usage:
  *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/audit-istaken.mjs
  *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/audit-istaken.mjs --apply
  *
  * Options:
- *   --apply        Flip under-marked apps (false→true). Default: dry run.
- *   --out <path>   Report JSON path (default: <script-dir>/istaken-audit-report.json)
- *   -h, --help     Show this message
+ *   --apply                Flip under-marked apps (false→true). Default: dry run.
+ *   --release-over-marked  With --apply, also flip over-marked apps true→false.
+ *   --out <path>           Report JSON path (default: <script-dir>/istaken-audit-report.json)
+ *   -h, --help             Show this message
  *
  * DATABASE_URL must be set (same connection string as the app).
  */
@@ -40,6 +41,7 @@ const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
     apply: { type: "boolean", default: false },
+    "release-over-marked": { type: "boolean", default: false },
     out: { type: "string" },
     help: { type: "boolean", short: "h" },
   },
@@ -50,11 +52,14 @@ if (values.help) {
   console.log(`Usage: node prisma/scripts/task-curation/audit-istaken.mjs [options]
 
 Options:
-  --apply        Flip under-marked apps (isTaken false→true). Default: dry run.
-  --out <path>   Report JSON path (default: <script-dir>/istaken-audit-report.json)
-  -h, --help     Show this message`);
+  --apply                Flip under-marked apps (isTaken false→true). Default: dry run.
+  --release-over-marked  With --apply, also flip over-marked apps true→false.
+  --out <path>           Report JSON path (default: <script-dir>/istaken-audit-report.json)
+  -h, --help             Show this message`);
   process.exit(0);
 }
+
+const releaseOverMarked = values["release-over-marked"];
 
 const outputPath = path.resolve(
   process.cwd(),
@@ -136,12 +141,18 @@ async function main() {
     }
   };
   preview("UNDER-marked — would be flipped to isTaken=true", buckets.underMarked);
-  preview("OVER-marked — flagged for manual review (NOT changed)", buckets.overMarked);
+  preview(
+    releaseOverMarked
+      ? "OVER-marked — would be flipped to isTaken=false"
+      : "OVER-marked — flagged for manual review (NOT changed)",
+    buckets.overMarked,
+  );
 
   const report = {
     generatedAt: new Date().toISOString(),
     rule: "taken if captureCount > 0 OR traceCount > 0",
     applied: values.apply,
+    releaseOverMarked,
     totals: {
       apps: total,
       consistentTaken: buckets.consistentTaken.length,
@@ -155,22 +166,41 @@ async function main() {
   await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(`\nFull report → ${outputPath}`);
 
-  // ── Apply (under-marked only) ───────────────────────────────────────────────
+  // ── Apply ─────────────────────────────────────────────────────────────────
   if (!values.apply) {
-    console.log(`\nDry run — no changes written. Re-run with --apply to flip ${buckets.underMarked.length} under-marked apps to isTaken=true.`);
+    const releaseHint = buckets.overMarked.length
+      ? " Add --release-over-marked to also flip over-marked apps to isTaken=false."
+      : "";
+    console.log(`\nDry run — no changes written. Re-run with --apply to flip ${buckets.underMarked.length} under-marked apps to isTaken=true.${releaseHint}`);
     return;
   }
-  if (buckets.underMarked.length === 0) {
-    console.log(`\n--apply: nothing to fix; no under-marked apps.`);
-    return;
+
+  let underMarkedUpdated = 0;
+  if (buckets.underMarked.length > 0) {
+    const ids = buckets.underMarked.map((r) => r.id);
+    const result = await prisma.candidateTaskApp.updateMany({
+      where: { id: { in: ids } },
+      data: { isTaken: true },
+    });
+    underMarkedUpdated = result.count;
   }
-  const ids = buckets.underMarked.map((r) => r.id);
-  const result = await prisma.candidateTaskApp.updateMany({
-    where: { id: { in: ids } },
-    data: { isTaken: true },
-  });
-  console.log(`\n--apply: flipped ${result.count} under-marked apps to isTaken=true (candidateTasks untouched).`);
-  console.log(`Over-marked apps left unchanged: ${buckets.overMarked.length} (review manually).`);
+
+  let overMarkedUpdated = 0;
+  if (releaseOverMarked && buckets.overMarked.length > 0) {
+    const ids = buckets.overMarked.map((r) => r.id);
+    const result = await prisma.candidateTaskApp.updateMany({
+      where: { id: { in: ids } },
+      data: { isTaken: false },
+    });
+    overMarkedUpdated = result.count;
+  }
+
+  console.log(`\n--apply: flipped ${underMarkedUpdated} under-marked apps to isTaken=true.`);
+  if (releaseOverMarked) {
+    console.log(`--apply --release-over-marked: flipped ${overMarkedUpdated} over-marked apps to isTaken=false.`);
+  } else {
+    console.log(`Over-marked apps left unchanged: ${buckets.overMarked.length}. Re-run with --apply --release-over-marked to release them.`);
+  }
 }
 
 main()
