@@ -1,5 +1,5 @@
 import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
-import { Filter, RefreshCcw, Search } from "lucide-react";
+import { Filter, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -52,6 +52,7 @@ export const CandidateTaskSearch = () => {
     resetFilters,
     showTaken,
   } = useCandidateTask();
+  const [showFilters, setShowFilters] = useState(false);
 
   const [buttonClickStates, setButtonClickStates] = useState<{
     [genre: string]: ButtonClickState;
@@ -88,6 +89,8 @@ export const CandidateTaskSearch = () => {
     }
   };
 
+  const activeFilterCount = selectedGenres.length + excludeGenres.length;
+
   const handleAllButtonClick = () => {
     setButtonClickStates(
       Object.fromEntries(
@@ -116,41 +119,82 @@ export const CandidateTaskSearch = () => {
         <Badge variant="secondary" className="h-full px-3">
           {totalCount} Apps {showTaken ? "Taken" : "Left"}
         </Badge>
-      </div>
-      <div className="flex flex-wrap gap-2 items-center">
         <Button
-          variant="secondary"
+          type="button"
+          variant={showFilters ? "default" : "outline"}
           className="h-full"
-          onClick={handleAllButtonClick}
+          onClick={() => setShowFilters((prev) => !prev)}
         >
-          All
+          <Filter className="text-muted-foreground" />
+          Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
         </Button>
-        {iosAppGenres.map((genre) => (
-          <Button
-            key={genre}
-            variant="secondary"
-            className={`h-full ${
-              selectedGenres.includes(genre)
-                ? "bg-green-500/50 hover:bg-green-600/50 dark:bg-green-400/50 dark:hover:bg-green-500/50"
-                : ""
-            } ${
-              excludeGenres.includes(genre)
-                ? "bg-red-500/50 hover:bg-red-600/50 dark:bg-red-400/50 dark:hover:bg-red-500/50"
-                : ""
-            }`}
-            onClick={() => handleButtonClick(genre)}
-          >
-            <Filter
-              className={`text-muted-foreground ${
-                selectedGenres.includes(genre)
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              }`}
-            />
-            {genre}
-          </Button>
-        ))}
       </div>
+      {activeFilterCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedGenres.map((genre) => (
+            <Badge
+              key={`selected-${genre}`}
+              className="bg-green-100 text-green-900 hover:bg-green-100 dark:bg-green-950 dark:text-green-200"
+            >
+              Include {genre}
+            </Badge>
+          ))}
+          {excludeGenres.map((genre) => (
+            <Badge
+              key={`excluded-${genre}`}
+              className="bg-red-100 text-red-900 hover:bg-red-100 dark:bg-red-950 dark:text-red-200"
+            >
+              Exclude {genre}
+            </Badge>
+          ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={handleAllButtonClick}
+          >
+            <X className="size-4" />
+            Clear
+          </Button>
+        </div>
+      ) : null}
+      {showFilters ? (
+        <div className="rounded-md border bg-background p-3">
+          <div className="mb-2 text-xs text-muted-foreground">
+            Click once to include a genre, twice to exclude it.
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            {iosAppGenres.map((genre) => (
+              <Button
+                key={genre}
+                type="button"
+                variant="secondary"
+                size="sm"
+                className={`h-8 ${
+                  selectedGenres.includes(genre)
+                    ? "bg-green-500/50 hover:bg-green-600/50 dark:bg-green-400/50 dark:hover:bg-green-500/50"
+                    : ""
+                } ${
+                  excludeGenres.includes(genre)
+                    ? "bg-red-500/50 hover:bg-red-600/50 dark:bg-red-400/50 dark:hover:bg-red-500/50"
+                    : ""
+                }`}
+                onClick={() => handleButtonClick(genre)}
+              >
+                <Filter
+                  className={`text-muted-foreground ${
+                    selectedGenres.includes(genre)
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                />
+                {genre}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

@@ -6,10 +6,12 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import {
   CandidateTaskApp,
+  setCandidateTaskStatus,
   setCandidateTaskAppTakenStatus,
   getCandidateTaskApps,
 } from "@/lib/actions";
@@ -33,6 +35,11 @@ interface CandidateTaskContextType {
   setExcludeGenres: (genres: string[]) => void;
   setShowTaken: (show: boolean) => void;
   handleSetAppTaken: (id: string, isTaken: boolean) => Promise<void>;
+  handleSetTaskStatus: (
+    id: string,
+    taskIndex: number,
+    status: "open" | "hidden"
+  ) => Promise<boolean>;
   loadMore: () => void;
   resetFilters: () => void;
   fetchCandidateTaskApps: () => void;
@@ -54,7 +61,8 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [excludeGenres, setExcludeGenres] = useState<string[]>([]);
   const [showTaken, setShowTaken] = useState(false);
-  const [page, setPage] = useState(1);
+  const [, setPage] = useState(1);
+  const pageRef = useRef(1);
 
   const debouncedSearch = useDebounce(search, 500);
   const pageSize = 100;
@@ -67,12 +75,14 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
           setIsLoadingMore(true);
         } else {
           setIsLoading(true);
+          pageRef.current = 1;
           setPage(1);
         }
 
+        const nextPage = isLoadMore ? pageRef.current + 1 : 1;
         const res = await getCandidateTaskApps({
           isTaken: showTaken,
-          page: isLoadMore ? page + 1 : 1,
+          page: nextPage,
           pageSize,
           search: debouncedSearch,
           selectedGenres,
@@ -85,9 +95,11 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
               ...prev,
               ...res.data!.candidateTaskApps,
             ]);
-            setPage((prev) => prev + 1);
+            pageRef.current = nextPage;
+            setPage(nextPage);
           } else {
             setCandidateTaskApps(res.data.candidateTaskApps);
+            pageRef.current = 1;
             setPage(1);
           }
           setTotalCount(res.data.totalCount);
@@ -100,7 +112,7 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
         setIsLoadingMore(false);
       }
     },
-    [showTaken, page, pageSize, debouncedSearch, selectedGenres, excludeGenres]
+    [showTaken, pageSize, debouncedSearch, selectedGenres, excludeGenres]
   );
 
   // Auto-fetch when filters change
@@ -118,6 +130,26 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleSetTaskStatus = async (
+    id: string,
+    taskIndex: number,
+    status: "open" | "hidden"
+  ) => {
+    const result = await setCandidateTaskStatus({ id, taskIndex, status });
+    if (!result.ok || !result.data) {
+      toast.error(result.message);
+      return false;
+    }
+
+    setCandidateTaskApps((prev) =>
+      prev.map((app) =>
+        app.id === id ? result.data!.candidateTaskApp : app
+      )
+    );
+    toast.success(status === "hidden" ? "Task hidden" : "Task restored");
+    return true;
+  };
+
   const loadMore = () => {
     if (hasMore && !isLoadingMore) {
       fetchCandidateTaskApps(true);
@@ -128,6 +160,7 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
     setSearch("");
     setSelectedGenres([]);
     setExcludeGenres([]);
+    pageRef.current = 1;
     setPage(1);
   };
 
@@ -148,6 +181,7 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
         setExcludeGenres,
         setShowTaken,
         handleSetAppTaken,
+        handleSetTaskStatus,
         loadMore,
         resetFilters,
         fetchCandidateTaskApps,
