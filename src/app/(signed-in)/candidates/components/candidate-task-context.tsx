@@ -121,12 +121,17 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
   }, [fetchCandidateTaskApps]);
 
   const handleSetAppTaken = async (id: string, isTaken: boolean) => {
-    setCandidateTaskApps((prev) => prev.filter((app) => app.id !== id));
-    setTotalCount((prev) => Math.max(0, prev - 1));
+    try {
+      const result = await setCandidateTaskAppTakenStatus({ id, isTaken });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
 
-    const result = await setCandidateTaskAppTakenStatus({ id, isTaken });
-    if (!result.ok) {
-      toast.error(result.message);
+      setCandidateTaskApps((prev) => prev.filter((app) => app.id !== id));
+      setTotalCount((prev) => Math.max(0, prev - 1));
+    } catch {
+      toast.error("Failed to set candidate task app taken status");
     }
   };
 
