@@ -57,7 +57,7 @@ export default function Page() {
   const { data: uploadList = [] } = useSWR(
     [CaptureSWROperations.UPLOAD_LIST, captureId],
     fileFetcher,
-    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId)
+    getSWRConfig(CaptureSWROperations.UPLOAD_LIST, captureId),
   );
   // filter out draft autosaves and screen images
   const filteredUserUploads = useMemo(
@@ -65,14 +65,14 @@ export default function Page() {
       uploadList.filter(
         (file) =>
           !file.fileKey.includes("/drafts") &&
-          !file.fileKey.includes("/screens")
+          !file.fileKey.includes("/screens"),
       ),
-    [uploadList]
+    [uploadList],
   );
   // count number of draft autosaves
   const numFilteredDrafts = useMemo(
     () => uploadList.filter((file) => file.fileKey.includes("/drafts")),
-    [uploadList]
+    [uploadList],
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +93,7 @@ export default function Page() {
         return res;
       });
     },
-    [captureId]
+    [captureId],
   );
 
   const [state, formAction, pending] = useActionState(handleSubmit, null);
@@ -139,130 +139,131 @@ export default function Page() {
   };
 
   return (
-    <div className="flex flex-col w-dvw min-h-dvh items-center justify-start p-4 md:p-16 gap-4">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-start gap-3 p-3 sm:p-4 md:gap-4 md:p-16">
       <Card className="w-full max-w-screen-sm">
-        <CardHeader>
-          <CardTitle>
-            <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-950 dark:text-neutral-50 text-sm tabular-nums">
+        <CardHeader className="px-5 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-5">
+          <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm tabular-nums text-neutral-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
               1
-            </span>{" "}
-            Install the target app
+            </span>
+            <span>Install the target app</span>
           </CardTitle>
           <CardDescription hidden>
             Install the target app to complete the task
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col">
-            <div className="flex flex-col sm:flex-row justify-center sm:justify-start items-center w-full gap-4">
-              <figure className="w-full max-w-24">
+        <CardContent className="px-5 pb-4 pt-0 sm:px-6 sm:pb-5">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+            <figure className="w-12 shrink-0 sm:w-20 md:w-24">
+              {!isDataLoading && app ? (
+                <Image
+                  className="aspect-square w-full rounded-xl object-contain sm:rounded-3xl"
+                  src={app.metadata.icon}
+                  alt={`${app.metadata.name} icon`}
+                  width={0}
+                  height={0}
+                  sizes={"100vw"}
+                />
+              ) : (
+                <div className="aspect-square w-full animate-pulse rounded-xl bg-neutral-200 object-contain dark:bg-neutral-800 sm:rounded-3xl" />
+              )}
+            </figure>
+            <div className="flex min-w-0 flex-1 flex-col items-start justify-between">
+              <div className="mb-3 flex min-w-0 flex-col items-start">
                 {!isDataLoading && app ? (
-                  <Image
-                    className="w-full rounded-3xl object-contain aspect-square"
-                    src={app.metadata.icon}
-                    alt={`${app.metadata.name} icon`}
-                    width={0}
-                    height={0}
-                    sizes={"100vw"}
-                  />
+                  <h2 className="line-clamp-2 break-words font-semibold leading-snug">
+                    {app.metadata.name}
+                  </h2>
                 ) : (
-                  <div className="w-full rounded-3xl object-contain aspect-square bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+                  <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
                 )}
-              </figure>
-              <div className="flex flex-col justify-between items-center sm:items-start">
-                <div className="flex flex-col items-center sm:items-start mb-4">
-                  {!isDataLoading && app ? (
-                    <h2 className="font-semibold leading-snug">
-                      {app.metadata.name}
-                    </h2>
-                  ) : (
-                    <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
-                  )}
-                  {!isDataLoading && app ? (
-                    <p className="text-sm md:text-base font-medium text-muted-foreground">
-                      {app.metadata.company}
-                    </p>
-                  ) : (
-                    <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
-                  )}
-                </div>
                 {!isDataLoading && app ? (
-                  app.metadata.url ? (
-                    <Link href={app.metadata.url} target="_blank">
-                      <button
-                        disabled={!app.metadata.url}
-                        className="inline-flex items-center px-3 py-0.5 rounded-full bg-blue-500 hover:bg-blue-600 disabled:bg-neutral-500 text-white text-sm md:text-base font-medium cursor-pointer transition-colors duration-150 ease-in-out"
-                      >
-                        <ExternalLink className="size-3.5 md:size-4 mr-1" />{" "}
-                        Open App Store
-                      </button>
-                    </Link>
-                  ) : (
-                    <button
-                      disabled={!app.metadata.url}
-                      className="inline-flex items-center px-3 py-0.5 rounded-full bg-blue-500 disabled:bg-neutral-500 text-white text-sm md:text-base font-medium"
-                    >
-                      Not available
-                    </button>
-                  )
+                  <p className="line-clamp-1 break-words text-sm font-medium text-muted-foreground md:text-base">
+                    {app.metadata.company}
+                  </p>
                 ) : (
-                  <button className="inline-flex items-center px-3 py-0.5 rounded-full bg-neutral-500 text-white text-sm md:text-base font-medium animate-pulse">
-                    Loading...
-                  </button>
+                  <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
                 )}
               </div>
+              {!isDataLoading && app ? (
+                app.metadata.url ? (
+                  <Link
+                    href={app.metadata.url}
+                    target="_blank"
+                    className="w-full"
+                  >
+                    <Button
+                      disabled={!app.metadata.url}
+                      className="min-h-11 w-full"
+                    >
+                      <ExternalLink className="mr-2 size-4" />
+                      <span className="flex-1 text-left">Open App Store</span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    disabled={!app.metadata.url}
+                    className="min-h-11 w-full"
+                  >
+                    Not available
+                  </Button>
+                )
+              ) : (
+                <Button disabled className="min-h-11 w-full animate-pulse">
+                  Loading...
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
       <Card className="w-full max-w-screen-sm">
-        <CardHeader>
-          <CardTitle>
-            <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-950 dark:text-neutral-50 text-sm tabular-nums">
+        <CardHeader className="px-5 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-5">
+          <CardTitle className="flex items-start gap-3 text-xl leading-tight sm:text-2xl">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm tabular-nums text-neutral-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
               2
-            </span>{" "}
-            Make a screen recording of the following task
+            </span>
+            <span>Make a screen recording of the following task</span>
           </CardTitle>
           <CardDescription hidden>Record the following task</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-5 pb-4 pt-0 sm:px-6 sm:pb-5">
           <div className="mb-4">
             {!isDataLoading && capture?.task ? (
-              <Badge>
-                <article className="prose prose-neutral dark:prose-invert leading-snug font-medium font-semibold text-white dark:text-neutral-900">
-                  <p>
-                    Task:{" "}
-                    {capture?.task?.description
-                      ? capture?.task?.description
-                      : "No description provided."}
-                  </p>
-                </article>
-              </Badge>
+              <div className="w-full border-l-4 border-neutral-400 bg-neutral-50 py-1 pl-3 pr-2 dark:bg-neutral-900">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Task to record
+                </span>
+                <p className="break-words text-sm font-medium leading-snug">
+                  {capture?.task?.description
+                    ? capture?.task?.description
+                    : "No description provided."}
+                </p>
+              </div>
             ) : (
               <>
-                <div className="w-full h-4 bg-neutral-500 dark:bg-neutral-400 animate-pulse rounded"></div>
+                <div className="h-4 w-full animate-pulse rounded bg-neutral-500 dark:bg-neutral-400"></div>
               </>
             )}
           </div>
 
-          <div className="mb-2">
-            <article>
-              Explore the app to familiarize yourself with the task before
-              screen recording. The recording should be short (max 1-2 minutes).
-            </article>
-          </div>
-
-          <div className="mb-2">
-            <article>
-              Turn on &ldquo;Do not Disturb&rdquo; to block notifications while
-              recording.
+          <div className="mb-3 text-sm leading-relaxed text-muted-foreground">
+            <article className="space-y-2">
+              <p>
+                Before recording, briefly explore the app so you know how to
+                complete the task.
+              </p>
+              <p>
+                Keep the recording short, about 1-2 minutes, and turn on
+                &ldquo;Do Not Disturb&rdquo;.
+              </p>
             </article>
           </div>
 
           <Accordion
             type="single"
             collapsible
-            className="px-4 border border-neutral-200 dark:border-neutral-800 rounded-xl"
+            className="rounded-xl border border-neutral-200 px-4 dark:border-neutral-800"
           >
             <AccordionItem value="item-1">
               <AccordionTrigger>How do I record my screen?</AccordionTrigger>
@@ -298,15 +299,15 @@ export default function Page() {
         </CardContent>
       </Card>
       <Card className="w-full max-w-screen-sm">
-        <CardHeader>
-          <CardTitle>
-            <span className="inline-flex justify-center items-center size-8 mr-1 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-950 dark:text-neutral-50 text-sm tabular-nums">
+        <CardHeader className="px-5 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-5">
+          <CardTitle className="flex items-start gap-3 text-xl leading-tight sm:text-2xl">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm tabular-nums text-neutral-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
               3
-            </span>{" "}
-            Upload your screen recording of the task
+            </span>
+            <span>Upload your screen recording of the task</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-5 pb-4 pt-0 sm:px-6 sm:pb-5">
           {filteredUserUploads && filteredUserUploads.length > 0 && (
             <div className="flex flex-col mb-4">
               <h2 className="font-semibold mb-2">Uploaded files</h2>
@@ -331,14 +332,14 @@ export default function Page() {
                 {filteredUserUploads.map((file: any, index: number) => (
                   <li
                     key={index}
-                    className="flex justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-none"
+                    className="flex min-w-0 justify-between gap-3 border-b border-neutral-200 px-4 py-2 last:border-none dark:border-neutral-800"
                   >
-                    <div className="flex items-center gap-2">
-                      <FileVideo className="size-4" />
+                    <div className="flex min-w-0 items-center gap-2">
+                      <FileVideo className="size-4 shrink-0" />
                       <Link
                         href={file.fileUrl}
                         target="_blank"
-                        className="hover:underline"
+                        className="min-w-0 break-all hover:underline"
                       >
                         {file.fileName}
                       </Link>
@@ -350,7 +351,7 @@ export default function Page() {
                         handleDeleteUpload(captureId, file.fileKey)
                       }
                     >
-                      <button className="inline-flex items-center cursor-pointer">
+                      <button className="inline-flex shrink-0 cursor-pointer items-center">
                         <X className="size-4 text-neutral-500 hover:opacity-75" />
                       </button>
                     </DeleteUploadDialog>
@@ -368,8 +369,8 @@ export default function Page() {
           )}
           <div
             className={cn(
-              "flex flex-col justify-center items-center w-full p-4 md:p-6 border-dashed border-neutral-200 hover:border-neutral-500 dark:border-neutral-800 dark:hover:border-neutral-400 rounded-2xl text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:dark:text-neutral-200 transition-colors duration-150 ease-in-out cursor-pointer",
-              file ? "border border-solid" : "border-2 border-dashed"
+              "flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-dashed border-neutral-200 p-4 text-neutral-500 transition-colors duration-150 ease-in-out hover:border-neutral-500 hover:text-neutral-700 dark:border-neutral-800 dark:text-neutral-400 hover:dark:text-neutral-200 dark:hover:border-neutral-400 md:p-6",
+              file ? "border border-solid" : "border-2 border-dashed",
             )}
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
@@ -386,14 +387,14 @@ export default function Page() {
               e.stopPropagation();
             }}
           >
-            <span className="inline-flex flex-col items-center text-center text-sm">
+            <span className="inline-flex min-w-0 max-w-full flex-col items-center text-center text-sm">
               {file ? (
-                <File className="size-6 mb-2" />
+                <File className="mb-2 size-6 shrink-0" />
               ) : (
-                <Upload className="size-6 mb-2" />
+                <Upload className="mb-2 size-6 shrink-0" />
               )}
               {file ? (
-                `${file.name}`
+                <span className="max-w-full break-all">{file.name}</span>
               ) : (
                 <>
                   <p>Tap to select or drop your file here</p>
@@ -403,8 +404,8 @@ export default function Page() {
             </span>
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col justify-end items-center">
-          <form className="self-end" action={formAction}>
+        <CardFooter className="flex flex-col items-center justify-end px-5 pb-4 sm:px-6 sm:pb-5">
+          <form className="self-stretch sm:self-end" action={formAction}>
             <input
               hidden
               className="hidden"
@@ -413,13 +414,17 @@ export default function Page() {
               ref={fileInputRef}
               onChange={handleFileChange}
             />
-            <Button type="submit" disabled={pending || !file}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto"
+              disabled={pending || !file}
+            >
               {pending && <Loader2 className="size-4 animate-spin" />}
               Upload
             </Button>
           </form>
-          <div className="font-semibold mt-4 justify-self-center self-center">
-            <article className="text-sm">
+          <div className="mt-4 self-center justify-self-center text-center font-semibold">
+            <article className="text-sm leading-snug">
               Close this tab once you have finished uploading your recording.
             </article>
           </div>
