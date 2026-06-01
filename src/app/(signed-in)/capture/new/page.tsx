@@ -15,6 +15,10 @@ export default async function Page({ searchParams }: PageProps) {
     for (const [key, value] of Object.entries(resolvedSearchParams ?? {})) {
       if (typeof value === "string") {
         callbackParams.set(key, value);
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          callbackParams.append(key, item);
+        }
       }
     }
     const callbackUrl = `/capture/new${
