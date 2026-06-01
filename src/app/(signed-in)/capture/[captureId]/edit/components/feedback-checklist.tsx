@@ -101,6 +101,15 @@ interface FeedbackChecklistProps {
   /** Human-readable step name shown in the header, e.g. "Annotate". */
   stepLabel: string;
   screens: FrameData[];
+  feedbackTabs: Array<{
+    step: number;
+    label: string;
+    count: number;
+    isCurrentStep: boolean;
+  }>;
+  selectedFeedbackStep: number;
+  onSelectedFeedbackStepChange: (step: number) => void;
+  onGoToSelectedStep?: () => void;
   onJumpToScreen?: (screenId: string) => void;
   layoutMode: ChecklistLayoutMode;
   onLayoutModeChange: (mode: ChecklistLayoutMode) => void;
@@ -115,13 +124,16 @@ export type ChecklistLayoutMode = "top" | "side";
  * Renders at the top of the editor area and shows only the feedback relevant
  * to the current workflow step.
  *
- * Checkbox state is ephemeral and controlled by the parent (React state only,
- * no DB persistence). The parent resets it when the step or layout changes.
+ * Checkbox state is is session-local, keyed by feedback phase, and resets only * when that phase’s feedback text changes.
  */
 export function FeedbackChecklist({
   feedback,
   stepLabel,
   screens,
+  feedbackTabs,
+  selectedFeedbackStep,
+  onSelectedFeedbackStepChange,
+  onGoToSelectedStep,
   onJumpToScreen,
   layoutMode,
   onLayoutModeChange,
@@ -140,6 +152,7 @@ export function FeedbackChecklist({
   const remaining = items.length - checkedItems.size;
   const allDone = remaining === 0;
   const summaryLabel = `${stepLabel} Feedback`;
+  const hasPhaseTabs = feedbackTabs.some((tab) => tab.count > 0);
 
   useEffect(() => {
     setIsCollapsed(false);
@@ -150,15 +163,6 @@ export function FeedbackChecklist({
       setIsCollapsed(false);
     }
   }, [allDone, checkedItems.size]);
-
-  // Auto-collapse when every item has been checked off.
-  useEffect(() => {
-    if (!allDone || items.length === 0) {
-      return;
-    }
-
-    setIsCollapsed(true);
-  }, [allDone, items.length]);
 
   // Nothing to show → render nothing.
   if (items.length === 0) return null;
@@ -177,9 +181,7 @@ export function FeedbackChecklist({
       <ul
         className={cn(
           "space-y-0.5 overflow-y-auto border-t border-amber-200/70 px-3 py-2 dark:border-amber-800/60",
-          layoutMode === "side"
-            ? "min-h-0 flex-1 basis-0"
-            : "max-h-28",
+          layoutMode === "side" ? "min-h-0 flex-1 basis-0" : "max-h-28",
         )}
       >
         {items.map((item, index) => {
@@ -206,7 +208,7 @@ export function FeedbackChecklist({
                   {isJumpable ? (
                     <button
                       type="button"
-                      className="inline-flex items-start gap-1 text-left cursor-pointer"
+                      className="inline-flex cursor-pointer items-start gap-1 text-left"
                       onClick={() => onJumpToScreen?.(item.screenId!)}
                     >
                       <span
@@ -291,6 +293,47 @@ export function FeedbackChecklist({
     );
   };
 
+  const FeedbackPhaseTabs = () => {
+    if (!hasPhaseTabs) {
+      return null;
+    }
+
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
+        {feedbackTabs.map((tab) => {
+          const isSelected = tab.step === selectedFeedbackStep;
+          return (
+            <Button
+              key={tab.step}
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={tab.count === 0}
+              onClick={() => onSelectedFeedbackStepChange(tab.step)}
+              className={cn(
+                "h-6 gap-1 rounded-sm px-2 text-[10px] font-semibold",
+                isSelected
+                  ? "bg-white text-amber-900 shadow-xs dark:bg-amber-950 dark:text-amber-100"
+                  : "text-amber-700 hover:bg-amber-200/50 dark:text-amber-300",
+                tab.count === 0 && "opacity-45",
+              )}
+            >
+              <span>{tab.label}</span>
+              {tab.count > 0 ? (
+                <span className="rounded-full bg-amber-200 px-1.5 py-0 text-[9px] leading-4 text-amber-900 dark:bg-amber-800 dark:text-amber-100">
+                  {tab.count}
+                </span>
+              ) : null}
+              {tab.isCurrentStep ? (
+                <span className="sr-only">(current editor step)</span>
+              ) : null}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  };
+
   const SideCollapsedFeedbackChecklist = () => {
     return (
       <aside className="flex h-full min-h-0 w-12 shrink-0 flex-col items-center gap-2 border-l border-amber-200/80 bg-amber-50/80 px-1 py-2 dark:border-amber-800/60 dark:bg-amber-950/20">
@@ -298,7 +341,7 @@ export function FeedbackChecklist({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-8 text-amber-800 hover:bg-amber-200/60 dark:text-amber-100 dark:hover:bg-amber-900/40"
+          className="size-8 cursor-pointer text-amber-800 hover:bg-amber-200/60 dark:text-amber-100 dark:hover:bg-amber-900/40"
           onClick={() => setIsCollapsed(false)}
           aria-label="Expand feedback checklist"
         >
@@ -318,7 +361,7 @@ export function FeedbackChecklist({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-8 text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
+          className="size-8 cursor-pointer text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
           onClick={() => onLayoutModeChange("top")}
           aria-label="Move checklist to top"
         >
@@ -337,12 +380,15 @@ export function FeedbackChecklist({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-8 shrink-0 text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
+            className="size-8 cursor-pointer shrink-0 text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
             onClick={() => setIsCollapsed(true)}
             aria-label="Collapse feedback checklist"
           >
             <ChevronRight className="size-4" />
           </Button>
+        </div>
+        <div className="border-t border-amber-200/70 px-3 py-1.5 dark:border-amber-800/60">
+          <FeedbackPhaseTabs />
         </div>
         <div className="border-b border-amber-200/70 px-3 py-2 dark:border-amber-800/60">
           <div className="text-[11px] font-semibold text-amber-900 dark:text-amber-100">
@@ -353,6 +399,17 @@ export function FeedbackChecklist({
               ? "All feedback items completed."
               : `${remaining} items remaining in this step.`}
           </div>
+          {onGoToSelectedStep ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-2 h-7 cursor-pointer border-amber-300 bg-white px-2 text-[10px] text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900"
+              onClick={onGoToSelectedStep}
+            >
+              Go to {stepLabel}
+            </Button>
+          ) : null}
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ChecklistList />
@@ -388,8 +445,6 @@ export function FeedbackChecklist({
           </button>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            <LayoutToggleGroup />
-
             <Badge
               variant="secondary"
               className={cn(
@@ -401,12 +456,43 @@ export function FeedbackChecklist({
             >
               {allDone ? "All done" : `${remaining} remaining`}
             </Badge>
-            <ChevronDown
-              className={cn(
-                "size-3.5 text-amber-600 transition-transform duration-200 dark:text-amber-400",
-                !isCollapsed && "rotate-180",
-              )}
-            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-6 cursor-pointer text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
+              onClick={() => setIsCollapsed((current) => !current)}
+              aria-label={
+                isCollapsed
+                  ? "Expand feedback checklist"
+                  : "Collapse feedback checklist"
+              }
+            >
+              <ChevronDown
+                className={cn(
+                  "size-3.5 transition-transform duration-200",
+                  !isCollapsed && "rotate-180",
+                )}
+              />
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex w-full items-center justify-between gap-2 border-t border-amber-200/70 px-3 py-1.5 dark:border-amber-800/60">
+          <FeedbackPhaseTabs />
+          <div className="flex shrink-0 items-center gap-1.5">
+            {onGoToSelectedStep ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-6 cursor-pointer border-amber-300 bg-white px-2 text-[10px] text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900"
+                onClick={onGoToSelectedStep}
+              >
+                Go to {stepLabel}
+              </Button>
+            ) : null}
+            <LayoutToggleGroup />
           </div>
         </div>
 
