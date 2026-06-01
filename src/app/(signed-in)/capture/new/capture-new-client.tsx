@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createCaptureTask, revalidateCaptureCaches } from "@/lib/actions";
+import { SetStateAction, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  createCaptureTask,
+  getCandidateTaskCapturePrefill,
+  revalidateCaptureCaches,
+} from "@/lib/actions";
 import { Platform, prettyOS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,8 +19,19 @@ import { Loader2 } from "lucide-react";
 import AddTaskInputs, { TaskCandidate } from "./components/add-task-inputs";
 import { Session } from "next-auth";
 
+type CandidateOrigin = {
+  candidateTaskAppId: string;
+  taskIndex: number;
+};
+
+const makeTaskCandidate = (description = ""): TaskCandidate => ({
+  id: `id_${Date.now()}_${Math.random().toString(16)}`,
+  description,
+});
+
 export default function CaptureNewClient({ user }: { user: Session["user"] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const maxLength = 200;
 
@@ -25,14 +40,26 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
 
   // Multi-row description → later collapsed to a single string for capture
   const [tasks, setTasks] = useState<TaskCandidate[]>([
-    {
-      id: `id_${Date.now()}_${Math.random().toString(16)}`,
-      description: "",
-    },
+    makeTaskCandidate(),
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPrefilling, setIsPrefilling] = useState(false);
   const [showAddApp, setShowAddApp] = useState(false);
+  const [candidateOrigin, setCandidateOrigin] = useState<CandidateOrigin | null>(
+    null
+  );
+
+  const handleManualSetApp = (
+    nextApp: SetStateAction<{ name: string; id: string }>
+  ) => {
+    setCandidateOrigin(null);
+    setApp(nextApp);
+  };
+
+  const handleManualSetTasks = (nextTasks: SetStateAction<TaskCandidate[]>) => {
+    setTasks(nextTasks);
+  };
 
   // Validation: all tasks must be non-empty (trimmed)
   const allFilled = tasks.every((t) => t.description.trim().length > 0);
@@ -59,6 +86,61 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
     setLastAddedId(null);
   }, [tasks, lastAddedId]);
 
+  useEffect(() => {
+    const candidateTaskAppId = searchParams.get("candidateTaskAppId");
+    const taskIndexParam = searchParams.get("taskIndex");
+    if (!candidateTaskAppId || taskIndexParam === null) {
+      return;
+    }
+
+    const taskIndex = Number(taskIndexParam);
+    if (!Number.isInteger(taskIndex) || taskIndex < 0) {
+      toast.error("Invalid candidate task link.");
+      return;
+    }
+
+    let ignore = false;
+    setIsPrefilling(true);
+
+    getCandidateTaskCapturePrefill({ candidateTaskAppId, taskIndex })
+      .then((result) => {
+        if (ignore) return;
+        if (!result.ok || !result.data) {
+          toast.error(result.message || "Unable to load candidate task.");
+          setCandidateOrigin(null);
+          return;
+        }
+
+        const prefillPlatform = result.data.platform as Platform;
+        if (!Object.values(Platform).includes(prefillPlatform)) {
+          toast.error("Candidate task has an unsupported platform.");
+          setCandidateOrigin(null);
+          return;
+        }
+
+        setPlatform(prefillPlatform);
+        setApp(result.data.app);
+        setTasks([makeTaskCandidate(result.data.task.description)]);
+        setCandidateOrigin({
+          candidateTaskAppId: result.data.candidateTaskAppId,
+          taskIndex: result.data.taskIndex,
+        });
+      })
+      .catch((error) => {
+        if (ignore) return;
+        console.error(error);
+        toast.error("Unable to load candidate task.");
+        setCandidateOrigin(null);
+      })
+      .finally(() => {
+        if (!ignore) setIsPrefilling(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user.id) {
@@ -71,25 +153,27 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
     }
     setIsSubmitting(true);
     try {
-      for (const task of tasks) {
+      for (const [index, task] of tasks.entries()) {
         const result = await createCaptureTask({
           appId: app.id,
           os: platform,
           description: task.description,
+          candidateOrigin:
+            index === 0 ? (candidateOrigin ?? undefined) : undefined,
         });
 
         if (!result.ok) {
           throw new Error(`Failed to create capture task: ${result.message}`);
         }
       }
+      toast.success("Capture tasks created! Redirecting...");
+      await revalidateCaptureCaches();
+      router.push(`/dashboard`);
     } catch (err) {
       toast.error(`Failed to create capture task.`);
       console.error(err);
     } finally {
-      toast.success("Capture tasks created! Redirecting...");
       setIsSubmitting(false);
-      await revalidateCaptureCaches();
-      router.push(`/dashboard`);
     }
   };
 
@@ -138,8 +222,10 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
                 setPlatform(selectPlatform as Platform);
                 // reset selected app on platform change
                 setApp({ name: "", id: "" });
+                setCandidateOrigin(null);
               }
             }}
+            disabled={isPrefilling || isSubmitting}
             className="w-full"
           >
             <ToggleGroupItem
@@ -163,12 +249,22 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
             2. Select App
           </Label>
           {app.name && <Badge>{app.name}</Badge>}
-          <AppGallery platform={platform} app={app} setApp={setApp} />
+          {isPrefilling ? (
+            <div className="flex items-center gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Loading candidate task...
+            </div>
+          ) : null}
+          <AppGallery
+            platform={platform}
+            app={app}
+            setApp={handleManualSetApp}
+          />
           <AddAppForm
             platform={platform}
             showAddApp={showAddApp}
             setShowAddApp={setShowAddApp}
-            setApp={setApp}
+            setApp={handleManualSetApp}
           />
         </div>
 
@@ -179,7 +275,7 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
           </Label>
 
           <AddTaskInputs
-            setTasks={setTasks}
+            setTasks={handleManualSetTasks}
             tasks={tasks}
             maxLength={maxLength}
             setLastAddedId={setLastAddedId}
@@ -190,10 +286,12 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
         <Button
           className="dark:bg-neutral-50 dark:text-black"
           type="submit"
-          disabled={!app.id || !allFilled || isSubmitting}
-          aria-disabled={!app.id || !allFilled || isSubmitting}
+          disabled={!app.id || !allFilled || isPrefilling || isSubmitting}
+          aria-disabled={!app.id || !allFilled || isPrefilling || isSubmitting}
         >
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {(isPrefilling || isSubmitting) && (
+            <Loader2 className="size-4 animate-spin" />
+          )}
           Start Capture
         </Button>
       </form>
