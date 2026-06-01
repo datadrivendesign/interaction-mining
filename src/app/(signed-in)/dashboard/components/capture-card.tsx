@@ -40,7 +40,7 @@ function hasReviewerFeedback(capture: {
 function StartButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/start`}>
-      <Button size="sm" variant="default" className="px-3">
+      <Button size="sm" variant="default" className="px-3 cursor-pointer">
         <Play className="mr-1.5 size-3" />
         Start
       </Button>
@@ -51,7 +51,7 @@ function StartButton({ captureId }: { captureId: string }) {
 function ProcessButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/start`}>
-      <Button size="sm" variant="default" className="px-3">
+      <Button size="sm" variant="default" className="px-3 cursor-pointer">
         <Pencil className="mr-1.5 size-3" />
         Process
       </Button>
@@ -62,7 +62,7 @@ function ProcessButton({ captureId }: { captureId: string }) {
 function ReviewButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/evaluate`}>
-      <Button size="sm" variant="default" className="px-3">
+      <Button size="sm" variant="default" className="px-3 cursor-pointer">
         <Eye className="mr-1.5 size-3" />
         Review
       </Button>
@@ -73,7 +73,7 @@ function ReviewButton({ captureId }: { captureId: string }) {
 function EditButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/edit`}>
-      <Button size="sm" variant="outline" className="px-3">
+      <Button size="sm" variant="outline" className="px-3 cursor-pointer">
         <Edit className="mr-1.5 size-3" />
         Edit
       </Button>
@@ -96,7 +96,7 @@ function DeleteDialog({
         <Button
           size="sm"
           variant="destructive"
-          className="px-3"
+          className="px-3 cursor-pointer"
           disabled={isDeleting}
         >
           <Trash className="mr-0.5 size-3" />
@@ -111,7 +111,7 @@ function DeleteDialog({
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
-            <Button size="sm" variant="outline">
+            <Button size="sm" variant="outline" className="cursor-pointer">
               Cancel
             </Button>
           </DialogClose>
@@ -119,7 +119,7 @@ function DeleteDialog({
             <Button
               size="sm"
               variant="destructive"
-              className="px-3"
+              className="px-3 cursor-pointer"
               disabled={isDeleting}
               onClick={() => onDelete(captureId)}
             >
