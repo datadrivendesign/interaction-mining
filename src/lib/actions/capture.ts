@@ -3,6 +3,7 @@
 import { unstable_cache, revalidateTag } from "next/cache";
 import { CaptureStatus, Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { listFromS3 } from "../aws";
 import { ActionPayload } from "./types";
@@ -384,6 +385,20 @@ export async function createCapture({
   }
 }
 
+const ObjectIdSchema = z.string().regex(/^[a-f0-9]{24}$/i);
+
+const CreateCaptureTaskInputSchema = z.object({
+  appId: z.string().min(1),
+  os: z.string().min(1),
+  description: z.string().trim().min(1).max(200),
+  candidateOrigin: z
+    .object({
+      candidateTaskAppId: ObjectIdSchema,
+      taskIndex: z.number().int().nonnegative(),
+    })
+    .optional(),
+});
+
 /**
  * Creates a new capture task in the database.
  * @param appId Id of the app to create the capture task for.
@@ -395,11 +410,32 @@ export async function createCaptureTask({
   appId,
   os,
   description,
+  candidateOrigin,
 }: {
   appId: string;
   os: string;
   description: string;
+  candidateOrigin?: {
+    candidateTaskAppId: string;
+    taskIndex: number;
+  };
 }) {
+  const parsedInput = CreateCaptureTaskInputSchema.safeParse({
+    appId,
+    os,
+    description,
+    candidateOrigin,
+  });
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: "Invalid capture task input.",
+      data: null,
+    };
+  }
+
+  const input = parsedInput.data;
+
   try {
     const session = await requireAuth();
 
@@ -408,17 +444,77 @@ export async function createCaptureTask({
     }
 
     const app = await prisma.app.findFirst({
-      where: { packageName: appId },
+      where: { packageName: input.appId, os: input.os },
     });
 
+    if (!app) {
+      return {
+        ok: false,
+        message: "Selected app not found.",
+        data: null,
+      };
+    }
+
+    let candidateTaskApp:
+      | Prisma.CandidateTaskAppGetPayload<{ include: { app: true } }>
+      | null = null;
+    if (input.candidateOrigin) {
+      candidateTaskApp = await prisma.candidateTaskApp.findUnique({
+        where: { id: input.candidateOrigin.candidateTaskAppId },
+        include: { app: true },
+      });
+
+      if (!candidateTaskApp) {
+        return {
+          ok: false,
+          message: "Candidate task app not found.",
+          data: null,
+        };
+      }
+
+      if (
+        candidateTaskApp.app.packageName !== input.appId ||
+        candidateTaskApp.app.os !== input.os ||
+        candidateTaskApp.appId !== app.id
+      ) {
+        return {
+          ok: false,
+          message: "Candidate task no longer matches the selected app.",
+          data: null,
+        };
+      }
+
+      const candidateTask =
+        candidateTaskApp.tasks[input.candidateOrigin.taskIndex];
+      if (!candidateTask) {
+        return {
+          ok: false,
+          message: "Candidate task index is out of range.",
+          data: null,
+        };
+      }
+
+      if (candidateTask.status === "hidden") {
+        return {
+          ok: false,
+          message: "This candidate task is hidden and cannot be started.",
+          data: null,
+        };
+      }
+    }
+
     const task = await prisma.task.create({
-      data: { appId, os, description },
+      data: {
+        appId: input.appId,
+        os: input.os,
+        description: input.description,
+      },
     });
 
     const capture = await prisma.capture.create({
       data: {
         app: {
-          connect: { id: app?.id },
+          connect: { id: app.id },
         },
         task: {
           connect: { id: task.id },
@@ -442,6 +538,25 @@ export async function createCaptureTask({
       return { ok: false, message: "Failed to update user.", data: null };
     }
 
+    if (input.candidateOrigin && candidateTaskApp) {
+      await prisma.$runCommandRaw({
+        update: "candidate_task_apps",
+        updates: [
+          {
+            q: { _id: { $oid: input.candidateOrigin.candidateTaskAppId } },
+            u: {
+              $set: {
+                isTaken: true,
+                [`tasks.${input.candidateOrigin.taskIndex}.status`]:
+                  "started",
+              },
+            },
+            multi: false,
+          },
+        ],
+      });
+    }
+
     return {
       ok: true,
       message: "Capture and task created.",
@@ -449,7 +564,11 @@ export async function createCaptureTask({
     };
   } catch (error) {
     console.error("Error creating capture/task:", error);
-    throw new Error("Failed to create capture and task");
+    return {
+      ok: false,
+      message: "Failed to create capture and task.",
+      data: null,
+    };
   }
 }
 

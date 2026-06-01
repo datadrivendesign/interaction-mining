@@ -22,9 +22,11 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Play,
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -168,6 +170,9 @@ const CandidateTaskDrawer = ({
   const [showHidden, setShowHidden] = useState(false);
   const [pendingTaskIndex, setPendingTaskIndex] = useState<number | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [openedTaskIndexes, setOpenedTaskIndexes] = useState<Set<number>>(
+    () => new Set()
+  );
 
   const hiddenCount =
     candidateTaskApp?.tasks.filter((task) => task.status === "hidden").length ??
@@ -187,6 +192,7 @@ const CandidateTaskDrawer = ({
     setShowHidden(false);
     setPendingTaskIndex(null);
     setIsClaiming(false);
+    setOpenedTaskIndexes(new Set());
   }, [candidateTaskApp?.id]);
 
   const copyText = async (text: string, copiedState: CopiedState) => {
@@ -221,7 +227,6 @@ const CandidateTaskDrawer = ({
     setIsClaiming(true);
     await handleSetAppTaken(candidateTaskApp.id, !candidateTaskApp.isTaken);
     setIsClaiming(false);
-    onOpenChange(false);
   };
 
   return (
@@ -333,8 +338,17 @@ const CandidateTaskDrawer = ({
                       key={`${candidateTaskApp.id}-${index}`}
                       task={task}
                       index={index}
+                      candidateTaskAppId={candidateTaskApp.id}
+                      opened={openedTaskIndexes.has(index)}
                       copied={copied}
                       pending={pendingTaskIndex === index}
+                      onOpenCapture={() =>
+                        setOpenedTaskIndexes((prev) => {
+                          const next = new Set(prev);
+                          next.add(index);
+                          return next;
+                        })
+                      }
                       onCopy={() => copyText(task.description, index)}
                       onStatusChange={(status) =>
                         handleTaskStatus(index, status)
@@ -358,15 +372,21 @@ const CandidateTaskDrawer = ({
 const CandidateTaskRow = ({
   task,
   index,
+  candidateTaskAppId,
+  opened,
   copied,
   pending,
+  onOpenCapture,
   onCopy,
   onStatusChange,
 }: {
   task: CandidateTask;
   index: number;
+  candidateTaskAppId: string;
+  opened: boolean;
   copied: CopiedState;
   pending: boolean;
+  onOpenCapture: () => void;
   onCopy: () => void;
   onStatusChange: (status: "open" | "hidden") => void;
 }) => {
@@ -384,6 +404,37 @@ const CandidateTaskRow = ({
           <p className="mt-1.5 text-sm leading-5">{task.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {!isHidden ? (
+            <WithTooltip
+              label={
+                opened
+                  ? "Capture form opened in a new tab"
+                  : "Create a capture with this app and task prefilled"
+              }
+            >
+              <Button
+                asChild
+                type="button"
+                size="sm"
+                variant={opened ? "outline" : "default"}
+                className="h-8 px-2"
+              >
+                <Link
+                  href={`/capture/new?candidateTaskAppId=${candidateTaskAppId}&taskIndex=${index}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onOpenCapture}
+                >
+                  {opened ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
+                  {opened ? "Opened" : "Start"}
+                </Link>
+              </Button>
+            </WithTooltip>
+          ) : null}
           <WithTooltip label="Copy task">
             <Button type="button" size="icon" variant="ghost" onClick={onCopy}>
               {copied === index ? (
