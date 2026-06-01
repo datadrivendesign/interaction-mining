@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sheet,
   SheetContent,
@@ -22,6 +23,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  ListChecks,
   Play,
   Sparkles,
 } from "lucide-react";
@@ -171,7 +173,10 @@ const CandidateTaskDrawer = ({
   const [pendingTaskIndex, setPendingTaskIndex] = useState<number | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
   const [openedTaskIndexes, setOpenedTaskIndexes] = useState<Set<number>>(
-    () => new Set()
+    () => new Set(),
+  );
+  const [selectedTaskIndexes, setSelectedTaskIndexes] = useState<Set<number>>(
+    () => new Set(),
   );
 
   const hiddenCount =
@@ -186,6 +191,15 @@ const CandidateTaskDrawer = ({
         .filter((task) => task.status !== "hidden")
         .map((task) => task.description)
     : [];
+  const selectedTaskIndexesList = Array.from(selectedTaskIndexes).sort(
+    (a, b) => a - b,
+  );
+  const selectedCaptureHref =
+    candidateTaskApp && selectedTaskIndexesList.length > 0
+      ? `/capture/new?candidateTaskAppId=${candidateTaskApp.id}&${selectedTaskIndexesList
+          .map((taskIndex) => `taskIndex=${taskIndex}`)
+          .join("&")}`
+      : "/capture/new";
 
   useEffect(() => {
     setCopied(null);
@@ -193,6 +207,7 @@ const CandidateTaskDrawer = ({
     setPendingTaskIndex(null);
     setIsClaiming(false);
     setOpenedTaskIndexes(new Set());
+    setSelectedTaskIndexes(new Set());
   }, [candidateTaskApp?.id]);
 
   const copyText = async (text: string, copiedState: CopiedState) => {
@@ -217,6 +232,13 @@ const CandidateTaskDrawer = ({
       status,
     );
     setPendingTaskIndex(null);
+    if (ok && status === "hidden") {
+      setSelectedTaskIndexes((prev) => {
+        const next = new Set(prev);
+        next.delete(taskIndex);
+        return next;
+      });
+    }
     if (ok && status === "open" && hiddenCount <= 1) {
       setShowHidden(false);
     }
@@ -276,6 +298,29 @@ const CandidateTaskDrawer = ({
                     Copy all
                   </Button>
                 </WithTooltip>
+                {selectedTaskIndexesList.length > 0 ? (
+                  <WithTooltip label="Create captures for selected tasks in a new tab">
+                    <Button asChild type="button" size="sm">
+                      <Link
+                        href={selectedCaptureHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() =>
+                          setOpenedTaskIndexes((prev) => {
+                            const next = new Set(prev);
+                            selectedTaskIndexesList.forEach((taskIndex) =>
+                              next.add(taskIndex),
+                            );
+                            return next;
+                          })
+                        }
+                      >
+                        <ListChecks className="size-4" />
+                        Start selected ({selectedTaskIndexesList.length})
+                      </Link>
+                    </Button>
+                  </WithTooltip>
+                ) : null}
                 <WithTooltip
                   label={
                     candidateTaskApp.isTaken
@@ -340,8 +385,20 @@ const CandidateTaskDrawer = ({
                       index={index}
                       candidateTaskAppId={candidateTaskApp.id}
                       opened={openedTaskIndexes.has(index)}
+                      selected={selectedTaskIndexes.has(index)}
                       copied={copied}
                       pending={pendingTaskIndex === index}
+                      onSelectedChange={(checked) =>
+                        setSelectedTaskIndexes((prev) => {
+                          const next = new Set(prev);
+                          if (checked) {
+                            next.add(index);
+                          } else {
+                            next.delete(index);
+                          }
+                          return next;
+                        })
+                      }
                       onOpenCapture={() =>
                         setOpenedTaskIndexes((prev) => {
                           const next = new Set(prev);
@@ -374,8 +431,10 @@ const CandidateTaskRow = ({
   index,
   candidateTaskAppId,
   opened,
+  selected,
   copied,
   pending,
+  onSelectedChange,
   onOpenCapture,
   onCopy,
   onStatusChange,
@@ -384,8 +443,10 @@ const CandidateTaskRow = ({
   index: number;
   candidateTaskAppId: string;
   opened: boolean;
+  selected: boolean;
   copied: CopiedState;
   pending: boolean;
+  onSelectedChange: (checked: boolean) => void;
   onOpenCapture: () => void;
   onCopy: () => void;
   onStatusChange: (status: "open" | "hidden") => void;
@@ -399,6 +460,14 @@ const CandidateTaskRow = ({
       }`}
     >
       <div className="flex items-start justify-between gap-2">
+        {!isHidden ? (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectedChange(checked === true)}
+            aria-label="Select task"
+            className="mt-1 cursor-pointer"
+          />
+        ) : null}
         <div className="min-w-0 flex-1">
           <SourceBadge generated={task.generated} />
           <p className="mt-1.5 text-sm leading-5">{task.description}</p>
@@ -484,7 +553,7 @@ const SourceBadge = ({ generated }: { generated: boolean }) => {
   if (generated) {
     return (
       <WithTooltip label="Task suggested by AI from the app description. Hide it if it does not work.">
-        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200">
+        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-200 hover:text-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900 dark:hover:text-amber-200">
           <Sparkles className="size-3" />
           AI-generated task
         </Badge>
@@ -494,7 +563,7 @@ const SourceBadge = ({ generated }: { generated: boolean }) => {
 
   return (
     <WithTooltip label="Task found in existing app data.">
-      <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200">
+      <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-200 hover:text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900 dark:hover:text-emerald-200">
         <Check className="size-3" />
         App task
       </Badge>

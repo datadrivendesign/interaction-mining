@@ -24,9 +24,13 @@ type CandidateOrigin = {
   taskIndex: number;
 };
 
-const makeTaskCandidate = (description = ""): TaskCandidate => ({
+const makeTaskCandidate = (
+  description = "",
+  candidateOrigin?: CandidateOrigin,
+): TaskCandidate => ({
   id: `id_${Date.now()}_${Math.random().toString(16)}`,
   description,
+  candidateOrigin,
 });
 
 export default function CaptureNewClient({ user }: { user: Session["user"] }) {
@@ -39,22 +43,20 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
   const [app, setApp] = useState({ name: "", id: "" });
 
   // Multi-row description → later collapsed to a single string for capture
-  const [tasks, setTasks] = useState<TaskCandidate[]>([
-    makeTaskCandidate(),
-  ]);
+  const [tasks, setTasks] = useState<TaskCandidate[]>([makeTaskCandidate()]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPrefilling, setIsPrefilling] = useState(false);
   const [showAddApp, setShowAddApp] = useState(false);
-  const [candidateOrigin, setCandidateOrigin] = useState<CandidateOrigin | null>(
-    null
-  );
 
   const handleManualSetApp = (
-    nextApp: SetStateAction<{ name: string; id: string }>
+    nextApp: SetStateAction<{ name: string; id: string }>,
   ) => {
-    setCandidateOrigin(null);
     setApp(nextApp);
+    setTasks((prev) =>
+      // clear candidate origin when app is set manually
+      prev.map(({ candidateOrigin: _candidateOrigin, ...task }) => task),
+    );
   };
 
   const handleManualSetTasks = (nextTasks: SetStateAction<TaskCandidate[]>) => {
@@ -88,13 +90,19 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
 
   useEffect(() => {
     const candidateTaskAppId = searchParams.get("candidateTaskAppId");
-    const taskIndexParam = searchParams.get("taskIndex");
-    if (!candidateTaskAppId || taskIndexParam === null) {
+    const taskIndexParams = searchParams.getAll("taskIndex");
+    if (!candidateTaskAppId || taskIndexParams.length === 0) {
       return;
     }
 
-    const taskIndex = Number(taskIndexParam);
-    if (!Number.isInteger(taskIndex) || taskIndex < 0) {
+    const taskIndexes = Array.from(
+      new Set(taskIndexParams.map((taskIndexParam) => Number(taskIndexParam))),
+    );
+    if (
+      taskIndexes.some(
+        (taskIndex) => !Number.isInteger(taskIndex) || taskIndex < 0,
+      )
+    ) {
       toast.error("Invalid candidate task link.");
       return;
     }
@@ -102,35 +110,32 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
     let ignore = false;
     setIsPrefilling(true);
 
-    getCandidateTaskCapturePrefill({ candidateTaskAppId, taskIndex })
+    getCandidateTaskCapturePrefill({ candidateTaskAppId, taskIndexes })
       .then((result) => {
         if (ignore) return;
         if (!result.ok || !result.data) {
           toast.error(result.message || "Unable to load candidate task.");
-          setCandidateOrigin(null);
           return;
         }
 
         const prefillPlatform = result.data.platform as Platform;
         if (!Object.values(Platform).includes(prefillPlatform)) {
           toast.error("Candidate task has an unsupported platform.");
-          setCandidateOrigin(null);
           return;
         }
 
         setPlatform(prefillPlatform);
         setApp(result.data.app);
-        setTasks([makeTaskCandidate(result.data.task.description)]);
-        setCandidateOrigin({
-          candidateTaskAppId: result.data.candidateTaskAppId,
-          taskIndex: result.data.taskIndex,
-        });
+        setTasks(
+          result.data.tasks.map((task) =>
+            makeTaskCandidate(task.description, task.origin),
+          ),
+        );
       })
       .catch((error) => {
         if (ignore) return;
         console.error(error);
         toast.error("Unable to load candidate task.");
-        setCandidateOrigin(null);
       })
       .finally(() => {
         if (!ignore) setIsPrefilling(false);
@@ -153,13 +158,12 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
     }
     setIsSubmitting(true);
     try {
-      for (const [index, task] of tasks.entries()) {
+      for (const task of tasks) {
         const result = await createCaptureTask({
           appId: app.id,
           os: platform,
           description: task.description,
-          candidateOrigin:
-            index === 0 ? (candidateOrigin ?? undefined) : undefined,
+          candidateOrigin: task.candidateOrigin,
         });
 
         if (!result.ok) {
@@ -222,7 +226,11 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
                 setPlatform(selectPlatform as Platform);
                 // reset selected app on platform change
                 setApp({ name: "", id: "" });
-                setCandidateOrigin(null);
+                setTasks((prev) =>
+                  prev.map(
+                    ({ candidateOrigin: _candidateOrigin, ...task }) => task,
+                  ),
+                );
               }
             }}
             disabled={isPrefilling || isSubmitting}
@@ -245,10 +253,26 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
 
         {/* App */}
         <div className="space-y-2 dark:text-white">
-          <Label htmlFor="app" className="mr-5 font-bold">
-            2. Select App
-          </Label>
-          {app.name && <Badge>{app.name}</Badge>}
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <Label htmlFor="app" className="font-bold">
+              2. Select App
+            </Label>
+            {app.name ? (
+              <div className="flex max-w-full items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 sm:max-w-[65%]">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Selected
+                  </div>
+                  <div className="truncate text-sm font-semibold">
+                    {app.name}
+                  </div>
+                </div>
+                <Badge variant="outline" className="shrink-0">
+                  {prettyOS(platform)}
+                </Badge>
+              </div>
+            ) : null}
+          </div>
           {isPrefilling ? (
             <div className="flex items-center gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />

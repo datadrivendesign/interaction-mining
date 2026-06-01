@@ -282,7 +282,7 @@ export async function getAllApps(): Promise<AppItemList[]> {
  * @returns app
  */
 export async function getAppByPackageName(
-  packageName: string
+  packageName: string,
 ): Promise<App | null> {
   if (!packageName) return null;
 
@@ -308,7 +308,7 @@ export async function getAppByPackageName(
  */
 export async function checkIfAppExists(
   packageName: string,
-  os: Platform
+  os: Platform,
 ): Promise<App | null> {
   if (!packageName) return null;
 
@@ -327,12 +327,43 @@ export async function checkIfAppExists(
 }
 
 /**
+ * Best-effort iOS lookup by numeric App Store ID stored inside metadata.url.
+ * This avoids repeat scraper calls for existing apps, but packageName remains
+ * the canonical app identity after scraping.
+ */
+export async function checkIfIosAppExistsByStoreId(
+  storeId: string,
+): Promise<App | null> {
+  if (!/^\d+$/.test(storeId)) return null;
+
+  try {
+    const app = await prisma.app.findFirst({
+      where: {
+        os: Platform.IOS,
+        metadata: {
+          is: {
+            url: {
+              contains: `/id${storeId}`,
+            },
+          },
+        },
+      },
+    });
+
+    return app;
+  } catch (error) {
+    console.error("Failed to check iOS app by store ID:", error);
+    return null;
+  }
+}
+
+/**
  * Saves an app to the database.
  * @param appData - app data to save
  * @returns app
  */
 export async function saveApp(
-  appData: Prisma.AppCreateInput
+  appData: Prisma.AppCreateInput,
 ): Promise<{ ok: boolean; data: App | null }> {
   if (!appData || !appData.packageName) return { ok: false, data: null };
 

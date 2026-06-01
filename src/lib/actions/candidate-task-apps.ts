@@ -38,21 +38,25 @@ const SetCandidateTaskStatusInputSchema = z.object({
 
 const GetCandidateTaskCapturePrefillInputSchema = z.object({
   candidateTaskAppId: ObjectIdSchema,
-  taskIndex: z.number().int().nonnegative(),
+  taskIndex: z.number().int().nonnegative().optional(),
+  taskIndexes: z.array(z.number().int().nonnegative()).min(1).optional(),
 });
 
 export type CandidateTaskCapturePrefill = {
   candidateTaskAppId: string;
-  taskIndex: number;
   platform: string;
   app: {
     name: string;
     id: string;
   };
-  task: {
+  tasks: {
     description: string;
     status: string;
-  };
+    origin: {
+      candidateTaskAppId: string;
+      taskIndex: number;
+    };
+  }[];
 };
 
 /**
@@ -290,9 +294,11 @@ export const setCandidateTaskStatus = async ({
 export const getCandidateTaskCapturePrefill = async ({
   candidateTaskAppId,
   taskIndex,
+  taskIndexes,
 }: {
   candidateTaskAppId: string;
-  taskIndex: number;
+  taskIndex?: number;
+  taskIndexes?: number[];
 }): Promise<ActionPayload<CandidateTaskCapturePrefill>> => {
   const session = await requireAuth();
   if (!session?.user?.id) {
@@ -302,6 +308,7 @@ export const getCandidateTaskCapturePrefill = async ({
   const parsedInput = GetCandidateTaskCapturePrefillInputSchema.safeParse({
     candidateTaskAppId,
     taskIndex,
+    taskIndexes,
   });
   if (!parsedInput.success) {
     return {
@@ -312,6 +319,20 @@ export const getCandidateTaskCapturePrefill = async ({
   }
 
   const input = parsedInput.data;
+  const requestedIndexes = Array.from(
+    new Set(
+      input.taskIndexes ??
+        (input.taskIndex !== undefined ? [input.taskIndex] : []),
+    ),
+  );
+
+  if (requestedIndexes.length === 0) {
+    return {
+      ok: false,
+      message: "No candidate task indexes provided.",
+      data: null,
+    };
+  }
 
   try {
     const candidateTaskApp = await prisma.candidateTaskApp.findUnique({
@@ -327,21 +348,33 @@ export const getCandidateTaskCapturePrefill = async ({
       };
     }
 
-    const task = candidateTaskApp.tasks[input.taskIndex];
-    if (!task) {
-      return {
-        ok: false,
-        message: "Candidate task index is out of range.",
-        data: null,
-      };
-    }
+    const tasks = [];
+    for (const requestedIndex of requestedIndexes) {
+      const task = candidateTaskApp.tasks[requestedIndex];
+      if (!task) {
+        return {
+          ok: false,
+          message: "Candidate task index is out of range.",
+          data: null,
+        };
+      }
 
-    if (task.status === "hidden") {
-      return {
-        ok: false,
-        message: "This candidate task is hidden and cannot be started.",
-        data: null,
-      };
+      if (task.status === "hidden") {
+        return {
+          ok: false,
+          message: "A selected candidate task is hidden and cannot be started.",
+          data: null,
+        };
+      }
+
+      tasks.push({
+        description: task.description,
+        status: task.status,
+        origin: {
+          candidateTaskAppId: candidateTaskApp.id,
+          taskIndex: requestedIndex,
+        },
+      });
     }
 
     return {
@@ -349,16 +382,12 @@ export const getCandidateTaskCapturePrefill = async ({
       message: "Candidate task prefill found.",
       data: {
         candidateTaskAppId: candidateTaskApp.id,
-        taskIndex: input.taskIndex,
         platform: candidateTaskApp.app.os,
         app: {
           name: candidateTaskApp.app.metadata.name,
           id: candidateTaskApp.app.packageName,
         },
-        task: {
-          description: task.description,
-          status: task.status,
-        },
+        tasks,
       },
     };
   } catch (error) {

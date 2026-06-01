@@ -5,6 +5,7 @@ import { Dispatch, SetStateAction, useState } from "react";
 import {
   AppInput,
   checkIfAppExists,
+  checkIfIosAppExistsByStoreId,
   getAndroidApp,
   getIosApp,
   saveApp,
@@ -23,6 +24,25 @@ export default function AddAppForm({
   setApp: Dispatch<SetStateAction<{ name: string; id: string }>>;
 }) {
   const [newAppId, setNewAppId] = useState("");
+  const [isAddingApp, setIsAddingApp] = useState(false);
+
+  function parseStoreAppInput(input: string) {
+    const trimmedInput = input.trim();
+    try {
+      const url = new URL(trimmedInput);
+      if (platform === Platform.ANDROID) {
+        return url.searchParams.get("id")?.trim() || trimmedInput;
+      }
+
+      const appStoreId = url.pathname.match(/\/id(\d+)/)?.[1];
+      return appStoreId || trimmedInput;
+    } catch {
+      if (platform === Platform.IOS) {
+        return trimmedInput.match(/id(\d+)/)?.[1] || trimmedInput;
+      }
+      return trimmedInput;
+    }
+  }
 
   function convertToPrismaApp(data: any): AppInput {
     const app = {
@@ -58,60 +78,82 @@ export default function AddAppForm({
   }
 
   async function handleAddApp() {
-    if (!newAppId) return;
-    // FIXME: db check breaks for ios because we lookup id instead of appId
-    if (platform === Platform.ANDROID) {
-      const existing = await checkIfAppExists(newAppId, platform);
-      if (existing) {
-        toast.success("App already exists!");
-        setApp({
-          id: existing.packageName,
-          name: existing.metadata.name,
-        });
-        setShowAddApp(false);
+    const parsedAppId = parseStoreAppInput(newAppId);
+    if (!parsedAppId || isAddingApp) return;
+    setIsAddingApp(true);
+
+    try {
+      if (platform === Platform.ANDROID) {
+        const existing = await checkIfAppExists(parsedAppId, platform);
+        if (existing) {
+          toast.success("App already exists!");
+          setApp({
+            id: existing.packageName,
+            name: existing.metadata.name,
+          });
+          setShowAddApp(false);
+          return;
+        }
+      }
+
+      if (platform === Platform.IOS) {
+        // First try App Store numeric ID from metadata.url to avoid scraper
+        // call for existing apps. After scraping, still check canonical saved
+        // packageName/appId because metadata.url is only best-effort shortcut.
+        const existingByStoreUrl =
+          await checkIfIosAppExistsByStoreId(parsedAppId);
+        if (existingByStoreUrl) {
+          toast.success("App already exists!");
+          setApp({
+            id: existingByStoreUrl.packageName,
+            name: existingByStoreUrl.metadata.name,
+          });
+          setShowAddApp(false);
+          return;
+        }
+      }
+
+      const result =
+        platform === Platform.ANDROID
+          ? await getAndroidApp({ appId: parsedAppId })
+          : await getIosApp({ id: parsedAppId });
+
+      if (!result || !result.ok) {
+        toast.error(
+          `Failed to fetch ${prettyOS(platform)} app. ${result?.message}`,
+        );
         return;
       }
-    }
 
-    const result =
-      platform === Platform.ANDROID
-        ? await getAndroidApp({ appId: newAppId })
-        : await getIosApp({ id: newAppId });
-
-    if (!result || !result.ok) {
-      toast.error(
-        `Failed to fetch ${prettyOS(platform)} app. ${result?.message}`
-      );
-      return;
-    }
-
-    // need to do post-scrape check, now we switch to id from appId
-    if (platform === Platform.IOS) {
-      const existing = await checkIfAppExists(result.data?.appId, platform);
-      if (existing) {
-        toast.success("App already exists!");
-        setApp({
-          id: existing.packageName,
-          name: existing.metadata.name,
-        });
-        setShowAddApp(false);
-        return;
+      if (platform === Platform.IOS) {
+        const existing = await checkIfAppExists(result.data?.appId, platform);
+        if (existing) {
+          toast.success("App already exists!");
+          setApp({
+            id: existing.packageName,
+            name: existing.metadata.name,
+          });
+          setShowAddApp(false);
+          return;
+        }
       }
-    }
 
-    const saved = await saveApp(convertToPrismaApp(result.data));
-    if (saved.ok) {
-      toast.success("App added!");
-      setTimeout(() => {
-        setApp({
-          id: saved.data?.packageName || newAppId,
-          name: saved.data?.metadata.name || newAppId,
-        });
-      }, 0);
-      setShowAddApp(false);
-      setNewAppId("");
-    } else {
-      toast.error("Failed to save app to database.");
+      const saved = await saveApp(convertToPrismaApp(result.data));
+      if (saved.ok) {
+        toast.success("App added!");
+        setTimeout(() => {
+          setApp({
+            id: saved.data?.packageName || parsedAppId,
+            name: saved.data?.metadata.name || parsedAppId,
+          });
+        }, 0);
+        setShowAddApp(false);
+        setNewAppId("");
+      } else {
+        toast.error("Failed to save app to database.");
+      }
+    } finally {
+      setIsAddingApp(false);
     }
   }
 
@@ -129,10 +171,10 @@ export default function AddAppForm({
       {showAddApp && (
         <div className="space-y-1 animate-fade-in">
           <Label htmlFor="newAppId">
-            Enter{" "}
+            Paste{" "}
             {platform === Platform.ANDROID
-              ? "Google Play Package Id"
-              : "App Store ID"}
+              ? "Google Play URL or package name"
+              : "App Store URL or app ID"}
           </Label>
           <div className="flex flex-col md:flex-row gap-2 w-3/4">
             <input
@@ -142,13 +184,17 @@ export default function AddAppForm({
               onChange={(e) => setNewAppId(e.target.value)}
               placeholder={`${
                 platform === Platform.ANDROID
-                  ? "e.g. com.whatsapp"
-                  : "e.g. 310633997"
+                  ? "e.g. https://play.google.com/store/apps/details?id=com.whatsapp"
+                  : "e.g. https://apps.apple.com/us/app/uber-request-a-ride/id368677368"
               }`}
               className="w-full border rounded px-3 py-2"
             />
-            <Button type="button" disabled={!newAppId} onClick={handleAddApp}>
-              Add App
+            <Button
+              type="button"
+              disabled={!newAppId.trim() || isAddingApp}
+              onClick={handleAddApp}
+            >
+              {isAddingApp ? "Adding..." : "Add App"}
             </Button>
           </div>
         </div>
