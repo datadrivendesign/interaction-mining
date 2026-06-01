@@ -1,8 +1,11 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, AlertCircle, Upload } from "lucide-react";
 import { CaptureStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import { toast } from "sonner";
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,38 +20,50 @@ import {
 import { statusConfig } from "./config";
 import { CaptureCard } from "./capture-card";
 
+type DashboardCapture = Prisma.CaptureGetPayload<{
+  include: { app: true; task: true };
+}>;
+const VISIBLE_CAPTURE_STATUSES = [
+  CaptureStatus.CREATED,
+  CaptureStatus.PROCESSING,
+  CaptureStatus.REVIEWING,
+] as const;
+type NonApprovedStatus = (typeof VISIBLE_CAPTURE_STATUSES)[number];
+
 export function CaptureColumn({
   handleLoadMore,
   status,
   config,
   columnData,
   onDelete,
+  deletingIds,
 }: {
   handleLoadMore: (status: NonApprovedStatus) => void;
   status: NonApprovedStatus;
-  config: any;
-  columnData: CapturesPaginatedOutput & { loading: boolean };
-  onDelete: (id: string) => void;
+  config: (typeof statusConfig)[NonApprovedStatus];
+  columnData: DashboardCapturesPaginatedOutput & { loading: boolean };
+  onDelete: (id: string) => Promise<void>;
+  deletingIds: Set<string>;
 }) {
   const Icon = config.icon;
 
   return (
-    <Card key={status} className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Icon className={`size-5 ${config.textColor}`} />
-            <h3 className="font-semibold">{config.label}</h3>
-            <Badge variant="secondary" className="ml-2">
+    <Card key={status} className="flex min-w-0 flex-col">
+      <CardHeader className="px-4 pb-3">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Icon className={`size-5 shrink-0 ${config.textColor}`} />
+            <h3 className="min-w-0 truncate font-semibold">{config.label}</h3>
+            <Badge variant="secondary" className="shrink-0">
               {columnData.items.length}
             </Badge>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{config.description}</p>
       </CardHeader>
-      <CardContent className="pt-0 overflow-y-auto max-h-[65vh]">
+      <CardContent className="px-4 pt-0 lg:max-h-[65vh] lg:overflow-y-auto">
         {columnData.items.length > 0 ? (
-          <div className="flex flex-col gap-3 justify-center items-center">
+          <div className="flex flex-col gap-3">
             <div className="space-y-3">
               {columnData.items.map((capture) => (
                 <CaptureCard
@@ -56,6 +71,7 @@ export function CaptureColumn({
                   capture={capture}
                   status={status as CaptureStatus}
                   onDelete={onDelete}
+                  isDeleting={deletingIds.has(capture.id)}
                 />
               ))}
             </div>
@@ -72,9 +88,9 @@ export function CaptureColumn({
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <AlertCircle className="mr-2 size-4" />
-            No {config.label.toLowerCase()} captures
+          <div className="flex items-center justify-center py-8 text-center text-muted-foreground">
+            <AlertCircle className="mr-2 size-4 shrink-0" />
+            <span>No {config.label.toLowerCase()} captures</span>
           </div>
         )}
       </CardContent>
@@ -82,16 +98,20 @@ export function CaptureColumn({
   );
 }
 
-type NonApprovedStatus = Exclude<
-  keyof typeof CaptureStatus,
-  "APPROVED" | "ARCHIVED"
->;
+type DashboardCapturesPaginatedOutput = Omit<
+  CapturesPaginatedOutput,
+  "items"
+> & {
+  items: DashboardCapture[];
+};
 type ColumnsState = Record<
   NonApprovedStatus,
-  CapturesPaginatedOutput & { loading: boolean }
+  DashboardCapturesPaginatedOutput & { loading: boolean }
 >;
 
-function sortCaptureItemsNewestFirst<T extends { id: string }>(items: T[]): T[] {
+function sortCaptureItemsNewestFirst<T extends { id: string }>(
+  items: T[],
+): T[] {
   return [...items].sort((a, b) => b.id.localeCompare(a.id));
 }
 
@@ -108,12 +128,14 @@ export function CaptureCardColumns({
   userId: string;
   initialCapturesByStatus: Record<NonApprovedStatus, CapturesPaginatedOutput>;
 }) {
+  const router = useRouter();
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
   const [columns, setColumns] = useState<ColumnsState>(() => {
     const entries = Object.entries(initialCapturesByStatus).map(([k, v]) => [
       k as NonApprovedStatus,
       {
         ...v,
-        items: normalizeCaptureItems(v.items),
+        items: normalizeCaptureItems(v.items as DashboardCapture[]),
         loading: false,
       },
     ]);
@@ -132,7 +154,7 @@ export function CaptureCardColumns({
     }));
     const res = await getCapturesPaginated({
       userId,
-      status: CaptureStatus[status],
+      status,
       cursor: column.nextCursor,
       limit: 10,
       includes: { app: true, task: true },
@@ -150,7 +172,10 @@ export function CaptureCardColumns({
     setColumns((prev) => ({
       ...prev,
       [status]: {
-        items: normalizeCaptureItems([...prev[status].items, ...items]),
+        items: normalizeCaptureItems([
+          ...prev[status].items,
+          ...(items as DashboardCapture[]),
+        ]),
         nextCursor,
         hasNextPage,
         loading: false,
@@ -158,28 +183,64 @@ export function CaptureCardColumns({
     }));
   };
 
-  const handleDelete = (id: string) => {
-    deleteCaptureTask(id);
-    revalidateCaptureCaches();
+  const handleDelete = async (id: string) => {
+    if (deletingIds.has(id)) {
+      return;
+    }
+
+    setDeletingIds((prev) => new Set(prev).add(id));
+    const result = await deleteCaptureTask(id);
+
+    if (!result.ok) {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.error(result.message || "Failed to delete capture.");
+      return;
+    }
+
+    setColumns((prev) => {
+      const next = { ...prev };
+      for (const status of Object.keys(next) as NonApprovedStatus[]) {
+        next[status] = {
+          ...next[status],
+          items: next[status].items.filter((capture) => capture.id !== id),
+        };
+      }
+      return next;
+    });
+
+    try {
+      await revalidateCaptureCaches();
+      router.refresh();
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {Object.entries(statusConfig)
-        .filter(([status]) => status !== CaptureStatus.APPROVED)
-        .map(([status, config]) => {
-          const column = columns[status as NonApprovedStatus];
-          return (
-            <CaptureColumn
-              key={status}
-              status={status as NonApprovedStatus}
-              config={config}
-              columnData={column}
-              handleLoadMore={handleLoadMore}
-              onDelete={(id) => handleDelete(id)}
-            />
-          );
-        })}
+    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.2fr)_minmax(0,0.95fr)]">
+      {VISIBLE_CAPTURE_STATUSES.map((status) => {
+        const config = statusConfig[status];
+        const column = columns[status];
+        return (
+          <CaptureColumn
+            key={status}
+            status={status}
+            config={config}
+            columnData={column}
+            handleLoadMore={handleLoadMore}
+            onDelete={(id) => handleDelete(id)}
+            deletingIds={deletingIds}
+          />
+        );
+      })}
     </div>
   );
 }

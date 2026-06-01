@@ -111,8 +111,8 @@ export default async function Page() {
   };
 
   return (
-    <main className="flex flex-col grow justify-start items-center min-w-dvw min-h-dvh bg-neutral-50 dark:bg-neutral-950">
-      <div className="flex w-full max-w-screen-xl p-6 gap-6">
+    <main className="flex min-h-dvh w-full grow flex-col items-center justify-start bg-neutral-50 dark:bg-neutral-950">
+      <div className="flex w-full max-w-screen-2xl flex-col gap-6 p-4 sm:p-6 lg:flex-row">
         <ProfileCard
           user={user}
           createdCaptures={createdCaptures}
@@ -121,22 +121,22 @@ export default async function Page() {
         />
 
         {/* Main Content */}
-        <section className="flex flex-col flex-1">
-          <div className="flex items-center justify-between mb-6 gap-4">
-            <div>
+        <section className="flex min-w-0 flex-1 flex-col">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
               <p className="text-muted-foreground">
                 Manage your captures and traces
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Link href="/capture/new">
-                <Button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Link href="/capture/new" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 size-4" /> New Capture
                 </Button>
               </Link>
-              <Link href="/candidates">
-                <Button>
+              <Link href="/candidates" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto">
                   <Search className="mr-2 size-4" /> Candidate Tasks
                 </Button>
               </Link>
