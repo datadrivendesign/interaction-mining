@@ -225,6 +225,16 @@ const CandidateTaskDrawer = ({
     status: "open" | "hidden",
   ) => {
     if (!candidateTaskApp) return;
+    const currentStatus = candidateTaskApp.tasks[taskIndex]?.status;
+    const nextHiddenCount =
+      currentStatus === status
+        ? hiddenCount
+        : status === "hidden"
+          ? hiddenCount + 1
+          : currentStatus === "hidden"
+            ? Math.max(0, hiddenCount - 1)
+            : hiddenCount;
+
     setPendingTaskIndex(taskIndex);
     const ok = await handleSetTaskStatus(
       candidateTaskApp.id,
@@ -239,7 +249,7 @@ const CandidateTaskDrawer = ({
         return next;
       });
     }
-    if (ok && status === "open" && hiddenCount <= 1) {
+    if (ok && status === "open" && nextHiddenCount <= 1) {
       setShowHidden(false);
     }
   };

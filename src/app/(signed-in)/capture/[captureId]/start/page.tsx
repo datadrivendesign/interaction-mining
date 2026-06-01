@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import useSWR from "swr";
 import { ArrowRight, FileVideo, Loader2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -15,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 import { useCapture } from "@/lib/hooks";
 import {
@@ -25,7 +27,7 @@ import {
 } from "../util";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import { Platform } from "@/lib/utils";
+import { Platform, prettyOS } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
 
 enum CaptureState {
@@ -113,10 +115,10 @@ export default function Page() {
   };
 
   return (
-    <main className="relative z-0 flex flex-col w-dvw min-h-dvh items-center justify-start">
-      <div className="relative z-0 flex flex-col w-full h-full items-center justify-start p-4 md:p-16 gap-4">
+    <main className="relative z-0 flex min-h-dvh w-full flex-col items-center justify-start">
+      <div className="relative z-0 flex h-full w-full flex-col items-center justify-start gap-4 p-3 sm:p-4 md:px-16 md:py-8">
         <Card className="w-full max-w-screen-sm">
-          <CardHeader>
+          <CardHeader className="px-5 pb-3 pt-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-2xl">Start capture session</CardTitle>
             <CardDescription>
               {os == "android"
@@ -124,12 +126,12 @@ export default function Page() {
                 : "Open your Camera app and scan the QR code to navigate to the capture session page."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6 pt-0">
-            <div className="flex flex-col md:flex-row w-full gap-x-6">
-              <div className="flex flex-col md:w-1/2">
+          <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+            <div className="grid w-full gap-4 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:items-start">
+              <div className="flex justify-center md:justify-start">
                 {!isCaptureLoading && capture ? (
                   <QRCodeSVG
-                    className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-white"
+                    className="aspect-square h-auto w-full max-w-52 rounded-xl bg-white p-4 object-contain sm:max-w-60 md:max-w-full"
                     value={
                       os === Platform.ANDROID
                         ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
@@ -137,97 +139,162 @@ export default function Page() {
                     }
                   />
                 ) : (
-                  <div className="w-full max-w-3xs h-auto rounded-xl object-contain aspect-square p-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
+                  <div className="aspect-square h-auto w-full max-w-52 animate-pulse rounded-xl bg-neutral-200 p-4 object-contain dark:bg-neutral-800 sm:max-w-60 md:max-w-full"></div>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="w-full max-w-screen-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl">Task recording</CardTitle>
-            <CardDescription>
-              Your recorded task video will appear here once you start uploading
-              them from your device.{" "}
-              <strong>
-                Remember to turn on &ldquo;Do not Disturb&rdquo; before you
-                start recording.
-              </strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col w-full">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="font-semibold">Uploaded files</h2>
-                <span className="inline-flex items-center text-sm text-muted-foreground">
-                  {isUploadListLoading ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin mr-1.5" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      {filteredUserUploads.length} file
-                      {filteredUserUploads.length !== 1 ? "s" : ""} uploaded
-                      {numFilteredDrafts.length > 0 &&
-                        `, ${numFilteredDrafts.length} auto-save${
-                          numFilteredDrafts.length !== 1 ? "s" : ""
-                        }`}
-                    </>
-                  )}
-                </span>
-              </div>
-              {!isUploadListLoading && filteredUserUploads.length > 0 ? (
-                <ul className="flex flex-col w-full rounded-xl border border-neutral-200 dark:border-neutral-800">
-                  {filteredUserUploads.map((file: any, index: number) => (
-                    <li
-                      key={index}
-                      className="flex justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 last:border-none"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileVideo className="size-4" />
-                        <Link
-                          href={file.fileUrl}
-                          target="_blank"
-                          className="hover:underline"
-                        >
-                          {file.fileName}
-                        </Link>
+              <div className="flex min-w-0 flex-col gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="size-12 shrink-0 overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-900">
+                    {!isCaptureLoading && capture?.app?.metadata.icon ? (
+                      <Image
+                        src={capture.app.metadata.icon}
+                        alt={`${capture.app.metadata.name} icon`}
+                        width={48}
+                        height={48}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="size-full animate-pulse bg-neutral-200 dark:bg-neutral-800" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {!isCaptureLoading && capture?.app ? (
+                      <>
+                        <h2 className="line-clamp-2 break-words text-base font-semibold leading-snug">
+                          {capture.app.metadata.name}
+                        </h2>
+                        <p className="line-clamp-1 break-words text-sm text-muted-foreground">
+                          {capture.app.metadata.company}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="h-4 w-32 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
+                        <div className="h-3 w-24 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
                       </div>
-                      <DeleteUploadDialog
-                        deleteDrafts={deleteDrafts}
-                        setDeleteDrafts={setDeleteDrafts}
-                        onContinue={() => {
-                          handleDeleteUpload(captureId, file.fileKey);
-                        }}
-                      >
-                        <button className="inline-flex items-center cursor-pointer">
-                          <X className="size-4 text-neutral-500 hover:opacity-75" />
-                        </button>
-                      </DeleteUploadDialog>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="flex flex-col justify-center items-center w-full p-4 md:p-6 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-muted-foreground transition-colors duration-150 ease-in-out cursor-pointer">
-                  <span className="inline-flex flex-col items-center text-center text-sm">
-                    Once you&rsquo;re ready, start uploading your capture
-                    recordings.
-                  </span>
+                    )}
+                  </div>
+                  {os ? (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-xs text-muted-foreground"
+                    >
+                      {prettyOS(os)}
+                    </Badge>
+                  ) : null}
                 </div>
-              )}
+                <div className="border-l-4 border-neutral-400 bg-neutral-50 py-1 pl-3 pr-2 dark:bg-neutral-900">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Task to record
+                  </span>
+                  <p className="break-words text-sm font-medium leading-snug">
+                    {!isCaptureLoading && capture?.task?.description
+                      ? capture.task.description
+                      : "Loading task..."}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted-background p-3 text-sm text-muted-foreground">
+                  Scan the QR code, record the task on your phone, then upload
+                  the recording from your phone.
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-        <div className="flex w-full max-w-screen-sm justify-end">
-          <Button
-            onClick={redirectToTraceProcess}
-            disabled={captureState < CaptureState.UPLOADED}
-            tooltip={"Navigate to trace creation editor"}
-          >
-            Go to editor <ArrowRight />
-          </Button>
-        </div>
+        {filteredUserUploads.length > 0 ? (
+          <>
+            <Card className="w-full max-w-screen-sm">
+              <CardHeader className="px-5 pb-3 pt-4 sm:px-6 sm:pt-6">
+                <CardTitle className="text-2xl">Task recording</CardTitle>
+                <CardDescription>
+                  Your uploaded recording appears here. Remember to turn on
+                  &ldquo;Do Not Disturb&rdquo; before recording.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+                <div className="flex w-full flex-col">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h2 className="font-semibold">Uploaded files</h2>
+                    <span className="inline-flex shrink-0 items-center text-sm text-muted-foreground">
+                      {isUploadListLoading ? (
+                        <>
+                          <Loader2 className="mr-1.5 size-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          {filteredUserUploads.length} file
+                          {filteredUserUploads.length !== 1 ? "s" : ""} uploaded
+                          {numFilteredDrafts.length > 0 &&
+                            `, ${numFilteredDrafts.length} auto-save${
+                              numFilteredDrafts.length !== 1 ? "s" : ""
+                            }`}
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <ul className="flex w-full flex-col rounded-xl border border-neutral-200 dark:border-neutral-800">
+                    {filteredUserUploads.map((file: any, index: number) => (
+                      <li
+                        key={index}
+                        className="flex min-w-0 justify-between gap-3 border-b border-neutral-200 px-4 py-2 last:border-none dark:border-neutral-800"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <FileVideo className="size-4 shrink-0" />
+                          <Link
+                            href={file.fileUrl}
+                            target="_blank"
+                            className="min-w-0 break-all hover:underline"
+                          >
+                            {file.fileName}
+                          </Link>
+                        </div>
+                        <DeleteUploadDialog
+                          deleteDrafts={deleteDrafts}
+                          setDeleteDrafts={setDeleteDrafts}
+                          onContinue={() => {
+                            handleDeleteUpload(captureId, file.fileKey);
+                          }}
+                        >
+                          <button className="inline-flex shrink-0 cursor-pointer items-center">
+                            <X className="size-4 text-neutral-500 hover:opacity-75" />
+                          </button>
+                        </DeleteUploadDialog>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+            <div className="flex w-full max-w-screen-sm flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Recording uploaded. Continue to the editor when ready.
+              </p>
+              <Button
+                onClick={redirectToTraceProcess}
+                disabled={captureState < CaptureState.UPLOADED}
+                tooltip={"Navigate to trace creation editor"}
+                className="w-full sm:w-auto cursor-pointer"
+              >
+                Go to editor <ArrowRight />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex w-full max-w-screen-sm flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Upload a recording from your phone to continue.
+            </p>
+            <Button
+              onClick={redirectToTraceProcess}
+              disabled
+              tooltip={"Navigate to trace creation editor"}
+              className="w-full sm:w-auto cursor-pointer"
+            >
+              Go to editor <ArrowRight />
+            </Button>
+          </div>
+        )}
       </div>
     </main>
   );

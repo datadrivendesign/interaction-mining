@@ -152,6 +152,9 @@ export default function AddAppForm({
       } else {
         toast.error("Failed to save app to database.");
       }
+    } catch (error) {
+      console.error("Failed to add app:", error);
+      toast.error(`Failed to add ${prettyOS(platform)} app. Please try again.`);
     } finally {
       setIsAddingApp(false);
     }

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Play, Eye, Edit, Pencil, Trash } from "lucide-react";
 import { CaptureStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +19,10 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+
+type DashboardCapture = Prisma.CaptureGetPayload<{
+  include: { app: true; task: true };
+}>;
 
 function hasReviewerFeedback(capture: {
   annotateFeedback?: string | null;
@@ -35,8 +40,8 @@ function hasReviewerFeedback(capture: {
 function StartButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/start`}>
-      <Button size="sm" variant="default">
-        <Play className="mr-2 size-3" />
+      <Button size="sm" variant="default" className="px-3">
+        <Play className="mr-1.5 size-3" />
         Start
       </Button>
     </Link>
@@ -46,8 +51,8 @@ function StartButton({ captureId }: { captureId: string }) {
 function ProcessButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/start`}>
-      <Button size="sm" variant="default">
-        <Pencil className="mr-2 size-3" />
+      <Button size="sm" variant="default" className="px-3">
+        <Pencil className="mr-1.5 size-3" />
         Process
       </Button>
     </Link>
@@ -57,8 +62,8 @@ function ProcessButton({ captureId }: { captureId: string }) {
 function ReviewButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/evaluate`}>
-      <Button size="sm" variant="default">
-        <Eye className="mr-2 size-3" />
+      <Button size="sm" variant="default" className="px-3">
+        <Eye className="mr-1.5 size-3" />
         Review
       </Button>
     </Link>
@@ -68,8 +73,8 @@ function ReviewButton({ captureId }: { captureId: string }) {
 function EditButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/edit`}>
-      <Button size="sm" variant="outline">
-        <Edit className="mr-2 size-3" />
+      <Button size="sm" variant="outline" className="px-3">
+        <Edit className="mr-1.5 size-3" />
         Edit
       </Button>
     </Link>
@@ -79,14 +84,21 @@ function EditButton({ captureId }: { captureId: string }) {
 function DeleteDialog({
   captureId,
   onDelete,
+  isDeleting,
 }: {
   captureId: string;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
+  isDeleting: boolean;
 }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="destructive">
+        <Button
+          size="sm"
+          variant="destructive"
+          className="px-3"
+          disabled={isDeleting}
+        >
           <Trash className="mr-0.5 size-3" />
         </Button>
       </DialogTrigger>
@@ -107,10 +119,12 @@ function DeleteDialog({
             <Button
               size="sm"
               variant="destructive"
+              className="px-3"
+              disabled={isDeleting}
               onClick={() => onDelete(captureId)}
             >
               <Trash className="mr-0.5 size-3" />
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogClose>
         </DialogFooter>
@@ -123,28 +137,41 @@ export function CaptureCard({
   capture,
   status,
   onDelete,
+  isDeleting,
 }: {
-  capture: any;
+  capture: DashboardCapture;
   status: CaptureStatus;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
+  isDeleting: boolean;
 }) {
   const showRevisionRequested =
     status === CaptureStatus.PROCESSING && hasReviewerFeedback(capture);
+  const appName = capture.app?.metadata?.name ?? "Unknown app";
+  const taskDescription = capture.task?.description ?? "No task description";
+  const platformLabel = prettyOS(capture.task?.os ?? "");
 
   const renderActionButtons = () => {
     switch (status) {
       case CaptureStatus.CREATED:
         return (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <StartButton captureId={capture.id} />
-            <DeleteDialog captureId={capture.id} onDelete={onDelete} />
+            <DeleteDialog
+              captureId={capture.id}
+              onDelete={onDelete}
+              isDeleting={isDeleting}
+            />
           </div>
         );
       case CaptureStatus.PROCESSING:
         return (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <ProcessButton captureId={capture.id} />
-            <DeleteDialog captureId={capture.id} onDelete={onDelete} />
+            <DeleteDialog
+              captureId={capture.id}
+              onDelete={onDelete}
+              isDeleting={isDeleting}
+            />
           </div>
         );
       case CaptureStatus.REVIEWING:
@@ -155,41 +182,61 @@ export function CaptureCard({
   };
 
   return (
-    <div className="flex flex-row items-center justify-between p-1 border rounded-lg hover:bg-muted-background transition-colors">
-      <div className="flex flex-col items-center text-center space-x-3">
-        {capture.app?.metadata?.icon ? (
-          <Image
-            src={capture.app?.metadata?.icon}
-            alt="App Icon"
-            className="w-10 h-10 rounded-lg object-cover"
-            width={40}
-            height={40}
-          />
-        ) : (
-          <div className="size-10 rounded-lg bg-muted-background animate-pulse" />
-        )}
-        <h4 className="font-medium text-sm">
-          {capture.app?.metadata?.name?.slice(0, 10)}
-          {`${capture.app?.metadata?.name?.length > 10 ? "..." : ""}`}
-        </h4>
+    <div className="flex w-full min-w-0 flex-col gap-3 rounded-lg border p-3 transition-colors hover:bg-muted-background">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="shrink-0">
+          {capture.app?.metadata?.icon ? (
+            <Image
+              src={capture.app?.metadata?.icon}
+              alt={`${appName} icon`}
+              className="size-10 rounded-lg object-cover"
+              width={40}
+              height={40}
+            />
+          ) : (
+            <div className="size-10 animate-pulse rounded-lg bg-muted-background" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <h4
+              className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-snug"
+              title={appName}
+            >
+              {appName}
+            </h4>
+            <div className="flex shrink-0 flex-wrap justify-end gap-1">
+              <Badge
+                variant="outline"
+                className="text-xs text-muted-foreground"
+                title={platformLabel}
+              >
+                {platformLabel}
+              </Badge>
+            </div>
+          </div>
+          <p
+            className="mt-1 line-clamp-2 break-words text-xs leading-snug text-muted-foreground"
+            title={taskDescription}
+          >
+            {taskDescription}
+          </p>
+        </div>
       </div>
-      <div className="flex flex-col h-full justify-evenly content-evenly items-center text-center ml-2">
-        {renderActionButtons()}
-        {showRevisionRequested && (
-          <Badge className="self-start mt-1 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300">
-            Revision requested
-          </Badge>
-        )}
-        <p className="text-xs text-muted-foreground self-start mt-1">
-          {capture.task?.description?.slice(0, 18)}
-          {`${capture.task?.description?.length > 18 ? "..." : ""}`}
-        </p>
-        <Badge
-          variant="outline"
-          className="text-xs text-muted-foreground self-start"
-        >
-          {prettyOS(capture.task?.os)}
-        </Badge>
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-wrap gap-2">
+          {showRevisionRequested && (
+            <Badge
+              className="bg-red-100 text-xs text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300"
+              title="Revision requested"
+            >
+              Needs revision
+            </Badge>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2 self-end">
+          {renderActionButtons()}
+        </div>
       </div>
     </div>
   );
