@@ -50,6 +50,7 @@ export function useIosScrubPreview({
   const scrubDisplayRafRef = useRef<number | null>(null);
   const previewSwapTimeoutRef = useRef<number | null>(null);
   const lastCommittedVideoTimeRef = useRef<number | null>(null);
+  const activePreviewFrameSrcRef = useRef<string | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [pausedPreviewTime, setPausedPreviewTime] = useState<number | null>(
@@ -84,6 +85,10 @@ export function useIosScrubPreview({
   const displayedTimelineTime = scrubPreviewTime ?? currentTime;
   const hasPreviewOverlay =
     displayedPreviewFrameSrc !== null || incomingPreviewFrameSrc !== null;
+
+  useEffect(() => {
+    activePreviewFrameSrcRef.current = activePreviewFrameSrc;
+  }, [activePreviewFrameSrc]);
 
   // Reset all preview frame state. Used by bootstrap on video reload and live-photo start.
   const resetPreviewFrames = useCallback(() => {
@@ -241,6 +246,10 @@ export function useIosScrubPreview({
   }, [activePreviewFrameSrc, displayedPreviewFrameSrc]);
 
   const handleIncomingPreviewLoad = useCallback((loadedSrc: string) => {
+    if (loadedSrc !== activePreviewFrameSrcRef.current) {
+      return;
+    }
+
     setIsIncomingPreviewVisible(true);
 
     if (previewSwapTimeoutRef.current !== null) {
@@ -248,6 +257,11 @@ export function useIosScrubPreview({
     }
 
     previewSwapTimeoutRef.current = window.setTimeout(() => {
+      if (loadedSrc !== activePreviewFrameSrcRef.current) {
+        previewSwapTimeoutRef.current = null;
+        return;
+      }
+
       setDisplayedPreviewFrameSrc(loadedSrc);
       setIncomingPreviewFrameSrc((currentIncomingSrc) =>
         currentIncomingSrc === loadedSrc ? null : currentIncomingSrc,
