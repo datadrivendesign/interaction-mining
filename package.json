@@ -141,6 +141,16 @@
   "overrides": {
     "tailwindcss-animate": {
       "tailwindcss": "$tailwindcss"
-    }
+    },
+    "fast-xml-parser": "^5.7.0",
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "brace-expansion": "^5.0.6",
+    "picomatch": "^4.0.4",
+    "minimatch": "^10.2.3",
+    "flatted": "^3.4.2",
+    "tar": "^7.5.11",
+    "svgo": "^3.3.3",
+    "undici": "^6.23.1",
+    "postcss": "$postcss"
   }
 }
