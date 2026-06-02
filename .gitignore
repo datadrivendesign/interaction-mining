@@ -61,6 +61,9 @@ scripts/curation-pipeline/worker-assignments/
 scripts/curation-pipeline/new-apps.json
 scripts/curation-pipeline/generated-tasks.json
 scripts/curation-pipeline/curated-tasks-new.json
+prisma/scripts/task-curation/istaken-audit-report.json
+prisma/scripts/task-curation/backfill-candidate-tasks-report.json
+prisma/scripts/task-curation/import-curated-report.json
 
 # worker onboarding materials (kept locally, not for repo)
 /onboarding_materials/

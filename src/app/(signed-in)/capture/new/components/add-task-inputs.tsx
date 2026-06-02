@@ -3,7 +3,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Minus, Plus } from "lucide-react";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 
-export type TaskCandidate = { id: string; description: string };
+export type TaskCandidate = {
+  id: string;
+  description: string;
+  candidateOrigin?: {
+    candidateTaskAppId: string;
+    taskIndex: number;
+  };
+};
 
 export default function AddTaskInputs({
   setTasks,
@@ -51,8 +58,8 @@ export default function AddTaskInputs({
   const updateTask = (id: string, value: string) => {
     setTasks((prev) =>
       prev.map((t) =>
-        t.id === id ? { ...t, description: value.slice(0, maxLength) } : t
-      )
+        t.id === id ? { ...t, description: value.slice(0, maxLength) } : t,
+      ),
     );
   };
 
@@ -77,7 +84,7 @@ export default function AddTaskInputs({
           )}
 
           <Textarea
-            className="min-h-20"
+            className="min-h-14 resize-none"
             ref={setTaskRef(t.id)}
             value={t.description}
             onChange={(e) => updateTask(t.id, e.target.value)}

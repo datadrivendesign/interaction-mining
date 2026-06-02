@@ -1,5 +1,10 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Capture, getCapture, getIosApp } from "@/lib/actions";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Capture, getCapture } from "@/lib/actions";
 import { Platform } from "@/lib/utils";
 import { CaptureStatus } from "@prisma/client";
 import { ArrowLeft } from "lucide-react";
@@ -25,23 +30,18 @@ export async function generateMetadata({
     }
   });
 
-  if ((capture.task.os as Platform) === Platform.IOS 
-    && capture.app?.packageName) {
-    try {
-      let app = await getIosApp({ appId: capture.app.packageName });
-
-      if (app.ok) {
-        const metadata: Metadata = {
-          title: "Upload Capture",
-          other: {
-            "apple-itunes-app": `app-id=${app.data.id}`,
-          },
-        };
-
-        return metadata;
-      }
-    } catch (error) {
-      console.error("Failed to fetch iOS app data:", error);
+  if (
+    (capture.task.os as Platform) === Platform.IOS &&
+    capture.app?.metadata.url
+  ) {
+    const appStoreId = capture.app.metadata.url.match(/\/id(\d+)/)?.[1];
+    if (appStoreId) {
+      return {
+        title: "Upload Capture",
+        other: {
+          "apple-itunes-app": `app-id=${appStoreId}`,
+        },
+      };
     }
   }
 
@@ -70,22 +70,29 @@ export default async function Layout({
   const capture = captureRes.data;
 
   if (!captureRes?.ok || !capture) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.NO_CAPTURE}
-    />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.NO_CAPTURE}
+      />
+    );
   } else if (capture?.status === CaptureStatus.REVIEWING) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.IN_REVIEW} />;
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.IN_REVIEW}
+      />
+    );
   } else if (capture?.status === CaptureStatus.APPROVED && capture?.appId) {
-    return <Error
-      captureId={captureId}
-      capture={capture}
-      errorType={ErrorType.APPROVED}
-    />
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.APPROVED}
+      />
+    );
   }
   return <>{children}</>;
 }
@@ -93,7 +100,7 @@ export default async function Layout({
 function Error({
   captureId,
   capture,
-  errorType
+  errorType,
 }: {
   captureId: string;
   capture: Capture | null;
@@ -115,16 +122,17 @@ function Error({
             "This capture is currently in review. If this status looks wrong (for example, it was recently sent back), refresh this page and try again.",
           linkText: "Return to review",
           linkUrl: `/capture/${captureId}/evaluate`,
-        }
+        };
       case ErrorType.APPROVED:
         return {
           title: "Capture already approved",
-          message: "This capture has already been approved. You can view the completed trace.",
+          message:
+            "This capture has already been approved. You can view the completed trace.",
           linkText: "View trace",
-          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`
-        }
+          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`,
+        };
     }
-  }
+  };
   const error = getError(errorType);
 
   return (
@@ -132,9 +140,7 @@ function Error({
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>{error.title}</CardTitle>
-          <CardDescription>
-            {error.message}
-          </CardDescription>
+          <CardDescription>{error.message}</CardDescription>
           <Link href={error.linkUrl}>
             <span className="inline-flex items-center underline">
               <ArrowLeft className="w-4 h-4 mr-1 inline-block" />

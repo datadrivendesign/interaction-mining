@@ -30,7 +30,7 @@ export function VideoPreviewOverlay({
         crossOrigin="anonymous"
         preload="auto"
         className={cn(
-          "max-w-full max-h-full rounded-lg object-contain transition-opacity",
+          "relative z-0 max-w-full max-h-full rounded-lg object-contain transition-opacity",
           hasPreviewOverlay ? "opacity-0" : "opacity-100",
         )}
         controls={false}
@@ -44,7 +44,7 @@ export function VideoPreviewOverlay({
           fill
           unoptimized
           sizes="100vw"
-          className="pointer-events-none absolute inset-0 h-full w-full rounded-lg object-contain"
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full rounded-lg object-contain"
         />
       ) : null}
       {incomingPreviewFrameSrc ? (
@@ -57,7 +57,7 @@ export function VideoPreviewOverlay({
           sizes="100vw"
           onLoad={() => onIncomingPreviewLoad(incomingPreviewFrameSrc)}
           className={cn(
-            "pointer-events-none absolute inset-0 h-full w-full rounded-lg object-contain transition-opacity duration-75",
+            "pointer-events-none absolute inset-0 z-20 h-full w-full rounded-lg object-contain transition-opacity duration-75",
             isIncomingPreviewVisible ? "opacity-100" : "opacity-0",
           )}
         />

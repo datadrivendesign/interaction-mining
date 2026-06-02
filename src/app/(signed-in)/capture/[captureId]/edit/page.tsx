@@ -1,5 +1,12 @@
 "use client";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useMeasure } from "@uidotdev/usehooks";
@@ -40,13 +47,27 @@ import {
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenBlobRegistryProvider } from "./screen-blob-registry";
-import { upgradeLegacyFeedbackText } from "../evaluate/utils/review-feedback";
+import {
+  parseFeedbackChecklistItems,
+  upgradeLegacyFeedbackText,
+} from "../evaluate/utils/review-feedback";
 
 enum TraceSteps {
   Capture = 0,
   Redact = 1,
   Review = 2,
 }
+
+type EditorNavigationReadiness = {
+  isBlockingNavigation: boolean;
+  reason?: string;
+};
+
+const FEEDBACK_STEP_ORDER = [
+  TraceSteps.Capture,
+  TraceSteps.Redact,
+  TraceSteps.Review,
+];
 
 export default function Page() {
   const CHECKLIST_LAYOUT_STORAGE_KEY = "edit-feedback-checklist-layout";
@@ -60,6 +81,11 @@ export default function Page() {
     DraftFetchResults.LOADING,
   );
   const [files, setFiles] = useState<ListedFiles[]>([]);
+  const [isFetchingVideoFiles, setIsFetchingVideoFiles] = useState(true);
+  const [redactReadiness, setRedactReadiness] =
+    useState<EditorNavigationReadiness>({
+      isBlockingNavigation: false,
+    });
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
   const [feedbackOverrides, setFeedbackOverrides] = useState<{
@@ -84,9 +110,22 @@ export default function Page() {
         ? savedLayout
         : "top";
     });
-  const [checkedChecklistItems, setCheckedChecklistItems] = useState<Set<string>>(
-    new Set(),
+  const [checkedChecklistItemsByStep, setCheckedChecklistItemsByStep] =
+    useState<Record<TraceSteps, Set<string>>>({
+      [TraceSteps.Capture]: new Set(),
+      [TraceSteps.Redact]: new Set(),
+      [TraceSteps.Review]: new Set(),
+    });
+  const [selectedFeedbackStep, setSelectedFeedbackStep] = useState<TraceSteps>(
+    TraceSteps.Capture,
   );
+  const previousFeedbackByStepRef = useRef<
+    Record<TraceSteps, string | undefined>
+  >({
+    [TraceSteps.Capture]: undefined,
+    [TraceSteps.Redact]: undefined,
+    [TraceSteps.Review]: undefined,
+  });
 
   const methods = useForm<TraceFormData>({
     defaultValues: {
@@ -190,17 +229,34 @@ export default function Page() {
   useEffect(() => {
     if (!captureId) return;
 
+    let isCurrentFetch = true;
+
     const fetchVideoFiles = async () => {
       try {
+        setIsFetchingVideoFiles(true);
         const result = await fileFetcher(["", captureId]);
+        if (!isCurrentFetch) {
+          return;
+        }
         setFiles(result);
       } catch (error) {
+        if (!isCurrentFetch) {
+          return;
+        }
         console.error("Failed to fetch video files:", error);
         setFiles([]);
+      } finally {
+        if (isCurrentFetch) {
+          setIsFetchingVideoFiles(false);
+        }
       }
     };
 
     fetchVideoFiles();
+
+    return () => {
+      isCurrentFetch = false;
+    };
   }, [captureId]);
 
   const isAutosavingRef = useRef(false);
@@ -295,24 +351,89 @@ export default function Page() {
   }, [capture, captureId, draftFetchResult, feedbackOverrides, methods]);
 
   // Map each step to its relevant evaluator-feedback field.
-  const stepFeedbackMap: Record<number, string | undefined> = {
-    [TraceSteps.Capture]:
-      feedbackOverrides.annotateFeedback ??
-      capture?.annotateFeedback ??
-      undefined,
-    [TraceSteps.Redact]:
-      feedbackOverrides.redactFeedback ?? capture?.redactFeedback ?? undefined,
-    [TraceSteps.Review]:
-      feedbackOverrides.summarizeFeedback ??
-      capture?.summarizeFeedback ??
-      undefined,
-  };
+  const stepFeedbackMap = useMemo(
+    () =>
+      ({
+        [TraceSteps.Capture]:
+          feedbackOverrides.annotateFeedback ??
+          capture?.annotateFeedback ??
+          undefined,
+        [TraceSteps.Redact]:
+          feedbackOverrides.redactFeedback ??
+          capture?.redactFeedback ??
+          undefined,
+        [TraceSteps.Review]:
+          feedbackOverrides.summarizeFeedback ??
+          capture?.summarizeFeedback ??
+          undefined,
+      }) as Record<TraceSteps, string | undefined>,
+    [
+      capture?.annotateFeedback,
+      capture?.redactFeedback,
+      capture?.summarizeFeedback,
+      feedbackOverrides.annotateFeedback,
+      feedbackOverrides.redactFeedback,
+      feedbackOverrides.summarizeFeedback,
+    ],
+  );
   const stepLabels: Record<number, string> = {
     [TraceSteps.Capture]: "Annotate",
     [TraceSteps.Redact]: "Redact",
     [TraceSteps.Review]: "Description",
   };
-  const currentStepFeedback = stepFeedbackMap[stepIndex];
+  const feedbackItemsByStep = useMemo(
+    () =>
+      Object.fromEntries(
+        FEEDBACK_STEP_ORDER.map((step) => [
+          step,
+          parseFeedbackChecklistItems({
+            text: stepFeedbackMap[step],
+            screens: watchedScreens,
+          }),
+        ]),
+      ) as Record<TraceSteps, ReturnType<typeof parseFeedbackChecklistItems>>,
+    [stepFeedbackMap, watchedScreens],
+  );
+  const hasAnyFeedback = FEEDBACK_STEP_ORDER.some(
+    (step) => feedbackItemsByStep[step].length > 0,
+  );
+  const firstFeedbackStep = FEEDBACK_STEP_ORDER.find(
+    (step) => feedbackItemsByStep[step].length > 0,
+  );
+  const effectiveSelectedFeedbackStep =
+    feedbackItemsByStep[selectedFeedbackStep].length > 0
+      ? selectedFeedbackStep
+      : (firstFeedbackStep ?? selectedFeedbackStep);
+  const selectedFeedback = stepFeedbackMap[effectiveSelectedFeedbackStep];
+  const feedbackTabs = FEEDBACK_STEP_ORDER.map((step) => ({
+    step,
+    label: stepLabels[step],
+    count: feedbackItemsByStep[step].length,
+    isCurrentStep: step === stepIndex,
+  }));
+  const canJumpFromCurrentChecklist =
+    effectiveSelectedFeedbackStep === stepIndex &&
+    effectiveSelectedFeedbackStep !== TraceSteps.Review;
+
+  useEffect(() => {
+    const activeStep = stepIndex as TraceSteps;
+    if (feedbackItemsByStep[activeStep].length > 0) {
+      setSelectedFeedbackStep(activeStep);
+      return;
+    }
+
+    setSelectedFeedbackStep((current) => {
+      if (feedbackItemsByStep[current].length > 0) {
+        return current;
+      }
+
+      return (
+        FEEDBACK_STEP_ORDER.find(
+          (step) => feedbackItemsByStep[step].length > 0,
+        ) ?? activeStep
+      );
+    });
+  }, [feedbackItemsByStep, stepIndex]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -328,16 +449,112 @@ export default function Page() {
       }
 
       setChecklistLayoutMode(mode);
-      setCheckedChecklistItems(new Set());
     },
     [checklistLayoutMode],
   );
 
   useEffect(() => {
-    setCheckedChecklistItems(new Set());
-  }, [currentStepFeedback, stepIndex]);
+    const previousFeedbackByStep = previousFeedbackByStepRef.current;
+    const changedSteps = FEEDBACK_STEP_ORDER.filter(
+      (step) => previousFeedbackByStep[step] !== stepFeedbackMap[step],
+    );
+
+    if (changedSteps.length === 0) {
+      return;
+    }
+
+    previousFeedbackByStepRef.current = { ...stepFeedbackMap };
+    setCheckedChecklistItemsByStep((prev) => {
+      const next = { ...prev };
+      changedSteps.forEach((step) => {
+        next[step] = new Set();
+      });
+      return next;
+    });
+  }, [stepFeedbackMap]);
+
+  const checkedChecklistItems =
+    checkedChecklistItemsByStep[effectiveSelectedFeedbackStep] ?? new Set();
+
+  const updateCheckedChecklistItemsForSelectedStep = useCallback(
+    (next: React.SetStateAction<Set<string>>) => {
+      setCheckedChecklistItemsByStep((prev) => {
+        const current = prev[effectiveSelectedFeedbackStep] ?? new Set();
+        return {
+          ...prev,
+          [effectiveSelectedFeedbackStep]:
+            typeof next === "function" ? next(current) : next,
+        };
+      });
+    },
+    [effectiveSelectedFeedbackStep],
+  );
+
+  const activeStepReadiness = useMemo<EditorNavigationReadiness>(() => {
+    if (stepIndex === TraceSteps.Capture) {
+      if (draftFetchResult === DraftFetchResults.LOADING) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Loading saved draft data...",
+        };
+      }
+      if (draftFetchResult === DraftFetchResults.ERROR) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Draft data failed to load. Refresh or return to upload.",
+        };
+      }
+      if (isFetchingVideoFiles) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Loading uploaded recording...",
+        };
+      }
+      if (watchedScreens.length === 0) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Preparing screen images...",
+        };
+      }
+      if (watchedScreens.some((screen) => !screen.src)) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Preparing screen images...",
+        };
+      }
+    }
+
+    if (stepIndex === TraceSteps.Redact) {
+      return redactReadiness;
+    }
+
+    if (
+      stepIndex === TraceSteps.Review &&
+      watchedScreens.some((screen) => !screen.src)
+    ) {
+      return {
+        isBlockingNavigation: true,
+        reason: "Screen images are still being prepared.",
+      };
+    }
+
+    return { isBlockingNavigation: false };
+  }, [
+    draftFetchResult,
+    isFetchingVideoFiles,
+    redactReadiness,
+    stepIndex,
+    watchedScreens,
+  ]);
 
   const handleNext = async () => {
+    if (activeStepReadiness.isBlockingNavigation) {
+      toast.error(
+        activeStepReadiness.reason ?? "Editor assets are still loading.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
@@ -492,7 +709,12 @@ export default function Page() {
           />
         );
       case 1:
-        return <RedactScreen jumpTarget={redactScreenJumpTarget} />;
+        return (
+          <RedactScreen
+            jumpTarget={redactScreenJumpTarget}
+            onNavigationReadinessChange={setRedactReadiness}
+          />
+        );
       case 2:
         return <Review capture={capture} />;
       default:
@@ -501,6 +723,10 @@ export default function Page() {
   };
 
   const handleChecklistJump = (screenId: string) => {
+    if (!canJumpFromCurrentChecklist) {
+      return;
+    }
+
     const nextTarget = {
       screenId,
       nonce: Date.now(),
@@ -514,130 +740,184 @@ export default function Page() {
     setRepairScreenJumpTarget(nextTarget);
   };
 
+  const handleGoToSelectedFeedbackStep = () => {
+    setStepIndex(effectiveSelectedFeedbackStep);
+  };
+
   return (
     <>
       <FormProvider {...methods}>
         <ScreenBlobRegistryProvider>
-        <main
-          className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
-          style={{ "--nav-height": `${height}px` } as React.CSSProperties}
-        >
-          {!isTraceLoading ? (
-            <>
-              <div className="relative flex flex-col w-full h-[calc(100%-var(--nav-height))]">
-                <div className="flex min-h-0 min-w-0 flex-1">
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                    {currentStepFeedback && checklistLayoutMode === "top" && (
-                      <FeedbackChecklist
-                        feedback={currentStepFeedback}
-                        stepLabel={stepLabels[stepIndex]}
-                        screens={watchedScreens}
-                        layoutMode={checklistLayoutMode}
-                        onLayoutModeChange={handleChecklistLayoutModeChange}
-                        checkedItems={checkedChecklistItems}
-                        onCheckedItemsChange={setCheckedChecklistItems}
-                        onJumpToScreen={handleChecklistJump}
-                      />
-                    )}
-                    <div className="flex w-full min-h-0 min-w-0 flex-1 flex-col items-center">
-                      {editorRender()}
+          <main
+            className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
+            style={{ "--nav-height": `${height}px` } as React.CSSProperties}
+          >
+            {!isTraceLoading ? (
+              <>
+                <div className="relative flex flex-col w-full h-[calc(100%-var(--nav-height))]">
+                  <div className="flex min-h-0 min-w-0 flex-1">
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                      {hasAnyFeedback &&
+                        selectedFeedback &&
+                        checklistLayoutMode === "top" && (
+                          <FeedbackChecklist
+                            feedback={selectedFeedback}
+                            stepLabel={
+                              stepLabels[effectiveSelectedFeedbackStep]
+                            }
+                            screens={watchedScreens}
+                            feedbackTabs={feedbackTabs}
+                            selectedFeedbackStep={effectiveSelectedFeedbackStep}
+                            onSelectedFeedbackStepChange={(step) =>
+                              setSelectedFeedbackStep(step as TraceSteps)
+                            }
+                            onGoToSelectedStep={
+                              effectiveSelectedFeedbackStep === stepIndex
+                                ? undefined
+                                : handleGoToSelectedFeedbackStep
+                            }
+                            layoutMode={checklistLayoutMode}
+                            onLayoutModeChange={handleChecklistLayoutModeChange}
+                            checkedItems={checkedChecklistItems}
+                            onCheckedItemsChange={
+                              updateCheckedChecklistItemsForSelectedStep
+                            }
+                            onJumpToScreen={
+                              canJumpFromCurrentChecklist
+                                ? handleChecklistJump
+                                : undefined
+                            }
+                          />
+                        )}
+                      <div className="flex w-full min-h-0 min-w-0 flex-1 flex-col items-center">
+                        {editorRender()}
+                      </div>
+                    </div>
+                    {hasAnyFeedback &&
+                      selectedFeedback &&
+                      checklistLayoutMode === "side" && (
+                        <FeedbackChecklist
+                          feedback={selectedFeedback}
+                          stepLabel={stepLabels[effectiveSelectedFeedbackStep]}
+                          screens={watchedScreens}
+                          feedbackTabs={feedbackTabs}
+                          selectedFeedbackStep={effectiveSelectedFeedbackStep}
+                          onSelectedFeedbackStepChange={(step) =>
+                            setSelectedFeedbackStep(step as TraceSteps)
+                          }
+                          onGoToSelectedStep={
+                            effectiveSelectedFeedbackStep === stepIndex
+                              ? undefined
+                              : handleGoToSelectedFeedbackStep
+                          }
+                          layoutMode={checklistLayoutMode}
+                          onLayoutModeChange={handleChecklistLayoutModeChange}
+                          checkedItems={checkedChecklistItems}
+                          onCheckedItemsChange={
+                            updateCheckedChecklistItemsForSelectedStep
+                          }
+                          onJumpToScreen={
+                            canJumpFromCurrentChecklist
+                              ? handleChecklistJump
+                              : undefined
+                          }
+                        />
+                      )}
+                  </div>
+                </div>
+                <nav
+                  ref={navRef}
+                  className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
+                >
+                  <div className="flex gap-2 items-center">
+                    <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
+                      <span className="inline-flex items-center text-muted-foreground">
+                        New Trace <ChevronRight className="size-6" />{" "}
+                      </span>
+                      <span className="inline-flex items-center text-black dark:text-white">
+                        {Array(stepIndex + 1)
+                          .fill(0)
+                          .map((_, i) => i as TraceSteps)
+                          .map((step, index, array) => (
+                            <Fragment key={index}>
+                              <span>{stepLabels[step]}</span>
+                              {index < array.length - 1 && (
+                                <ChevronRight className="size-6" />
+                              )}
+                            </Fragment>
+                          ))}
+                      </span>
+                    </h1>
+                    <span className="block">
+                      <Sheet title={"Instructions"}>{docRender()}</Sheet>
+                    </span>
+                    <Button
+                      className="ml-8 hover:cursor-pointer"
+                      variant="destructive"
+                      onClick={handleClickBackToUpload}
+                      disabled={isSubmitting}
+                    >
+                      Back to Upload
+                    </Button>
+                  </div>
+                  <div className="flex gap-4 items-center">
+                    <Button
+                      className="mr-8 hover:cursor-pointer"
+                      variant="outline"
+                      onClick={handleClickSaveDraft}
+                      disabled={isSubmitting || isAutosavingRef.current}
+                    >
+                      {isAutosavingRef.current ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin mr-2" />
+                          Autosaving...
+                        </>
+                      ) : (
+                        "Save Draft"
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex gap-4 items-center">
+                    <Button
+                      className="hover:cursor-pointer"
+                      variant="outline"
+                      onClick={handlePrevious}
+                      disabled={stepIndex === 0}
+                    >
+                      Back
+                    </Button>
+                    <div className="flex flex-col items-end gap-1">
+                      <Button
+                        onClick={handleNext}
+                        disabled={
+                          isSubmitting ||
+                          activeStepReadiness.isBlockingNavigation
+                        }
+                      >
+                        {isSubmitting && (
+                          <Loader2 className="size-4 animate-spin" />
+                        )}
+                        {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
+                      </Button>
+                      {activeStepReadiness.isBlockingNavigation &&
+                      activeStepReadiness.reason ? (
+                        <p className="max-w-64 text-right text-xs text-muted-foreground">
+                          {activeStepReadiness.reason}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
-                  {currentStepFeedback && checklistLayoutMode === "side" && (
-                    <FeedbackChecklist
-                      feedback={currentStepFeedback}
-                      stepLabel={stepLabels[stepIndex]}
-                      screens={watchedScreens}
-                      layoutMode={checklistLayoutMode}
-                      onLayoutModeChange={handleChecklistLayoutModeChange}
-                      checkedItems={checkedChecklistItems}
-                      onCheckedItemsChange={setCheckedChecklistItems}
-                      onJumpToScreen={handleChecklistJump}
-                    />
-                  )}
-                </div>
+                </nav>
+              </>
+            ) : (
+              <div className="flex flex-col grow justify-center items-center w-full h-full">
+                <Loader2 className="text-muted-foreground size-8 animate-spin" />
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+                  Loading capture...
+                </h1>
               </div>
-              <nav
-                ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
-              >
-                <div className="flex gap-2 items-center">
-                  <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
-                    <span className="inline-flex items-center text-muted-foreground">
-                      New Trace <ChevronRight className="size-6" />{" "}
-                    </span>
-                    <span className="inline-flex items-center text-black dark:text-white">
-                      {Array(stepIndex + 1)
-                        .fill(0)
-                        .map((_, i) => TraceSteps[i])
-                        .map((step, index, array) => (
-                          <Fragment key={index}>
-                            <span>{step}</span>
-                            {index < array.length - 1 && (
-                              <ChevronRight className="size-6" />
-                            )}
-                          </Fragment>
-                        ))}
-                    </span>
-                  </h1>
-                  <span className="block">
-                    <Sheet title={"Instructions"}>{docRender()}</Sheet>
-                  </span>
-                  <Button
-                    className="ml-8 hover:cursor-pointer"
-                    variant="destructive"
-                    onClick={handleClickBackToUpload}
-                    disabled={isSubmitting}
-                  >
-                    Back to Upload
-                  </Button>
-                </div>
-                <div className="flex gap-4 items-center">
-                  <Button
-                    className="mr-8 hover:cursor-pointer"
-                    variant="outline"
-                    onClick={handleClickSaveDraft}
-                    disabled={isSubmitting || isAutosavingRef.current}
-                  >
-                    {isAutosavingRef.current ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin mr-2" />
-                        Autosaving...
-                      </>
-                    ) : (
-                      "Save Draft"
-                    )}
-                  </Button>
-                </div>
-                <div className="flex gap-4 items-center">
-                  <Button
-                    className="hover:cursor-pointer"
-                    variant="outline"
-                    onClick={handlePrevious}
-                    disabled={stepIndex === 0}
-                  >
-                    Back
-                  </Button>
-                  {
-                    <Button onClick={handleNext} disabled={isSubmitting}>
-                      {isSubmitting && (
-                        <Loader2 className="size-4 animate-spin" />
-                      )}
-                      {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
-                    </Button>
-                  }
-                </div>
-              </nav>
-            </>
-          ) : (
-            <div className="flex flex-col grow justify-center items-center w-full h-full">
-              <Loader2 className="text-muted-foreground size-8 animate-spin" />
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                Loading capture...
-              </h1>
-            </div>
-          )}
-        </main>
+            )}
+          </main>
         </ScreenBlobRegistryProvider>
       </FormProvider>
     </>

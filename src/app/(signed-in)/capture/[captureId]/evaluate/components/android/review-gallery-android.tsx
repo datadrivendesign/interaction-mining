@@ -10,6 +10,7 @@ import {
   findGestureOption,
   normalizeGestureType,
 } from "@/lib/utils/gesture-options";
+import { Check } from "lucide-react";
 import Image from "next/image";
 import { FrameData, TraceFormData } from "../../../edit/components/types";
 import { useEffect, useMemo, useRef } from "react";
@@ -24,11 +25,15 @@ export function ReviewGalleryAndroid({
   activeScreenId,
   commentsByScreen,
   onScreenSelect,
+  selectedScreenIds,
+  onSelectedScreenToggle,
 }: {
   traceData: TraceFormData;
   activeScreenId: string | null;
   commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string) => void;
+  selectedScreenIds?: string[];
+  onSelectedScreenToggle?: (screenId: string, checked: boolean) => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -98,6 +103,12 @@ export function ReviewGalleryAndroid({
               isActive={screen.id === activeScreenId}
               issueCount={commentsByScreen[screen.id]?.length ?? 0}
               onSelect={() => onScreenSelect(screen.id)}
+              isSelected={selectedScreenIds?.includes(screen.id) ?? false}
+              onSelectedToggle={
+                onSelectedScreenToggle
+                  ? (checked) => onSelectedScreenToggle(screen.id, checked)
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -116,6 +127,8 @@ function ReviewFigureAndroid({
   isActive,
   issueCount,
   onSelect,
+  isSelected,
+  onSelectedToggle,
 }: {
   cardRef?: (node: HTMLElement | null) => void;
   index: number;
@@ -126,6 +139,8 @@ function ReviewFigureAndroid({
   isActive: boolean;
   issueCount: number;
   onSelect: () => void;
+  isSelected?: boolean;
+  onSelectedToggle?: (checked: boolean) => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -187,6 +202,33 @@ function ReviewFigureAndroid({
         <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
           {index + 1}
         </div>
+
+        {/* Selection checkbox overlay */}
+        {onSelectedToggle !== undefined && (
+          <button
+            type="button"
+            aria-label={
+              isSelected
+                ? `Deselect screen ${index + 1}`
+                : `Select screen ${index + 1}`
+            }
+            className="absolute bottom-1 left-1 z-30 flex size-5 items-center justify-center rounded border-2 shadow-sm transition-colors"
+            style={{
+              background: isSelected
+                ? "rgb(124 58 237)"
+                : "rgba(255,255,255,0.9)",
+              borderColor: isSelected ? "rgb(124 58 237)" : "rgb(163 163 163)",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectedToggle(!isSelected);
+            }}
+          >
+            {isSelected && (
+              <Check className="size-3 text-white" strokeWidth={3} />
+            )}
+          </button>
+        )}
 
         <TooltipProvider delayDuration={100}>
           {screen.src.length > 0 ? (

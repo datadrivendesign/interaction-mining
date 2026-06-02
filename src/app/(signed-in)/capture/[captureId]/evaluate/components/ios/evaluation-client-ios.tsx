@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/resizable";
 import { useParams } from "next/navigation";
 import type { ImperativePanelHandle } from "react-resizable-panels";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DraftTraceFormData,
   TraceFormData,
@@ -41,6 +41,23 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
+  );
+  const [gallerySelectedScreenIds, setGallerySelectedScreenIds] = useState<
+    string[]
+  >([]);
+  const [isComposerInScreenMode, setIsComposerInScreenMode] = useState(false);
+
+  const handleGalleryToggle = useCallback(
+    (screenId: string, checked: boolean) => {
+      setGallerySelectedScreenIds((prev) =>
+        checked
+          ? prev.includes(screenId)
+            ? prev
+            : [...prev, screenId]
+          : prev.filter((id) => id !== screenId),
+      );
+    },
+    [],
   );
   const [hasHydratedFeedback, setHasHydratedFeedback] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
@@ -295,6 +312,14 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                       void handleReplayScreen(screenId)
                     }
                     canReplay={videoDuration > 0}
+                    selectedScreenIds={
+                      isComposerInScreenMode
+                        ? gallerySelectedScreenIds
+                        : undefined
+                    }
+                    onSelectedScreenToggle={
+                      isComposerInScreenMode ? handleGalleryToggle : undefined
+                    }
                   />
                 )}
               </ResizablePanel>
@@ -323,6 +348,11 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                         handleScreenSelect(nextScreen.id, nextScreen.timestamp);
                       }
                     }}
+                    externalSelectedScreenIds={gallerySelectedScreenIds}
+                    onExternalSelectedScreenIdsChange={
+                      setGallerySelectedScreenIds
+                    }
+                    onComposerScreenModeChange={setIsComposerInScreenMode}
                   />
                 )}
               </ResizablePanel>

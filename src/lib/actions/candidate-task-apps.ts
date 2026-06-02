@@ -3,12 +3,61 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { ActionPayload } from "./types";
+import { z } from "zod";
+import { requireAuth } from "../auth/auth";
 
 export type CandidateTaskApp = Prisma.CandidateTaskAppGetPayload<{
   include: {
     app: true;
   };
 }>;
+
+const ObjectIdSchema = z.string().regex(/^[a-f0-9]{24}$/i);
+
+const GetCandidateTaskAppsInputSchema = z.object({
+  isTaken: z.boolean(),
+  page: z.number().int().positive().default(1),
+  pageSize: z.number().int().positive().max(200).default(100),
+  search: z.string().default(""),
+  excludeGenres: z.array(z.string()).default([]),
+  selectedGenres: z.array(z.string()).default([]),
+});
+
+const SetCandidateTaskAppTakenStatusInputSchema = z.object({
+  id: ObjectIdSchema,
+  isTaken: z.boolean(),
+});
+
+const CandidateTaskStatusSchema = z.enum(["open", "started", "hidden"]);
+
+const SetCandidateTaskStatusInputSchema = z.object({
+  id: ObjectIdSchema,
+  taskIndex: z.number().int().nonnegative(),
+  status: CandidateTaskStatusSchema,
+});
+
+const GetCandidateTaskCapturePrefillInputSchema = z.object({
+  candidateTaskAppId: ObjectIdSchema,
+  taskIndex: z.number().int().nonnegative().optional(),
+  taskIndexes: z.array(z.number().int().nonnegative()).min(1).optional(),
+});
+
+export type CandidateTaskCapturePrefill = {
+  candidateTaskAppId: string;
+  platform: string;
+  app: {
+    name: string;
+    id: string;
+  };
+  tasks: {
+    description: string;
+    status: string;
+    origin: {
+      candidateTaskAppId: string;
+      taskIndex: number;
+    };
+  }[];
+};
 
 /**
  * Fetches candidate task apps from the database.
@@ -37,24 +86,42 @@ export const getCandidateTaskApps = async ({
     currentPage: number;
   }>
 > => {
+  const parsedInput = GetCandidateTaskAppsInputSchema.safeParse({
+    isTaken,
+    page,
+    pageSize,
+    search,
+    excludeGenres,
+    selectedGenres,
+  });
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: "Invalid candidate task app query.",
+      data: null,
+    };
+  }
+
+  const input = parsedInput.data;
+
   try {
-    const skip = (page - 1) * pageSize;
+    const skip = (input.page - 1) * input.pageSize;
     const where: Prisma.CandidateTaskAppWhereInput = {
-      isTaken: isTaken,
+      isTaken: input.isTaken,
       app: {
         is: {
           metadata: {
             is: {
               name: {
-                contains: search.trim(),
+                contains: input.search.trim(),
                 mode: "insensitive",
               },
               genre: {
-                hasEvery: selectedGenres,
+                hasEvery: input.selectedGenres,
               },
               NOT: {
                 genre: {
-                  hasSome: excludeGenres,
+                  hasSome: input.excludeGenres,
                 },
               },
             },
@@ -68,7 +135,7 @@ export const getCandidateTaskApps = async ({
     const candidateTaskApps = await prisma.candidateTaskApp.findMany({
       where,
       skip,
-      take: pageSize,
+      take: input.pageSize,
       include: { app: true },
       orderBy: { id: "asc" },
     });
@@ -79,8 +146,8 @@ export const getCandidateTaskApps = async ({
       data: {
         candidateTaskApps,
         totalCount,
-        hasMore: skip + pageSize < totalCount,
-        currentPage: page,
+        hasMore: skip + input.pageSize < totalCount,
+        currentPage: input.page,
       },
     };
   } catch (error) {
@@ -100,8 +167,23 @@ export const setCandidateTaskAppTakenStatus = async ({
   id: string;
   isTaken: boolean;
 }): Promise<ActionPayload<{ totalCount: number }>> => {
+  const parsedInput = SetCandidateTaskAppTakenStatusInputSchema.safeParse({
+    id,
+    isTaken,
+  });
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: "Invalid candidate task app taken status input.",
+      data: null,
+    };
+  }
+
   try {
-    await prisma.candidateTaskApp.update({ where: { id }, data: { isTaken } });
+    await prisma.candidateTaskApp.update({
+      where: { id: parsedInput.data.id },
+      data: { isTaken: parsedInput.data.isTaken },
+    });
     const totalCount = await prisma.candidateTaskApp.count({
       where: { isTaken: false },
     });
@@ -115,6 +197,204 @@ export const setCandidateTaskAppTakenStatus = async ({
     return {
       ok: false,
       message: "Failed to set candidate task app taken status",
+      data: null,
+    };
+  }
+};
+
+export const setCandidateTaskStatus = async ({
+  id,
+  taskIndex,
+  status,
+}: {
+  id: string;
+  taskIndex: number;
+  status: z.infer<typeof CandidateTaskStatusSchema>;
+}): Promise<ActionPayload<{ candidateTaskApp: CandidateTaskApp }>> => {
+  const parsedInput = SetCandidateTaskStatusInputSchema.safeParse({
+    id,
+    taskIndex,
+    status,
+  });
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: "Invalid candidate task status input.",
+      data: null,
+    };
+  }
+
+  const input = parsedInput.data;
+
+  try {
+    const candidateTaskApp = await prisma.candidateTaskApp.findUnique({
+      where: { id: input.id },
+      include: { app: true },
+    });
+
+    if (!candidateTaskApp) {
+      return {
+        ok: false,
+        message: "Candidate task app not found.",
+        data: null,
+      };
+    }
+
+    if (input.taskIndex >= candidateTaskApp.tasks.length) {
+      return {
+        ok: false,
+        message: "Candidate task index is out of range.",
+        data: null,
+      };
+    }
+
+    await prisma.$runCommandRaw({
+      update: "candidate_task_apps",
+      updates: [
+        {
+          q: { _id: { $oid: input.id } },
+          u: {
+            $set: {
+              [`tasks.${input.taskIndex}.status`]: input.status,
+            },
+          },
+          multi: false,
+        },
+      ],
+    });
+
+    const updated = await prisma.candidateTaskApp.findUnique({
+      where: { id: input.id },
+      include: { app: true },
+    });
+
+    if (!updated) {
+      return {
+        ok: false,
+        message: "Candidate task app not found.",
+        data: null,
+      };
+    }
+
+    return {
+      ok: true,
+      message: "Candidate task status updated successfully",
+      data: { candidateTaskApp: updated },
+    };
+  } catch (error) {
+    console.error("Error setting candidate task status:", error);
+    return {
+      ok: false,
+      message: "Failed to set candidate task status",
+      data: null,
+    };
+  }
+};
+
+export const getCandidateTaskCapturePrefill = async ({
+  candidateTaskAppId,
+  taskIndex,
+  taskIndexes,
+}: {
+  candidateTaskAppId: string;
+  taskIndex?: number;
+  taskIndexes?: number[];
+}): Promise<ActionPayload<CandidateTaskCapturePrefill>> => {
+  const session = await requireAuth();
+  if (!session?.user?.id) {
+    return { ok: false, message: "User not authenticated.", data: null };
+  }
+
+  const parsedInput = GetCandidateTaskCapturePrefillInputSchema.safeParse({
+    candidateTaskAppId,
+    taskIndex,
+    taskIndexes,
+  });
+  if (!parsedInput.success) {
+    return {
+      ok: false,
+      message: "Invalid candidate task prefill input.",
+      data: null,
+    };
+  }
+
+  const input = parsedInput.data;
+  const requestedIndexes = Array.from(
+    new Set(
+      input.taskIndexes ??
+        (input.taskIndex !== undefined ? [input.taskIndex] : []),
+    ),
+  );
+
+  if (requestedIndexes.length === 0) {
+    return {
+      ok: false,
+      message: "No candidate task indexes provided.",
+      data: null,
+    };
+  }
+
+  try {
+    const candidateTaskApp = await prisma.candidateTaskApp.findUnique({
+      where: { id: input.candidateTaskAppId },
+      include: { app: true },
+    });
+
+    if (!candidateTaskApp) {
+      return {
+        ok: false,
+        message: "Candidate task app not found.",
+        data: null,
+      };
+    }
+
+    const tasks = [];
+    for (const requestedIndex of requestedIndexes) {
+      const task = candidateTaskApp.tasks[requestedIndex];
+      if (!task) {
+        return {
+          ok: false,
+          message: "Candidate task index is out of range.",
+          data: null,
+        };
+      }
+
+      if (task.status === "hidden") {
+        return {
+          ok: false,
+          message: "A selected candidate task is hidden and cannot be started.",
+          data: null,
+        };
+      }
+
+      tasks.push({
+        description: task.description,
+        status: task.status,
+        origin: {
+          candidateTaskAppId: candidateTaskApp.id,
+          taskIndex: requestedIndex,
+        },
+      });
+    }
+
+    return {
+      ok: true,
+      message: "Candidate task prefill found.",
+      data: {
+        candidateTaskAppId: candidateTaskApp.id,
+        platform: candidateTaskApp.app.os,
+        app: {
+          name: candidateTaskApp.app.metadata.name,
+          id: candidateTaskApp.app.packageName,
+        },
+        tasks,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching candidate task capture prefill:", error);
+    return {
+      ok: false,
+      message: "Failed to fetch candidate task prefill.",
       data: null,
     };
   }

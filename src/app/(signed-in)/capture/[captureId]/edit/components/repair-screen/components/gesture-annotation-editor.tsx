@@ -60,6 +60,7 @@ export const GestureAnnotationEditor =
       const previousGestureTypeRef = useRef<ScreenGesture["type"]>(
         gesture.type,
       );
+      const localTemplateDescriptionRef = useRef<string | null>(null);
 
       const activeTemplate = useMemo(
         () => getGestureTemplate(gesture.type),
@@ -138,6 +139,7 @@ export const GestureAnnotationEditor =
         const typeChanged = previousType !== gesture.type;
 
         if (!gesture.type) {
+          localTemplateDescriptionRef.current = null;
           setLegacyTemplateHint(false);
           previousGestureTypeRef.current = gesture.type;
           return;
@@ -145,6 +147,7 @@ export const GestureAnnotationEditor =
 
         // If the gesture type is freeform, we need to handle the case where the user changes the type from a template to a freeform
         if (isFreeformGestureType(gesture.type)) {
+          localTemplateDescriptionRef.current = null;
           if (
             typeChanged &&
             hasInitializedTypeRef.current &&
@@ -174,6 +177,7 @@ export const GestureAnnotationEditor =
 
         // If the gesture type is a template, we need to handle the case where the user changes the type from a template to a template
         if (typeChanged && hasInitializedTypeRef.current) {
+          localTemplateDescriptionRef.current = null;
           const defaults = getGestureTemplateDefaultSlots(gesture.type);
           setSlotValues(defaults);
           setLegacyTemplateHint(false);
@@ -187,6 +191,16 @@ export const GestureAnnotationEditor =
           if (templated !== gesture.description) {
             setGesture((prev) => ({ ...prev, description: templated }));
           }
+          previousGestureTypeRef.current = gesture.type;
+          return;
+        }
+
+        if (
+          hasInitializedTypeRef.current &&
+          !typeChanged &&
+          localTemplateDescriptionRef.current === (gesture.description ?? "")
+        ) {
+          localTemplateDescriptionRef.current = null;
           previousGestureTypeRef.current = gesture.type;
           return;
         }
@@ -267,6 +281,7 @@ export const GestureAnnotationEditor =
             nextValues,
           );
           if (nextDescription.length > GESTURE_DESCRIPTION_MAX_LENGTH) return;
+          localTemplateDescriptionRef.current = nextDescription;
           setSlotValues(nextValues);
           if (slot.key === "target") setTargetTouched(true);
           if (slot.key === "goal") setGoalTouched(true);

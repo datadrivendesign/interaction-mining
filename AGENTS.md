@@ -22,20 +22,31 @@ Before changing logic or data format, verify:
 
 ---
 
-## 1. Mandatory Plan-First Protocol
-### Plan Before Code
-Before any changes, provide:
-1. A checklist of steps.
-2. Exact file list with action: **Create / Modify / Delete**.
-3. Labels for: **Breaking, Risky, Backend, or Data Model** changes.
-4. Known failure points and edge cases.
+## 1. Scoped Plan-First Protocol
+### When Approval Is Required
+Require a plan and explicit approval only for application changes, including:
+- Frontend behavior, UI flows, annotation interactions, uploads, auth, API routes, server actions, Prisma queries, data validation, persistence, or trace/data formats.
+- Any risky, breaking, backend, or data-model-impacting change.
 
-**Wait for explicit approval.** Only proceed when the user says:
-- `APPROVE PLAN`: Proceed with implementation.
-- `APPROVE BREAKING CHANGE`: Authorize schema/API/trace format shifts.
+Do not require plan approval for low-risk non-application work such as:
+- Documentation edits, README/AGENTS updates, comments, formatting-only changes, local utility scripts, analysis, command output, branch cleanup, or test-only changes that do not alter app behavior.
+
+### Plan Format
+Keep plans concise. For approval-gated work, include only:
+- Steps.
+- Files to create/modify/delete.
+- Risk labels: `Breaking`, `Risky`, `Backend`, `Data Model`, or `None`.
+- Key failure points/edge cases.
+
+Approval shorthand:
+- `A`: approve plan and proceed.
+- `B`: decline or revise; user may add requested changes.
+- `AB`: approve breaking change, including schema/API/auth/trace format shifts.
+
+Do not ask the user to type long approval phrases.
 
 ### Scope Changes
-If work reveals a necessary deviation: **Stop immediately**, explain the deviation, and wait for renewed approval.
+For approval-gated work, stop and ask again if the approved scope must materially change. For non-gated work, proceed conservatively and report the deviation briefly.
 
 ---
 
@@ -52,20 +63,22 @@ If work reveals a necessary deviation: **Stop immediately**, explain the deviati
 
 ## 3. Execution & Verification
 - Implement in small, independently reviewable steps. No unrelated refactors.
-- **Change Summary:** After each step, group changes by: **UI, API, Data Model, Styling, and Dependencies.**
-- **Manual Test Checklist:** Provide a custom Markdown checkbox list derived from the diff:
+- Keep status updates and final summaries token-efficient. Do not repeat large plans, file inventories, or boilerplate unless useful.
+- For app changes, summarize by affected area only when relevant: **UI, API, Data Model, Styling, Dependencies**.
+- For app changes, provide a focused manual test checklist derived from the diff. Include relevant items only:
   - **Happy Path:** One end-to-end success test.
-  - **Edge Cases:** Malformed Zod inputs (400 vs 500), interrupted uploads, and viewport tests (360px).
+  - **Edge Cases:** Malformed Zod inputs (400 vs 500), interrupted uploads, viewport tests (360px).
   - **Double-Submit:** Verify buttons disable during execution.
   - **Persistence:** Test page refresh mid-state.
-  - **Environment:** Label tests with `[Local]` or `[Amplify dev]` if they require specific DB/S3 access.
+  - **Environment:** Label tests `[Local]` or `[Amplify dev]` if they require specific DB/S3 access.
+- For docs/scripts/tooling-only changes, a brief summary plus any command/test result is enough.
 
 ---
 
 ## 4. Non-Goals
 **Do not, under any circumstances:**
-- Modify auth flow or change DB schema without explicit `APPROVE BREAKING CHANGE`.
-- Perform unrelated refactors or add new external services without explicit `APPROVE BREAKING CHANGE`.
+- Modify auth flow or change DB schema without explicit `AB`.
+- Perform unrelated refactors or add new external services without explicit `AB`.
 
 ---
 
