@@ -20,10 +20,17 @@ export interface RedactScreenJumpTarget {
   screenId: string;
 }
 
+type NavigationReadiness = {
+  isBlockingNavigation: boolean;
+  reason?: string;
+};
+
 export default function RedactScreen({
   jumpTarget,
+  onNavigationReadinessChange,
 }: {
   jumpTarget?: RedactScreenJumpTarget | null;
+  onNavigationReadinessChange?: (readiness: NavigationReadiness) => void;
 }) {
   const { getValues } = useFormContext<TraceFormData>();
   const screens = getValues("screens") as FrameData[];
@@ -35,6 +42,59 @@ export default function RedactScreen({
 
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
   const [copied, setCopied] = useState<Redaction[]>([]);
+  const focusedScreen =
+    focusViewIndex > -1 ? screens[focusViewIndex] : undefined;
+  const focusedScreenId = focusedScreen?.id ?? null;
+  const focusedScreenSrc = focusedScreen?.src ?? "";
+
+  React.useEffect(() => {
+    if (focusViewIndex < 0) {
+      onNavigationReadinessChange?.({ isBlockingNavigation: false });
+      return;
+    }
+
+    if (!focusedScreenSrc) {
+      onNavigationReadinessChange?.({
+        isBlockingNavigation: true,
+        reason: "Selected redaction screen image is still loading...",
+      });
+      return;
+    }
+
+    onNavigationReadinessChange?.({
+      isBlockingNavigation: true,
+      reason: "Loading selected redaction screen image...",
+    });
+  }, [
+    focusViewIndex,
+    focusedScreenId,
+    focusedScreenSrc,
+    onNavigationReadinessChange,
+  ]);
+
+  const handleImageStatusChange = useCallback(
+    (imageStatus: "loading" | "loaded" | "failed") => {
+      if (imageStatus === "loading") {
+        onNavigationReadinessChange?.({
+          isBlockingNavigation: true,
+          reason: "Loading selected redaction screen image...",
+        });
+        return;
+      }
+      if (imageStatus === "failed") {
+        onNavigationReadinessChange?.({
+          isBlockingNavigation: true,
+          reason:
+            "Selected redaction screen image failed to load. Refresh or return to upload.",
+        });
+        return;
+      }
+      onNavigationReadinessChange?.({
+        isBlockingNavigation: false,
+      });
+    },
+    [onNavigationReadinessChange],
+  );
 
   const handlePrevious = useCallback(() => {
     const wrappedIndex = (focusViewIndex - 1 + screens.length) % screens.length;
@@ -70,13 +130,14 @@ export default function RedactScreen({
           defaultSize={75}
           className="relative z-20 min-w-0 overflow-hidden"
         >
-          {focusViewIndex > -1 ? (
+          {focusedScreen ? (
             <FocusView
-              key={focusViewIndex}
-              screen={screens[focusViewIndex]}
-              vh={vhs[screens[focusViewIndex].id]}
+              key={focusedScreen.id}
+              screen={focusedScreen}
+              vh={vhs[focusedScreen.id]}
               copied={copied}
               setCopied={setCopied}
+              onImageStatusChange={handleImageStatusChange}
             />
           ) : (
             <div className="flex justify-center items-center w-full h-full">

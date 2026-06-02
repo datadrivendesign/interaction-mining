@@ -55,6 +55,7 @@ export function GestureMenu({
   position: { x: number | null; y: number | null };
   transform: { x: number; y: number; scaleX: number; scaleY: number } | null;
 }) {
+  const { gesture, canvasSize } = useContext(GestureContext);
   const ANNOTATION_GAP_PX = 4;
   const MARKER_RADIUS_PX = 16;
   const SAFE_ZONE_MARGIN_PX = 8;
@@ -67,11 +68,18 @@ export function GestureMenu({
   const [horizontalOffset, setHorizontalOffset] = useState(0);
   const [verticalOffset, setVerticalOffset] = useState(0);
   const [editorMaxHeight, setEditorMaxHeight] = useState<number | null>(null);
+  const hasSelectedGesture = Boolean(normalizeGestureType(gesture.type));
+  const shouldHideEditorForDragPlacement = isPlacingDragPoint(gesture);
+  const shouldShowEditor =
+    hasSelectedGesture && !shouldHideEditorForDragPlacement;
+  const isWaitingForDragEndPoint = isAwaitingDragEndPoint(gesture);
+  const menuAnchor = getGestureMenuAnchor(position, gesture, canvasSize);
   const lastPlacementAnchorRef = useRef<{
     markerX: number;
     markerY: number;
     width: number;
     height: number;
+    hasEditor: boolean;
   } | null>(null);
 
   const updatePlacement = useCallback(() => {
@@ -79,17 +87,13 @@ export function GestureMenu({
     const menuElement = menuRef.current;
     const selectionElement = selectionRef.current;
     const editorElement = editorContainerRef.current;
-    if (
-      !droppableElement ||
-      !menuElement ||
-      !selectionElement ||
-      !editorElement
-    ) {
+    const hasEditor = Boolean(editorElement);
+    if (!droppableElement || !menuElement || !selectionElement) {
       return;
     }
 
-    const markerX = (position.x ?? 0) + (transform?.x ?? 0);
-    const markerY = (position.y ?? 0) + (transform?.y ?? 0);
+    const markerX = (menuAnchor.x ?? 0) + (transform?.x ?? 0);
+    const markerY = (menuAnchor.y ?? 0) + (transform?.y ?? 0);
     const droppableRect = droppableElement.getBoundingClientRect();
     const menuRect = menuElement.getBoundingClientRect();
 
@@ -113,7 +117,6 @@ export function GestureMenu({
     }
 
     const selectionRect = selectionElement.getBoundingClientRect();
-    const editorRect = editorElement.getBoundingClientRect();
     const rootTop = markerY - MARKER_RADIUS_PX;
     const safeTop = margin;
     const safeBottom = Math.max(safeTop, droppableRect.height - margin);
@@ -129,13 +132,16 @@ export function GestureMenu({
       setEditorMaxHeight(nextEditorMaxHeight);
     }
 
-    const boundedEditorHeight = Math.min(
-      editorRect.height,
-      nextEditorMaxHeight,
-    );
+    const boundedEditorHeight = editorElement
+      ? Math.min(
+          editorElement.getBoundingClientRect().height,
+          nextEditorMaxHeight,
+        )
+      : 0;
     const roomBelow = safeBottom - (rootTop + selectionRect.height);
     const roomAbove = rootTop - safeTop;
     const shouldPlaceAbove =
+      hasEditor &&
       roomBelow < boundedEditorHeight + ANNOTATION_GAP_PX &&
       roomAbove > roomBelow;
     const previousAnchor = lastPlacementAnchorRef.current;
@@ -144,13 +150,15 @@ export function GestureMenu({
       markerY,
       width: droppableRect.width,
       height: droppableRect.height,
+      hasEditor,
     };
     const shouldAllowSideFlip =
       !previousAnchor ||
       Math.abs(previousAnchor.markerX - placementAnchor.markerX) > 0.5 ||
       Math.abs(previousAnchor.markerY - placementAnchor.markerY) > 0.5 ||
       Math.abs(previousAnchor.width - placementAnchor.width) > 0.5 ||
-      Math.abs(previousAnchor.height - placementAnchor.height) > 0.5;
+      Math.abs(previousAnchor.height - placementAnchor.height) > 0.5 ||
+      previousAnchor.hasEditor !== placementAnchor.hasEditor;
     if (shouldAllowSideFlip && shouldPlaceAbove !== placeTextareaAbove) {
       setPlaceTextareaAbove(shouldPlaceAbove);
     }
@@ -163,7 +171,9 @@ export function GestureMenu({
       : rootTop;
     const fullBottom = shouldPlaceAbove
       ? rootTop + selectionRect.height
-      : rootTop + selectionRect.height + ANNOTATION_GAP_PX + boundedEditorHeight;
+      : rootTop +
+        selectionRect.height +
+        (hasEditor ? ANNOTATION_GAP_PX + boundedEditorHeight : 0);
 
     let nextVerticalOffset = 0;
     if (fullTop < safeTop) {
@@ -183,8 +193,8 @@ export function GestureMenu({
     editorMaxHeight,
     horizontalOffset,
     placeTextareaAbove,
-    position.x,
-    position.y,
+    menuAnchor.x,
+    menuAnchor.y,
     transform?.x,
     transform?.y,
     verticalOffset,
@@ -193,13 +203,13 @@ export function GestureMenu({
   // Determine whether to place the textarea above or below the marker.
   useLayoutEffect(() => {
     updatePlacement();
-  }, [updatePlacement]);
+  }, [shouldHideEditorForDragPlacement, updatePlacement]);
 
   useEffect(() => {
     const menuElement = menuRef.current;
     const selectionElement = selectionRef.current;
     const editorElement = editorContainerRef.current;
-    if (!menuElement || !selectionElement || !editorElement) {
+    if (!menuElement || !selectionElement) {
       return;
     }
     if (typeof ResizeObserver === "undefined") {
@@ -213,14 +223,16 @@ export function GestureMenu({
     });
     resizeObserver.observe(menuElement);
     resizeObserver.observe(selectionElement);
-    resizeObserver.observe(editorElement);
+    if (editorElement) {
+      resizeObserver.observe(editorElement);
+    }
     window.addEventListener("resize", updatePlacement);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updatePlacement);
     };
-  }, [updatePlacement]);
+  }, [shouldHideEditorForDragPlacement, updatePlacement]);
 
   // Focus the description field of the gesture annotation editor
   const focusDescriptionField = () => {
@@ -228,51 +240,62 @@ export function GestureMenu({
   };
 
   return (
-    <div
-      ref={menuRef}
-      className="absolute z-50 ml-2"
-      style={{
-        left: `calc(${position.x ?? 0}px + var(--marker-radius))`,
-        top: `calc(${position.y ?? 0}px - var(--marker-radius))`,
-        transform: `translate3d(${(transform?.x ?? 0) + horizontalOffset}px, ${
-          (transform?.y ?? 0) + verticalOffset
-        }px, 0)`,
-      }}
-    >
-      {/* Measure selection row here from ref. Editor overlay is absolutely placed so its out of flow, and does not contribute to parent height. */}
-      <div ref={selectionRef} className="relative w-full">
-        {placeTextareaAbove && (
-          <div
-            ref={editorContainerRef}
-            className="absolute left-0 w-full overflow-y-auto"
-            style={{
-              bottom: `calc(100% + ${ANNOTATION_GAP_PX}px)`,
-              maxHeight: editorMaxHeight ?? undefined,
-            }}
-          >
-            <GestureAnnotationEditor ref={editorRef} />
+    <>
+      {isWaitingForDragEndPoint ? (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-50 -translate-x-1/2">
+          <div className="inline-flex items-center rounded-md border border-black/20 bg-black/85 px-2 py-1 text-xs font-semibold tracking-wide text-white shadow-sm dark:border-white/25 dark:bg-white/90 dark:text-black">
+            Click end point
           </div>
-        )}
+        </div>
+      ) : null}
 
-        <GestureSelection
-          focusDescriptionField={focusDescriptionField}
-          openAbove={placeTextareaAbove}
-        />
+      <div
+        ref={menuRef}
+        className="absolute z-50 ml-2"
+        style={{
+          left: `calc(${menuAnchor.x ?? 0}px + var(--marker-radius))`,
+          top: `calc(${menuAnchor.y ?? 0}px - var(--marker-radius))`,
+          transform: `translate3d(${(transform?.x ?? 0) + horizontalOffset}px, ${
+            (transform?.y ?? 0) + verticalOffset
+          }px, 0)`,
+          display: isWaitingForDragEndPoint ? "none" : undefined,
+        }}
+      >
+        {/* Measure selection row here from ref. Editor overlay is absolutely placed so its out of flow, and does not contribute to parent height. */}
+        <div ref={selectionRef} className="relative w-full">
+          {placeTextareaAbove && shouldShowEditor && (
+            <div
+              ref={editorContainerRef}
+              className="absolute left-0 w-full overflow-y-auto"
+              style={{
+                bottom: `calc(100% + ${ANNOTATION_GAP_PX}px)`,
+                maxHeight: editorMaxHeight ?? undefined,
+              }}
+            >
+              <GestureAnnotationEditor ref={editorRef} />
+            </div>
+          )}
 
-        {!placeTextareaAbove && (
-          <div
-            ref={editorContainerRef}
-            className="absolute left-0 w-full overflow-y-auto"
-            style={{
-              top: `calc(100% + ${ANNOTATION_GAP_PX}px)`,
-              maxHeight: editorMaxHeight ?? undefined,
-            }}
-          >
-            <GestureAnnotationEditor ref={editorRef} />
-          </div>
-        )}
+          <GestureSelection
+            focusDescriptionField={focusDescriptionField}
+            openAbove={placeTextareaAbove}
+          />
+
+          {!placeTextareaAbove && shouldShowEditor && (
+            <div
+              ref={editorContainerRef}
+              className="absolute left-0 w-full overflow-y-auto"
+              style={{
+                top: `calc(100% + ${ANNOTATION_GAP_PX}px)`,
+                maxHeight: editorMaxHeight ?? undefined,
+              }}
+            >
+              <GestureAnnotationEditor ref={editorRef} />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -287,6 +310,55 @@ export function DroppableArea({ children }: { children: React.ReactNode }) {
 
 function isDragGesture(type: string | null) {
   return normalizeGestureType(type) === GESTURE_TYPES.DRAG;
+}
+
+function isPlacingDragPoint(gesture: ScreenGesture) {
+  return (
+    isDragGesture(gesture.type) &&
+    (gesture.x === null ||
+      gesture.y === null ||
+      gesture.scrollDeltaX === null ||
+      gesture.scrollDeltaY === null)
+  );
+}
+
+function isAwaitingDragEndPoint(gesture: ScreenGesture) {
+  return (
+    isDragGesture(gesture.type) &&
+    gesture.x !== null &&
+    gesture.y !== null &&
+    (gesture.scrollDeltaX === null || gesture.scrollDeltaY === null)
+  );
+}
+
+function getGestureMenuAnchor(
+  position: { x: number | null; y: number | null },
+  gesture: ScreenGesture,
+  canvasSize: { width: number; height: number },
+) {
+  if (
+    !isDragGesture(gesture.type) ||
+    position.x === null ||
+    position.y === null ||
+    gesture.scrollDeltaX === null ||
+    gesture.scrollDeltaY === null
+  ) {
+    return position;
+  }
+
+  const endX =
+    position.x + gesture.scrollDeltaX * Math.max(canvasSize.width, 1);
+  const endY =
+    position.y + gesture.scrollDeltaY * Math.max(canvasSize.height, 1);
+
+  if (endX <= position.x) {
+    return position;
+  }
+
+  return {
+    x: endX,
+    y: endY,
+  };
 }
 
 export function DraggableMarker({

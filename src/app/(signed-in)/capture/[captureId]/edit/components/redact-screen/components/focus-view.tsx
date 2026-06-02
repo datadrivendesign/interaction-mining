@@ -8,11 +8,13 @@ export function FocusView({
   vh,
   copied,
   setCopied,
+  onImageStatusChange,
 }: {
   screen: FrameData;
   vh: any;
   copied: Redaction[];
   setCopied: React.Dispatch<React.SetStateAction<Redaction[]>>;
+  onImageStatusChange?: (imageStatus: "loading" | "loaded" | "failed") => void;
 }) {
   return (
     <>
@@ -22,6 +24,7 @@ export function FocusView({
           vh={vh}
           copied={copied}
           setCopied={setCopied}
+          onImageStatusChange={onImageStatusChange}
         />
       </div>
     </>

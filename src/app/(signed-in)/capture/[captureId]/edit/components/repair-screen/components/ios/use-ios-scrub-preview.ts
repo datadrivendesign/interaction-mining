@@ -50,6 +50,7 @@ export function useIosScrubPreview({
   const scrubDisplayRafRef = useRef<number | null>(null);
   const previewSwapTimeoutRef = useRef<number | null>(null);
   const lastCommittedVideoTimeRef = useRef<number | null>(null);
+  const activePreviewFrameSrcRef = useRef<string | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [pausedPreviewTime, setPausedPreviewTime] = useState<number | null>(
@@ -70,12 +71,16 @@ export function useIosScrubPreview({
   );
 
   const activePreviewFrameSrc = useMemo(() => {
+    const sourceTime = scrubPreviewTime ?? pausedPreviewTime;
+    const selected =
+      sourceTime !== null ? getNearestPreviewThumbnail(sourceTime) : null;
+
     if (scrubPreviewTime !== null) {
-      return getNearestPreviewThumbnail(scrubPreviewTime)?.src ?? null;
+      return selected?.src ?? null;
     }
 
     if (pausedPreviewTime !== null) {
-      return getNearestPreviewThumbnail(pausedPreviewTime)?.src ?? null;
+      return selected?.src ?? null;
     }
 
     return null;
@@ -84,6 +89,10 @@ export function useIosScrubPreview({
   const displayedTimelineTime = scrubPreviewTime ?? currentTime;
   const hasPreviewOverlay =
     displayedPreviewFrameSrc !== null || incomingPreviewFrameSrc !== null;
+
+  useEffect(() => {
+    activePreviewFrameSrcRef.current = activePreviewFrameSrc;
+  }, [activePreviewFrameSrc]);
 
   // Reset all preview frame state. Used by bootstrap on video reload and live-photo start.
   const resetPreviewFrames = useCallback(() => {
@@ -171,6 +180,7 @@ export function useIosScrubPreview({
         pendingSeekTimeRef.current = null;
         const scrubTargetTime = scrubPreviewTimeRef.current;
         if (
+          !isScrubPreviewActiveRef.current &&
           scrubTargetTime !== null &&
           Math.abs(video.currentTime - scrubTargetTime) <= 0.001
         ) {
@@ -241,6 +251,10 @@ export function useIosScrubPreview({
   }, [activePreviewFrameSrc, displayedPreviewFrameSrc]);
 
   const handleIncomingPreviewLoad = useCallback((loadedSrc: string) => {
+    if (loadedSrc !== activePreviewFrameSrcRef.current) {
+      return;
+    }
+
     setIsIncomingPreviewVisible(true);
 
     if (previewSwapTimeoutRef.current !== null) {
@@ -248,6 +262,11 @@ export function useIosScrubPreview({
     }
 
     previewSwapTimeoutRef.current = window.setTimeout(() => {
+      if (loadedSrc !== activePreviewFrameSrcRef.current) {
+        previewSwapTimeoutRef.current = null;
+        return;
+      }
+
       setDisplayedPreviewFrameSrc(loadedSrc);
       setIncomingPreviewFrameSrc((currentIncomingSrc) =>
         currentIncomingSrc === loadedSrc ? null : currentIncomingSrc,
@@ -408,6 +427,10 @@ export function useIosScrubPreview({
 
   const handleScrubActiveChange = useCallback((active: boolean) => {
     isScrubPreviewActiveRef.current = active;
+
+    if (active) {
+      setPausedPreviewTime(null);
+    }
 
     if (!active && scrubPreviewTimeRef.current === null) {
       pendingScrubDisplayTimeRef.current = null;
