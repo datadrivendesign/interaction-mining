@@ -37,6 +37,23 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
   );
+  const [gallerySelectedScreenIds, setGallerySelectedScreenIds] = useState<
+    string[]
+  >([]);
+  const [isComposerInScreenMode, setIsComposerInScreenMode] = useState(false);
+
+  const handleGalleryToggle = useCallback(
+    (screenId: string, checked: boolean) => {
+      setGallerySelectedScreenIds((prev) =>
+        checked
+          ? prev.includes(screenId)
+            ? prev
+            : [...prev, screenId]
+          : prev.filter((id) => id !== screenId),
+      );
+    },
+    [],
+  );
   const [hasHydratedFeedback, setHasHydratedFeedback] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const { capture, isLoading: isTraceLoading } = useCapture(captureId, {
@@ -304,6 +321,14 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                     activeScreenId={activeScreenId}
                     commentsByScreen={feedbackState.commentsByScreen}
                     onScreenSelect={setActiveScreenId}
+                    selectedScreenIds={
+                      isComposerInScreenMode
+                        ? gallerySelectedScreenIds
+                        : undefined
+                    }
+                    onSelectedScreenToggle={
+                      isComposerInScreenMode ? handleGalleryToggle : undefined
+                    }
                   />
                 )}
               </ResizablePanel>
@@ -325,6 +350,11 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                     onFeedbackStateChange={setFeedbackState}
                     hotkeyAction={screenCommentsHotkeyAction}
                     onJumpToScreen={setActiveScreenId}
+                    externalSelectedScreenIds={gallerySelectedScreenIds}
+                    onExternalSelectedScreenIdsChange={
+                      setGallerySelectedScreenIds
+                    }
+                    onComposerScreenModeChange={setIsComposerInScreenMode}
                   />
                 )}
               </ResizablePanel>
