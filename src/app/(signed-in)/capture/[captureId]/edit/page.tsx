@@ -58,6 +58,11 @@ enum TraceSteps {
   Review = 2,
 }
 
+type EditorNavigationReadiness = {
+  isBlockingNavigation: boolean;
+  reason?: string;
+};
+
 const FEEDBACK_STEP_ORDER = [
   TraceSteps.Capture,
   TraceSteps.Redact,
@@ -76,6 +81,11 @@ export default function Page() {
     DraftFetchResults.LOADING,
   );
   const [files, setFiles] = useState<ListedFiles[]>([]);
+  const [isFetchingVideoFiles, setIsFetchingVideoFiles] = useState(true);
+  const [redactReadiness, setRedactReadiness] =
+    useState<EditorNavigationReadiness>({
+      isBlockingNavigation: false,
+    });
   const [navRef, { height }] = useMeasure();
   const router = useRouter();
   const [feedbackOverrides, setFeedbackOverrides] = useState<{
@@ -219,17 +229,34 @@ export default function Page() {
   useEffect(() => {
     if (!captureId) return;
 
+    let isCurrentFetch = true;
+
     const fetchVideoFiles = async () => {
       try {
+        setIsFetchingVideoFiles(true);
         const result = await fileFetcher(["", captureId]);
+        if (!isCurrentFetch) {
+          return;
+        }
         setFiles(result);
       } catch (error) {
+        if (!isCurrentFetch) {
+          return;
+        }
         console.error("Failed to fetch video files:", error);
         setFiles([]);
+      } finally {
+        if (isCurrentFetch) {
+          setIsFetchingVideoFiles(false);
+        }
       }
     };
 
     fetchVideoFiles();
+
+    return () => {
+      isCurrentFetch = false;
+    };
   }, [captureId]);
 
   const isAutosavingRef = useRef(false);
@@ -463,7 +490,71 @@ export default function Page() {
     [effectiveSelectedFeedbackStep],
   );
 
+  const activeStepReadiness = useMemo<EditorNavigationReadiness>(() => {
+    if (stepIndex === TraceSteps.Capture) {
+      if (draftFetchResult === DraftFetchResults.LOADING) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Loading saved draft data...",
+        };
+      }
+      if (draftFetchResult === DraftFetchResults.ERROR) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Draft data failed to load. Refresh or return to upload.",
+        };
+      }
+      if (isFetchingVideoFiles) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Loading uploaded recording...",
+        };
+      }
+      if (watchedScreens.length === 0) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Preparing screen images...",
+        };
+      }
+      if (watchedScreens.some((screen) => !screen.src)) {
+        return {
+          isBlockingNavigation: true,
+          reason: "Preparing screen images...",
+        };
+      }
+    }
+
+    if (stepIndex === TraceSteps.Redact) {
+      return redactReadiness;
+    }
+
+    if (
+      stepIndex === TraceSteps.Review &&
+      watchedScreens.some((screen) => !screen.src)
+    ) {
+      return {
+        isBlockingNavigation: true,
+        reason: "Screen images are still being prepared.",
+      };
+    }
+
+    return { isBlockingNavigation: false };
+  }, [
+    draftFetchResult,
+    isFetchingVideoFiles,
+    redactReadiness,
+    stepIndex,
+    watchedScreens,
+  ]);
+
   const handleNext = async () => {
+    if (activeStepReadiness.isBlockingNavigation) {
+      toast.error(
+        activeStepReadiness.reason ?? "Editor assets are still loading.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
@@ -618,7 +709,12 @@ export default function Page() {
           />
         );
       case 1:
-        return <RedactScreen jumpTarget={redactScreenJumpTarget} />;
+        return (
+          <RedactScreen
+            jumpTarget={redactScreenJumpTarget}
+            onNavigationReadinessChange={setRedactReadiness}
+          />
+        );
       case 2:
         return <Review capture={capture} />;
       default:
@@ -790,14 +886,26 @@ export default function Page() {
                     >
                       Back
                     </Button>
-                    {
-                      <Button onClick={handleNext} disabled={isSubmitting}>
+                    <div className="flex flex-col items-end gap-1">
+                      <Button
+                        onClick={handleNext}
+                        disabled={
+                          isSubmitting ||
+                          activeStepReadiness.isBlockingNavigation
+                        }
+                      >
                         {isSubmitting && (
                           <Loader2 className="size-4 animate-spin" />
                         )}
                         {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
                       </Button>
-                    }
+                      {activeStepReadiness.isBlockingNavigation &&
+                      activeStepReadiness.reason ? (
+                        <p className="max-w-64 text-right text-xs text-muted-foreground">
+                          {activeStepReadiness.reason}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 </nav>
               </>

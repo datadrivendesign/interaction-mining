@@ -58,11 +58,13 @@ export default function RedactScreenCanvas({
   vh,
   copied,
   setCopied,
+  onImageStatusChange,
 }: {
   screen: FrameData;
   vh: any;
   copied: Redaction[];
   setCopied: React.Dispatch<React.SetStateAction<Redaction[]>>;
+  onImageStatusChange?: (imageStatus: "loading" | "loaded" | "failed") => void;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
   const [watchRedactions] = useWatch({
@@ -347,6 +349,7 @@ export default function RedactScreenCanvas({
           redactions={redactionsOnScreen}
           vh={{ vhBoxes, rootBounds }}
           mode={mode}
+          onImageStatusChange={onImageStatusChange}
         />
       </div>
     </RedactCanvasContext.Provider>

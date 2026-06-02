@@ -4,6 +4,7 @@ import {
   forwardRef,
   useCallback,
   useContext,
+  useEffect,
   useImperativeHandle,
 } from "react";
 import Konva from "konva";
@@ -27,6 +28,7 @@ export interface CanvasComponentProps {
   };
   redactions: Redaction[];
   mode: "pencil" | "eraser" | "select";
+  onImageStatusChange?: (imageStatus: "loading" | "loaded" | "failed") => void;
 }
 
 export interface CanvasRef {
@@ -34,7 +36,7 @@ export interface CanvasRef {
 }
 
 const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
-  function CanvasComponent({ screen, redactions, vh }, ref) {
+  function CanvasComponent({ screen, redactions, vh, onImageStatusChange }, ref) {
     const { vhBoxes, rootBounds } = vh;
     const {
       mode,
@@ -59,6 +61,10 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       setIsPanning,
       getRelativePointer,
     } = useRedactStageViewport({ imageSrc: screen.src });
+
+    useEffect(() => {
+      onImageStatusChange?.(imageStatus);
+    }, [imageStatus, onImageStatusChange]);
 
     const updateRect = useCallback(
       (id: string, rect: Partial<Redaction>) => {
