@@ -77,7 +77,7 @@ export function GestureSelection({
         const wasDrag = prev.type === GESTURE_TYPES.DRAG;
         const isDrag = storedType === GESTURE_TYPES.DRAG;
         const isGestureTypeTransition = prev.type !== storedType;
-        const resetDragPoints = isGestureTypeTransition && (wasDrag || isDrag);
+        const resetDragPoints = isGestureTypeTransition && isDrag;
 
         return {
           ...prev,
