@@ -68,7 +68,10 @@ export function GestureMenu({
   const [horizontalOffset, setHorizontalOffset] = useState(0);
   const [verticalOffset, setVerticalOffset] = useState(0);
   const [editorMaxHeight, setEditorMaxHeight] = useState<number | null>(null);
+  const hasSelectedGesture = Boolean(normalizeGestureType(gesture.type));
   const shouldHideEditorForDragPlacement = isPlacingDragPoint(gesture);
+  const shouldShowEditor =
+    hasSelectedGesture && !shouldHideEditorForDragPlacement;
   const isWaitingForDragEndPoint = isAwaitingDragEndPoint(gesture);
   const menuAnchor = getGestureMenuAnchor(position, gesture, canvasSize);
   const lastPlacementAnchorRef = useRef<{
@@ -260,7 +263,7 @@ export function GestureMenu({
       >
         {/* Measure selection row here from ref. Editor overlay is absolutely placed so its out of flow, and does not contribute to parent height. */}
         <div ref={selectionRef} className="relative w-full">
-          {placeTextareaAbove && !shouldHideEditorForDragPlacement && (
+          {placeTextareaAbove && shouldShowEditor && (
             <div
               ref={editorContainerRef}
               className="absolute left-0 w-full overflow-y-auto"
@@ -278,7 +281,7 @@ export function GestureMenu({
             openAbove={placeTextareaAbove}
           />
 
-          {!placeTextareaAbove && !shouldHideEditorForDragPlacement && (
+          {!placeTextareaAbove && shouldShowEditor && (
             <div
               ref={editorContainerRef}
               className="absolute left-0 w-full overflow-y-auto"

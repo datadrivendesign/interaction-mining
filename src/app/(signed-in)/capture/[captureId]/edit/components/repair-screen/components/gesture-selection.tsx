@@ -11,6 +11,7 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -30,11 +31,12 @@ import {
   GestureOption,
   COMMAND_ITEM_CLASS,
   COMMAND_LIST_CLASS,
+  flattenGestureOptions,
   findGestureOption,
   normalizeGestureType,
   POPOVER_CONTENT_CLASS,
 } from "@/lib/utils/gesture-options";
-import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { GESTURE_GROUP_TYPES, GESTURE_TYPES } from "@/lib/utils/gesture-types";
 import { GestureContext } from "./gesture-menu";
 
 export function GestureSelection({
@@ -47,6 +49,7 @@ export function GestureSelection({
   const { gesture, setGesture, gestureOptions } = useContext(GestureContext);
   const [open, setOpen] = useState(gesture.type === null);
   const [value, setValue] = useState<string>(gesture.type ?? "");
+  const [search, setSearch] = useState("");
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
 
   const toStoredGestureType = (raw: string): ScreenGesture["type"] | null => {
@@ -60,6 +63,13 @@ export function GestureSelection({
   }, [gesture.type]);
 
   const selectedStoredType = toStoredGestureType(value);
+  const concreteGestureOptions = flattenGestureOptions(gestureOptions).filter(
+    (option) =>
+      option.value !== GESTURE_GROUP_TYPES.SWIPE &&
+      option.value !== GESTURE_GROUP_TYPES.ZOOM &&
+      option.value !== GESTURE_GROUP_TYPES.ROTATE,
+  );
+  const isSearching = search.trim().length > 0;
   const dragHelperText =
     selectedStoredType === GESTURE_TYPES.DRAG
       ? gesture.x === null || gesture.y === null
@@ -129,107 +139,148 @@ export function GestureSelection({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className={POPOVER_CONTENT_CLASS}
+          className={cn(
+            POPOVER_CONTENT_CLASS,
+            "group/gesture-popover",
+          )}
           side={openAbove ? "top" : "bottom"}
           align="start"
-          sideOffset={4}
-          avoidCollisions={false}
+          sideOffset={6}
+          avoidCollisions
         >
-          <Command>
-            <CommandList className={COMMAND_LIST_CLASS}>
+          <Command className="group-data-[side=top]/gesture-popover:flex-col-reverse">
+            <CommandInput
+              value={search}
+              onValueChange={setSearch}
+              placeholder="Search gestures..."
+            />
+            <CommandList
+              id="gesture-selection-list"
+              className={COMMAND_LIST_CLASS}
+            >
               <CommandEmpty>No gesture found.</CommandEmpty>
               <CommandGroup>
-                {gestureOptions.map((option) =>
-                  option.subGestures ? (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      onMouseEnter={() => {
-                        setHoveredOption(option.value);
-                      }}
-                      onMouseLeave={() => {
-                        setHoveredOption(null);
-                      }}
-                      className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
-                    >
-                      <div
-                        id={`${option.value}-label`}
-                        className={`inline-flex w-full items-center gap-2 transition-transform duration-200 ${
-                          hoveredOption === option.value
-                            ? "-translate-x-full"
-                            : "translate-x-0"
-                        }`}
+                {isSearching
+                  ? concreteGestureOptions.map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        value={`${option.label} ${option.value}`}
+                        className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
+                        onSelect={() => {
+                          setValue(option.value);
+                          setSearch("");
+                          setOpen(false);
+                          focusDescriptionField();
+                        }}
                       >
-                        {option.icon}
-                        {option.label}
-                      </div>
-                      {/* Sub-gesture hidden menu shown on hover */}
-                      <div
-                        id={`${option.value}-sub-gestures`}
-                        className={`absolute w-full inset-0 flex justify-center items-center transition-transform duration-200 ${
-                          hoveredOption === option.value
-                            ? "translate-x-0"
-                            : "translate-x-full"
-                        }`}
-                      >
-                        {option.subGestures.map((subOption: GestureOption) => (
-                          <TooltipProvider
-                            key={subOption.value}
-                            delayDuration={0}
+                        <span className="inline-flex items-center gap-2">
+                          {value === option.value ? (
+                            <Check className={cn("h-4 w-4", "opacity-100")} />
+                          ) : (
+                            option.icon
+                          )}
+                          {option.label}
+                        </span>
+                      </CommandItem>
+                    ))
+                  : gestureOptions.map((option) =>
+                      option.subGestures ? (
+                        <CommandItem
+                          key={option.value}
+                          value={option.value}
+                          onMouseEnter={() => {
+                            setHoveredOption(option.value);
+                          }}
+                          onMouseLeave={() => {
+                            setHoveredOption(null);
+                          }}
+                          className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
+                        >
+                          <div
+                            id={`${option.value}-label`}
+                            className={`inline-flex w-full items-center gap-2 transition-transform duration-200 ${
+                              hoveredOption === option.value
+                                ? "-translate-x-full"
+                                : "translate-x-0"
+                            }`}
                           >
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  className="w-full cursor-pointer"
-                                  onClick={() => {
-                                    setValue(subOption.value);
-                                    setOpen(false);
-                                    focusDescriptionField();
-                                  }}
+                            {option.icon}
+                            {option.label}
+                          </div>
+                          {/* Sub-gesture hidden menu shown on hover */}
+                          <div
+                            id={`${option.value}-sub-gestures`}
+                            className={`absolute inset-0 flex w-full items-center justify-center transition-transform duration-200 ${
+                              hoveredOption === option.value
+                                ? "translate-x-0"
+                                : "translate-x-full"
+                            }`}
+                          >
+                            {option.subGestures.map(
+                              (subOption: GestureOption) => (
+                                <TooltipProvider
+                                  key={subOption.value}
+                                  delayDuration={0}
                                 >
-                                  <span className="inline-flex items-center gap-2">
-                                    {value === subOption.value ? (
-                                      <Check
-                                        className={cn("h-4 w-4", "opacity-100")}
-                                      />
-                                    ) : (
-                                      subOption.icon
-                                    )}
-                                  </span>
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                {subOption.label}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))}
-                      </div>
-                    </CommandItem>
-                  ) : (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
-                      onSelect={(currentValue) => {
-                        const selected =
-                          currentValue === value ? "" : currentValue;
-                        const normalized = normalizeGestureType(selected);
-                        setValue(normalized ?? selected);
-                        setOpen(false);
-                        focusDescriptionField();
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        {value === option.value ? (
-                          <Check className={cn("h-4 w-4", "opacity-100")} />
-                        ) : (
-                          option.icon
-                        )}
-                        {option.label}
-                      </span>
-                    </CommandItem>
-                  ),
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        className="w-full cursor-pointer"
+                                        onClick={() => {
+                                          setValue(subOption.value);
+                                          setSearch("");
+                                          setOpen(false);
+                                          focusDescriptionField();
+                                        }}
+                                      >
+                                        <span className="inline-flex items-center gap-2">
+                                          {value === subOption.value ? (
+                                            <Check
+                                              className={cn(
+                                                "h-4 w-4",
+                                                "opacity-100",
+                                              )}
+                                            />
+                                          ) : (
+                                            subOption.icon
+                                          )}
+                                        </span>
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      {subOption.label}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ),
+                            )}
+                          </div>
+                        </CommandItem>
+                      ) : (
+                        <CommandItem
+                          key={option.value}
+                          value={option.value}
+                          className={cn(COMMAND_ITEM_CLASS, "cursor-pointer")}
+                          onSelect={(currentValue) => {
+                            const selected =
+                              currentValue === value ? "" : currentValue;
+                            const normalized = normalizeGestureType(selected);
+                            setValue(normalized ?? selected);
+                            setSearch("");
+                            setOpen(false);
+                            focusDescriptionField();
+                          }}
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            {value === option.value ? (
+                              <Check className={cn("h-4 w-4", "opacity-100")} />
+                            ) : (
+                              option.icon
+                            )}
+                            {option.label}
+                          </span>
+                        </CommandItem>
+                      ),
                 )}
               </CommandGroup>
             </CommandList>
