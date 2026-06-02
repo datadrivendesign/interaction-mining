@@ -95,9 +95,17 @@ export function GestureMenu({
     const markerX = (menuAnchor.x ?? 0) + (transform?.x ?? 0);
     const markerY = (menuAnchor.y ?? 0) + (transform?.y ?? 0);
     const droppableRect = droppableElement.getBoundingClientRect();
+    const safeAreaRect =
+      menuElement
+        .closest<HTMLElement>("[data-gesture-safe-area]")
+        ?.getBoundingClientRect() ?? droppableRect;
     const menuRect = menuElement.getBoundingClientRect();
 
     const margin = SAFE_ZONE_MARGIN_PX;
+    const safeAreaBottom = Math.max(
+      margin,
+      safeAreaRect.bottom - droppableRect.top - margin,
+    );
     const baseLeft = markerX + 16;
     // Keep the annotation menu anchored to the right of the gesture marker.
     // If there is insufficient room near the right edge, clamp it within the
@@ -119,7 +127,10 @@ export function GestureMenu({
     const selectionRect = selectionElement.getBoundingClientRect();
     const rootTop = markerY - MARKER_RADIUS_PX;
     const safeTop = margin;
-    const safeBottom = Math.max(safeTop, droppableRect.height - margin);
+    const safeBottom = Math.max(
+      safeTop,
+      Math.min(droppableRect.height - margin, safeAreaBottom),
+    );
     const safeHeight = Math.max(0, safeBottom - safeTop);
     const nextEditorMaxHeight = Math.max(
       MIN_EDITOR_MAX_HEIGHT_PX,
@@ -203,7 +214,7 @@ export function GestureMenu({
   // Determine whether to place the textarea above or below the marker.
   useLayoutEffect(() => {
     updatePlacement();
-  }, [shouldHideEditorForDragPlacement, updatePlacement]);
+  }, [shouldHideEditorForDragPlacement, shouldShowEditor, updatePlacement]);
 
   useEffect(() => {
     const menuElement = menuRef.current;
@@ -232,7 +243,7 @@ export function GestureMenu({
       resizeObserver.disconnect();
       window.removeEventListener("resize", updatePlacement);
     };
-  }, [shouldHideEditorForDragPlacement, updatePlacement]);
+  }, [shouldHideEditorForDragPlacement, shouldShowEditor, updatePlacement]);
 
   // Focus the description field of the gesture annotation editor
   const focusDescriptionField = () => {
