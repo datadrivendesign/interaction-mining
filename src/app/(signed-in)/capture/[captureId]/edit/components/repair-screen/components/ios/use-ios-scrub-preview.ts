@@ -71,12 +71,16 @@ export function useIosScrubPreview({
   );
 
   const activePreviewFrameSrc = useMemo(() => {
+    const sourceTime = scrubPreviewTime ?? pausedPreviewTime;
+    const selected =
+      sourceTime !== null ? getNearestPreviewThumbnail(sourceTime) : null;
+
     if (scrubPreviewTime !== null) {
-      return getNearestPreviewThumbnail(scrubPreviewTime)?.src ?? null;
+      return selected?.src ?? null;
     }
 
     if (pausedPreviewTime !== null) {
-      return getNearestPreviewThumbnail(pausedPreviewTime)?.src ?? null;
+      return selected?.src ?? null;
     }
 
     return null;
@@ -176,6 +180,7 @@ export function useIosScrubPreview({
         pendingSeekTimeRef.current = null;
         const scrubTargetTime = scrubPreviewTimeRef.current;
         if (
+          !isScrubPreviewActiveRef.current &&
           scrubTargetTime !== null &&
           Math.abs(video.currentTime - scrubTargetTime) <= 0.001
         ) {
@@ -243,7 +248,7 @@ export function useIosScrubPreview({
 
     setIncomingPreviewFrameSrc(activePreviewFrameSrc);
     setIsIncomingPreviewVisible(false);
-  }, [activePreviewFrameSrc, displayedPreviewFrameSrc]);
+  }, [activePreviewFrameSrc, displayedPreviewFrameSrc, incomingPreviewFrameSrc]);
 
   const handleIncomingPreviewLoad = useCallback((loadedSrc: string) => {
     if (loadedSrc !== activePreviewFrameSrcRef.current) {
@@ -422,6 +427,10 @@ export function useIosScrubPreview({
 
   const handleScrubActiveChange = useCallback((active: boolean) => {
     isScrubPreviewActiveRef.current = active;
+
+    if (active) {
+      setPausedPreviewTime(null);
+    }
 
     if (!active && scrubPreviewTimeRef.current === null) {
       pendingScrubDisplayTimeRef.current = null;
