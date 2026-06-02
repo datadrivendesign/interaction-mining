@@ -142,7 +142,7 @@
 
 ### Prerequisites
 
-- **Node.js 18+** (LTS recommended)
+- **Node.js 22.13.0+** (use `nvm use` from `.nvmrc`)
 - **MongoDB** (Atlas or local **with replica set enabled**; Prisma requires a replica set)
 - **Object Storage:** **MinIO** or **AWS S3** (for screenshots/large assets)
 - *(Optional)* **Android Studio / Android device** if you plan to collect on-device interaction data locally

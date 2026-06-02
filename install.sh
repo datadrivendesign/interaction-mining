@@ -49,19 +49,27 @@ print_section "Check Prerequisites"
 echo -e "${BLUE}Checking if the following dependencies are installed on your system:${NC}"
 echo ""
 echo "Web Requirements:"
-echo "  - Node.js (v16 or v18 recommended)"
+echo "  - Node.js (version in .nvmrc: 22.13.0)"
 echo "  - npm"
 echo ""
 
-# Ensure Node.js version (>=16.0.0) is installed using nvm or brew
-MIN_NODE_MAJOR=16
-INSTALL_NODE_VERSION="lts/*"
+# Load nvm when available; non-interactive shells often do not load it by default.
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$NVM_DIR/nvm.sh"
+fi
+
+# Ensure Node.js matches the project runtime.
+REQUIRED_NODE_VERSION="22.13.0"
+if [ -f ".nvmrc" ]; then
+  REQUIRED_NODE_VERSION=$(tr -d '[:space:]' < .nvmrc)
+fi
 
 if command -v node &>/dev/null; then
   NODE_VERSION=$(node -v | sed 's/v//')
-  IFS='.' read -r NODE_MAJOR NODE_MINOR NODE_PATCH <<< "$NODE_VERSION"
-  if (( NODE_MAJOR < MIN_NODE_MAJOR )); then
-    echo -e "${YELLOW}Node.js version $NODE_VERSION is too low. Installing a newer version...${NC}"
+  if [[ "$NODE_VERSION" != "$REQUIRED_NODE_VERSION" ]]; then
+    echo -e "${YELLOW}Node.js version $NODE_VERSION detected, but $REQUIRED_NODE_VERSION is required.${NC}"
     INSTALL_NODE=true
   else
     echo -e "${GREEN}✔ Node.js version $NODE_VERSION detected.${NC}"
@@ -73,13 +81,25 @@ else
 fi
 
 if [[ "$INSTALL_NODE" = true ]]; then
-  if command -v brew &>/dev/null; then
-    echo "Installing Node.js using brew..."
-    brew install node
+  if command -v nvm &>/dev/null; then
+    echo "Installing and using Node.js $REQUIRED_NODE_VERSION with nvm..."
+    nvm install "$REQUIRED_NODE_VERSION"
+    nvm use "$REQUIRED_NODE_VERSION"
+  elif command -v brew &>/dev/null; then
+    echo -e "${YELLOW}nvm is not installed. Installing Node.js using brew may not install the exact required version.${NC}"
+    brew install node@22
+    echo -e "${YELLOW}After install, make sure 'node -v' reports v$REQUIRED_NODE_VERSION before rerunning this script.${NC}"
   else
-    echo -e "${RED}brew is not installed. Please install brew to proceed.${NC}"
+    echo -e "${RED}Node.js $REQUIRED_NODE_VERSION is required. Install nvm or brew, then rerun this script.${NC}"
     exit 1
   fi
+fi
+
+NODE_VERSION=$(node -v | sed 's/v//')
+if [[ "$NODE_VERSION" != "$REQUIRED_NODE_VERSION" ]]; then
+  echo -e "${RED}Node.js version $NODE_VERSION is active, but $REQUIRED_NODE_VERSION is required.${NC}"
+  echo -e "${YELLOW}Run 'nvm use' from the project root or update your shell PATH before rerunning.${NC}"
+  exit 1
 fi
 
 # Ensure npm is available
