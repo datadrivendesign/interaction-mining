@@ -248,7 +248,7 @@ export function useIosScrubPreview({
 
     setIncomingPreviewFrameSrc(activePreviewFrameSrc);
     setIsIncomingPreviewVisible(false);
-  }, [activePreviewFrameSrc, displayedPreviewFrameSrc, incomingPreviewFrameSrc]);
+  }, [activePreviewFrameSrc, displayedPreviewFrameSrc]);
 
   const handleIncomingPreviewLoad = useCallback((loadedSrc: string) => {
     if (loadedSrc !== activePreviewFrameSrcRef.current) {
