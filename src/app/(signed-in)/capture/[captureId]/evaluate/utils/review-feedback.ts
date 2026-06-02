@@ -6,6 +6,7 @@ export interface ReviewComment {
   text: string;
   issueId?: string;
   destination?: TraceIssueDestination;
+  screenIds?: string[];
   imported?: boolean;
 }
 
@@ -48,7 +49,10 @@ function normalizeFeedbackLine(text: string) {
 }
 
 function normalizeSerializedText(text: string) {
-  return text.replace(/\s*\n+\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+  return text
+    .replace(/\s*\n+\s*/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function getEmbeddedScreenId(text: string) {
@@ -64,7 +68,9 @@ function getSortedScreens(screens: FrameData[]) {
 }
 
 function getScreenNumberById(screenId: string, screens: FrameData[]) {
-  const index = getSortedScreens(screens).findIndex((screen) => screen.id === screenId);
+  const index = getSortedScreens(screens).findIndex(
+    (screen) => screen.id === screenId,
+  );
   return index >= 0 ? index + 1 : null;
 }
 
@@ -111,7 +117,10 @@ export function parseFeedbackLine({
   const sortedScreens = getSortedScreens(screens);
 
   if (embeddedScreenId) {
-    const currentScreenNumber = getScreenNumberById(embeddedScreenId, sortedScreens);
+    const currentScreenNumber = getScreenNumberById(
+      embeddedScreenId,
+      sortedScreens,
+    );
     const body = screenMatch ? screenMatch[2] : withoutToken;
 
     if (currentScreenNumber) {
@@ -131,7 +140,9 @@ export function parseFeedbackLine({
     return {
       rawText,
       text: withoutToken,
-      body: screenMatch ? normalizeSerializedText(screenMatch[2]) : normalizeSerializedText(withoutToken),
+      body: screenMatch
+        ? normalizeSerializedText(screenMatch[2])
+        : normalizeSerializedText(withoutToken),
       screenId: embeddedScreenId,
       originalScreenNumber: screenMatch
         ? Number.parseInt(screenMatch[1], 10)
@@ -258,29 +269,48 @@ function parseFeedbackLines({
   const flowComments: ReviewComment[] = [];
   const sortedScreens = getSortedScreens(screens);
 
+  // Group screen-scoped lines by body text so that multi-screen comments
+  // (serialized as one line per screen) are re-assembled as a single imported
+  // comment with screenIds — matching their pre-serialization shape and
+  // collapsing correctly in the All Issues view via dedupeComments.
+  const screenGroups = new Map<string, { screenIds: string[]; body: string }>();
+
   getFeedbackLines(text).forEach((line) => {
-    const parsed = parseFeedbackLine({
-      text: line,
-      screens: sortedScreens,
-    });
+    const parsed = parseFeedbackLine({ text: line, screens: sortedScreens });
 
     if (!parsed.screenId || parsed.unresolved) {
       flowComments.push(
-        createImportedComment({
-          text: parsed.text,
-          destination,
-        }),
+        createImportedComment({ text: parsed.text, destination }),
       );
       return;
     }
 
-    commentsByScreen[parsed.screenId] = [
-      ...(commentsByScreen[parsed.screenId] ?? []),
-      createImportedComment({
-        text: parsed.text,
-        destination,
-      }),
-    ];
+    const groupKey = parsed.body.toLowerCase();
+    const existing = screenGroups.get(groupKey);
+    if (existing) {
+      existing.screenIds.push(parsed.screenId);
+    } else {
+      screenGroups.set(groupKey, {
+        screenIds: [parsed.screenId],
+        body: parsed.body,
+      });
+    }
+  });
+
+  screenGroups.forEach(({ screenIds, body }) => {
+    const comment: ReviewComment = {
+      id: crypto.randomUUID(),
+      text: body,
+      destination,
+      imported: true,
+      screenIds: screenIds.length > 1 ? screenIds : undefined,
+    };
+    screenIds.forEach((screenId) => {
+      commentsByScreen[screenId] = [
+        ...(commentsByScreen[screenId] ?? []),
+        comment,
+      ];
+    });
   });
 
   return { commentsByScreen, flowComments };
@@ -299,6 +329,8 @@ export function serializeReviewFeedbackState({
 
   const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
 
+  const serializedScreenCommentIds = new Set<string>();
+
   sortedScreens.forEach((screen, index) => {
     const screenComments = feedbackState.commentsByScreen[screen.id] ?? [];
     screenComments.forEach((comment) => {
@@ -306,19 +338,38 @@ export function serializeReviewFeedbackState({
         return;
       }
 
-      const serializedLine = ensureScreenToken(
-        ensureScreenPrefix(comment.text, index + 1),
-        screen.id,
-      );
-      if (comment.destination === "redaction") {
-        redactLines.push(serializedLine);
+      if (serializedScreenCommentIds.has(comment.id)) {
         return;
       }
-      if (comment.destination === "summarize") {
-        summarizeLines.push(serializedLine);
-        return;
-      }
-      annotateLines.push(serializedLine);
+      serializedScreenCommentIds.add(comment.id);
+
+      const targetScreenIds =
+        comment.screenIds && comment.screenIds.length > 0
+          ? comment.screenIds
+          : [screen.id];
+
+      targetScreenIds.forEach((screenId) => {
+        const targetIndex = sortedScreens.findIndex(
+          (candidate) => candidate.id === screenId,
+        );
+        if (targetIndex < 0) {
+          return;
+        }
+
+        const serializedLine = ensureScreenToken(
+          ensureScreenPrefix(comment.text, targetIndex + 1),
+          screenId,
+        );
+        if (comment.destination === "redaction") {
+          redactLines.push(serializedLine);
+          return;
+        }
+        if (comment.destination === "summarize") {
+          summarizeLines.push(serializedLine);
+          return;
+        }
+        annotateLines.push(serializedLine);
+      });
     });
   });
 

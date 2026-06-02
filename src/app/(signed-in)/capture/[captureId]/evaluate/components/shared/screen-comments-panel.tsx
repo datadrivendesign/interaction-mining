@@ -42,6 +42,9 @@ export function ScreenCommentsPanel({
   onFeedbackStateChange,
   hotkeyAction,
   onJumpToScreen,
+  externalSelectedScreenIds,
+  onExternalSelectedScreenIdsChange,
+  onComposerScreenModeChange,
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
@@ -49,6 +52,9 @@ export function ScreenCommentsPanel({
   onFeedbackStateChange?: (feedback: ReviewFeedbackState) => void;
   hotkeyAction?: ReviewCommentHotkeyAction | null;
   onJumpToScreen?: (screenId: string) => void;
+  externalSelectedScreenIds?: string[];
+  onExternalSelectedScreenIdsChange?: (ids: string[]) => void;
+  onComposerScreenModeChange?: (isActive: boolean) => void;
 }) {
   const [internalFeedbackState, setInternalFeedbackState] =
     useState<ReviewFeedbackState>(EMPTY_REVIEW_FEEDBACK_STATE);
@@ -56,7 +62,25 @@ export function ScreenCommentsPanel({
   const [showTextarea, setShowTextarea] = useState(false);
   const [customDestination, setCustomDestination] =
     useState<TraceIssueDestination>("annotation");
+  const [commentTarget, setCommentTarget] =
+    useState<ReviewCommentTarget>("screen");
+  const [_selectedScreenIds, _setSelectedScreenIds] = useState<string[]>([]);
   const [pendingIssue, setPendingIssue] = useState<TraceIssue | null>(null);
+
+  // Derive selectedScreenIds from external prop when provided, internal state otherwise.
+  const selectedScreenIds = externalSelectedScreenIds ?? _selectedScreenIds;
+  const setSelectedScreenIds = useCallback(
+    (next: string[] | ((prev: string[]) => string[])) => {
+      if (onExternalSelectedScreenIdsChange) {
+        const currentIds = externalSelectedScreenIds ?? [];
+        const nextIds = typeof next === "function" ? next(currentIds) : next;
+        onExternalSelectedScreenIdsChange(nextIds);
+      } else {
+        _setSelectedScreenIds(next);
+      }
+    },
+    [externalSelectedScreenIds, onExternalSelectedScreenIdsChange],
+  );
   const [placeholderValues, setPlaceholderValues] = useState<
     Record<string, string>
   >({});
@@ -90,7 +114,10 @@ export function ScreenCommentsPanel({
     [onFeedbackStateChange, resolvedFeedbackState],
   );
 
-  const sortedScreens = [...screens].sort((a, b) => a.timestamp - b.timestamp);
+  const sortedScreens = useMemo(
+    () => [...screens].sort((a, b) => a.timestamp - b.timestamp),
+    [screens],
+  );
   const screenMetaById = useMemo(
     () =>
       Object.fromEntries(
@@ -125,12 +152,23 @@ export function ScreenCommentsPanel({
     [activeScreen, resolvedFeedbackState.commentsByScreen],
   );
   const flowComments = resolvedFeedbackState.flowComments;
+  const dedupeComments = useCallback((comments: ReviewComment[]) => {
+    const seen = new Set<string>();
+    return comments.filter((comment) => {
+      if (seen.has(comment.id)) {
+        return false;
+      }
+      seen.add(comment.id);
+      return true;
+    });
+  }, []);
   const allComments = useMemo(
-    () => [
-      ...flowComments,
-      ...Object.values(resolvedFeedbackState.commentsByScreen).flat(),
-    ],
-    [flowComments, resolvedFeedbackState.commentsByScreen],
+    () =>
+      dedupeComments([
+        ...flowComments,
+        ...Object.values(resolvedFeedbackState.commentsByScreen).flat(),
+      ]),
+    [dedupeComments, flowComments, resolvedFeedbackState.commentsByScreen],
   );
   const usedIssueIds = useMemo(
     () =>
@@ -168,29 +206,97 @@ export function ScreenCommentsPanel({
         screenId: null,
         screenLabel: "Flow",
       })),
-      ...sortedScreens.flatMap((screen, index) =>
-        (resolvedFeedbackState.commentsByScreen[screen.id] ?? []).map(
-          (comment) => ({
-            comment,
-            target: "screen" as const,
-            screenId: screen.id,
-            screenLabel: `Screen ${index + 1}`,
-          }),
+      ...dedupeComments(
+        sortedScreens.flatMap(
+          (screen) => resolvedFeedbackState.commentsByScreen[screen.id] ?? [],
         ),
-      ),
+      ).map((comment) => {
+        const targetScreenIds =
+          comment.screenIds && comment.screenIds.length > 0
+            ? comment.screenIds
+            : Object.entries(resolvedFeedbackState.commentsByScreen)
+                .filter(([, comments]) =>
+                  comments.some((candidate) => candidate.id === comment.id),
+                )
+                .map(([screenId]) => screenId);
+        const screenLabels = targetScreenIds
+          .map((screenId) => screenMetaById[screenId]?.screenLabel)
+          .filter((label): label is string => Boolean(label));
+
+        return {
+          comment,
+          target: "screen" as const,
+          screenId: targetScreenIds.length === 1 ? targetScreenIds[0] : null,
+          screenLabel:
+            screenLabels.length > 1
+              ? `Screens ${screenLabels
+                  .map((label) => label.replace(/^Screen\s+/i, ""))
+                  .join(", ")}`
+              : (screenLabels[0] ?? "Screen"),
+        };
+      }),
     ],
-    [flowComments, resolvedFeedbackState.commentsByScreen, sortedScreens],
+    [
+      dedupeComments,
+      flowComments,
+      resolvedFeedbackState.commentsByScreen,
+      screenMetaById,
+      sortedScreens,
+    ],
   );
   const pendingPlaceholders = pendingIssue
     ? getTemplatePlaceholders(pendingIssue.annotation)
     : [];
-  const pendingPreview = pendingIssue
-    ? fillIssueTemplate(
-        pendingIssue.annotation,
-        screenNumber,
-        placeholderValues,
-      )
-    : "";
+  const pendingPreview = useMemo(() => {
+    if (!pendingIssue) return "";
+    const selectedNumbers = selectedScreenIds
+      .map((id) => screenMetaById[id]?.screenNumber)
+      .filter((n): n is number => n !== undefined)
+      .sort((a, b) => a - b);
+    const firstNum = selectedNumbers[0] ?? screenNumber;
+    const filled = fillIssueTemplate(
+      pendingIssue.annotation,
+      firstNum,
+      placeholderValues,
+    );
+    if (selectedNumbers.length > 1) {
+      return filled.replace(
+        /^Screen \d+:/i,
+        `Screens ${selectedNumbers.join(", ")}:`,
+      );
+    }
+    return filled;
+  }, [
+    pendingIssue,
+    selectedScreenIds,
+    screenMetaById,
+    screenNumber,
+    placeholderValues,
+  ]);
+
+  // Body text without the "Screen N:" prefix — used when storing the comment so
+  // that screen context lives only in screenIds/commentsByScreen, not duplicated
+  // in the text (which would become stale if screens are later removed).
+  const pendingBody = useMemo(() => {
+    if (!pendingIssue) return "";
+    const firstNum =
+      selectedScreenIds
+        .map((id) => screenMetaById[id]?.screenNumber)
+        .filter((n): n is number => n !== undefined)
+        .sort((a, b) => a - b)[0] ?? screenNumber;
+    const filled = fillIssueTemplate(
+      pendingIssue.annotation,
+      firstNum,
+      placeholderValues,
+    );
+    return filled.replace(/^Screen\s+\d+:\s*/i, "").trim();
+  }, [
+    pendingIssue,
+    selectedScreenIds,
+    screenMetaById,
+    screenNumber,
+    placeholderValues,
+  ]);
 
   useEffect(() => {
     if (!pendingIssue && !showTextarea) {
@@ -202,13 +308,31 @@ export function ScreenCommentsPanel({
     });
   }, [pendingIssue, showTextarea]);
 
+  useEffect(() => {
+    if (selectedScreenIds.length > 0 || !activeScreen) {
+      return;
+    }
+
+    setSelectedScreenIds([activeScreen.id]);
+  }, [activeScreen, selectedScreenIds.length, setSelectedScreenIds]);
+
+  // Notify parent when the composer enters/exits screen-targeting mode so the
+  // gallery can show/hide its selection checkbox overlay.
+  useEffect(() => {
+    const isInScreenMode =
+      commentTarget === "screen" && (showTextarea || pendingIssue !== null);
+    onComposerScreenModeChange?.(isInScreenMode);
+  }, [commentTarget, showTextarea, pendingIssue, onComposerScreenModeChange]);
+
   const resetComposer = useCallback(() => {
     setDraft("");
     setShowTextarea(false);
     setCustomDestination("annotation");
+    setCommentTarget("screen");
+    setSelectedScreenIds(activeScreen ? [activeScreen.id] : []);
     setPendingIssue(null);
     setPlaceholderValues({});
-  }, []);
+  }, [activeScreen, setSelectedScreenIds]);
 
   const addComment = useCallback(
     ({
@@ -216,11 +340,13 @@ export function ScreenCommentsPanel({
       issueId,
       destination,
       target,
+      screenIds,
     }: {
       text: string;
       issueId?: string;
       destination?: TraceIssueDestination;
       target: "screen" | "flow";
+      screenIds?: string[];
     }) => {
       if (!text.trim() || !destination) {
         return;
@@ -231,6 +357,10 @@ export function ScreenCommentsPanel({
         text: text.trim(),
         issueId,
         destination,
+        screenIds:
+          target === "screen" && screenIds && screenIds.length > 1
+            ? screenIds
+            : undefined,
       };
 
       setFeedbackState((prev) => {
@@ -241,19 +371,27 @@ export function ScreenCommentsPanel({
           };
         }
 
-        if (!activeScreen) {
+        const targetScreenIds =
+          screenIds && screenIds.length > 0
+            ? screenIds
+            : activeScreen
+              ? [activeScreen.id]
+              : [];
+        if (targetScreenIds.length === 0) {
           return prev;
         }
 
+        const commentsByScreen = { ...prev.commentsByScreen };
+        targetScreenIds.forEach((screenId) => {
+          commentsByScreen[screenId] = [
+            ...(commentsByScreen[screenId] ?? []),
+            nextComment,
+          ];
+        });
+
         return {
           ...prev,
-          commentsByScreen: {
-            ...prev.commentsByScreen,
-            [activeScreen.id]: [
-              ...(prev.commentsByScreen[activeScreen.id] ?? []),
-              nextComment,
-            ],
-          },
+          commentsByScreen,
         };
       });
 
@@ -275,19 +413,16 @@ export function ScreenCommentsPanel({
           };
         }
 
-        const targetScreenId = screenId ?? activeScreen?.id;
-        if (!targetScreenId) {
-          return prev;
-        }
-
         return {
           ...prev,
-          commentsByScreen: {
-            ...prev.commentsByScreen,
-            [targetScreenId]: (
-              prev.commentsByScreen[targetScreenId] ?? []
-            ).filter((comment) => comment.id !== id),
-          },
+          commentsByScreen: Object.fromEntries(
+            Object.entries(prev.commentsByScreen).map(
+              ([targetScreenId, comments]) => [
+                targetScreenId,
+                comments.filter((comment) => comment.id !== id),
+              ],
+            ),
+          ),
         };
       });
 
@@ -295,7 +430,53 @@ export function ScreenCommentsPanel({
         setExpandedCommentId(null);
       }
     },
-    [activeScreen, expandedCommentId, setFeedbackState],
+    [expandedCommentId, setFeedbackState],
+  );
+
+  const removeCommentFromScreen = useCallback(
+    (commentId: string, screenIdToRemove: string) => {
+      setFeedbackState((prev) => {
+        const existing = Object.values(prev.commentsByScreen)
+          .flat()
+          .find((c) => c.id === commentId);
+        if (!existing) return prev;
+
+        const currentScreenIds =
+          existing.screenIds && existing.screenIds.length > 0
+            ? existing.screenIds
+            : Object.keys(prev.commentsByScreen).filter((sid) =>
+                (prev.commentsByScreen[sid] ?? []).some(
+                  (c) => c.id === commentId,
+                ),
+              );
+
+        const remainingScreenIds = currentScreenIds.filter(
+          (sid) => sid !== screenIdToRemove,
+        );
+        const strippedText = existing.text
+          .replace(/^Screens?\s+[\d,\s]+:\s*/i, "")
+          .trim();
+        const updated: ReviewComment = {
+          ...existing,
+          screenIds:
+            remainingScreenIds.length > 1 ? remainingScreenIds : undefined,
+          text: strippedText.length > 0 ? strippedText : existing.text,
+        };
+
+        return {
+          ...prev,
+          commentsByScreen: Object.fromEntries(
+            Object.entries(prev.commentsByScreen).map(([sid, comments]) => [
+              sid,
+              sid === screenIdToRemove
+                ? comments.filter((c) => c.id !== commentId)
+                : comments.map((c) => (c.id === commentId ? updated : c)),
+            ]),
+          ),
+        };
+      });
+    },
+    [setFeedbackState],
   );
 
   const updateComment = useCallback(
@@ -315,23 +496,22 @@ export function ScreenCommentsPanel({
           };
         }
 
-        const targetScreenId = screenId ?? activeScreen?.id;
-        if (!targetScreenId) {
-          return prev;
-        }
-
         return {
           ...prev,
-          commentsByScreen: {
-            ...prev.commentsByScreen,
-            [targetScreenId]: (prev.commentsByScreen[targetScreenId] ?? []).map(
-              (comment) => (comment.id === id ? { ...comment, text } : comment),
+          commentsByScreen: Object.fromEntries(
+            Object.entries(prev.commentsByScreen).map(
+              ([targetScreenId, comments]) => [
+                targetScreenId,
+                comments.map((comment) =>
+                  comment.id === id ? { ...comment, text } : comment,
+                ),
+              ],
             ),
-          },
+          ),
         };
       });
     },
-    [activeScreen, setFeedbackState],
+    [setFeedbackState],
   );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -340,7 +520,8 @@ export function ScreenCommentsPanel({
       addComment({
         text: draft,
         destination: customDestination,
-        target: customDestination === "summarize" ? "flow" : "screen",
+        target: commentTarget,
+        screenIds: commentTarget === "screen" ? selectedScreenIds : undefined,
       });
     }
     if (event.key === "Escape") {
@@ -354,12 +535,16 @@ export function ScreenCommentsPanel({
         return;
       }
 
-      const placeholders = getTemplatePlaceholders(issue.annotation);
-      if (placeholders.length > 0) {
+      if (issue.scope === "screen") {
         setPendingIssue(issue);
         setShowTextarea(false);
+        setCommentTarget("screen");
+        setCustomDestination(issue.destination);
+        setSelectedScreenIds(activeScreen ? [activeScreen.id] : []);
         setPlaceholderValues(
-          placeholders.reduce<Record<string, string>>((acc, token) => {
+          getTemplatePlaceholders(issue.annotation).reduce<
+            Record<string, string>
+          >((acc, token) => {
             acc[token] = "";
             return acc;
           }, {}),
@@ -374,7 +559,7 @@ export function ScreenCommentsPanel({
         target: issue.scope,
       });
     },
-    [activeScreen, addComment, screenNumber],
+    [activeScreen, addComment, screenNumber, setSelectedScreenIds],
   );
 
   const handleOtherSelect = useCallback(() => {
@@ -382,9 +567,11 @@ export function ScreenCommentsPanel({
     setPlaceholderValues({});
     setDraft("");
     setCustomDestination("annotation");
+    setCommentTarget("screen");
+    setSelectedScreenIds(activeScreen ? [activeScreen.id] : []);
     setShowTextarea(true);
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, []);
+  }, [activeScreen, setSelectedScreenIds]);
 
   const handlePlaceholderValueChange = (token: string, value: string) => {
     setPlaceholderValues((prev) => ({
@@ -407,10 +594,12 @@ export function ScreenCommentsPanel({
 
     event.preventDefault();
     addComment({
-      text: pendingPreview,
+      text: pendingBody,
       issueId: pendingIssue.id,
-      destination: pendingIssue.destination,
+      destination: customDestination,
       target: pendingIssue.scope,
+      screenIds:
+        pendingIssue.scope === "screen" ? selectedScreenIds : undefined,
     });
   };
 
@@ -456,6 +645,18 @@ export function ScreenCommentsPanel({
     [onJumpToScreen],
   );
 
+  const handleSelectedScreenToggle = useCallback(
+    (screenId: string, checked: boolean) => {
+      setSelectedScreenIds((prev) => {
+        if (checked) {
+          return prev.includes(screenId) ? prev : [...prev, screenId];
+        }
+        return prev.filter((id) => id !== screenId);
+      });
+    },
+    [setSelectedScreenIds],
+  );
+
   const renderCommentCard = ({
     comment,
     target,
@@ -475,6 +676,17 @@ export function ScreenCommentsPanel({
     const screenLabelForComment =
       screenLabelOverride ?? screenMeta?.screenLabel ?? "Screen";
 
+    const multiScreenIds =
+      comment.screenIds && comment.screenIds.length > 1
+        ? comment.screenIds
+        : null;
+    const screenDetails = multiScreenIds
+      ? multiScreenIds.map((sid) => ({
+          screenId: sid,
+          screenLabel: screenMetaById[sid]?.screenLabel ?? "Screen",
+        }))
+      : undefined;
+
     return (
       <CommentCard
         key={comment.id}
@@ -490,13 +702,17 @@ export function ScreenCommentsPanel({
         onUpdateText={(text) =>
           updateComment(target, comment.id, text, screenId)
         }
-        screenLabel={
-          target === "screen" && screenId ? screenLabelForComment : undefined
-        }
+        screenLabel={target === "screen" ? screenLabelForComment : undefined}
         showJumpAction={showJumpAction}
         onJumpToScreen={
           showJumpAction && target === "screen" && screenId
             ? () => handleJumpToScreen(screenId)
+            : undefined
+        }
+        screenDetails={screenDetails}
+        onRemoveFromScreen={
+          screenDetails
+            ? (sid) => removeCommentFromScreen(comment.id, sid)
             : undefined
         }
       />
@@ -588,29 +804,40 @@ export function ScreenCommentsPanel({
               pendingPreview={pendingPreview}
               showTextarea={showTextarea}
               customDestination={customDestination}
+              commentTarget={commentTarget}
               draft={draft}
               screenLabel={screenLabel}
               hasActiveScreen={!!activeScreen}
+              screens={sortedScreens}
+              selectedScreenIds={selectedScreenIds}
               onPlaceholderValueChange={handlePlaceholderValueChange}
               onPlaceholderKeyDown={handlePlaceholderKeyDown}
               onAddPendingIssue={() =>
                 pendingIssue &&
                 addComment({
-                  text: pendingPreview,
+                  text: pendingBody,
                   issueId: pendingIssue.id,
-                  destination: pendingIssue.destination,
+                  destination: customDestination,
                   target: pendingIssue.scope,
+                  screenIds:
+                    pendingIssue.scope === "screen"
+                      ? selectedScreenIds
+                      : undefined,
                 })
               }
               onResetComposer={resetComposer}
               onSetCustomDestination={setCustomDestination}
+              onSetCommentTarget={setCommentTarget}
+              onSelectedScreenToggle={handleSelectedScreenToggle}
               onDraftChange={setDraft}
               onDraftKeyDown={handleKeyDown}
               onAddCustomIssue={() =>
                 addComment({
                   text: draft,
                   destination: customDestination,
-                  target: customDestination === "summarize" ? "flow" : "screen",
+                  target: commentTarget,
+                  screenIds:
+                    commentTarget === "screen" ? selectedScreenIds : undefined,
                 })
               }
             />
@@ -642,7 +869,8 @@ export function ScreenCommentsPanel({
                     target: entry.target,
                     screenId: entry.screenId,
                     screenLabelOverride: entry.screenLabel,
-                    showJumpAction: entry.target === "screen",
+                    showJumpAction:
+                      entry.target === "screen" && Boolean(entry.screenId),
                   }),
                 )}
               </div>

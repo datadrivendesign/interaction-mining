@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Play } from "lucide-react";
+import { Check, Play } from "lucide-react";
 import {
   findGestureOption,
   normalizeGestureType,
@@ -27,6 +27,8 @@ export function ReviewGalleryIOS({
   onScreenSelect,
   onReplayScreen,
   canReplay = false,
+  selectedScreenIds,
+  onSelectedScreenToggle,
 }: {
   traceData: TraceFormData;
   activeScreenId: string | null;
@@ -34,6 +36,8 @@ export function ReviewGalleryIOS({
   onScreenSelect: (id: string, timestamp: number) => void;
   onReplayScreen?: (id: string, timestamp: number) => void;
   canReplay?: boolean;
+  selectedScreenIds?: string[];
+  onSelectedScreenToggle?: (screenId: string, checked: boolean) => void;
 }) {
   const [orientationByScreenId, setOrientationByScreenId] = useState<
     Record<string, "portrait" | "landscape">
@@ -124,6 +128,12 @@ export function ReviewGalleryIOS({
                   : undefined
               }
               canReplay={canReplay}
+              isSelected={selectedScreenIds?.includes(screen.id) ?? false}
+              onSelectedToggle={
+                onSelectedScreenToggle
+                  ? (checked) => onSelectedScreenToggle(screen.id, checked)
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -145,6 +155,8 @@ function ReviewFigureIOS({
   onJump,
   onReplay,
   canReplay,
+  isSelected,
+  onSelectedToggle,
 }: {
   cardRef?: (node: HTMLElement | null) => void;
   index: number;
@@ -158,6 +170,8 @@ function ReviewFigureIOS({
   onJump: () => void;
   onReplay?: () => void;
   canReplay: boolean;
+  isSelected?: boolean;
+  onSelectedToggle?: (checked: boolean) => void;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -231,6 +245,33 @@ function ReviewFigureIOS({
             title={`Replay around Screen ${index + 1}`}
           >
             <Play className="size-3.5 fill-current" />
+          </button>
+        )}
+
+        {/* Selection checkbox overlay */}
+        {onSelectedToggle !== undefined && (
+          <button
+            type="button"
+            aria-label={
+              isSelected
+                ? `Deselect screen ${index + 1}`
+                : `Select screen ${index + 1}`
+            }
+            className="absolute bottom-1 left-1 z-30 flex size-5 items-center justify-center rounded border-2 shadow-sm transition-colors"
+            style={{
+              background: isSelected
+                ? "rgb(124 58 237)"
+                : "rgba(255,255,255,0.9)",
+              borderColor: isSelected ? "rgb(124 58 237)" : "rgb(163 163 163)",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectedToggle(!isSelected);
+            }}
+          >
+            {isSelected && (
+              <Check className="size-3 text-white" strokeWidth={3} />
+            )}
           </button>
         )}
 

@@ -149,7 +149,88 @@ export function FeedbackChecklist({
       }),
     [feedback, screens],
   );
-  const remaining = items.length - checkedItems.size;
+  const displayItems = useMemo(() => {
+    const screenGroups = new Map<
+      string,
+      {
+        item: (typeof items)[number];
+        screenIds: string[];
+        screenLabels: string[];
+      }
+    >();
+    const ungrouped: Array<{
+      item: (typeof items)[number];
+      screenIds: string[];
+      screenLabels: string[];
+    }> = [];
+
+    items.forEach((item) => {
+      if (!item.screenId || item.unresolved) {
+        ungrouped.push({
+          item,
+          screenIds: item.screenId ? [item.screenId] : [],
+          screenLabels:
+            item.originalScreenNumber !== null
+              ? [`Screen ${item.originalScreenNumber}`]
+              : [],
+        });
+        return;
+      }
+
+      const groupKey = item.body.toLowerCase();
+      const existing = screenGroups.get(groupKey);
+      const screenLabel =
+        item.originalScreenNumber !== null
+          ? `Screen ${item.originalScreenNumber}`
+          : "Screen";
+      if (existing) {
+        existing.screenIds.push(item.screenId);
+        existing.screenLabels.push(screenLabel);
+        return;
+      }
+
+      screenGroups.set(groupKey, {
+        item,
+        screenIds: [item.screenId],
+        screenLabels: [screenLabel],
+      });
+    });
+
+    // Sort each multi-screen group so chips appear in ascending screen-number order.
+    screenGroups.forEach((group) => {
+      const paired = group.screenIds.map((id, i) => ({
+        id,
+        label: group.screenLabels[i],
+        num: parseInt(group.screenLabels[i].replace(/^Screen\s+/i, ""), 10) || 0,
+      }));
+      paired.sort((a, b) => a.num - b.num);
+      group.screenIds = paired.map((p) => p.id);
+      group.screenLabels = paired.map((p) => p.label);
+    });
+
+    return [...ungrouped, ...Array.from(screenGroups.values())].map(
+      (entry, index) => {
+        const isMultiScreen = entry.screenIds.length > 1;
+        return {
+          ...entry,
+          id: isMultiScreen
+            ? `screens:${entry.screenIds.join(",")}:${entry.item.body}`
+            : getChecklistItemId({
+                screenId: entry.item.screenId,
+                originalScreenNumber: entry.item.originalScreenNumber,
+                index,
+              }),
+          text: isMultiScreen
+            ? `Screens ${entry.screenLabels
+                .map((label) => label.replace(/^Screen\s+/i, ""))
+                .join(", ")}: ${entry.item.body}`
+            : entry.item.text,
+          isMultiScreen,
+        };
+      },
+    );
+  }, [items]);
+  const remaining = displayItems.length - checkedItems.size;
   const allDone = remaining === 0;
   const summaryLabel = `${stepLabel} Feedback`;
   const hasPhaseTabs = feedbackTabs.some((tab) => tab.count > 0);
@@ -165,7 +246,7 @@ export function FeedbackChecklist({
   }, [allDone, checkedItems.size]);
 
   // Nothing to show → render nothing.
-  if (items.length === 0) return null;
+  if (displayItems.length === 0) return null;
 
   const handleToggle = (itemId: string, checked: boolean) => {
     onCheckedItemsChange((prev) => {
@@ -184,14 +265,14 @@ export function FeedbackChecklist({
           layoutMode === "side" ? "min-h-0 flex-1 basis-0" : "max-h-28",
         )}
       >
-        {items.map((item, index) => {
-          const itemId = getChecklistItemId({
-            screenId: item.screenId,
-            originalScreenNumber: item.originalScreenNumber,
-            index,
-          });
+        {displayItems.map((displayItem) => {
+          const item = displayItem.item;
+          const itemId = displayItem.id;
           const isJumpable = Boolean(
-            item.screenId && !item.unresolved && onJumpToScreen,
+            item.screenId &&
+              !item.unresolved &&
+              !displayItem.isMultiScreen &&
+              onJumpToScreen,
           );
           const isChecked = checkedItems.has(itemId);
           const id = `feedback-${itemId}`;
@@ -205,7 +286,39 @@ export function FeedbackChecklist({
               />
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="text-xs leading-snug">
-                  {isJumpable ? (
+                  {displayItem.isMultiScreen ? (
+                    <div className="space-y-1">
+                      <div
+                        className={cn(
+                          isChecked
+                            ? "line-through text-muted-foreground"
+                            : "text-neutral-800 dark:text-neutral-200",
+                        )}
+                      >
+                        {renderInlineMarkdown(displayItem.item.body)}
+                      </div>
+                      {onJumpToScreen && (
+                        <div className="flex flex-wrap gap-1">
+                          {displayItem.screenIds.map((screenId, i) => (
+                            <button
+                              key={screenId}
+                              type="button"
+                              onClick={() => onJumpToScreen(screenId)}
+                              className={cn(
+                                "inline-flex cursor-pointer items-center gap-0.5 rounded-sm border px-1.5 py-0.5 text-[9px] font-medium transition-colors",
+                                isChecked
+                                  ? "border-neutral-300 bg-neutral-100 text-muted-foreground dark:border-neutral-700 dark:bg-neutral-800"
+                                  : "border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/50",
+                              )}
+                            >
+                              {displayItem.screenLabels[i]}
+                              <ExternalLink className="ml-0.5 size-2.5" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : isJumpable ? (
                     <button
                       type="button"
                       className="inline-flex cursor-pointer items-start gap-1 text-left"
@@ -219,7 +332,7 @@ export function FeedbackChecklist({
                             : "text-violet-700 decoration-violet-400 hover:text-violet-800 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200",
                         )}
                       >
-                        {renderInlineMarkdown(item.text)}
+                        {renderInlineMarkdown(displayItem.text)}
                       </span>
                       <ExternalLink
                         className={cn(
@@ -238,7 +351,7 @@ export function FeedbackChecklist({
                           : "text-neutral-800 dark:text-neutral-200",
                       )}
                     >
-                      {renderInlineMarkdown(item.text)}
+                      {renderInlineMarkdown(displayItem.text)}
                     </div>
                   )}
                 </div>
