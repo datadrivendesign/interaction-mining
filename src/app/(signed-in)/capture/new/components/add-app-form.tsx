@@ -44,39 +44,6 @@ export default function AddAppForm({
     }
   }
 
-  function convertToPrismaApp(data: any): AppInput {
-    const app = {
-      packageName: data.appId,
-      category: {
-        id:
-          platform === Platform.ANDROID
-            ? `${data.genre}`
-            : `${data.primaryGenreId}`,
-        name:
-          platform === Platform.ANDROID
-            ? `${data.genreId}`
-            : `${data.primaryGenre}`,
-      },
-      metadata: {
-        company: data.developer ?? "unknown",
-        name: data.title ?? "unknown",
-        cover: data.screenshots?.[0] ?? data.icon ?? "unknown",
-        description: data.description ?? "unknown",
-        icon: data.icon ?? "unknown",
-        rating: data.score ?? -1,
-        reviews: data.reviews ?? -1,
-        genre:
-          platform === Platform.ANDROID
-            ? (data.categories.map((c: any) => c.name) ?? [])
-            : (data.genres ?? []),
-        downloads: platform === Platform.ANDROID ? data.installs : "-1",
-        url: data.url ?? "unknown",
-      },
-      os: platform,
-    } as AppInput;
-    return app;
-  }
-
   async function handleAddApp() {
     const parsedAppId = parseStoreAppInput(newAppId);
     if (!parsedAppId || isAddingApp) return;
@@ -113,20 +80,30 @@ export default function AddAppForm({
         }
       }
 
-      const result =
-        platform === Platform.ANDROID
-          ? await getAndroidApp({ appId: parsedAppId })
-          : await getIosApp({ id: parsedAppId });
+      let appInput: AppInput;
 
-      if (!result || !result.ok) {
-        toast.error(
-          `Failed to fetch ${prettyOS(platform)} app. ${result?.message}`,
-        );
-        return;
+      if (platform === Platform.ANDROID) {
+        const result = await getAndroidApp({ appId: parsedAppId });
+        if (!result || !result.ok || !result.data) {
+          toast.error(
+            `Failed to fetch ${prettyOS(platform)} app. ${result?.message}`,
+          );
+          return;
+        }
+        appInput = result.data;
+      } else {
+        const result = await getIosApp({ id: parsedAppId });
+        if (!result || !result.ok || !result.data) {
+          toast.error(
+            `Failed to fetch ${prettyOS(platform)} app. ${result?.message}`,
+          );
+          return;
+        }
+        appInput = result.data;
       }
 
       if (platform === Platform.IOS) {
-        const existing = await checkIfAppExists(result.data?.appId, platform);
+        const existing = await checkIfAppExists(appInput.packageName, platform);
         if (existing) {
           toast.success("App already exists!");
           setApp({
@@ -138,7 +115,7 @@ export default function AddAppForm({
         }
       }
 
-      const saved = await saveApp(convertToPrismaApp(result.data));
+      const saved = await saveApp(appInput);
       if (saved.ok) {
         toast.success("App added!");
         setTimeout(() => {
