@@ -11,7 +11,7 @@
     "db:backfill-users": "dotenvx run --env-file=.env.local -- npx ts-node --esm prisma/scripts/backfill-users.mjs",
     "db:transition-to-cloudfront": "dotenvx run --env-file=.env.local -- npx ts-node --esm prisma/scripts/transition-to-cloudfront.mjs",
     "db:add-os-to-app": "dotenvx run --env-file=.env.local -- npx ts-node --esm prisma/scripts/add-os-to-app.mjs",
-    "lint": "next lint",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -117,9 +117,11 @@
     "use-image": "^1.1.1",
     "usehooks-ts": "^3.1.1",
     "uuid": "^11.1.1",
-    "vaul": "^1.1.2"
+    "vaul": "^1.1.2",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/lodash": "^4.17.17",
@@ -130,9 +132,9 @@
     "@typescript-eslint/parser": "^8.60.1",
     "babel-plugin-react-compiler": "^19.1.0-rc.1",
     "concurrently": "^9.1.2",
-    "eslint": "^8.57.1",
+    "eslint": "^9",
     "eslint-config-next": "^15.5.18",
-    "eslint-plugin-react-hooks": "^6.0.0-rc.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "postcss": "^8.5.15",
     "prisma": "^6.8.2",
     "tailwindcss": "^4.3.0",
@@ -146,7 +148,6 @@
     "@babel/plugin-transform-modules-systemjs": "^7.29.4",
     "brace-expansion": "^5.0.6",
     "picomatch": "^4.0.4",
-    "minimatch": "^10.2.3",
     "flatted": "^3.4.2",
     "tar": "^7.5.11",
     "svgo": "^3.3.3",

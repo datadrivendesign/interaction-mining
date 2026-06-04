@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import Image from "next/image";
 import clsx from "clsx";
@@ -91,7 +92,7 @@ export function Gallery() {
       <aside
         className={clsx(
           inspectData ? "hidden md:flex" : "flex",
-          "flex-col shrink-0 basis-full md:basis-[320px] h-full min-h-0 border-r border-muted-background divide-y divide-dimmed-background overflow-auto"
+          "flex-col shrink-0 basis-full md:basis-[320px] h-full min-h-0 border-r border-muted-background divide-y divide-dimmed-background overflow-auto",
         )}
       >
         {data.map((data, index) => (
@@ -101,7 +102,7 @@ export function Gallery() {
               "flex flex-col p-4 cursor-pointer",
               inspectData?.id === data?.id
                 ? "bg-muted-background"
-                : "bg-transparent"
+                : "bg-transparent",
             )}
             onClick={() => setInspectData(data)}
           >
@@ -132,20 +133,224 @@ export function Gallery() {
   );
 }
 
+function ScreenThumb({
+  screen,
+  index,
+  total,
+  imageMaxHeightPx,
+}: {
+  screen: Screen;
+  index: number;
+  total: number;
+  imageMaxHeightPx: number | null;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [naturalSize, setNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const isLandscape =
+    naturalSize !== null && naturalSize.width > naturalSize.height;
+  const aspectRatio = naturalSize
+    ? `${naturalSize.width} / ${naturalSize.height}`
+    : undefined;
+  const imageMaxHeight = imageMaxHeightPx
+    ? `${imageMaxHeightPx}px`
+    : "calc(100dvh - 22rem)";
+  const imageAspect = naturalSize ? naturalSize.width / naturalSize.height : 1;
+  const thumbWidth = naturalSize
+    ? `min(${naturalSize.width}px, calc(${imageMaxHeight} * ${imageAspect}), ${
+        isLandscape ? "100%" : "13rem"
+      })`
+    : undefined;
+  const figureStyle: React.CSSProperties = {
+    aspectRatio,
+    ...(thumbWidth ? { width: thumbWidth } : null),
+  };
+  const thumbStyle: React.CSSProperties | undefined = thumbWidth
+    ? { width: thumbWidth }
+    : undefined;
+  const isFinalScreen = index === total - 1;
+  const description = screen.gesture.description?.trim();
+
+  const handleLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.currentTarget;
+      if (img.naturalWidth && img.naturalHeight) {
+        setNaturalSize({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      }
+      setLoaded(true);
+    },
+    [],
+  );
+
+  return (
+    <div
+      className={clsx(
+        "flex flex-col items-center shrink-0 min-h-0 gap-1",
+        isLandscape ? "" : "max-w-[13rem]",
+      )}
+      style={thumbStyle}
+    >
+      <div
+        className={clsx(
+          "relative min-h-0 flex items-center justify-center max-w-full",
+          naturalSize ? "w-full" : "",
+        )}
+      >
+        <motion.div
+          animate={{ opacity: loaded ? 0 : 1 }}
+          className="absolute inset-0 z-10 flex items-center justify-center"
+          transition={{ duration: 0.5 }}
+        >
+          <div
+            className="h-64 w-28 max-w-full rounded-lg bg-neutral-100 dark:bg-neutral-900 animate-pulse"
+            style={{ maxHeight: imageMaxHeight }}
+          />
+        </motion.div>
+        <figure
+          className={clsx(
+            "relative inline-flex max-w-full border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden leading-none",
+            naturalSize ? "w-full" : "w-[min(13rem,100%)]",
+          )}
+          style={figureStyle}
+        >
+          <div className="absolute right-2 top-2 z-30 rounded-full border border-white/25 bg-black/20 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+            {index + 1}
+          </div>
+          <Image
+            src={screen?.src}
+            alt={`screen-${screen?.id}`}
+            className={clsx(
+              loaded ? "visible" : "invisible",
+              "relative z-0 block object-contain w-full h-full",
+            )}
+            width={0}
+            height={0}
+            sizes="100vw"
+            priority
+            onLoad={handleLoad}
+          />
+          <TooltipProvider delayDuration={100}>
+            {screen.gesture.x !== null && screen.gesture.y !== null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
+                    style={{
+                      left: `${(screen.gesture.x ?? 0) * 100}%`,
+                      top: `${(screen.gesture.y ?? 0) * 100}%`,
+                    }}
+                  >
+                    {
+                      gestureOptions
+                        .flatMap((option) => [
+                          option,
+                          ...(option.subGestures ?? []),
+                        ])
+                        .find(
+                          (option) =>
+                            option.value === screen.gesture.type?.toLowerCase(),
+                        )?.icon
+                    }
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="z-50">
+                  <p>{screen.gesture.type}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {(screen.redactions || []).map((redaction, i) => (
+              <Tooltip key={`${redaction.annotation}-${i}`}>
+                <TooltipTrigger asChild>
+                  <div
+                    className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                    style={{
+                      left: `${redaction.x * 100}%`,
+                      top: `${redaction.y * 100}%`,
+                      width: `${redaction.width * 100}%`,
+                      height: `${redaction.height * 100}%`,
+                    }}
+                  ></div>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={10}>
+                  <p>{redaction.annotation}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
+        </figure>
+      </div>
+      {/* Gesture caption */}
+      <div className="prose prose-neutral dark:prose-invert leading-snug font-semibold dark:text-neutral-900 shrink-0 h-16 w-full overflow-y-auto whitespace-pre-wrap pt-1">
+        {description ? (
+          <p className="text-xs text-center dark:text-neutral-300">
+            {description}
+          </p>
+        ) : isFinalScreen ? (
+          <div className="flex justify-center">
+            <span className="inline-flex items-center rounded-md border border-green-500/25 bg-green-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
+              Final Screen
+            </span>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function InspectView({ data }: { data: Trace }) {
   const { setInspectData } = useContext(GalleryContext);
-  const [loading, setLoading] = useState({ status: "loading" });
-
-  const handleImageLoad = useCallback(() => {
-    setLoading({ status: "loaded" });
-  }, []);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [imageMaxHeightPx, setImageMaxHeightPx] = useState<number | null>(null);
 
   const handleDownload = useCallback(() => {
     downloadTrace(data);
   }, [data]);
 
+  useEffect(() => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+
+    const CAPTION_RESERVE_PX = 72;
+    const MIN_IMAGE_HEIGHT_PX = 180;
+
+    const updateImageBudget = () => {
+      const rect = element.getBoundingClientRect();
+      const nextHeight = Math.max(
+        MIN_IMAGE_HEIGHT_PX,
+        Math.floor(rect.height - CAPTION_RESERVE_PX),
+      );
+      setImageMaxHeightPx((prev) =>
+        prev !== null && Math.abs(prev - nextHeight) < 1 ? prev : nextHeight,
+      );
+    };
+
+    updateImageBudget();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateImageBudget);
+      return () => {
+        window.removeEventListener("resize", updateImageBudget);
+      };
+    }
+
+    const resizeObserver = new ResizeObserver(updateImageBudget);
+    resizeObserver.observe(element);
+    window.addEventListener("resize", updateImageBudget);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateImageBudget);
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col grow w-full h-full p-4 md:p-6 pr-0">
+    <div className="flex flex-col grow w-full h-full min-h-0 overflow-hidden p-4 md:p-6 pr-0">
       <button
         onClick={() => setInspectData(null)}
         className="inline-flex md:hidden cursor-pointer mb-2"
@@ -155,21 +360,28 @@ export function InspectView({ data }: { data: Trace }) {
           Back
         </span>
       </button>
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4 shrink-0">
         <section>
           <h1 className="text-lg font-bold tracking-tight">
             {data?.description}
           </h1>
-          <span className="text-sm text-muted-foreground mb-2">
-            Created on{" "}
-            {prettyTime(data?.created, {
-              format: "LLLL dd, yyyy",
-            })}
-            {" at "}
-            {prettyTime(data?.created, {
-              format: "hh:mm a",
-            })}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <span>
+              Created on{" "}
+              {prettyTime(data?.created, {
+                format: "LLLL dd, yyyy",
+              })}
+              {" at "}
+              {prettyTime(data?.created, {
+                format: "hh:mm a",
+              })}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {data?.screens.length}{" "}
+              {data?.screens.length === 1 ? "screen" : "screens"}
+            </span>
+          </div>
         </section>
         <div className="hidden md:flex gap-2">
           <Button
@@ -182,89 +394,20 @@ export function InspectView({ data }: { data: Trace }) {
           </Button>
         </div>
       </div>
-      <section className="block w-full mb-4">
-        <div className="flex w-full overflow-x-scroll touch-pan-x pb-3">
-          <div className="flex min-w-full gap-2">
+      <section className="flex-1 min-h-0 w-full mb-4">
+        <div
+          ref={scrollContainerRef}
+          className="flex h-full w-full overflow-x-auto overflow-y-hidden touch-pan-x pb-3"
+        >
+          <div className="flex h-full items-start gap-4">
             {data?.screens.map((screen: Screen, index: number) => (
-              <div key={screen.id}>
-                <figure className="relative flex flex-col shrink-0 w-48 border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden">
-                  <motion.div
-                    animate={{ opacity: loading.status === "loading" ? 1 : 0 }}
-                    className="absolute z-10 flex w-full h-full"
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="w-full h-full bg-neutral-100 dark:bg-neutral-900 animate-pulse"></div>
-                  </motion.div>
-                  <Image
-                    src={screen?.src}
-                    alt={`screen-${screen?.id}`}
-                    className={clsx(
-                      loading.status === "loading" ? "invisible" : "visible",
-                      "relative z-0 object-contain w-full h-auto"
-                    )}
-                    width={0}
-                    height={0}
-                    sizes="100vw"
-                    priority
-                    onLoad={handleImageLoad}
-                  />
-                  <TooltipProvider delayDuration={100}>
-                    {screen.gesture.x !== null && screen.gesture.y !== null && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
-                            style={{
-                              left: `${(screen.gesture.x ?? 0) * 100}%`,
-                              top: `${(screen.gesture.y ?? 0) * 100}%`,
-                            }}
-                          >
-                            {
-                              gestureOptions
-                                .flatMap((option) => [
-                                  option,
-                                  ...(option.subGestures ?? []),
-                                ])
-                                .find(
-                                  (option) =>
-                                    option.value ===
-                                    screen.gesture.type?.toLowerCase()
-                                )?.icon
-                            }
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="z-50">
-                          <p>{screen.gesture.type}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {(screen.redactions || []).map((redaction, i) => (
-                      <Tooltip key={`${redaction.annotation}-${i}`}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
-                            style={{
-                              left: `${redaction.x * 100}%`,
-                              top: `${redaction.y * 100}%`,
-                              width: `${redaction.width * 100}%`,
-                              height: `${redaction.height * 100}%`,
-                            }}
-                          ></div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" sideOffset={10}>
-                          <p>{redaction.annotation}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </TooltipProvider>
-                </figure>
-                {/* Gesture caption */}
-                <div className="prose prose-neutral dark:prose-invert leading-snug font-xs font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
-                  <p className="text-xs text-center dark:text-neutral-300">
-                    {screen.gesture.description ?? ""}
-                  </p>
-                </div>
-              </div>
+              <ScreenThumb
+                key={screen.id}
+                screen={screen}
+                index={index}
+                total={data.screens.length}
+                imageMaxHeightPx={imageMaxHeightPx}
+              />
             ))}
           </div>
         </div>

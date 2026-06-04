@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { getApp, getTraces, Trace } from "@/lib/actions";
 import { GalleryRoot, Gallery } from "./components/gallery";
 import { prettyOS } from "@/lib/utils";
-import { App, Screen } from "@prisma/client";
+import { App } from "@prisma/client";
+import { compareScreensChronological } from "./lib";
 
 export default async function AppPage({
   params,
@@ -22,13 +23,8 @@ export default async function AppPage({
     await getTraces({ appId: id, includes: { screens: true } }).then((res) => {
       if (res.ok) {
         traces = res.data;
-        // sort screens for each trace by last ObjectId counter bytes
-        traces?.forEach((trace: any) => {
-          trace.screens?.sort((a: Screen, b: Screen) => {
-            const hexNumA = parseInt(a.id.slice(-6), 16);
-            const hexNumB = parseInt(b.id.slice(-6), 16);
-            return hexNumA - hexNumB;
-          });
+        traces?.forEach((trace) => {
+          trace.screens?.sort(compareScreensChronological);
         });
       }
     });
