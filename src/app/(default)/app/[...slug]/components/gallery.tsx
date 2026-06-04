@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import Image from "next/image";
 import clsx from "clsx";
@@ -136,10 +137,12 @@ function ScreenThumb({
   screen,
   index,
   total,
+  imageMaxHeightPx,
 }: {
   screen: Screen;
   index: number;
   total: number;
+  imageMaxHeightPx: number | null;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [naturalSize, setNaturalSize] = useState<{
@@ -152,12 +155,22 @@ function ScreenThumb({
   const aspectRatio = naturalSize
     ? `${naturalSize.width} / ${naturalSize.height}`
     : undefined;
+  const imageMaxHeight = imageMaxHeightPx
+    ? `${imageMaxHeightPx}px`
+    : "calc(100dvh - 22rem)";
+  const imageAspect = naturalSize ? naturalSize.width / naturalSize.height : 1;
+  const thumbWidth = naturalSize
+    ? `min(${naturalSize.width}px, calc(${imageMaxHeight} * ${imageAspect}), ${
+        isLandscape ? "100%" : "13rem"
+      })`
+    : undefined;
   const figureStyle: React.CSSProperties = {
     aspectRatio,
-    ...(isLandscape && naturalSize
-      ? { height: `min(${naturalSize.height}px, calc(100dvh - 18rem))` }
-      : null),
+    ...(thumbWidth ? { width: thumbWidth } : null),
   };
+  const thumbStyle: React.CSSProperties | undefined = thumbWidth
+    ? { width: thumbWidth }
+    : undefined;
   const isFinalScreen = index === total - 1;
   const description = screen.gesture.description?.trim();
 
@@ -181,19 +194,28 @@ function ScreenThumb({
         "flex flex-col items-center shrink-0 min-h-0 gap-1",
         isLandscape ? "" : "max-w-[13rem]",
       )}
+      style={thumbStyle}
     >
-      <div className="relative min-h-0 flex items-center justify-center max-w-full">
+      <div
+        className={clsx(
+          "relative min-h-0 flex items-center justify-center max-w-full",
+          naturalSize ? "w-full" : "",
+        )}
+      >
         <motion.div
           animate={{ opacity: loaded ? 0 : 1 }}
           className="absolute inset-0 z-10 flex items-center justify-center"
           transition={{ duration: 0.5 }}
         >
-          <div className="h-64 w-28 max-h-[calc(100dvh-18rem)] max-w-full rounded-lg bg-neutral-100 dark:bg-neutral-900 animate-pulse" />
+          <div
+            className="h-64 w-28 max-w-full rounded-lg bg-neutral-100 dark:bg-neutral-900 animate-pulse"
+            style={{ maxHeight: imageMaxHeight }}
+          />
         </motion.div>
         <figure
           className={clsx(
             "relative inline-flex max-w-full border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden leading-none",
-            isLandscape ? "" : "w-[min(13rem,100%)]",
+            naturalSize ? "w-full" : "w-[min(13rem,100%)]",
           )}
           style={figureStyle}
         >
@@ -205,7 +227,7 @@ function ScreenThumb({
             alt={`screen-${screen?.id}`}
             className={clsx(
               loaded ? "visible" : "invisible",
-              "relative z-0 block object-fill w-full h-full",
+              "relative z-0 block object-contain w-full h-full",
             )}
             width={0}
             height={0}
@@ -264,7 +286,7 @@ function ScreenThumb({
         </figure>
       </div>
       {/* Gesture caption */}
-      <div className="prose prose-neutral dark:prose-invert leading-snug font-semibold dark:text-neutral-900 shrink-0 w-full max-h-16 overflow-y-auto whitespace-pre-wrap pt-1">
+      <div className="prose prose-neutral dark:prose-invert leading-snug font-semibold dark:text-neutral-900 shrink-0 h-16 w-full overflow-y-auto whitespace-pre-wrap pt-1">
         {description ? (
           <p className="text-xs text-center dark:text-neutral-300">
             {description}
@@ -283,10 +305,49 @@ function ScreenThumb({
 
 export function InspectView({ data }: { data: Trace }) {
   const { setInspectData } = useContext(GalleryContext);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [imageMaxHeightPx, setImageMaxHeightPx] = useState<number | null>(null);
 
   const handleDownload = useCallback(() => {
     downloadTrace(data);
   }, [data]);
+
+  useEffect(() => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+
+    const CAPTION_RESERVE_PX = 72;
+    const MIN_IMAGE_HEIGHT_PX = 180;
+
+    const updateImageBudget = () => {
+      const rect = element.getBoundingClientRect();
+      const nextHeight = Math.max(
+        MIN_IMAGE_HEIGHT_PX,
+        Math.floor(rect.height - CAPTION_RESERVE_PX),
+      );
+      setImageMaxHeightPx((prev) =>
+        prev !== null && Math.abs(prev - nextHeight) < 1 ? prev : nextHeight,
+      );
+    };
+
+    updateImageBudget();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateImageBudget);
+      return () => {
+        window.removeEventListener("resize", updateImageBudget);
+      };
+    }
+
+    const resizeObserver = new ResizeObserver(updateImageBudget);
+    resizeObserver.observe(element);
+    window.addEventListener("resize", updateImageBudget);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateImageBudget);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col grow w-full h-full min-h-0 overflow-hidden p-4 md:p-6 pr-0">
@@ -333,15 +394,19 @@ export function InspectView({ data }: { data: Trace }) {
           </Button>
         </div>
       </div>
-      <section className="block w-full min-h-0 mb-4">
-        <div className="flex w-full max-h-[calc(100dvh-14rem)] overflow-x-auto overflow-y-hidden touch-pan-x pb-3">
-          <div className="flex items-start gap-4">
+      <section className="flex-1 min-h-0 w-full mb-4">
+        <div
+          ref={scrollContainerRef}
+          className="flex h-full w-full overflow-x-auto overflow-y-hidden touch-pan-x pb-3"
+        >
+          <div className="flex h-full items-start gap-4">
             {data?.screens.map((screen: Screen, index: number) => (
               <ScreenThumb
                 key={screen.id}
                 screen={screen}
                 index={index}
                 total={data.screens.length}
+                imageMaxHeightPx={imageMaxHeightPx}
               />
             ))}
           </div>
