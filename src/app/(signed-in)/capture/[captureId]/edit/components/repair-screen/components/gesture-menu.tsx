@@ -64,6 +64,7 @@ export function GestureMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const selectionRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const pendingDescriptionFocusRef = useRef(false);
   const [placeTextareaAbove, setPlaceTextareaAbove] = useState(false);
   const [horizontalOffset, setHorizontalOffset] = useState(0);
   const [verticalOffset, setVerticalOffset] = useState(0);
@@ -245,9 +246,28 @@ export function GestureMenu({
     };
   }, [shouldHideEditorForDragPlacement, shouldShowEditor, updatePlacement]);
 
+  useEffect(() => {
+    if (!pendingDescriptionFocusRef.current || !shouldShowEditor) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      pendingDescriptionFocusRef.current = false;
+      editorRef.current?.focusDescription();
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [gesture.type, shouldShowEditor]);
+
   // Focus the description field of the gesture annotation editor
   const focusDescriptionField = () => {
-    editorRef.current?.focusDescription();
+    if (editorRef.current) {
+      editorRef.current.focusDescription();
+      return;
+    }
+    pendingDescriptionFocusRef.current = true;
   };
 
   return (
