@@ -1,4 +1,4 @@
 {
   "extends": "next/core-web-vitals",
-  "ignorePatterns": ["**/*.json", "**/*.md"]
+  "ignorePatterns": ["**/*.json", "**/*.md", "src/app/(signed-in)/_trace/**"]
 }
