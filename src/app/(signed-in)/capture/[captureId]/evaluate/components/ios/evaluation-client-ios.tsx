@@ -28,6 +28,7 @@ import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
+import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 
 const REVIEW_VIDEO_PANEL_DEFAULT_HORIZONTAL = 23;
 const REVIEW_VIDEO_PANEL_LANDSCAPE_HORIZONTAL = 31;
@@ -69,6 +70,9 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     includes: { app: true, task: true },
   });
   const captureDbId = capture?.id ?? null;
+  const captureTimestamp = captureDbId
+    ? formatCaptureTimestampFromObjectId(captureDbId)
+    : null;
 
   useEffect(() => {
     const updateLayoutMode = () => {
@@ -108,12 +112,13 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
     }
   }, [reviewVideoLandscape, isCompactLayout]);
 
-  const { isSubmitting, handleApprove, handleDeny } = useReviewVerdictActions({
-    capture,
-    traceData,
-    feedbackState,
-    isAdmin,
-  });
+  const { isSubmitting, handleApprove, handleDeny, handleSkip } =
+    useReviewVerdictActions({
+      capture,
+      traceData,
+      feedbackState,
+      isAdmin,
+    });
 
   const {
     videoRef,
@@ -308,6 +313,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                     activeScreenId={activeScreenId}
                     commentsByScreen={feedbackState.commentsByScreen}
                     onScreenSelect={handleScreenSelect}
+                    captureTimestamp={captureTimestamp}
                     onReplayScreen={(screenId) =>
                       void handleReplayScreen(screenId)
                     }
@@ -366,6 +372,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
           isSubmitting={isSubmitting}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
+          onSkip={() => void handleSkip()}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },

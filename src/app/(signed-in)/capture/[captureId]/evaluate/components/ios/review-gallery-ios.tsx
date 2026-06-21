@@ -25,6 +25,7 @@ export function ReviewGalleryIOS({
   activeScreenId,
   commentsByScreen,
   onScreenSelect,
+  captureTimestamp,
   onReplayScreen,
   canReplay = false,
   selectedScreenIds,
@@ -34,6 +35,7 @@ export function ReviewGalleryIOS({
   activeScreenId: string | null;
   commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string, timestamp: number) => void;
+  captureTimestamp?: string | null;
   onReplayScreen?: (id: string, timestamp: number) => void;
   canReplay?: boolean;
   selectedScreenIds?: string[];
@@ -87,6 +89,7 @@ export function ReviewGalleryIOS({
         <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
           {sortedScreens.length} screen{sortedScreens.length === 1 ? "" : "s"}
           {screensWithIssues > 0 ? ` • ${screensWithIssues} flagged` : ""}
+          {captureTimestamp ? ` • Created ${captureTimestamp}` : ""}
         </p>
       </div>
 
