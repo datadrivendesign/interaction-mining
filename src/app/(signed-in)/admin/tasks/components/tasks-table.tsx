@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { CaptureAdminView } from "@/lib/actions";
+import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 import Link from "next/link";
 
 /**
@@ -35,7 +36,8 @@ export function TasksTable({
           <TableHead className="text-muted-foreground">Name</TableHead>
           <TableHead className="text-muted-foreground">Email</TableHead>
           <TableHead className="text-muted-foreground">App</TableHead>
-          <TableHead className="text-muted-foreground">Review Task</TableHead>
+          <TableHead className="text-muted-foreground">Created</TableHead>
+          <TableHead className="text-muted-foreground">Task</TableHead>
         </TableRow>
       </TableHeader>
 
@@ -73,6 +75,9 @@ export function TasksTable({
               >
                 {capture.app.metadata.name}
               </Button>
+            </TableCell>
+            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+              {formatCaptureTimestampFromObjectId(capture.id) ?? "Unknown"}
             </TableCell>
             <TableCell>
               <Link

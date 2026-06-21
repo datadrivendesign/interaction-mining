@@ -28,6 +28,7 @@ import {
 import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
+import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 
 export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
@@ -61,6 +62,9 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
   });
   const isProcessingRef = useRef(false);
   const captureDbId = capture?.id ?? null;
+  const captureTimestamp = captureDbId
+    ? formatCaptureTimestampFromObjectId(captureDbId)
+    : null;
 
   const populateDraftScreens = useCallback(
     async (
@@ -322,6 +326,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                     activeScreenId={activeScreenId}
                     commentsByScreen={feedbackState.commentsByScreen}
                     onScreenSelect={setActiveScreenId}
+                    captureTimestamp={captureTimestamp}
                     selectedScreenIds={
                       isComposerInScreenMode
                         ? gallerySelectedScreenIds

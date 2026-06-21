@@ -25,6 +25,7 @@ export function ReviewGalleryAndroid({
   activeScreenId,
   commentsByScreen,
   onScreenSelect,
+  captureTimestamp,
   selectedScreenIds,
   onSelectedScreenToggle,
 }: {
@@ -32,6 +33,7 @@ export function ReviewGalleryAndroid({
   activeScreenId: string | null;
   commentsByScreen: Record<string, ScreenComment[]>;
   onScreenSelect: (id: string) => void;
+  captureTimestamp?: string | null;
   selectedScreenIds?: string[];
   onSelectedScreenToggle?: (screenId: string, checked: boolean) => void;
 }) {
@@ -80,6 +82,7 @@ export function ReviewGalleryAndroid({
         <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
           {sortedScreens.length} screen{sortedScreens.length === 1 ? "" : "s"}
           {screensWithIssues > 0 ? ` • ${screensWithIssues} flagged` : ""}
+          {captureTimestamp ? ` • Created ${captureTimestamp}` : ""}
         </p>
       </div>
 
