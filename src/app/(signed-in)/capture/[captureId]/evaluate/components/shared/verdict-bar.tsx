@@ -14,12 +14,14 @@ export function VerdictBar({
   isSubmitting,
   onApprove,
   onDeny,
+  onSkip,
   additionalShortcuts = [],
 }: {
   issueSummary: string;
   isSubmitting: boolean;
   onApprove: () => void;
   onDeny: () => void;
+  onSkip: () => void;
   additionalShortcuts?: { label: string; keys: string }[];
 }) {
   return (
@@ -29,6 +31,18 @@ export function VerdictBar({
       </p>
 
       <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-w-0"
+          onClick={onSkip}
+          disabled={isSubmitting}
+        >
+          <span>Skip</span>
+          <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">
+            Ctrl+Shift+S
+          </span>
+        </Button>
         <Button
           size="sm"
           className="min-w-0 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:text-white! dark:hover:bg-green-800!"
@@ -80,6 +94,10 @@ export function VerdictBar({
               <div className="flex items-center justify-between gap-3">
                 <span>Deny capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+D</Kbd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>Skip capture</span>
+                <Kbd className="text-[10px]">Ctrl+Shift+S</Kbd>
               </div>
               {additionalShortcuts.length > 0 && (
                 <>
