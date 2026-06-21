@@ -33,7 +33,10 @@ export function useReviewVerdictActions({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigateAfterVerdict = useCallback(
-    async (successMessage: string) => {
+    async (
+      successMessage: string,
+      emptyQueueMessage = "Review queue complete.",
+    ) => {
       if (!capture) {
         router.push("/admin/tasks");
         return;
@@ -56,7 +59,7 @@ export function useReviewVerdictActions({
         return;
       }
 
-      toast.success(`${successMessage} Review queue complete.`);
+      toast.success(`${successMessage} ${emptyQueueMessage}`);
       router.push("/admin/tasks");
     },
     [capture, router],
@@ -125,6 +128,26 @@ export function useReviewVerdictActions({
     }
   }, [capture, feedbackState, navigateAfterVerdict, traceData]);
 
+  const handleSkip = useCallback(async () => {
+    if (!capture) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await navigateAfterVerdict(
+        "Capture skipped.",
+        "No later reviewing captures found.",
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [capture, navigateAfterVerdict]);
+
   useHotkeys(
     "ctrl+shift+a",
     (event) => {
@@ -157,9 +180,26 @@ export function useReviewVerdictActions({
     [handleDeny, isAdmin, isSubmitting],
   );
 
+  useHotkeys(
+    "ctrl+shift+s",
+    (event) => {
+      event.preventDefault();
+      void handleSkip();
+    },
+    {
+      enabled: isAdmin && !isSubmitting,
+      enableOnFormTags: false,
+      enableOnContentEditable: false,
+      ignoreEventWhen: (event) => event.repeat,
+      preventDefault: true,
+    },
+    [handleSkip, isAdmin, isSubmitting],
+  );
+
   return {
     isSubmitting,
     handleApprove,
     handleDeny,
+    handleSkip,
   };
 }

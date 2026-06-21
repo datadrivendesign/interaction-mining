@@ -102,12 +102,13 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
-  const { isSubmitting, handleApprove, handleDeny } = useReviewVerdictActions({
-    capture,
-    traceData,
-    feedbackState,
-    isAdmin,
-  });
+  const { isSubmitting, handleApprove, handleDeny, handleSkip } =
+    useReviewVerdictActions({
+      capture,
+      traceData,
+      feedbackState,
+      isAdmin,
+    });
 
   useEffect(() => {
     if (!captureDbId || !traceData) {
@@ -368,6 +369,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
           isSubmitting={isSubmitting}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
+          onSkip={() => void handleSkip()}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
