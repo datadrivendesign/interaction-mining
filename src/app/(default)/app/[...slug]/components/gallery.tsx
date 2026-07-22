@@ -24,7 +24,12 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { gestureOptions } from "@/lib/utils/gesture-options";
+import {
+  findGestureOption,
+  normalizeGestureType,
+} from "@/lib/utils/gesture-options";
+import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { useMeasure } from "@uidotdev/usehooks";
 import { downloadTrace } from "../lib";
 import { Trace } from "@/lib/actions";
 
@@ -149,6 +154,9 @@ function ScreenThumb({
     width: number;
     height: number;
   } | null>(null);
+  const [containerRef, { width, height }] = useMeasure();
+  const canvasWidth = width ?? 0;
+  const canvasHeight = height ?? 0;
 
   const isLandscape =
     naturalSize !== null && naturalSize.width > naturalSize.height;
@@ -173,6 +181,24 @@ function ScreenThumb({
     : undefined;
   const isFinalScreen = index === total - 1;
   const description = screen.gesture.description?.trim();
+  const isDrag =
+    screen.gesture &&
+    normalizeGestureType(screen.gesture.type) === GESTURE_TYPES.DRAG &&
+    screen.gesture.x !== null &&
+    screen.gesture.y !== null &&
+    screen.gesture.scrollDeltaX !== null &&
+    screen.gesture.scrollDeltaY !== null &&
+    canvasWidth > 0 &&
+    canvasHeight > 0;
+
+  const startX = isDrag ? screen.gesture.x! * canvasWidth : 0;
+  const startY = isDrag ? screen.gesture.y! * canvasHeight : 0;
+  const endX = isDrag
+    ? (screen.gesture.x! + screen.gesture.scrollDeltaX!) * canvasWidth
+    : 0;
+  const endY = isDrag
+    ? (screen.gesture.y! + screen.gesture.scrollDeltaY!) * canvasHeight
+    : 0;
 
   const handleLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -213,6 +239,7 @@ function ScreenThumb({
           />
         </motion.div>
         <figure
+          ref={containerRef}
           className={clsx(
             "relative inline-flex max-w-full border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden leading-none",
             naturalSize ? "w-full" : "w-[min(13rem,100%)]",
@@ -235,6 +262,45 @@ function ScreenThumb({
             priority
             onLoad={handleLoad}
           />
+          {isDrag && (
+            <svg
+              className="absolute inset-0 z-10 w-full h-full pointer-events-none overflow-visible"
+              width="100%"
+              height="100%"
+            >
+              <defs>
+                <marker
+                  id={`dragArrowHead-${screen.id}`}
+                  viewBox="0 0 8 8"
+                  markerWidth="5"
+                  markerHeight="5"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M0,0 L0,8 L8,4 z" fill="rgba(23,23,23,0.72)" />
+                </marker>
+              </defs>
+              <line
+                x1={startX}
+                y1={startY}
+                x2={endX}
+                y2={endY}
+                stroke="rgba(23,23,23,0.72)"
+                strokeWidth="2"
+                markerEnd={`url(#dragArrowHead-${screen.id})`}
+              />
+              <circle
+                cx={endX}
+                cy={endY}
+                r="5"
+                fill="white"
+                stroke="rgba(23,23,23,0.92)"
+                strokeWidth="1.8"
+              />
+            </svg>
+          )}
           <TooltipProvider delayDuration={100}>
             {screen.gesture.x !== null && screen.gesture.y !== null && (
               <Tooltip>
@@ -246,17 +312,7 @@ function ScreenThumb({
                       top: `${(screen.gesture.y ?? 0) * 100}%`,
                     }}
                   >
-                    {
-                      gestureOptions
-                        .flatMap((option) => [
-                          option,
-                          ...(option.subGestures ?? []),
-                        ])
-                        .find(
-                          (option) =>
-                            option.value === screen.gesture.type?.toLowerCase(),
-                        )?.icon
-                    }
+                    {findGestureOption(screen.gesture.type)?.icon}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="z-50">
