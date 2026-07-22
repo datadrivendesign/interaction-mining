@@ -6,12 +6,17 @@ import { User, CaptureStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 
 import { auth } from "@/lib/auth/auth";
-import { getCaptureCounts, getCapturesPaginated } from "@/lib/actions";
+import {
+  getCaptureCounts,
+  getCapturesPaginated,
+  getCrawlRequestsForUser,
+} from "@/lib/actions";
 import {
   CaptureCardColumns,
   NoCapturesCard,
 } from "./components/capture-card-columns";
 import { ProfileCard } from "./components/profile-card";
+import { CrawlRequestList } from "./components/crawl-request-list";
 
 export default async function Page() {
   const session = await auth();
@@ -27,6 +32,7 @@ export default async function Page() {
     createdCapturesPaginatedData,
     processingCapturesPaginatedData,
     reviewingCapturesPaginatedData,
+    crawlRequestsData,
   ] = await Promise.all([
     getCaptureCounts({ userId: user.id }),
     getCapturesPaginated({
@@ -47,13 +53,15 @@ export default async function Page() {
       limit: 10,
       includes: { app: true, task: true },
     }),
+    getCrawlRequestsForUser(user.id),
   ]);
 
   if (
     !captureCountsData.ok ||
     !createdCapturesPaginatedData.ok ||
     !processingCapturesPaginatedData.ok ||
-    !reviewingCapturesPaginatedData.ok
+    !reviewingCapturesPaginatedData.ok ||
+    !crawlRequestsData.ok
   ) {
     if (!captureCountsData.ok) {
       console.error(
@@ -77,6 +85,12 @@ export default async function Page() {
       console.error(
         "Failed to fetch reviewing captures:",
         reviewingCapturesPaginatedData.message,
+      );
+    }
+    if (!crawlRequestsData.ok) {
+      console.error(
+        "Failed to fetch crawl requests:",
+        crawlRequestsData.message,
       );
     }
     notFound();
@@ -142,6 +156,8 @@ export default async function Page() {
               </Link>
             </div>
           </div>
+
+          <CrawlRequestList crawlRequests={crawlRequestsData.data} />
 
           {totalCaptures > 0 ? (
             <CaptureCardColumns
