@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -206,8 +207,19 @@ export default function RepairScreen({
     [focusViewIndex, handleDeleteScreen],
   );
 
+  // A checklist jump must apply exactly once per click. `screens` stays in the
+  // deps so a jump requested before the screens finish loading still lands, but
+  // it cannot be used to detect a *new* jump: react-hook-form broadcasts a deep
+  // clone of the form on every write, so `useWatch` hands back a fresh `screens`
+  // array on every keystroke. Without the nonce guard, each keystroke re-applied
+  // the last jump and yanked focus off whatever screen was being edited.
+  const appliedJumpNonceRef = useRef<number | null>(null);
+
   React.useEffect(() => {
     if (!jumpTarget) {
+      return;
+    }
+    if (appliedJumpNonceRef.current === jumpTarget.nonce) {
       return;
     }
 
@@ -215,6 +227,7 @@ export default function RepairScreen({
       (screen) => screen.id === jumpTarget.screenId,
     );
     if (targetIndex >= 0) {
+      appliedJumpNonceRef.current = jumpTarget.nonce;
       setFocusViewIndex(targetIndex);
     }
   }, [jumpTarget, screens]);

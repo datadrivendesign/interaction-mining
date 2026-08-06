@@ -7,7 +7,7 @@ import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { extractVideoFrame } from "../../util";
+import { extractVideoFrame, useFormFieldKeyPressGuard } from "../../util";
 import { FrameData, Redaction, TraceFormData } from "../../../types";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenGesture } from "@prisma/client";
@@ -60,6 +60,7 @@ export function RepairScreenIOS({
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
 
   const videoFiles = useMemo(() => {
     const regexRule = /\.(mp4|mov)$/;
@@ -222,11 +223,18 @@ export function RepairScreenIOS({
   useHotkeys(
     "c",
     (e) => {
+      // Bound to keyup, so the release can outlive the field it was typed into:
+      // if a form write moved the focused screen mid-press, the annotation
+      // editor is already gone and this event reads as a bare workspace
+      // keypress. Trust the keydown's target instead.
+      if (didKeyPressStartInFormField("c")) {
+        return;
+      }
       e.preventDefault();
       handleCaptureFrame();
     },
     { keyup: true },
-    [handleCaptureFrame],
+    [didKeyPressStartInFormField, handleCaptureFrame],
   );
 
   return (
