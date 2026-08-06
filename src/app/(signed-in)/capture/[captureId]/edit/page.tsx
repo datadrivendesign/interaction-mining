@@ -97,6 +97,10 @@ export default function Page() {
     useState<RepairScreenJumpTarget | null>(null);
   const [redactScreenJumpTarget, setRedactScreenJumpTarget] =
     useState<RedactScreenJumpTarget | null>(null);
+  // Identifies each jump request so the editors can apply one exactly once.
+  // A counter rather than a timestamp: two clicks inside the same millisecond
+  // would otherwise share a nonce, and the second jump would be dropped.
+  const jumpNonceRef = useRef(0);
   const [checklistLayoutMode, setChecklistLayoutMode] =
     useState<ChecklistLayoutMode>(() => {
       if (typeof window === "undefined") {
@@ -727,9 +731,10 @@ export default function Page() {
       return;
     }
 
+    jumpNonceRef.current += 1;
     const nextTarget = {
       screenId,
-      nonce: Date.now(),
+      nonce: jumpNonceRef.current,
     };
 
     if (stepIndex === TraceSteps.Redact) {

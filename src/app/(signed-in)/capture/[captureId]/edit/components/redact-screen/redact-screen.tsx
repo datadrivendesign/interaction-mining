@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import {
@@ -110,8 +110,18 @@ export default function RedactScreen({
   useHotkeys("right", handleNext);
   useHotkeys("tab", handleNext);
 
+  // Apply each checklist jump exactly once. `screens` is read via `getValues`
+  // here, so it happens to keep a stable identity and this effect does not
+  // currently re-fire on form writes — unlike the repair step, where the same
+  // effect without this guard re-applied the jump on every keystroke. Guarding
+  // anyway so the behaviour does not depend on that accident.
+  const appliedJumpNonceRef = useRef<number | null>(null);
+
   React.useEffect(() => {
     if (!jumpTarget) {
+      return;
+    }
+    if (appliedJumpNonceRef.current === jumpTarget.nonce) {
       return;
     }
 
@@ -119,6 +129,7 @@ export default function RedactScreen({
       (screen) => screen.id === jumpTarget.screenId,
     );
     if (targetIndex >= 0) {
+      appliedJumpNonceRef.current = jumpTarget.nonce;
       setFocusViewIndex(targetIndex);
     }
   }, [jumpTarget, screens]);
