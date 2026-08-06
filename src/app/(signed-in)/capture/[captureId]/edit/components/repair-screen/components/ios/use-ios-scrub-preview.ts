@@ -311,7 +311,10 @@ export function useIosScrubPreview({
 
       t = Math.max(0, Math.min(t, videoDuration));
 
-      if (options?.syncFocus ?? true) {
+      // Opt-in. A seek only drags the focused screen along when the seek itself
+      // was the worker's intent — scrubbing, frame stepping, the ±5s keys. A seek
+      // that exists because a screen was selected must not reassign selection.
+      if (options?.syncFocus) {
         syncFocusToTimestamp(t);
       }
 
