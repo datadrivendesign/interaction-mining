@@ -32,6 +32,12 @@ interface NavigationContextType {
   handleDeleteScreen: (index: number) => void;
   focusViewIndex: number;
   setFocusViewIndex: (index: number) => void;
+  /**
+   * Lets a platform with a scrubbable recording hand up a seek function, so an
+   * explicit jump to a screen can move the playhead with it. Pass `null` to
+   * unregister. Android has no recording to scrub and never registers.
+   */
+  registerSeekToTime: (seek: ((timestamp: number) => void) | null) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(
@@ -87,6 +93,16 @@ export default function RepairScreen({
 
   const os = capture?.task ? capture.task.os : "none";
   const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
+
+  // Held in a ref rather than state: registering a seek function must not
+  // re-render, and the jump effect only ever reads the current one.
+  const seekToTimeRef = useRef<((timestamp: number) => void) | null>(null);
+  const registerSeekToTime = useCallback(
+    (seek: ((timestamp: number) => void) | null) => {
+      seekToTimeRef.current = seek;
+    },
+    [],
+  );
 
   // UI-level guard for keyboard/arrow navigation so users cannot leave a screen
   // with incomplete required template fields. Matches validateGestureDescription
@@ -229,6 +245,11 @@ export default function RepairScreen({
     if (targetIndex >= 0) {
       appliedJumpNonceRef.current = jumpTarget.nonce;
       setFocusViewIndex(targetIndex);
+      // Move the recording to the same screen, matching what clicking the
+      // filmstrip already does. Without this the playhead stays where it was,
+      // and `c` would capture a frame from an unrelated part of the video —
+      // which is exactly what the feedback often asks the worker to do.
+      seekToTimeRef.current?.(screens[targetIndex].timestamp);
     }
   }, [jumpTarget, screens]);
 
@@ -240,6 +261,7 @@ export default function RepairScreen({
         handleDeleteScreen,
         focusViewIndex,
         setFocusViewIndex,
+        registerSeekToTime,
       }}
     >
       {(os.toLowerCase() as Platform) === Platform.ANDROID ? (

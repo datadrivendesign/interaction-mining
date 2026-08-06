@@ -35,7 +35,8 @@ export function RepairScreenIOS({
   os: Platform;
   draftFetchResult: DraftFetchResults;
 }) {
-  const { focusViewIndex, setFocusViewIndex } = useNavigation();
+  const { focusViewIndex, setFocusViewIndex, registerSeekToTime } =
+    useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
   const { register: registerScreenUrl } = useScreenBlobRegistry();
   const [watchScreens, watchGestures, watchRedactions] = useWatch({
@@ -147,6 +148,17 @@ export function RepairScreenIOS({
     setIsLivePhotoActive,
     syncFocusToTimestamp,
   });
+
+  // Let a jump to a screen (feedback checklist chip) carry the playhead with it.
+  // `syncFocus: false` matters: handleSetTime otherwise re-derives focus from the
+  // nearest screen timestamp, which lands on a neighbour when two screens sit
+  // close together and would override the jump that asked for this seek.
+  useEffect(() => {
+    registerSeekToTime((timestamp) =>
+      handleSetTime(timestamp, { syncFocus: false }),
+    );
+    return () => registerSeekToTime(null);
+  }, [handleSetTime, registerSeekToTime]);
 
   // Now that scrub-preview exists, point the lazy refs at the real callbacks.
   useEffect(() => {
