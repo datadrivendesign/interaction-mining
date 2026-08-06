@@ -42,6 +42,7 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import {
   DraftFetchResults,
+  countUnlabelledRedactions,
   dedupeScreensById,
   getDraftFiles,
   handleDraftSave,
@@ -105,6 +106,56 @@ function collectIncompleteScreens(
       issue: getScreenAnnotationIssue(gestures[screen.id]),
     }))
     .filter((entry): entry is IncompleteScreen => entry.issue !== null);
+}
+
+type UnlabelledRedactionScreen = {
+  screenNumber: number;
+  boxCount: number;
+};
+
+/**
+ * Screens carrying redaction boxes with no label, numbered the way the filmstrip
+ * numbers them.
+ *
+ * Scanned rather than parsed for the same reason as `collectIncompleteScreens`:
+ * `RedactionSchema`'s refine returns on the first unlabelled box and reports one
+ * record-level message, so it can say neither which screen nor how many boxes.
+ *
+ * Slightly stricter than the schema, which only rejects an empty string — a
+ * whitespace-only label is no more useful to a reviewer than a blank one.
+ */
+function collectUnlabelledRedactions(
+  screens: TraceFormData["screens"],
+  redactions: TraceFormData["redactions"],
+): UnlabelledRedactionScreen[] {
+  return screens
+    .map((screen, index) => ({
+      screenNumber: index + 1,
+      boxCount: countUnlabelledRedactions(redactions[screen.id]),
+    }))
+    .filter((entry) => entry.boxCount > 0);
+}
+
+/** One message naming the screens whose redaction boxes still need labels. */
+function describeUnlabelledRedactions(
+  entries: UnlabelledRedactionScreen[],
+): string {
+  const describe = (entry: UnlabelledRedactionScreen) =>
+    `Screen ${entry.screenNumber}: label ${
+      entry.boxCount === 1
+        ? "the redaction box"
+        : `${entry.boxCount} redaction boxes`
+    }`;
+
+  if (entries.length === 1) {
+    return `${describe(entries[0])}.`;
+  }
+  if (entries.length <= 4) {
+    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
+  }
+  return `${entries.length} screens have unlabelled redaction boxes: ${entries
+    .map((entry) => entry.screenNumber)
+    .join(", ")}.`;
 }
 
 /**
@@ -635,16 +686,29 @@ export default function Page() {
         return;
       }
     } else if (stepIndex === TraceSteps.Redact) {
-      // Validate the "redactions"
-      const validation = RedactionSchema.safeParse(
-        methods.getValues().redactions,
+      const { screens: currentScreens, redactions: currentRedactions } =
+        methods.getValues();
+      // Unlabelled boxes first, named per screen. The schema can only say "each
+      // redaction must have an annotation", which leaves the worker opening
+      // screens one by one to find out where.
+      const unlabelledRedactions = collectUnlabelledRedactions(
+        currentScreens,
+        currentRedactions,
       );
+      if (unlabelledRedactions.length > 0) {
+        toast.error(describeUnlabelledRedactions(unlabelledRedactions));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Then the structural check, for anything malformed the UI should not be
+      // able to produce.
+      const validation = RedactionSchema.safeParse(currentRedactions);
       if (!validation.success) {
         console.error(validation.error.issues);
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
+        new Set(validation.error.issues.map((issue) => issue.message)).forEach(
+          (message) => toast.error(message),
+        );
         setIsSubmitting(false);
         return;
       }
