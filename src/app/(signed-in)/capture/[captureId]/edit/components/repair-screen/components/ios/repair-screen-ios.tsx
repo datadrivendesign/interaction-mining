@@ -62,6 +62,8 @@ export function RepairScreenIOS({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
+  // Holds a jump's seek target while the recording is still loading.
+  const pendingJumpSeekRef = useRef<number | null>(null);
 
   const videoFiles = useMemo(() => {
     const regexRule = /\.(mp4|mov)$/;
@@ -154,11 +156,34 @@ export function RepairScreenIOS({
   // nearest screen timestamp, which lands on a neighbour when two screens sit
   // close together and would override the jump that asked for this seek.
   useEffect(() => {
-    registerSeekToTime((timestamp) =>
-      handleSetTime(timestamp, { syncFocus: false }),
-    );
+    registerSeekToTime((timestamp) => {
+      // handleSetTime clamps into [0, videoDuration], and videoDuration is 0
+      // until the recording's metadata loads. Seeking now would silently park
+      // the playhead at 0 and never correct itself, because a jump applies only
+      // once. Hold the timestamp and let the effect below place it instead.
+      if (videoDuration <= 0) {
+        pendingJumpSeekRef.current = timestamp;
+        return;
+      }
+      handleSetTime(timestamp, { syncFocus: false });
+    });
     return () => registerSeekToTime(null);
-  }, [handleSetTime, registerSeekToTime]);
+  }, [handleSetTime, registerSeekToTime, videoDuration]);
+
+  // Place a jump seek that arrived before the recording was ready. Reachable
+  // whenever the step is re-entered with a jump still armed: both this component
+  // and the video remount, so the jump applies while videoDuration is still 0.
+  useEffect(() => {
+    if (videoDuration <= 0) {
+      return;
+    }
+    const pendingSeek = pendingJumpSeekRef.current;
+    if (pendingSeek === null) {
+      return;
+    }
+    pendingJumpSeekRef.current = null;
+    handleSetTime(pendingSeek, { syncFocus: false });
+  }, [handleSetTime, videoDuration]);
 
   // Now that scrub-preview exists, point the lazy refs at the real callbacks.
   useEffect(() => {
