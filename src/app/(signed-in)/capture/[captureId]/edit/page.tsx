@@ -587,10 +587,42 @@ export default function Page() {
       });
       if (!validation.success) {
         console.error(validation.error.issues);
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
+        // Group by screen. GestureSchema validates each field separately, so one
+        // untouched gesture yields three or four issues — "Gesture type is
+        // required", "X coordinate is required", "Y coordinate is required" —
+        // which fired as separate toasts and told the worker neither which
+        // screen to fix nor that "X coordinate" means "place the marker".
+        const currentScreens = methods.getValues().screens;
+        const screenNumberById = new Map(
+          currentScreens.map((screen, index) => [screen.id, index + 1]),
+        );
+        const flaggedScreenNumbers = new Set<number>();
+        const otherMessages = new Set<string>();
+
+        validation.error.issues.forEach((issue) => {
+          const [field, screenId] = issue.path;
+          if (field === "gestures" && typeof screenId === "string") {
+            const screenNumber = screenNumberById.get(screenId);
+            if (screenNumber !== undefined) {
+              flaggedScreenNumbers.add(screenNumber);
+              return;
+            }
+          }
+          otherMessages.add(issue.message);
         });
+
+        if (flaggedScreenNumbers.size > 0) {
+          const screenList = Array.from(flaggedScreenNumbers).sort(
+            (a, b) => a - b,
+          );
+          toast.error(
+            screenList.length === 1
+              ? `Screen ${screenList[0]} needs a gesture with a description.`
+              : `These screens need a gesture with a description: ${screenList.join(", ")}.`,
+          );
+        }
+        otherMessages.forEach((message) => toast.error(message));
+
         setIsSubmitting(false);
         return;
       }
