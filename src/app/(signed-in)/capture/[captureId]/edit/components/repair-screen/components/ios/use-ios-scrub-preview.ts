@@ -196,6 +196,19 @@ export function useIosScrubPreview({
           lastCommittedVideoTimeRef.current = video.currentTime;
           updateCurrentTime(video.currentTime);
         }
+
+        // Reveal the real frame now that the seek has landed. The overlay is
+        // only meant to cover seek latency, but a preview thumbnail is a
+        // nearest-neighbour pick off a coarse grid — roughly 1.2s apart on a
+        // long recording, so up to ~0.6s from the playhead. Leaving it up means
+        // the worker aims with an image that can be half a second stale while
+        // `c` captures the accurate frame underneath it.
+        if (
+          !isScrubPreviewActiveRef.current &&
+          scrubPreviewTimeRef.current === null
+        ) {
+          setPausedPreviewTime(null);
+        }
       });
     };
     video.addEventListener("seeked", syncSeekTime);
