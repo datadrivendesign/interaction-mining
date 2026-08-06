@@ -26,6 +26,12 @@ export interface RepairScreenJumpTarget {
   screenId: string;
 }
 
+/**
+ * Stable fallback for the watched screens list. A fresh `[]` literal would
+ * change identity every render and defeat every dependency array that reads it.
+ */
+const EMPTY_SCREENS: FrameData[] = [];
+
 interface NavigationContextType {
   handleNext: () => void;
   handlePrevious: () => void;
@@ -93,14 +99,12 @@ export default function RepairScreen({
   jumpTarget?: RepairScreenJumpTarget | null;
 }) {
   const { getValues, setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchGestures] = useWatch({
-    name: ["screens", "gestures"],
-  });
-  const screens = watchScreens as FrameData[];
-  const gestures = useMemo(
-    () => (watchGestures ?? {}) as { [key: string]: ScreenGesture },
-    [watchGestures],
-  );
+  // Only `screens` is watched. Dropping the `gestures` subscription keeps this
+  // component from re-rendering on every keystroke in the annotation editor —
+  // react-hook-form hands out a deep clone of the form on each write, which is
+  // what made the jump effect re-fire per keystroke in the first place.
+  const screens = (useWatch({ name: "screens" }) ??
+    EMPTY_SCREENS) as FrameData[];
 
   const os = capture?.task ? capture.task.os : "none";
   const [focusedScreenId, setFocusedScreenId] = useState<string | null>(null);
@@ -122,23 +126,14 @@ export default function RepairScreen({
     [],
   );
 
-  // UI-level guard for keyboard/arrow navigation so users cannot leave a screen
-  // with incomplete required template fields. Matches validateGestureDescription
-  // used by filmstrip and form schema.
-  const canAdvanceFromCurrentScreen = useCallback(() => {
-    if (focusedIndex < 0 || focusedIndex >= screens.length) {
-      return true;
-    }
-    // Last screen does not require a gesture.
-    if (focusedIndex === screens.length - 1) {
-      return true;
-    }
-    const currentScreen = screens[focusedIndex];
-    const currentGesture = gestures[currentScreen.id];
-    return validateGestureDescription(
-      currentGesture ?? { type: null, description: "" },
-    );
-  }, [focusedIndex, gestures, screens]);
+  // Navigation is deliberately unguarded. Gesture completeness is enforced
+  // where it can actually hold — the step's Next button validates every screen
+  // against ScreenGestureSchema and reports each failure (page.tsx). Blocking
+  // Tab/arrows only trapped keyboard users: it was silent, one-directional
+  // (Previous was always free), and bypassed by clicking a filmstrip item or a
+  // feedback chip, so it enforced nothing while making the keyboard feel broken
+  // — you could not even reach a newly captured screen without first filling in
+  // every incomplete screen ahead of it.
 
   // handle focusing on previous screen in the filmstrip list
   const handlePrevious = useCallback(() => {
@@ -158,12 +153,9 @@ export default function RepairScreen({
     if (screens.length === 0) {
       return;
     }
-    if (!canAdvanceFromCurrentScreen()) {
-      return;
-    }
     const wrappedIndex = (focusedIndex + 1) % screens.length;
     setFocusedScreenId(screens[wrappedIndex].id);
-  }, [canAdvanceFromCurrentScreen, focusedIndex, screens]);
+  }, [focusedIndex, screens]);
 
   const handleDeleteScreen = useCallback(
     (screenId: string) => {
