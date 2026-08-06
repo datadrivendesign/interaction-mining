@@ -62,6 +62,21 @@ export function VideoPreviewOverlay({
           )}
         />
       ) : null}
+      {/*
+        Preview frames come from a coarse thumbnail grid — roughly a second apart
+        on a long recording — so what is showing here can sit up to half a second
+        from the playhead. Labelling it means the correction when the real frame
+        arrives reads as the picture sharpening rather than the tool changing its
+        mind, and it marks the moments when `c` would capture something other
+        than what is on screen.
+      */}
+      {hasPreviewOverlay ? (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2">
+          <span className="inline-flex items-center rounded-md border border-black/15 bg-black/55 px-2 py-1 text-[11px] font-semibold tracking-wide text-white shadow-sm dark:border-white/25 dark:bg-white/90 dark:text-black">
+            Preview
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
