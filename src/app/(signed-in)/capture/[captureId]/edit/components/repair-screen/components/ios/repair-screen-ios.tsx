@@ -217,7 +217,12 @@ export function RepairScreenIOS({
       "screens",
       [...screens, f].sort((a, b) => a.timestamp - b.timestamp),
     );
-  }, [currentTime, registerScreenUrl, screens, setValue]);
+    // Focus what was just captured. Every screen but the last needs a gesture,
+    // so capturing is always followed by annotating it — and leaving focus
+    // behind meant hunting for the new frame in the filmstrip first. No seek is
+    // needed: the playhead is already at this screen's timestamp.
+    setFocusedScreenId(f.id);
+  }, [currentTime, registerScreenUrl, screens, setFocusedScreenId, setValue]);
 
   // Workspace keybinds
   useHotkeys("space", async (e) => {
