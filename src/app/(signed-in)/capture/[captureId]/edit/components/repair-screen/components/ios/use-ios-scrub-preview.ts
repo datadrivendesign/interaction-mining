@@ -178,12 +178,21 @@ export function useIosScrubPreview({
       requestAnimationFrame(() => {
         isSeekInFlightRef.current = false;
         pendingSeekTimeRef.current = null;
-        const scrubTargetTime = scrubPreviewTimeRef.current;
-        if (
+
+        // Has the playhead come to rest? The drag is over and nothing newer is
+        // queued, so wherever the element landed is the final position.
+        //
+        // Deliberately not an exact comparison against the requested time.
+        // Browsers snap `currentTime` to the nearest decodable frame, so the
+        // landed value usually differs by more than a millisecond — gating on an
+        // exact match left the coarse thumbnail up at random, which is why the
+        // preview and the real frame sometimes still disagreed after mouseup.
+        const hasPlayheadSettled =
           !isScrubPreviewActiveRef.current &&
-          scrubTargetTime !== null &&
-          Math.abs(video.currentTime - scrubTargetTime) <= 0.001
-        ) {
+          scrubQueuedSeekTimeRef.current === null &&
+          scrubSeekTimeoutRef.current === null;
+
+        if (hasPlayheadSettled && scrubPreviewTimeRef.current !== null) {
           scrubPreviewTimeRef.current = null;
           setScrubPreviewTime(null);
         }
@@ -197,16 +206,13 @@ export function useIosScrubPreview({
           updateCurrentTime(video.currentTime);
         }
 
-        // Reveal the real frame now that the seek has landed. The overlay is
-        // only meant to cover seek latency, but a preview thumbnail is a
-        // nearest-neighbour pick off a coarse grid — roughly 1.2s apart on a
-        // long recording, so up to ~0.6s from the playhead. Leaving it up means
-        // the worker aims with an image that can be half a second stale while
-        // `c` captures the accurate frame underneath it.
-        if (
-          !isScrubPreviewActiveRef.current &&
-          scrubPreviewTimeRef.current === null
-        ) {
+        // Reveal the real frame. The overlay is only meant to cover seek
+        // latency, but a preview thumbnail is a nearest-neighbour pick off a
+        // coarse grid — roughly 1.2s apart on a long recording, so up to ~0.6s
+        // from the playhead. Leaving it up means the worker aims with an image
+        // that can be half a second stale while `c` captures the accurate frame
+        // underneath it.
+        if (hasPlayheadSettled) {
           setPausedPreviewTime(null);
         }
       });
