@@ -141,7 +141,6 @@ function FilmstripItem({
   return (
     <motion.li
       className="cursor-pointer min-w-fit h-full max-w-full"
-      data-index={index}
       data-screen-id={screen.id}
       variants={card}
       initial="initial"
