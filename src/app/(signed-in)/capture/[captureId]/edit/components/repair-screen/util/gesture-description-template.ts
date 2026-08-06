@@ -311,28 +311,53 @@ export function validateGestureDescription(
   });
 }
 
+/** The reason a screen's annotation is not finished yet. */
+export type ScreenAnnotationIssue =
+  | "missing-gesture"
+  | "missing-type"
+  | "missing-marker"
+  | "incomplete-drag"
+  | "incomplete-description";
+
+/** What the worker has to do about each issue, phrased as an instruction. */
+export const SCREEN_ANNOTATION_ISSUE_ACTIONS: Record<
+  ScreenAnnotationIssue,
+  string
+> = {
+  "missing-gesture": "add a gesture",
+  "missing-type": "choose a gesture type",
+  "missing-marker": "place the gesture on the screen",
+  "incomplete-drag": "add the drag end point",
+  "incomplete-description": "finish the description",
+};
+
+type GestureCompletenessFields = Pick<
+  ScreenGesture,
+  "type" | "description" | "x" | "y" | "scrollDeltaX" | "scrollDeltaY"
+>;
+
 /**
- * Whether a screen's annotation is finished: a gesture exists, it is placed
- * somewhere on the screen, and its description satisfies the template.
+ * Why a screen's annotation is unfinished, or `null` when it is done.
  *
  * Single source of truth for "is this screen done", shared by the filmstrip's
- * error ring and the step's Next gate so the two cannot disagree — previously
- * the ring ignored marker placement while the gate required it, so a screen
- * could look complete and still block the step.
+ * error ring and the step's Next gate so the two cannot disagree — the ring used
+ * to ignore marker placement while the gate required it, so a screen could look
+ * finished and still block the step. Returning the reason rather than a boolean
+ * lets the gate say what is wrong instead of only which screens are wrong.
+ *
+ * Checks run most-basic-first so the reported reason is the one the worker
+ * should act on next.
  *
  * @param gesture - The gesture recorded for a screen, if any.
  */
-export function isScreenAnnotationComplete(
-  gesture:
-    | Pick<
-        ScreenGesture,
-        "type" | "description" | "x" | "y" | "scrollDeltaX" | "scrollDeltaY"
-      >
-    | null
-    | undefined,
-): boolean {
+export function getScreenAnnotationIssue(
+  gesture: GestureCompletenessFields | null | undefined,
+): ScreenAnnotationIssue | null {
   if (!gesture) {
-    return false;
+    return "missing-gesture";
+  }
+  if (!gesture.type) {
+    return "missing-type";
   }
   // validateGestureDescription covers type, template slots and drag end-points,
   // but not whether the marker was ever placed.
@@ -342,9 +367,29 @@ export function isScreenAnnotationComplete(
     gesture.y === null ||
     gesture.y === undefined
   ) {
-    return false;
+    return "missing-marker";
   }
-  return validateGestureDescription(gesture);
+  if (
+    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
+    !hasCompleteDragPoints(gesture)
+  ) {
+    return "incomplete-drag";
+  }
+  if (!validateGestureDescription(gesture)) {
+    return "incomplete-description";
+  }
+  return null;
+}
+
+/**
+ * Whether a screen's annotation is finished.
+ *
+ * @param gesture - The gesture recorded for a screen, if any.
+ */
+export function isScreenAnnotationComplete(
+  gesture: GestureCompletenessFields | null | undefined,
+): boolean {
+  return getScreenAnnotationIssue(gesture) === null;
 }
 
 export function hasCompleteDragPoints(

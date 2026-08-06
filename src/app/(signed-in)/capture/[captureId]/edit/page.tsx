@@ -22,7 +22,11 @@ import {
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
-import { isScreenAnnotationComplete } from "./components/repair-screen/util";
+import {
+  SCREEN_ANNOTATION_ISSUE_ACTIONS,
+  ScreenAnnotationIssue,
+  getScreenAnnotationIssue,
+} from "./components/repair-screen/util";
 
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
@@ -584,21 +588,47 @@ export default function Page() {
       const { screens: currentScreens, gestures: currentGestures } =
         methods.getValues();
       // The last screen is the goal state and needs no gesture.
-      const incompleteScreenNumbers = currentScreens
+      const incompleteScreens = currentScreens
         .slice(0, -1)
-        .map((screen, index) => ({ screen, screenNumber: index + 1 }))
+        .map((screen, index) => ({
+          screenNumber: index + 1,
+          issue: getScreenAnnotationIssue(currentGestures[screen.id]),
+        }))
         .filter(
-          ({ screen }) =>
-            !isScreenAnnotationComplete(currentGestures[screen.id]),
-        )
-        .map(({ screenNumber }) => screenNumber);
-
-      if (incompleteScreenNumbers.length > 0) {
-        toast.error(
-          incompleteScreenNumbers.length === 1
-            ? `Screen ${incompleteScreenNumbers[0]} needs a gesture, a marker on the screen, and a complete description.`
-            : `${incompleteScreenNumbers.length} screens still need work: ${incompleteScreenNumbers.join(", ")}.`,
+          (
+            entry,
+          ): entry is { screenNumber: number; issue: ScreenAnnotationIssue } =>
+            entry.issue !== null,
         );
+
+      if (incompleteScreens.length > 0) {
+        // Say what to do, not just where. Listing bare screen numbers moves the
+        // guesswork rather than removing it. Beyond a handful the per-screen
+        // reasons stop fitting in a toast, so fall back to the numbers and point
+        // at the filmstrip, which rings exactly these screens.
+        const describe = ({
+          screenNumber,
+          issue,
+        }: {
+          screenNumber: number;
+          issue: ScreenAnnotationIssue;
+        }) => `Screen ${screenNumber}: ${SCREEN_ANNOTATION_ISSUE_ACTIONS[issue]}`;
+
+        if (incompleteScreens.length === 1) {
+          toast.error(`${describe(incompleteScreens[0])}.`);
+        } else if (incompleteScreens.length <= 4) {
+          toast.error(
+            `${incompleteScreens.length} screens need work — ${incompleteScreens
+              .map(describe)
+              .join("; ")}.`,
+          );
+        } else {
+          toast.error(
+            `${incompleteScreens.length} screens need work: ${incompleteScreens
+              .map((entry) => entry.screenNumber)
+              .join(", ")}. The filmstrip rings them in yellow.`,
+          );
+        }
         setIsSubmitting(false);
         return;
       }
