@@ -35,6 +35,13 @@ interface UseIosVideoBootstrapResult {
   videoDuration: number;
   thumbnails: PreviewThumbnail[];
   previewThumbnails: PreviewThumbnail[];
+  /**
+   * False until this hook has finished with the video element. Bootstrap seeks
+   * the live element while extracting frames, so anything that wants to place
+   * the playhead has to wait for this — a seek performed earlier gets dragged
+   * away by the warmup extraction.
+   */
+  isVideoReady: boolean;
 }
 
 export function useIosVideoBootstrap({
@@ -52,6 +59,7 @@ export function useIosVideoBootstrap({
   const isProcessingRef = useRef(false);
 
   const [videoDuration, setVideoDuration] = useState(0);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [thumbnails, setThumbnails] = useState<PreviewThumbnail[]>([]);
   const [previewThumbnails, setPreviewThumbnails] = useState<PreviewThumbnail[]>(
     [],
@@ -87,6 +95,7 @@ export function useIosVideoBootstrap({
       }
       try {
         isProcessingRef.current = true;
+        setIsVideoReady(false);
         revokeBlobUrls(thumbnailObjectUrlsRef.current);
         revokeBlobUrls(previewThumbnailObjectUrlsRef.current);
         thumbnailObjectUrlsRef.current = [];
@@ -194,6 +203,9 @@ export function useIosVideoBootstrap({
           "screens",
           draftScreens.sort((a, b) => a.timestamp - b.timestamp),
         );
+        // Done seeking the live element. Anything holding a playhead position
+        // can place it now without bootstrap dragging it away.
+        setIsVideoReady(true);
       } catch (e) {
         console.error("Error loading video blob:", e);
         toast.error("Error loading video for frame extraction");
@@ -223,5 +235,6 @@ export function useIosVideoBootstrap({
     videoDuration,
     thumbnails,
     previewThumbnails,
+    isVideoReady,
   };
 }

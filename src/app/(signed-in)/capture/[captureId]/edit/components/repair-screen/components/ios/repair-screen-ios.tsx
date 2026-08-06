@@ -91,8 +91,8 @@ export function RepairScreenIOS({
   });
 
   // Bootstrap: load video, populate screens, expose duration + thumbnails.
-  const { videoDuration, thumbnails, previewThumbnails } = useIosVideoBootstrap(
-    {
+  const { videoDuration, thumbnails, previewThumbnails, isVideoReady } =
+    useIosVideoBootstrap({
       videoRef,
       videoFiles,
       draftFetchResult,
@@ -100,8 +100,7 @@ export function RepairScreenIOS({
       setValue,
       onResetPreviewFrames,
       registerScreenUrl,
-    },
-  );
+    });
 
   // Playback: isPlaying, currentTime, live-photo replay window.
   const {
@@ -157,24 +156,24 @@ export function RepairScreenIOS({
   // close together and would override the jump that asked for this seek.
   useEffect(() => {
     registerSeekToTime((timestamp) => {
-      // handleSetTime clamps into [0, videoDuration], and videoDuration is 0
-      // until the recording's metadata loads. Seeking now would silently park
-      // the playhead at 0 and never correct itself, because a jump applies only
-      // once. Hold the timestamp and let the effect below place it instead.
-      if (videoDuration <= 0) {
+      // Bootstrap seeks the live video element while extracting frames — the
+      // warmup grab alone drags it to 0.1s — and the `seeked` listener writes
+      // that back over currentTime. Seeking before it finishes gets undone, and
+      // a jump applies only once, so it never self-corrects. Hold it instead.
+      if (!isVideoReady) {
         pendingJumpSeekRef.current = timestamp;
         return;
       }
       handleSetTime(timestamp, { syncFocus: false });
     });
     return () => registerSeekToTime(null);
-  }, [handleSetTime, registerSeekToTime, videoDuration]);
+  }, [handleSetTime, isVideoReady, registerSeekToTime]);
 
-  // Place a jump seek that arrived before the recording was ready. Reachable
-  // whenever the step is re-entered with a jump still armed: both this component
-  // and the video remount, so the jump applies while videoDuration is still 0.
+  // Place a jump seek that arrived while the recording was still loading.
+  // Reachable whenever the step is re-entered with a jump still armed: this
+  // component and the video both remount, so the jump lands mid-bootstrap.
   useEffect(() => {
-    if (videoDuration <= 0) {
+    if (!isVideoReady) {
       return;
     }
     const pendingSeek = pendingJumpSeekRef.current;
@@ -183,7 +182,7 @@ export function RepairScreenIOS({
     }
     pendingJumpSeekRef.current = null;
     handleSetTime(pendingSeek, { syncFocus: false });
-  }, [handleSetTime, videoDuration]);
+  }, [handleSetTime, isVideoReady]);
 
   // Now that scrub-preview exists, point the lazy refs at the real callbacks.
   useEffect(() => {
