@@ -44,6 +44,11 @@ enum CaptureStatus {
   APPROVED
 }
 
+enum ReviewVerdict {
+  APPROVED
+  REJECTED
+}
+
 type AppMetadata {
   company     String
   name        String
@@ -170,11 +175,46 @@ model Capture {
   otp               String
   src               String
   status            CaptureStatus @default(CREATED)
+  // Back-relation only. The foreign key lives on CaptureReview, so this adds no
+  // stored field to existing capture documents.
+  reviews           CaptureReview[]
 
   // add indexes for faster lookup for admin review search/filter
   @@index([status, userId])
   @@index([status, appId])
   @@map("captures")
+}
+
+/// One row per verdict submitted from the evaluate step. Append-only: a capture
+/// bounced back to a worker and re-reviewed accumulates one row per round, so
+/// reject rates, rework counts, and the reasons behind them stay recoverable
+/// even though Capture keeps only the latest feedback text.
+model CaptureReview {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  captureId        String        @map("capture") @db.ObjectId
+  capture          Capture       @relation(fields: [captureId], references: [id])
+  reviewerId       String?       @map("reviewer") @db.ObjectId
+  reviewer         User?         @relation(fields: [reviewerId], references: [id])
+  verdict          ReviewVerdict
+  /// 1 for the first review of this capture, 2 after one round of rework, and so
+  /// on. Lets "needed more than one pass" be queried without a self-join.
+  attempt          Int
+  /// Stable TRACE_ISSUES ids cited in this review, deduplicated. Empty on
+  /// approval and on rejections written only as freehand comments.
+  issueIds         String[]      @map("issue_ids")
+  issueCategories  String[]      @map("issue_categories")
+  /// Which editor steps the worker was sent back to: annotation, redaction, summarize.
+  destinations     String[]
+  screenIssueCount Int           @map("screen_issue_count")
+  flowIssueCount   Int           @map("flow_issue_count")
+  /// Trace size at review time, for normalizing issue counts across traces.
+  screenCount      Int?          @map("screen_count")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  @@index([captureId, createdAt])
+  @@index([verdict, createdAt])
+  @@index([reviewerId, createdAt])
+  @@map("capture_reviews")
 }
 
 model User {
@@ -192,6 +232,7 @@ model User {
   captures               Capture[]
   traceIds               String[]        @default([]) @map("traces") @db.ObjectId
   traces                 Trace[]
+  captureReviews         CaptureReview[]
   // Optional for WebAuthn support
   Authenticator          Authenticator[]
 
