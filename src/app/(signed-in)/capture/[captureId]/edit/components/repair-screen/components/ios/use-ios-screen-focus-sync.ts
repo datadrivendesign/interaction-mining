@@ -4,14 +4,14 @@ import { findNearestScreenIndex } from "./ios-helpers";
 
 interface UseIosScreenFocusSyncArgs {
   screens: FrameData[];
-  focusViewIndex: number;
-  setFocusViewIndex: (index: number) => void;
+  focusedScreenId: string | null;
+  setFocusedScreenId: (screenId: string | null) => void;
 }
 
 export function useIosScreenFocusSync({
   screens,
-  focusViewIndex,
-  setFocusViewIndex,
+  focusedScreenId,
+  setFocusedScreenId,
 }: UseIosScreenFocusSyncArgs) {
   const getNearestScreenIndex = useCallback(
     (time: number) => findNearestScreenIndex(screens, time),
@@ -21,11 +21,15 @@ export function useIosScreenFocusSync({
   const syncFocusToTimestamp = useCallback(
     (time: number) => {
       const nextIndex = getNearestScreenIndex(time);
-      if (nextIndex >= 0 && nextIndex !== focusViewIndex) {
-        setFocusViewIndex(nextIndex);
+      if (nextIndex < 0) {
+        return;
+      }
+      const nextScreenId = screens[nextIndex].id;
+      if (nextScreenId !== focusedScreenId) {
+        setFocusedScreenId(nextScreenId);
       }
     },
-    [focusViewIndex, getNearestScreenIndex, setFocusViewIndex],
+    [focusedScreenId, getNearestScreenIndex, screens, setFocusedScreenId],
   );
 
   return { getNearestScreenIndex, syncFocusToTimestamp };

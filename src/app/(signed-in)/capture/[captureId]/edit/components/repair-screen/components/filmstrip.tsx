@@ -15,7 +15,7 @@ import Image from "next/image";
 import { card } from "../util";
 import { spring } from "@/lib/motion";
 import { findGestureOption } from "@/lib/utils/gesture-options";
-import { validateGestureDescription } from "../util";
+import { isScreenAnnotationComplete } from "../util";
 import { useEffect, useRef } from "react";
 
 export function Filmstrip({
@@ -31,12 +31,12 @@ export function Filmstrip({
   os: Platform;
   handleSetTime: (t: number) => void;
 }) {
-  const { focusViewIndex, setFocusViewIndex, handleDeleteScreen } =
+  const { focusedScreenId, setFocusedScreenId, handleDeleteScreen } =
     useNavigation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (focusViewIndex < 0) {
+    if (focusedScreenId === null) {
       return;
     }
 
@@ -46,8 +46,10 @@ export function Filmstrip({
         return;
       }
 
+      // Queried by id, not position: an insert shifts every later index, so a
+      // positional selector can scroll to the wrong thumbnail.
       const selectedItem = container.querySelector<HTMLElement>(
-        `[data-index="${focusViewIndex}"]`,
+        `[data-screen-id="${focusedScreenId}"]`,
       );
       if (!selectedItem) {
         return;
@@ -71,7 +73,7 @@ export function Filmstrip({
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [focusViewIndex, screens.length]);
+  }, [focusedScreenId, screens.length]);
 
   return (
     <div ref={containerRef} className="h-full overflow-x-auto">
@@ -87,15 +89,11 @@ export function Filmstrip({
                 gesture={gestures[screen.id]}
                 redactions={redactions[screen.id] ?? []}
                 os={os}
-                isSelected={focusViewIndex === index}
+                isSelected={focusedScreenId === screen.id}
                 hasError={
-                  isLast
-                    ? false
-                    : !gestures[screen.id] ||
-                      gestures[screen.id].type === null ||
-                      !validateGestureDescription(gestures[screen.id])
+                  isLast ? false : !isScreenAnnotationComplete(gestures[screen.id])
                 }
-                onClick={() => setFocusViewIndex(index)}
+                onClick={() => setFocusedScreenId(screen.id)}
                 handleSetTime={handleSetTime}
                 handleDeleteFrame={handleDeleteScreen}
               />
@@ -127,7 +125,7 @@ function FilmstripItem({
   isSelected?: boolean;
   hasError?: boolean;
   handleSetTime: (t: number) => void;
-  handleDeleteFrame: (index: number) => void;
+  handleDeleteFrame: (screenId: string) => void;
   onClick?: () => void;
 }) {
   const hasGestureCoordinates =
@@ -139,7 +137,7 @@ function FilmstripItem({
   return (
     <motion.li
       className="cursor-pointer min-w-fit h-full max-w-full"
-      data-index={index}
+      data-screen-id={screen.id}
       variants={card}
       initial="initial"
       animate="animate"
@@ -166,7 +164,7 @@ function FilmstripItem({
           onClick={(e) => {
             // Prevent bubbling to parent click handlers that set focus/time
             e.stopPropagation();
-            handleDeleteFrame(index);
+            handleDeleteFrame(screen.id);
           }}
           className="inline-flex self-end items-center cursor-pointer"
           title="Delete snapshot"

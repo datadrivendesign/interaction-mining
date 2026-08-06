@@ -26,12 +26,29 @@ export interface RepairScreenJumpTarget {
   screenId: string;
 }
 
+/**
+ * Stable fallback for the watched screens list. A fresh `[]` literal would
+ * change identity every render and defeat every dependency array that reads it.
+ */
+const EMPTY_SCREENS: FrameData[] = [];
+
 interface NavigationContextType {
   handleNext: () => void;
   handlePrevious: () => void;
-  handleDeleteScreen: (index: number) => void;
-  focusViewIndex: number;
-  setFocusViewIndex: (index: number) => void;
+  handleDeleteScreen: (screenId: string) => void;
+  /**
+   * The focused screen, identified by id. Authoritative — inserting or deleting
+   * a screen shifts positions, so an index cannot survive an edit to the trace.
+   */
+  focusedScreenId: string | null;
+  setFocusedScreenId: (screenId: string | null) => void;
+  /**
+   * Position of the focused screen in the sorted list, derived from
+   * `focusedScreenId`. Provided here so ordering questions ("is this the last
+   * screen?", "what is next?") have one answer rather than one per consumer.
+   * `-1` when nothing is focused or the focused screen no longer exists.
+   */
+  focusedIndex: number;
   /**
    * Lets a platform with a scrubbable recording hand up a seek function, so an
    * explicit jump to a screen can move the playhead with it. Pass `null` to
@@ -82,17 +99,22 @@ export default function RepairScreen({
   jumpTarget?: RepairScreenJumpTarget | null;
 }) {
   const { getValues, setValue } = useFormContext<TraceFormData>();
-  const [watchScreens, watchGestures] = useWatch({
-    name: ["screens", "gestures"],
-  });
-  const screens = watchScreens as FrameData[];
-  const gestures = useMemo(
-    () => (watchGestures ?? {}) as { [key: string]: ScreenGesture },
-    [watchGestures],
-  );
+  // Only `screens` is watched. Dropping the `gestures` subscription keeps this
+  // component from re-rendering on every keystroke in the annotation editor —
+  // react-hook-form hands out a deep clone of the form on each write, which is
+  // what made the jump effect re-fire per keystroke in the first place.
+  const screens = (useWatch({ name: "screens" }) ??
+    EMPTY_SCREENS) as FrameData[];
 
   const os = capture?.task ? capture.task.os : "none";
-  const [focusViewIndex, setFocusViewIndex] = useState<number>(-1);
+  const [focusedScreenId, setFocusedScreenId] = useState<string | null>(null);
+  const focusedIndex = useMemo(
+    () =>
+      focusedScreenId === null
+        ? -1
+        : screens.findIndex((screen) => screen.id === focusedScreenId),
+    [focusedScreenId, screens],
+  );
 
   // Held in a ref rather than state: registering a seek function must not
   // re-render, and the jump effect only ever reads the current one.
@@ -104,23 +126,14 @@ export default function RepairScreen({
     [],
   );
 
-  // UI-level guard for keyboard/arrow navigation so users cannot leave a screen
-  // with incomplete required template fields. Matches validateGestureDescription
-  // used by filmstrip and form schema.
-  const canAdvanceFromCurrentScreen = useCallback(() => {
-    if (focusViewIndex < 0 || focusViewIndex >= screens.length) {
-      return true;
-    }
-    // Last screen does not require a gesture.
-    if (focusViewIndex === screens.length - 1) {
-      return true;
-    }
-    const currentScreen = screens[focusViewIndex];
-    const currentGesture = gestures[currentScreen.id];
-    return validateGestureDescription(
-      currentGesture ?? { type: null, description: "" },
-    );
-  }, [focusViewIndex, gestures, screens]);
+  // Navigation is deliberately unguarded. Gesture completeness is enforced
+  // where it can actually hold — the step gates in page.tsx check every screen
+  // and name each one that needs work. Blocking
+  // Tab/arrows only trapped keyboard users: it was silent, one-directional
+  // (Previous was always free), and bypassed by clicking a filmstrip item or a
+  // feedback chip, so it enforced nothing while making the keyboard feel broken
+  // — you could not even reach a newly captured screen without first filling in
+  // every incomplete screen ahead of it.
 
   // handle focusing on previous screen in the filmstrip list
   const handlePrevious = useCallback(() => {
@@ -128,29 +141,29 @@ export default function RepairScreen({
       return;
     }
     // javascript be stupid, negative modulo isn't a thing here
-    let wrappedIndex = (focusViewIndex - 1) % screens.length;
+    let wrappedIndex = (focusedIndex - 1) % screens.length;
     if (wrappedIndex < 0) {
       wrappedIndex = screens.length - 1;
     }
-    setFocusViewIndex(wrappedIndex);
-  }, [focusViewIndex, screens.length]);
+    setFocusedScreenId(screens[wrappedIndex].id);
+  }, [focusedIndex, screens]);
 
   // handle focusing on next screen in the filmstrip list
   const handleNext = useCallback(() => {
     if (screens.length === 0) {
       return;
     }
-    if (!canAdvanceFromCurrentScreen()) {
-      return;
-    }
-    const wrappedIndex = (focusViewIndex + 1) % screens.length;
-    setFocusViewIndex(wrappedIndex);
-  }, [canAdvanceFromCurrentScreen, focusViewIndex, screens.length]);
+    const wrappedIndex = (focusedIndex + 1) % screens.length;
+    setFocusedScreenId(screens[wrappedIndex].id);
+  }, [focusedIndex, screens]);
 
   const handleDeleteScreen = useCallback(
-    (index: number) => {
+    (screenId: string) => {
       const currentScreens = getValues("screens");
-      if (index < 0 || index >= currentScreens.length) {
+      const index = currentScreens.findIndex(
+        (screen) => screen.id === screenId,
+      );
+      if (index < 0) {
         return;
       }
 
@@ -176,7 +189,7 @@ export default function RepairScreen({
       setValue("gestures", nextGestures);
       setValue("redactions", nextRedactions);
       setValue("vhs", nextVHs);
-      setFocusViewIndex(-1);
+      setFocusedScreenId(null);
     },
     [getValues, setValue],
   );
@@ -212,15 +225,18 @@ export default function RepairScreen({
     "backspace",
     (event) => {
       event.preventDefault();
-      handleDeleteScreen(focusViewIndex);
+      if (focusedScreenId === null) {
+        return;
+      }
+      handleDeleteScreen(focusedScreenId);
     },
     {
-      enabled: focusViewIndex >= 0,
+      enabled: focusedScreenId !== null,
       enableOnFormTags: false,
       enableOnContentEditable: false,
       preventDefault: true,
     },
-    [focusViewIndex, handleDeleteScreen],
+    [focusedScreenId, handleDeleteScreen],
   );
 
   // A checklist jump must apply exactly once per click. `screens` stays in the
@@ -244,7 +260,7 @@ export default function RepairScreen({
     );
     if (targetIndex >= 0) {
       appliedJumpNonceRef.current = jumpTarget.nonce;
-      setFocusViewIndex(targetIndex);
+      setFocusedScreenId(jumpTarget.screenId);
       // Move the recording to the same screen, matching what clicking the
       // filmstrip already does. Without this the playhead stays where it was,
       // and `c` would capture a frame from an unrelated part of the video —
@@ -259,8 +275,9 @@ export default function RepairScreen({
         handleNext,
         handlePrevious,
         handleDeleteScreen,
-        focusViewIndex,
-        setFocusViewIndex,
+        focusedScreenId,
+        setFocusedScreenId,
+        focusedIndex,
         registerSeekToTime,
       }}
     >

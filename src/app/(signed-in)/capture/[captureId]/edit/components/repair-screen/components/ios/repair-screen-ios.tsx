@@ -35,8 +35,12 @@ export function RepairScreenIOS({
   os: Platform;
   draftFetchResult: DraftFetchResults;
 }) {
-  const { focusViewIndex, setFocusViewIndex, registerSeekToTime } =
-    useNavigation();
+  const {
+    focusedScreenId,
+    setFocusedScreenId,
+    focusedIndex,
+    registerSeekToTime,
+  } = useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
   const { register: registerScreenUrl } = useScreenBlobRegistry();
   const [watchScreens, watchGestures, watchRedactions] = useWatch({
@@ -47,17 +51,15 @@ export function RepairScreenIOS({
   const gestures = watchGestures as { [key: string]: ScreenGesture };
   const redactions = watchRedactions as { [key: string]: Redaction[] };
   const focusedScreen =
-    focusViewIndex > -1 && focusViewIndex < screens.length
-      ? screens[focusViewIndex]
-      : null;
+    screens.find((screen) => screen.id === focusedScreenId) ?? null;
   const captureMarkers = useMemo(
     () =>
-      screens.map((screen, index) => ({
+      screens.map((screen) => ({
         id: screen.id,
         timestamp: screen.timestamp,
-        isFocused: focusViewIndex === index,
+        isFocused: screen.id === focusedScreenId,
       })),
-    [focusViewIndex, screens],
+    [focusedScreenId, screens],
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -86,8 +88,8 @@ export function RepairScreenIOS({
 
   const { syncFocusToTimestamp } = useIosScreenFocusSync({
     screens,
-    focusViewIndex,
-    setFocusViewIndex,
+    focusedScreenId,
+    setFocusedScreenId,
   });
 
   // Bootstrap: load video, populate screens, expose duration + thumbnails.
@@ -117,7 +119,7 @@ export function RepairScreenIOS({
   } = useIosVideoPlayback({
     videoRef,
     videoDuration,
-    focusViewIndex,
+    focusedScreenId,
     onLivePhotoStart,
   });
 
@@ -215,7 +217,12 @@ export function RepairScreenIOS({
       "screens",
       [...screens, f].sort((a, b) => a.timestamp - b.timestamp),
     );
-  }, [currentTime, registerScreenUrl, screens, setValue]);
+    // Focus what was just captured. Every screen but the last needs a gesture,
+    // so capturing is always followed by annotating it — and leaving focus
+    // behind meant hunting for the new frame in the filmstrip first. No seek is
+    // needed: the playhead is already at this screen's timestamp.
+    setFocusedScreenId(f.id);
+  }, [currentTime, registerScreenUrl, screens, setFocusedScreenId, setValue]);
 
   // Workspace keybinds
   useHotkeys("space", async (e) => {
@@ -232,10 +239,10 @@ export function RepairScreenIOS({
     "r",
     (e) => {
       e.preventDefault();
-      if (focusViewIndex < 0 || focusViewIndex >= screens.length) return;
-      handleLivePhoto(screens[focusViewIndex].timestamp);
+      if (!focusedScreen) return;
+      handleLivePhoto(focusedScreen.timestamp);
     },
-    [focusViewIndex, screens, handleLivePhoto],
+    [focusedScreen, handleLivePhoto],
   );
 
   useHotkeys(
@@ -310,7 +317,7 @@ export function RepairScreenIOS({
               <RepairFocusPanelIOS
                 taskDescription={taskDescription}
                 focusedScreen={focusedScreen}
-                isLastScreen={focusViewIndex === screens.length - 1}
+                isLastScreen={focusedIndex === screens.length - 1}
                 isLivePhotoActive={isLivePhotoActive}
                 onLivePhoto={handleLivePhoto}
               />
