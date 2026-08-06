@@ -36,7 +36,12 @@ import RedactScreen from "./components/redact-screen";
 import { RedactScreenJumpTarget } from "./components/redact-screen/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { DraftFetchResults, getDraftFiles, handleDraftSave } from "./util";
+import {
+  DraftFetchResults,
+  dedupeScreensById,
+  getDraftFiles,
+  handleDraftSave,
+} from "./util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
@@ -208,10 +213,13 @@ export default function Page() {
       }
 
       if (!hasScreensWithSrc) {
+        // Screen id keys selection, gestures, redactions and VHs, so a repeated
+        // id in a draft would make all four ambiguous.
+        const draftScreens = dedupeScreensById(draftFormData.screens);
         // grab screens
         methods.setValue(
           "screens",
-          draftFormData.screens.map((screen) => ({
+          draftScreens.map((screen) => ({
             id: screen.id,
             src: "",
             timestamp: screen.timestamp,
@@ -219,7 +227,7 @@ export default function Page() {
         );
         // grab vh from android screens
         const draftVHs: { [key: string]: any } = {};
-        draftFormData.screens.forEach((screen) => {
+        draftScreens.forEach((screen) => {
           draftVHs[screen.id] = null;
         });
         methods.setValue("vhs", draftVHs);
