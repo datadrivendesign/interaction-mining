@@ -127,8 +127,8 @@ export default function RepairScreen({
   );
 
   // Navigation is deliberately unguarded. Gesture completeness is enforced
-  // where it can actually hold — the step's Next button validates every screen
-  // against ScreenGestureSchema and reports each failure (page.tsx). Blocking
+  // where it can actually hold — the step gates in page.tsx check every screen
+  // and name each one that needs work. Blocking
   // Tab/arrows only trapped keyboard users: it was silent, one-directional
   // (Previous was always free), and bypassed by clicking a filmstrip item or a
   // feedback chip, so it enforced nothing while making the keyboard feel broken

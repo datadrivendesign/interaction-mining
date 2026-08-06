@@ -78,6 +78,55 @@ const FEEDBACK_STEP_ORDER = [
   TraceSteps.Review,
 ];
 
+type IncompleteScreen = {
+  screenNumber: number;
+  issue: ScreenAnnotationIssue;
+};
+
+/**
+ * Screens whose annotation is unfinished, numbered the way the filmstrip numbers
+ * them. The last screen is the goal state and needs no gesture.
+ *
+ * Scanned per screen rather than parsed with a zod schema. Zod skips a `.refine`
+ * when the schema beneath it failed, and the ways an annotation can be
+ * incomplete sit at different levels — a missing marker fails field validation,
+ * unfilled template slots fail a refine, a screen with no gesture at all fails a
+ * different refine — so any field-level failure hid the rest. Both gates share
+ * this function so they cannot drift apart or under-report.
+ */
+function collectIncompleteScreens(
+  screens: TraceFormData["screens"],
+  gestures: TraceFormData["gestures"],
+): IncompleteScreen[] {
+  return screens
+    .slice(0, -1)
+    .map((screen, index) => ({
+      screenNumber: index + 1,
+      issue: getScreenAnnotationIssue(gestures[screen.id]),
+    }))
+    .filter((entry): entry is IncompleteScreen => entry.issue !== null);
+}
+
+/**
+ * One message saying what each unfinished screen needs. Past four screens the
+ * reasons stop fitting a toast, so it falls back to numbers and points at the
+ * filmstrip, which rings exactly the same set.
+ */
+function describeIncompleteScreens(entries: IncompleteScreen[]): string {
+  const describe = (entry: IncompleteScreen) =>
+    `Screen ${entry.screenNumber}: ${SCREEN_ANNOTATION_ISSUE_ACTIONS[entry.issue]}`;
+
+  if (entries.length === 1) {
+    return `${describe(entries[0])}.`;
+  }
+  if (entries.length <= 4) {
+    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
+  }
+  return `${entries.length} screens need work: ${entries
+    .map((entry) => entry.screenNumber)
+    .join(", ")}. The filmstrip rings them in yellow.`;
+}
+
 export default function Page() {
   const CHECKLIST_LAYOUT_STORAGE_KEY = "edit-feedback-checklist-layout";
   const params = useParams();
@@ -574,61 +623,14 @@ export default function Page() {
     setIsSubmitting(true);
     // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
-      // Scanned per screen rather than run through ScreenGestureSchema. Zod skips
-      // a `.refine` when the schema beneath it already failed, and the three ways
-      // an annotation can be incomplete sit at three different levels: a missing
-      // marker fails field validation, an unfilled template fails
-      // GestureSchema's refine, and a screen with no gesture at all fails
-      // ScreenGestureSchema's refine. Any field-level failure therefore silenced
-      // the other two, so a worker fixed one screen, pressed Next, and only then
-      // discovered the next problem.
-      //
-      // isScreenAnnotationComplete is the same predicate the filmstrip uses for
-      // its error ring, so what is flagged here is what is ringed there.
       const { screens: currentScreens, gestures: currentGestures } =
         methods.getValues();
-      // The last screen is the goal state and needs no gesture.
-      const incompleteScreens = currentScreens
-        .slice(0, -1)
-        .map((screen, index) => ({
-          screenNumber: index + 1,
-          issue: getScreenAnnotationIssue(currentGestures[screen.id]),
-        }))
-        .filter(
-          (
-            entry,
-          ): entry is { screenNumber: number; issue: ScreenAnnotationIssue } =>
-            entry.issue !== null,
-        );
-
+      const incompleteScreens = collectIncompleteScreens(
+        currentScreens,
+        currentGestures,
+      );
       if (incompleteScreens.length > 0) {
-        // Say what to do, not just where. Listing bare screen numbers moves the
-        // guesswork rather than removing it. Beyond a handful the per-screen
-        // reasons stop fitting in a toast, so fall back to the numbers and point
-        // at the filmstrip, which rings exactly these screens.
-        const describe = ({
-          screenNumber,
-          issue,
-        }: {
-          screenNumber: number;
-          issue: ScreenAnnotationIssue;
-        }) => `Screen ${screenNumber}: ${SCREEN_ANNOTATION_ISSUE_ACTIONS[issue]}`;
-
-        if (incompleteScreens.length === 1) {
-          toast.error(`${describe(incompleteScreens[0])}.`);
-        } else if (incompleteScreens.length <= 4) {
-          toast.error(
-            `${incompleteScreens.length} screens need work — ${incompleteScreens
-              .map(describe)
-              .join("; ")}.`,
-          );
-        } else {
-          toast.error(
-            `${incompleteScreens.length} screens need work: ${incompleteScreens
-              .map((entry) => entry.screenNumber)
-              .join(", ")}. The filmstrip rings them in yellow.`,
-          );
-        }
+        toast.error(describeIncompleteScreens(incompleteScreens));
         setIsSubmitting(false);
         return;
       }
@@ -647,26 +649,42 @@ export default function Page() {
         return;
       }
     } else if (stepIndex === TraceSteps.Review) {
-      // validate all screen gestures except the last one
-      const allButLastScreenIds = methods
-        .getValues()
-        .screens.slice(0, -1)
-        .map((s) => s.id);
+      const { screens: currentScreens, gestures: currentGestures } =
+        methods.getValues();
+      // Gestures first, with the same predicate and reporting as the capture
+      // step. TraceFormSchema's refines under-report for the reason described on
+      // collectIncompleteScreens, and this is the gate that decides whether a
+      // trace reaches a reviewer — a screen captured after passing the capture
+      // step would otherwise slip through unannotated.
+      const incompleteScreens = collectIncompleteScreens(
+        currentScreens,
+        currentGestures,
+      );
+      if (incompleteScreens.length > 0) {
+        toast.error(describeIncompleteScreens(incompleteScreens));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Then the rest of the trace — the description above all, which is only
+      // written at this step.
+      const allButLastScreenIds = currentScreens.slice(0, -1).map((s) => s.id);
       const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
+        Object.entries(currentGestures).filter(([id]) =>
           allButLastScreenIds.includes(id),
         ),
       );
-      // Validate the entire trace form, especially "description"
       const validation = TraceFormSchema.safeParse({
         ...methods.getValues(),
         gestures: allButLastScreenGestures,
       });
       if (!validation.success) {
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
+        console.error(validation.error.issues);
+        // Deduplicated: the schema reports per field, so one cause can surface
+        // several times with the same wording.
+        new Set(validation.error.issues.map((issue) => issue.message)).forEach(
+          (message) => toast.error(message),
+        );
         setIsSubmitting(false);
         return;
       }
