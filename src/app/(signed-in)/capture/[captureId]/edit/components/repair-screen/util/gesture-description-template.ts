@@ -311,6 +311,42 @@ export function validateGestureDescription(
   });
 }
 
+/**
+ * Whether a screen's annotation is finished: a gesture exists, it is placed
+ * somewhere on the screen, and its description satisfies the template.
+ *
+ * Single source of truth for "is this screen done", shared by the filmstrip's
+ * error ring and the step's Next gate so the two cannot disagree — previously
+ * the ring ignored marker placement while the gate required it, so a screen
+ * could look complete and still block the step.
+ *
+ * @param gesture - The gesture recorded for a screen, if any.
+ */
+export function isScreenAnnotationComplete(
+  gesture:
+    | Pick<
+        ScreenGesture,
+        "type" | "description" | "x" | "y" | "scrollDeltaX" | "scrollDeltaY"
+      >
+    | null
+    | undefined,
+): boolean {
+  if (!gesture) {
+    return false;
+  }
+  // validateGestureDescription covers type, template slots and drag end-points,
+  // but not whether the marker was ever placed.
+  if (
+    gesture.x === null ||
+    gesture.x === undefined ||
+    gesture.y === null ||
+    gesture.y === undefined
+  ) {
+    return false;
+  }
+  return validateGestureDescription(gesture);
+}
+
 export function hasCompleteDragPoints(
   gesture: Pick<ScreenGesture, "x" | "y" | "scrollDeltaX" | "scrollDeltaY">,
 ): boolean {

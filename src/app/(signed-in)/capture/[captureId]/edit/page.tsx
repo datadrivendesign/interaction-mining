@@ -19,10 +19,10 @@ import { toast } from "sonner";
 import {
   DraftTraceFormData,
   RedactionSchema,
-  ScreenGestureSchema,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
+import { isScreenAnnotationComplete } from "./components/repair-screen/util";
 
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
@@ -570,59 +570,35 @@ export default function Page() {
     setIsSubmitting(true);
     // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
-      // validate all screen gestures except the last one
-      const allButLastScreenIds = methods
-        .getValues()
-        .screens.slice(0, -1)
-        .map((s) => s.id);
-      const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
-          allButLastScreenIds.includes(id),
-        ),
-      );
-      // Validate the "gestures"
-      const validation = ScreenGestureSchema.safeParse({
-        ...methods.getValues(),
-        gestures: allButLastScreenGestures,
-      });
-      if (!validation.success) {
-        console.error(validation.error.issues);
-        // Group by screen. GestureSchema validates each field separately, so one
-        // untouched gesture yields three or four issues — "Gesture type is
-        // required", "X coordinate is required", "Y coordinate is required" —
-        // which fired as separate toasts and told the worker neither which
-        // screen to fix nor that "X coordinate" means "place the marker".
-        const currentScreens = methods.getValues().screens;
-        const screenNumberById = new Map(
-          currentScreens.map((screen, index) => [screen.id, index + 1]),
+      // Scanned per screen rather than run through ScreenGestureSchema. Zod skips
+      // a `.refine` when the schema beneath it already failed, and the three ways
+      // an annotation can be incomplete sit at three different levels: a missing
+      // marker fails field validation, an unfilled template fails
+      // GestureSchema's refine, and a screen with no gesture at all fails
+      // ScreenGestureSchema's refine. Any field-level failure therefore silenced
+      // the other two, so a worker fixed one screen, pressed Next, and only then
+      // discovered the next problem.
+      //
+      // isScreenAnnotationComplete is the same predicate the filmstrip uses for
+      // its error ring, so what is flagged here is what is ringed there.
+      const { screens: currentScreens, gestures: currentGestures } =
+        methods.getValues();
+      // The last screen is the goal state and needs no gesture.
+      const incompleteScreenNumbers = currentScreens
+        .slice(0, -1)
+        .map((screen, index) => ({ screen, screenNumber: index + 1 }))
+        .filter(
+          ({ screen }) =>
+            !isScreenAnnotationComplete(currentGestures[screen.id]),
+        )
+        .map(({ screenNumber }) => screenNumber);
+
+      if (incompleteScreenNumbers.length > 0) {
+        toast.error(
+          incompleteScreenNumbers.length === 1
+            ? `Screen ${incompleteScreenNumbers[0]} needs a gesture, a marker on the screen, and a complete description.`
+            : `${incompleteScreenNumbers.length} screens still need work: ${incompleteScreenNumbers.join(", ")}.`,
         );
-        const flaggedScreenNumbers = new Set<number>();
-        const otherMessages = new Set<string>();
-
-        validation.error.issues.forEach((issue) => {
-          const [field, screenId] = issue.path;
-          if (field === "gestures" && typeof screenId === "string") {
-            const screenNumber = screenNumberById.get(screenId);
-            if (screenNumber !== undefined) {
-              flaggedScreenNumbers.add(screenNumber);
-              return;
-            }
-          }
-          otherMessages.add(issue.message);
-        });
-
-        if (flaggedScreenNumbers.size > 0) {
-          const screenList = Array.from(flaggedScreenNumbers).sort(
-            (a, b) => a - b,
-          );
-          toast.error(
-            screenList.length === 1
-              ? `Screen ${screenList[0]} needs a gesture with a description.`
-              : `These screens need a gesture with a description: ${screenList.join(", ")}.`,
-          );
-        }
-        otherMessages.forEach((message) => toast.error(message));
-
         setIsSubmitting(false);
         return;
       }

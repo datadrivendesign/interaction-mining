@@ -15,7 +15,7 @@ import Image from "next/image";
 import { card } from "../util";
 import { spring } from "@/lib/motion";
 import { findGestureOption } from "@/lib/utils/gesture-options";
-import { validateGestureDescription } from "../util";
+import { isScreenAnnotationComplete } from "../util";
 import { useEffect, useRef } from "react";
 
 export function Filmstrip({
@@ -91,11 +91,7 @@ export function Filmstrip({
                 os={os}
                 isSelected={focusedScreenId === screen.id}
                 hasError={
-                  isLast
-                    ? false
-                    : !gestures[screen.id] ||
-                      gestures[screen.id].type === null ||
-                      !validateGestureDescription(gestures[screen.id])
+                  isLast ? false : !isScreenAnnotationComplete(gestures[screen.id])
                 }
                 onClick={() => setFocusedScreenId(screen.id)}
                 handleSetTime={handleSetTime}
