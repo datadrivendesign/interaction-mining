@@ -7,7 +7,7 @@ import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { extractVideoFrame } from "../../util";
+import { extractVideoFrame, useFormFieldKeyPressGuard } from "../../util";
 import { FrameData, Redaction, TraceFormData } from "../../../types";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenGesture } from "@prisma/client";
@@ -35,7 +35,8 @@ export function RepairScreenIOS({
   os: Platform;
   draftFetchResult: DraftFetchResults;
 }) {
-  const { focusViewIndex, setFocusViewIndex } = useNavigation();
+  const { focusViewIndex, setFocusViewIndex, registerSeekToTime } =
+    useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
   const { register: registerScreenUrl } = useScreenBlobRegistry();
   const [watchScreens, watchGestures, watchRedactions] = useWatch({
@@ -60,6 +61,9 @@ export function RepairScreenIOS({
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
+  // Holds a jump's seek target while the recording is still loading.
+  const pendingJumpSeekRef = useRef<number | null>(null);
 
   const videoFiles = useMemo(() => {
     const regexRule = /\.(mp4|mov)$/;
@@ -87,8 +91,8 @@ export function RepairScreenIOS({
   });
 
   // Bootstrap: load video, populate screens, expose duration + thumbnails.
-  const { videoDuration, thumbnails, previewThumbnails } = useIosVideoBootstrap(
-    {
+  const { videoDuration, thumbnails, previewThumbnails, isVideoReady } =
+    useIosVideoBootstrap({
       videoRef,
       videoFiles,
       draftFetchResult,
@@ -96,8 +100,7 @@ export function RepairScreenIOS({
       setValue,
       onResetPreviewFrames,
       registerScreenUrl,
-    },
-  );
+    });
 
   // Playback: isPlaying, currentTime, live-photo replay window.
   const {
@@ -146,6 +149,40 @@ export function RepairScreenIOS({
     setIsLivePhotoActive,
     syncFocusToTimestamp,
   });
+
+  // Let a jump to a screen (feedback checklist chip) carry the playhead with it.
+  // `syncFocus: false` matters: handleSetTime otherwise re-derives focus from the
+  // nearest screen timestamp, which lands on a neighbour when two screens sit
+  // close together and would override the jump that asked for this seek.
+  useEffect(() => {
+    registerSeekToTime((timestamp) => {
+      // Bootstrap seeks the live video element while extracting frames — the
+      // warmup grab alone drags it to 0.1s — and the `seeked` listener writes
+      // that back over currentTime. Seeking before it finishes gets undone, and
+      // a jump applies only once, so it never self-corrects. Hold it instead.
+      if (!isVideoReady) {
+        pendingJumpSeekRef.current = timestamp;
+        return;
+      }
+      handleSetTime(timestamp, { syncFocus: false });
+    });
+    return () => registerSeekToTime(null);
+  }, [handleSetTime, isVideoReady, registerSeekToTime]);
+
+  // Place a jump seek that arrived while the recording was still loading.
+  // Reachable whenever the step is re-entered with a jump still armed: this
+  // component and the video both remount, so the jump lands mid-bootstrap.
+  useEffect(() => {
+    if (!isVideoReady) {
+      return;
+    }
+    const pendingSeek = pendingJumpSeekRef.current;
+    if (pendingSeek === null) {
+      return;
+    }
+    pendingJumpSeekRef.current = null;
+    handleSetTime(pendingSeek, { syncFocus: false });
+  }, [handleSetTime, isVideoReady]);
 
   // Now that scrub-preview exists, point the lazy refs at the real callbacks.
   useEffect(() => {
@@ -222,11 +259,18 @@ export function RepairScreenIOS({
   useHotkeys(
     "c",
     (e) => {
+      // Bound to keyup, so the release can outlive the field it was typed into:
+      // if a form write moved the focused screen mid-press, the annotation
+      // editor is already gone and this event reads as a bare workspace
+      // keypress. Trust the keydown's target instead.
+      if (didKeyPressStartInFormField("c")) {
+        return;
+      }
       e.preventDefault();
       handleCaptureFrame();
     },
     { keyup: true },
-    [handleCaptureFrame],
+    [didKeyPressStartInFormField, handleCaptureFrame],
   );
 
   return (
