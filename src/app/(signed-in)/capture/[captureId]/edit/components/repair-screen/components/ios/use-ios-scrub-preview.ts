@@ -57,27 +57,47 @@ interface UseIosScrubPreviewArgs {
 }
 
 /**
- * Cheap signature of what was drawn: a handful of pixels spread across the
- * frame. Identical signatures for different requested moments mean the same
- * frame came back twice, which would place the fault in the decoder rather than
- * anywhere our timing can reach.
+ * Describes what is actually on a canvas.
+ *
+ * The previous version sampled five points along the diagonal, which on a
+ * letterboxed recording lands in the black bars — reporting uniform black for
+ * every frame regardless of content, and sending two investigations down the
+ * wrong path. This samples a grid across the whole frame and reports the spread,
+ * so "uniformly blank" and "real content" cannot be confused.
  */
-function fingerprintCanvas(
+function describeCanvas(
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-): string {
+): Record<string, unknown> {
   try {
-    return [0.2, 0.4, 0.5, 0.6, 0.8]
-      .map((fraction) => {
-        const x = Math.floor(canvas.width * fraction);
-        const y = Math.floor(canvas.height * fraction);
+    const steps = 7;
+    const luminances: number[] = [];
+    let signature = 0;
+    for (let row = 1; row < steps; row += 1) {
+      for (let column = 1; column < steps; column += 1) {
+        const x = Math.floor((canvas.width * column) / steps);
+        const y = Math.floor((canvas.height * row) / steps);
         const [r, g, b] = context.getImageData(x, y, 1, 1).data;
-        return `${r},${g},${b}`;
-      })
-      .join("|");
-  } catch {
-    // Tainted canvas: displayable but not readable, so no fingerprint.
-    return "unreadable";
+        luminances.push(0.299 * r + 0.587 * g + 0.114 * b);
+        // Order-dependent rolling signature, so two different frames rarely match.
+        signature = (signature * 31 + r * 65536 + g * 256 + b) % 1000000007;
+      }
+    }
+    const min = Math.min(...luminances);
+    const max = Math.max(...luminances);
+    const mean =
+      luminances.reduce((sum, value) => sum + value, 0) / luminances.length;
+    return {
+      size: `${canvas.width}x${canvas.height}`,
+      lumaMin: Math.round(min),
+      lumaMax: Math.round(max),
+      lumaMean: Math.round(mean),
+      // A frame with no spread across 36 points is blank, not content.
+      looksBlank: max - min < 4,
+      signature,
+    };
+  } catch (error) {
+    return { unreadable: String(error).slice(0, 60) };
   }
 }
 
@@ -121,6 +141,8 @@ export function useIosScrubPreview({
   const frameCallbackHandleRef = useRef<number | null>(null);
   /** Invalidates an in-flight frame read when a newer one starts. */
   const revealTokenRef = useRef(0);
+  /** The control only needs measuring once per session. */
+  const controlMeasuredRef = useRef(false);
   const revealFallbackTimeoutRef = useRef<number | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
@@ -160,6 +182,34 @@ export function useIosScrubPreview({
     [previewThumbnails],
   );
 
+  /** Measures a preview thumbnail the same way, to calibrate the frame reading. */
+  const describeThumbnailControl = useCallback(async (src: string | null) => {
+    if (!src || controlMeasuredRef.current) {
+      return;
+    }
+    controlMeasuredRef.current = true;
+    try {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("control image failed"));
+        image.src = src;
+      });
+      const scratch = document.createElement("canvas");
+      scratch.width = image.naturalWidth;
+      scratch.height = image.naturalHeight;
+      const context = scratch.getContext("2d");
+      if (!context) {
+        return;
+      }
+      context.drawImage(image, 0, 0);
+      logScrubEvent("thumbnailControl", describeCanvas(context, scratch));
+    } catch (error) {
+      logScrubEvent("thumbnailControl", { failed: String(error).slice(0, 60) });
+    }
+  }, []);
+
   /**
    * Paint the frame the element is currently decoding into the canvas.
    *
@@ -180,10 +230,14 @@ export function useIosScrubPreview({
           const context = canvas.getContext("2d");
           logScrubEvent("settledFrameDrawn", {
             at: Math.round(time * 1000) / 1000,
-            fingerprint: context
-              ? fingerprintCanvas(context, canvas)
-              : "no-context",
+            ...(context ? describeCanvas(context, canvas) : { noContext: true }),
           });
+          // A known-good image through the same measurement, as a control. If
+          // this shows spread and the drawn frame does not, the draw is blank;
+          // if both look blank, the measurement is at fault again.
+          void describeThumbnailControl(
+            getNearestPreviewThumbnail(time)?.src ?? null,
+          );
         }
         return drew;
       } catch (error) {
@@ -191,7 +245,12 @@ export function useIosScrubPreview({
         return false;
       }
     },
-    [drawFrameInto, settledFrameCanvasRef],
+    [
+      describeThumbnailControl,
+      drawFrameInto,
+      getNearestPreviewThumbnail,
+      settledFrameCanvasRef,
+    ],
   );
 
   const cancelPendingReveal = useCallback(() => {
