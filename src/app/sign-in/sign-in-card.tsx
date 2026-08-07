@@ -33,7 +33,7 @@ export default function SignInCard() {
   };
 
   return (
-    <div className="flex w-dvw min-h-dvh justify-center items-start md:items-center p-8 md:p-16">
+    <div className="flex min-h-dvh w-dvw items-start justify-center p-8 md:items-center md:p-16">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-center text-2xl font-black">
@@ -42,12 +42,12 @@ export default function SignInCard() {
 
           {/* Google */}
           <Button
-            className="flex grow justify-center items-center w-full rounded-lg px-4 py-2"
+            className="flex w-full grow items-center justify-center rounded-lg px-4 py-2"
             onClick={handleGoogleSignIn}
           >
-            <span className="inline-flex items-center text-white dark:text-black font-medium">
+            <span className="inline-flex items-center font-medium text-white dark:text-black">
               <Image
-                className="w-auto h-4 mr-4"
+                className="mr-4 h-4 w-auto"
                 src="/third-party-logos/g.webp"
                 alt="Google logo"
                 width={0}

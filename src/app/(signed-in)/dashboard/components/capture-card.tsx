@@ -40,7 +40,7 @@ function hasReviewerFeedback(capture: {
 function StartButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/start`}>
-      <Button size="sm" variant="default" className="px-3 cursor-pointer">
+      <Button size="sm" variant="default" className="cursor-pointer px-3">
         <Play className="mr-1.5 size-3" />
         Start
       </Button>
@@ -51,7 +51,7 @@ function StartButton({ captureId }: { captureId: string }) {
 function ProcessButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/start`}>
-      <Button size="sm" variant="default" className="px-3 cursor-pointer">
+      <Button size="sm" variant="default" className="cursor-pointer px-3">
         <Pencil className="mr-1.5 size-3" />
         Process
       </Button>
@@ -62,7 +62,7 @@ function ProcessButton({ captureId }: { captureId: string }) {
 function ReviewButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/evaluate`}>
-      <Button size="sm" variant="default" className="px-3 cursor-pointer">
+      <Button size="sm" variant="default" className="cursor-pointer px-3">
         <Eye className="mr-1.5 size-3" />
         Review
       </Button>
@@ -73,7 +73,7 @@ function ReviewButton({ captureId }: { captureId: string }) {
 function EditButton({ captureId }: { captureId: string }) {
   return (
     <Link href={`/capture/${captureId}/edit`}>
-      <Button size="sm" variant="outline" className="px-3 cursor-pointer">
+      <Button size="sm" variant="outline" className="cursor-pointer px-3">
         <Edit className="mr-1.5 size-3" />
         Edit
       </Button>
@@ -96,7 +96,7 @@ function DeleteDialog({
         <Button
           size="sm"
           variant="destructive"
-          className="px-3 cursor-pointer"
+          className="cursor-pointer px-3"
           disabled={isDeleting}
         >
           <Trash className="mr-0.5 size-3" />
@@ -119,7 +119,7 @@ function DeleteDialog({
             <Button
               size="sm"
               variant="destructive"
-              className="px-3 cursor-pointer"
+              className="cursor-pointer px-3"
               disabled={isDeleting}
               onClick={() => onDelete(captureId)}
             >
@@ -200,7 +200,7 @@ export function CaptureCard({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-start justify-between gap-2">
             <h4
-              className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-snug"
+              className="line-clamp-2 min-w-0 text-sm leading-snug font-medium break-words"
               title={appName}
             >
               {appName}
@@ -216,7 +216,7 @@ export function CaptureCard({
             </div>
           </div>
           <p
-            className="mt-1 line-clamp-2 break-words text-xs leading-snug text-muted-foreground"
+            className="mt-1 line-clamp-2 text-xs leading-snug break-words text-muted-foreground"
             title={taskDescription}
           >
             {taskDescription}

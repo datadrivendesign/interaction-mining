@@ -103,7 +103,7 @@ export const getCapture = unstable_cache(
   {
     revalidate: 10,
     tags: ["capture", "capture-single"],
-  }
+  },
 );
 
 /**
@@ -179,7 +179,7 @@ export const getCaptures = unstable_cache(
     }
   },
   ["captures-list"],
-  { revalidate: 10, tags: ["capture", "captures-list"] }
+  { revalidate: 10, tags: ["capture", "captures-list"] },
 );
 
 /**
@@ -300,7 +300,7 @@ export async function getCapturesPaginated({
  */
 export async function updateCapture(
   id: string,
-  data: Prisma.CaptureUpdateInput
+  data: Prisma.CaptureUpdateInput,
 ) {
   const session = await requireAuth();
 
@@ -327,7 +327,7 @@ export async function updateCapture(
  * @returns ActionPayload of list of uploaded files.
  */
 export async function getCaptureFiles(
-  captureId: string
+  captureId: string,
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`uploads/${captureId}`);
@@ -455,9 +455,9 @@ export async function createCaptureTask({
       };
     }
 
-    let candidateTaskApp:
-      | Prisma.CandidateTaskAppGetPayload<{ include: { app: true } }>
-      | null = null;
+    let candidateTaskApp: Prisma.CandidateTaskAppGetPayload<{
+      include: { app: true };
+    }> | null = null;
     if (input.candidateOrigin) {
       candidateTaskApp = await prisma.candidateTaskApp.findUnique({
         where: { id: input.candidateOrigin.candidateTaskAppId },
@@ -547,8 +547,7 @@ export async function createCaptureTask({
             u: {
               $set: {
                 isTaken: true,
-                [`tasks.${input.candidateOrigin.taskIndex}.status`]:
-                  "started",
+                [`tasks.${input.candidateOrigin.taskIndex}.status`]: "started",
               },
             },
             multi: false,

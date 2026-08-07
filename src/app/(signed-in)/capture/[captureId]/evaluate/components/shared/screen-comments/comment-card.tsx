@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertCircle, ChevronDown, ChevronRight, Layers2, X } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Layers2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ReviewComment } from "../../../utils/review-feedback";
@@ -44,7 +50,7 @@ export function CommentCard({
           <div className="flex min-w-0 flex-1 items-start gap-1.5">
             <button
               type="button"
-              className="flex min-w-0 flex-1 items-start gap-1.5 text-left cursor-pointer"
+              className="flex min-w-0 flex-1 cursor-pointer items-start gap-1.5 text-left"
               onClick={onToggleExpanded}
             >
               {isExpanded ? (
@@ -67,11 +73,14 @@ export function CommentCard({
                       {screenDetails.length} screens
                     </span>
                   )}
-                  {!showJumpAction && !isMultiScreen && target === "screen" && screenLabel && (
-                    <span className="rounded-full bg-neutral-700 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white dark:bg-neutral-300 dark:text-neutral-900">
-                      {screenLabel}
-                    </span>
-                  )}
+                  {!showJumpAction &&
+                    !isMultiScreen &&
+                    target === "screen" &&
+                    screenLabel && (
+                      <span className="rounded-full bg-neutral-700 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums dark:bg-neutral-300 dark:text-neutral-900">
+                        {screenLabel}
+                      </span>
+                    )}
                 </div>
                 <p className="line-clamp-2 text-[11px] leading-snug text-neutral-600 dark:text-neutral-400">
                   {comment.text}
@@ -86,7 +95,7 @@ export function CommentCard({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-6 shrink-0 px-2 text-[10px] cursor-pointer hover:bg-blue-500/100 hover:text-white dark:hover:bg-blue-500/100 dark:hover:text-white"
+                  className="h-6 shrink-0 cursor-pointer px-2 text-[10px] hover:bg-blue-500/100 hover:text-white dark:hover:bg-blue-500/100 dark:hover:text-white"
                   onClick={onJumpToScreen}
                 >
                   {screenLabel}
@@ -99,7 +108,7 @@ export function CommentCard({
               {screenDetails.map(({ screenId, screenLabel: label }) => (
                 <span
                   key={screenId}
-                  className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium tabular-nums text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                  className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-700 tabular-nums dark:bg-neutral-800 dark:text-neutral-300"
                 >
                   {label}
                   {onRemoveFromScreen && (
@@ -123,7 +132,7 @@ export function CommentCard({
           type="button"
           aria-label={isMultiScreen ? "Remove from all screens" : "Remove"}
           title={isMultiScreen ? "Remove from all screens" : undefined}
-          className="shrink-0 p-1 text-neutral-400 transition-colors hover:text-red-500 cursor-pointer"
+          className="shrink-0 cursor-pointer p-1 text-neutral-400 transition-colors hover:text-red-500"
           onClick={onRemove}
         >
           <X className="size-3.5" />

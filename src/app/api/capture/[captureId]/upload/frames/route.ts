@@ -4,7 +4,7 @@ import { handleAndroidScreenUpload } from "@/lib/actions";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ captureId: string }> }
+  { params }: { params: Promise<{ captureId: string }> },
 ) {
   try {
     const { captureId } = await params;
@@ -26,7 +26,7 @@ export async function POST(
 
       return NextResponse.json(
         { message: "Upload successful" },
-        { status: 200 }
+        { status: 200 },
       );
     }
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -34,7 +34,7 @@ export async function POST(
     console.error("Upload error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

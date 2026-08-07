@@ -64,7 +64,7 @@ export default async function Layout({
 
 function TraceCreatedRedirect({ redirectTo }: { redirectTo: string }) {
   return (
-    <div className="flex w-dvw h-[calc(100dvh-65px)] justify-center items-start md:items-center p-8 md:p-16">
+    <div className="flex h-[calc(100dvh-65px)] w-dvw items-start justify-center p-8 md:items-center md:p-16">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>Trace already exists</CardTitle>

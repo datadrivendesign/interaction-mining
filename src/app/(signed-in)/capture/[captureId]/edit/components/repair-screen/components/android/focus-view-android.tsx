@@ -48,7 +48,7 @@ export function FocusViewAndroid({
   return (
     <>
       <div
-        className="relative z-20 flex justify-center w-full h-full overflow-visible"
+        className="relative z-20 flex h-full w-full justify-center overflow-visible"
         data-gesture-safe-area
       >
         <RepairScreenCanvasAndroid

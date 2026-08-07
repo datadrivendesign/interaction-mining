@@ -23,7 +23,7 @@ const __dirname = path.dirname(__filename);
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
-    out:  { type: "string" },
+    out: { type: "string" },
     help: { type: "boolean", short: "h" },
   },
   allowPositionals: false,

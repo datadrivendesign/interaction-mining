@@ -21,7 +21,7 @@ async function main() {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
-      id:        { type: "string" },
+      id: { type: "string" },
       "dry-run": { type: "boolean", default: false },
     },
     allowPositionals: false,
@@ -30,7 +30,9 @@ async function main() {
   const traceId = values.id;
   if (!traceId) {
     console.error("Error: --id <traceId> is required.");
-    console.error("Usage: node prisma/scripts/admin/delete-trace.mjs --id <traceId> [--dry-run]");
+    console.error(
+      "Usage: node prisma/scripts/admin/delete-trace.mjs --id <traceId> [--dry-run]",
+    );
     process.exit(1);
   }
 
@@ -64,12 +66,15 @@ async function main() {
   if (trace.captureId) {
     const capture = await prisma.capture.update({
       where: { id: trace.captureId },
-      data:  { status: "REVIEWING" },
+      data: { status: "REVIEWING" },
     });
     console.log(`Capture ${capture.id} reverted to REVIEWING`);
   }
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1); })
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
   .finally(() => prisma.$disconnect());

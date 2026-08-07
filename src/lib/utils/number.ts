@@ -4,7 +4,7 @@ import { Platform } from "@/lib/utils";
 
 export function formatNumber(
   number: number,
-  formatterString: string = ""
+  formatterString: string = "",
 ): string {
   // If using default formatter and number is less than 1000, return raw number
   if (!formatterString && Math.abs(number) < 1000) {

@@ -176,9 +176,12 @@ function install() {
     return;
   }
   isInstalled = true;
-  (
-    window as unknown as { __odimScrubProfile: unknown }
-  ).__odimScrubProfile = { summary, reset, samples, phaseTimings };
+  (window as unknown as { __odimScrubProfile: unknown }).__odimScrubProfile = {
+    summary,
+    reset,
+    samples,
+    phaseTimings,
+  };
   console.info(
     "[scrub-profiler] recording. Call __odimScrubProfile.summary() when done.",
   );

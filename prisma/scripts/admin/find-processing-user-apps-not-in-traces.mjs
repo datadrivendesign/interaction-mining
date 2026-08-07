@@ -71,7 +71,9 @@ function toCsv(users) {
 
   return [
     columns.join(","),
-    ...rows.map((row) => columns.map((column) => csvEscape(row[column])).join(",")),
+    ...rows.map((row) =>
+      columns.map((column) => csvEscape(row[column])).join(","),
+    ),
   ].join("\n");
 }
 
@@ -213,63 +215,67 @@ async function main() {
     ...new Set(groupedCaptures.flatMap((group) => Array.from(group.taskIds))),
   ];
 
-  const [approvedCapturesForApps, approvedCapturesForTasks, tracesForApps, tracesForTasks] =
-    await Promise.all([
-      appIds.length > 0
-        ? prisma.capture.findMany({
-            where: {
-              status: "APPROVED",
-              appId: {
-                in: appIds,
-              },
+  const [
+    approvedCapturesForApps,
+    approvedCapturesForTasks,
+    tracesForApps,
+    tracesForTasks,
+  ] = await Promise.all([
+    appIds.length > 0
+      ? prisma.capture.findMany({
+          where: {
+            status: "APPROVED",
+            appId: {
+              in: appIds,
             },
-            select: {
-              appId: true,
+          },
+          select: {
+            appId: true,
+          },
+          distinct: ["appId"],
+        })
+      : [],
+    taskIds.length > 0
+      ? prisma.capture.findMany({
+          where: {
+            status: "APPROVED",
+            taskId: {
+              in: taskIds,
             },
-            distinct: ["appId"],
-          })
-        : [],
-      taskIds.length > 0
-        ? prisma.capture.findMany({
-            where: {
-              status: "APPROVED",
-              taskId: {
-                in: taskIds,
-              },
+          },
+          select: {
+            taskId: true,
+          },
+          distinct: ["taskId"],
+        })
+      : [],
+    appIds.length > 0
+      ? prisma.trace.findMany({
+          where: {
+            appId: {
+              in: appIds,
             },
-            select: {
-              taskId: true,
+          },
+          select: {
+            appId: true,
+          },
+          distinct: ["appId"],
+        })
+      : [],
+    taskIds.length > 0
+      ? prisma.trace.findMany({
+          where: {
+            taskId: {
+              in: taskIds,
             },
-            distinct: ["taskId"],
-          })
-        : [],
-      appIds.length > 0
-        ? prisma.trace.findMany({
-            where: {
-              appId: {
-                in: appIds,
-              },
-            },
-            select: {
-              appId: true,
-            },
-            distinct: ["appId"],
-          })
-        : [],
-      taskIds.length > 0
-        ? prisma.trace.findMany({
-            where: {
-              taskId: {
-                in: taskIds,
-              },
-            },
-            select: {
-              taskId: true,
-            },
-            distinct: ["taskId"],
-          })
-        : [],
-    ]);
+          },
+          select: {
+            taskId: true,
+          },
+          distinct: ["taskId"],
+        })
+      : [],
+  ]);
 
   const approvedAppIds = new Set(
     approvedCapturesForApps.map((capture) => capture.appId),
@@ -338,7 +344,9 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error("Failed to find processing user/app groups without references.");
+    console.error(
+      "Failed to find processing user/app groups without references.",
+    );
     console.error(error);
     process.exitCode = 1;
   })

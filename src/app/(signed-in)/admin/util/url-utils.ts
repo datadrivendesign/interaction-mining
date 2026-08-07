@@ -12,7 +12,7 @@ export const constructUserCapturesURL = (
   userId: string,
   page: number,
   appIds: string[],
-  status: CaptureStatus | ""
+  status: CaptureStatus | "",
 ) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", page.toString());
@@ -35,7 +35,7 @@ export const constructUserCapturesURL = (
 export const constructUserPanelURL = (
   page: number,
   users: string[],
-  role: Role | ""
+  role: Role | "",
 ) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", page.toString());
@@ -58,7 +58,7 @@ export const constructUserPanelURL = (
 export const constructTaskPanelURL = (
   page: number,
   users: string[],
-  apps: string[]
+  apps: string[],
 ) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", page.toString());

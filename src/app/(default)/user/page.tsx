@@ -1,3 +1,3 @@
-export default function UserRoute () {
-    return <></>
+export default function UserRoute() {
+  return <></>;
 }

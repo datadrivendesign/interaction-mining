@@ -20,11 +20,11 @@ export default function Review({
   const taskDescription = capture?.task?.description ?? "";
 
   return (
-    <div className="flex w-full h-full">
-      <div className="flex w-2/3 h-full overflow-auto border-r border-neutral-200 dark:border-neutral-800">
+    <div className="flex h-full w-full">
+      <div className="flex h-full w-2/3 overflow-auto border-r border-neutral-200 dark:border-neutral-800">
         <SaveTraceGallery />
       </div>
-      <div className="sticky top-0 flex flex-col shrink-0 grow-0 justify-center items-center w-1/3 h-full p-8">
+      <div className="sticky top-0 flex h-full w-1/3 shrink-0 grow-0 flex-col items-center justify-center p-8">
         <SaveTracePanel os={os} taskDescription={taskDescription} />
       </div>
     </div>

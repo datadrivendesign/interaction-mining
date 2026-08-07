@@ -23,8 +23,8 @@ const __dirname = path.dirname(__filename);
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
-    in:   { type: "string" },
-    out:  { type: "string" },
+    in: { type: "string" },
+    out: { type: "string" },
     help: { type: "boolean", short: "h" },
   },
   allowPositionals: false,
@@ -59,7 +59,9 @@ function normalizeRecords(parsedJson) {
     return parsedJson.records;
   }
 
-  throw new Error("Input JSON must be an array or an object with a records array.");
+  throw new Error(
+    "Input JSON must be an array or an object with a records array.",
+  );
 }
 
 function isGameApp(record) {
@@ -86,8 +88,12 @@ async function main() {
     return record.isTaken !== true && !isGameApp(record);
   });
 
-  const removedTakenCount = records.filter((record) => record.isTaken === true).length;
-  const removedGamesCount = records.filter((record) => isGameApp(record)).length;
+  const removedTakenCount = records.filter(
+    (record) => record.isTaken === true,
+  ).length;
+  const removedGamesCount = records.filter((record) =>
+    isGameApp(record),
+  ).length;
   const removedTotalCount = records.length - filteredRecords.length;
 
   const payload = {
@@ -104,7 +110,9 @@ async function main() {
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 
-  console.log(`Read ${records.length} CandidateTaskApp records from ${inputPath}`);
+  console.log(
+    `Read ${records.length} CandidateTaskApp records from ${inputPath}`,
+  );
   console.log(`Removed ${removedTotalCount} records total`);
   console.log(`- isTaken=true: ${removedTakenCount}`);
   console.log(`- Games category/genre: ${removedGamesCount}`);

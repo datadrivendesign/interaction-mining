@@ -57,38 +57,38 @@ export function ReviewVideoPanelIOS({
       : "w-[75%] max-w-[60%] h-auto";
 
   return (
-    <aside className="w-full h-full flex flex-col min-h-0">
+    <aside className="flex h-full min-h-0 w-full flex-col">
       {/* Header strip */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+      <div className="flex h-9 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50 px-3 dark:border-neutral-800 dark:bg-neutral-950">
         <span
           className={cn(
-            "size-1.5 rounded-full shrink-0",
+            "size-1.5 shrink-0 rounded-full",
             isAdmin ? "bg-amber-500" : "bg-neutral-400",
           )}
         />
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+        <span className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           {isAdmin ? "Admin Review" : "Owner Review"}
         </span>
         {isAdmin && (
           <Button
             size="sm"
-            className="ml-auto text-[10px] font-semibold uppercase tracking-widest text-neutral-300 transition-colors hover:text-neutral-100 dark:text-neutral-700 dark:hover:text-neutral-800"
+            className="ml-auto text-[10px] font-semibold tracking-widest text-neutral-300 uppercase transition-colors hover:text-neutral-100 dark:text-neutral-700 dark:hover:text-neutral-800"
           >
-            <ArrowLeft className="w-2 h-2" />
+            <ArrowLeft className="h-2 w-2" />
             <Link href="/admin/tasks">Back to list</Link>
           </Button>
         )}
       </div>
 
       {/* Scrollable content: reference only */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-3">
           {traceData.description && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+              <span className="text-[10px] font-semibold tracking-widest text-neutral-400 uppercase dark:text-neutral-500">
                 Task
               </span>
-              <p className="text-[13px] font-medium leading-6 text-neutral-800 dark:text-neutral-100">
+              <p className="text-[13px] leading-6 font-medium text-neutral-800 dark:text-neutral-100">
                 {traceData.description}
               </p>
             </div>

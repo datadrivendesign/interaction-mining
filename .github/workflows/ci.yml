@@ -1,6 +1,6 @@
 name: CI
 
-# Cheap, fast gate for every PR into main: type-check + lint.
+# Cheap, fast gate for every PR into main: format + type-check + lint.
 # Does not build or hit the DB — just the static checks.
 
 on:
@@ -15,6 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Name is load-bearing: branch protection on main and odim-dev-env requires a
+  # status check called exactly "type-check-and-lint". Renaming it means that
+  # check never reports again and every PR blocks waiting for it, including any
+  # already open. It runs a format check too, despite the name.
   type-check-and-lint:
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +38,12 @@ jobs:
       # Generate does not require a live DATABASE_URL.
       - name: Generate Prisma client
         run: npx prisma generate
+
+      # Runs before the slower checks: a formatting failure is one command to
+      # fix, and without enforcement the repo drifts back out of format the first
+      # time somebody's editor is configured differently.
+      - name: Format check
+        run: npm run format:check
 
       - name: Type check
         run: npm run type-check

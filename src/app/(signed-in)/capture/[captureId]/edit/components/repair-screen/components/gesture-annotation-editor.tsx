@@ -360,13 +360,13 @@ export const GestureAnnotationEditor =
                   <div className="text-xs text-muted-foreground">
                     Fill in the missing fields.
                   </div>
-                  <div className="flex flex-wrap gap-2 items-center">
+                  <div className="flex flex-wrap items-center gap-2">
                     {activeTemplate.fixedParts.map((fixedPart, index) => {
                       const slot = activeTemplate.slots[index];
                       return (
                         <React.Fragment key={`${fixedPart}-${index}`}>
                           {fixedPart ? (
-                            <span className="whitespace-pre text-xs font-semibold tracking-wide text-foreground">
+                            <span className="text-xs font-semibold tracking-wide whitespace-pre text-foreground">
                               {fixedPart}
                             </span>
                           ) : null}
@@ -395,7 +395,7 @@ export const GestureAnnotationEditor =
                                   index === 0 ? firstSlotInputRef : undefined
                                 }
                                 className={cn(
-                                  "h-7 min-w-24 max-w-40 rounded border border-input bg-background px-2 text-xs text-foreground",
+                                  "border-input h-7 max-w-40 min-w-24 rounded border bg-background px-2 text-xs text-foreground",
                                   slot.key === "destination" &&
                                     shouldShowDestinationError
                                     ? "border-red-500"

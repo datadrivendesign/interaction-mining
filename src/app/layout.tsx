@@ -23,7 +23,7 @@ const interVariable = localFont({
     {
       path: "../../public/font/Inter/InterVariable-Italic.woff2",
       style: "italic",
-    }
+    },
   ],
   display: "swap",
 });
@@ -35,7 +35,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Interaction Mining",
-  description: "Interaction Mining - A platform for capturing, analyzing, and understanding user interactions with mobile applications.",
+  description:
+    "Interaction Mining - A platform for capturing, analyzing, and understanding user interactions with mobile applications.",
 };
 
 export default function RootLayout({
@@ -51,7 +52,7 @@ export default function RootLayout({
             inter.variable,
             interVariable.variable,
             geistMono.variable,
-            "relative flex flex-col grow min-w-dvw min-h-dvh scroll-smooth! font-sans"
+            "relative flex min-h-dvh min-w-dvw grow flex-col scroll-smooth! font-sans",
           )}
         >
           <Toaster />

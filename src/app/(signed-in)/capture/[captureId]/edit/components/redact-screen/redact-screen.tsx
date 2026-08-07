@@ -151,8 +151,8 @@ export default function RedactScreen({
               onImageStatusChange={handleImageStatusChange}
             />
           ) : (
-            <div className="flex justify-center items-center w-full h-full">
-              <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-3xl font-semibold text-muted-foreground lg:text-4xl">
                 Select a screen from the filmstrip.
               </span>
             </div>

@@ -76,22 +76,46 @@ export function clampToAnchor(
     case "middle-right": {
       const left = oldEdges.left;
       const right = clampValue(newEdges.right, left + minW, boundsRight);
-      return fromEdges({ left, right, top: oldEdges.top, bottom: oldEdges.bottom, rotation });
+      return fromEdges({
+        left,
+        right,
+        top: oldEdges.top,
+        bottom: oldEdges.bottom,
+        rotation,
+      });
     }
     case "middle-left": {
       const right = oldEdges.right;
       const left = clampValue(newEdges.left, boundsX, right - minW);
-      return fromEdges({ left, right, top: oldEdges.top, bottom: oldEdges.bottom, rotation });
+      return fromEdges({
+        left,
+        right,
+        top: oldEdges.top,
+        bottom: oldEdges.bottom,
+        rotation,
+      });
     }
     case "middle-bottom": {
       const top = oldEdges.top;
       const bottom = clampValue(newEdges.bottom, top + minH, boundsBottom);
-      return fromEdges({ left: oldEdges.left, right: oldEdges.right, top, bottom, rotation });
+      return fromEdges({
+        left: oldEdges.left,
+        right: oldEdges.right,
+        top,
+        bottom,
+        rotation,
+      });
     }
     case "middle-top": {
       const bottom = oldEdges.bottom;
       const top = clampValue(newEdges.top, boundsY, bottom - minH);
-      return fromEdges({ left: oldEdges.left, right: oldEdges.right, top, bottom, rotation });
+      return fromEdges({
+        left: oldEdges.left,
+        right: oldEdges.right,
+        top,
+        bottom,
+        rotation,
+      });
     }
     case "top-left": {
       const right = oldEdges.right;

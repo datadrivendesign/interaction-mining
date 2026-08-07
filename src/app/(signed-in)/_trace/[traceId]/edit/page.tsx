@@ -50,36 +50,36 @@ export default function Page() {
   });
 
   useEffect(() => {
-    const loadFormData = async() => {
+    const loadFormData = async () => {
       const screens = trace?.screens;
       const gestures = trace?.screens.reduce(
         (acc, screen) => {
           acc[screen.id] = screen.gesture;
           return acc;
         },
-        {} as { [key: string]: ScreenGesture }
+        {} as { [key: string]: ScreenGesture },
       );
       const redactions = trace?.screens.reduce(
         (acc, screen) => {
           acc[screen.id] = screen.redactions ?? [];
           return acc;
         },
-        {} as { [key: string]: ScreenRedaction[] }
+        {} as { [key: string]: ScreenRedaction[] },
       );
       // need to fetch and deserialize JSON file from s3
       const vhs = await Promise.all(
-        (trace?.screens ?? []).map(async(screen) => {
+        (trace?.screens ?? []).map(async (screen) => {
           try {
             if (screen.vh && typeof screen.vh === "string") {
               const res = await fetch(screen.vh);
-              const data = await res.json()
+              const data = await res.json();
               return [screen.id, data];
             }
-          } catch(err) {
+          } catch (err) {
             console.error(`Failed to fetch VH for screen ${screen.id}`, err);
-          } 
+          }
           return [screen.id, { x: null, y: null, width: null, height: null }];
-        })
+        }),
       ).then(Object.fromEntries);
       const description = trace?.description ?? "";
 
@@ -88,9 +88,9 @@ export default function Page() {
         gestures,
         redactions,
         vhs,
-        description
+        description,
       });
-    }
+    };
 
     loadFormData();
   }, [trace, methods]);
@@ -164,8 +164,10 @@ export default function Page() {
 
   // load values from trace into form
   useEffect(() => {
-    const loadFormData = async() => {
-      if (!trace) { return; }
+    const loadFormData = async () => {
+      if (!trace) {
+        return;
+      }
       const screens = trace.screens;
       const gestures = trace.screens.reduce(
         (acc, screen) => {
@@ -174,7 +176,7 @@ export default function Page() {
           }
           return acc;
         },
-        {} as { [key: string]: ScreenGesture }
+        {} as { [key: string]: ScreenGesture },
       );
       const redactions = trace.screens.reduce(
         (acc, screen) => {
@@ -188,22 +190,22 @@ export default function Page() {
 
           return acc;
         },
-        {} as { [key: string]: ScreenRedaction[] }
+        {} as { [key: string]: ScreenRedaction[] },
       );
       // have to fetch from vh URL
       const vhs = await Promise.all(
-        (trace?.screens ?? []).map(async(screen) => {
+        (trace?.screens ?? []).map(async (screen) => {
           try {
             if (screen.vh && typeof screen.vh === "string") {
               const res = await fetch(screen.vh);
-              const data = await res.json()
+              const data = await res.json();
               return [screen.id, data];
             }
-          } catch(err) {
+          } catch (err) {
             console.error(`Failed to fetch VH for screen ${screen.id}`, err);
-          } 
+          }
           return [screen.id, { x: null, y: null, width: null, height: null }];
-        })
+        }),
       ).then(Object.fromEntries);
       const description = trace.description ?? "";
 
@@ -216,7 +218,7 @@ export default function Page() {
         vhs,
         description,
       });
-    }
+    };
 
     loadFormData();
   }, [trace, methods]);
@@ -225,26 +227,26 @@ export default function Page() {
     <>
       <FormProvider {...methods}>
         <main
-          className="relative flex flex-col w-dvw h-[calc(100dvh-65px)] bg-white dark:bg-black overflow-hidden"
+          className="relative flex h-[calc(100dvh-65px)] w-dvw flex-col overflow-hidden bg-white dark:bg-black"
           style={{ "--nav-height": `${height}px` } as React.CSSProperties}
         >
           {!isTraceLoading ? (
             <>
-              <div className="relative flex w-full h-full">
-                <aside className="flex flex-col w-full max-w-sm h-full p-4 md:p-6 overflow-hidden border-r border-neutral-200 dark:border-neutral-800">
-                  <article className="prose prose-neutral dark:prose-invert leading-snug">
+              <div className="relative flex h-full w-full">
+                <aside className="flex h-full w-full max-w-sm flex-col overflow-hidden border-r border-neutral-200 p-4 md:p-6 dark:border-neutral-800">
+                  <article className="prose leading-snug prose-neutral dark:prose-invert">
                     {docRender()}
                   </article>
                 </aside>
-                <div className="flex flex-col grow h-full items-center">
+                <div className="flex h-full grow flex-col items-center">
                   {editorRender()}
                 </div>
               </div>
               <nav
                 ref={navRef}
-                className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
+                className="sticky bottom-0 flex h-auto w-full shrink grow-0 justify-between border-t border-neutral-200 bg-white px-6 py-4 backdrop-blur-sm dark:border-neutral-800 dark:bg-black"
               >
-                <div className="flex gap-2 items-center">
+                <div className="flex items-center gap-2">
                   <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
                     <span className="inline-flex items-center text-muted-foreground">
                       New Trace <ChevronRight className="size-6" />{" "}
@@ -269,9 +271,9 @@ export default function Page() {
                     <Button onClick={handleNext}>Next</Button>
                   ) : (
                     <Button onClick={handleNext} disabled={isSubmitting}>
-                      {isSubmitting && <Loader2 
-                        className="size-4 animate-spin" 
-                      />}
+                      {isSubmitting && (
+                        <Loader2 className="size-4 animate-spin" />
+                      )}
                       Finish
                     </Button>
                   )}
@@ -279,9 +281,9 @@ export default function Page() {
               </nav>
             </>
           ) : (
-            <div className="flex flex-col grow justify-center items-center w-full h-full">
-              <Loader2 className="text-muted-foreground size-8 animate-spin" />
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+            <div className="flex h-full w-full grow flex-col items-center justify-center">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              <h1 className="text-xl font-bold tracking-tight md:text-2xl">
                 Loading trace...
               </h1>
             </div>

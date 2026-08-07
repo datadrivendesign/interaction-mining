@@ -6,39 +6,39 @@ export interface RedactLabel {
 
 export const redactLabels: RedactLabel[] = [
   {
-    value: "Name", 
-    label: "Name"
-  },  
+    value: "Name",
+    label: "Name",
+  },
   {
     value: "Photo",
-    label: "Photo"
+    label: "Photo",
   },
   {
     value: "Email",
-    label: "Email"
+    label: "Email",
   },
   {
     value: "Location",
-    label: "Location"
+    label: "Location",
   },
   {
     value: "Phone",
-    label: "Phone"
+    label: "Phone",
   },
   {
     value: "Financial",
-    label: "Financial"
+    label: "Financial",
   },
   {
     value: "Other",
     label: "Other",
-    requiresCustomInput: true
-  }
+    requiresCustomInput: true,
+  },
 ];
 
 // Helper function to get label by value
 export const getRedactLabel = (value: string): RedactLabel | undefined => {
-  return redactLabels.find(label => label.value === value);
+  return redactLabels.find((label) => label.value === value);
 };
 
 // Helper function to check if label requires custom input

@@ -44,7 +44,7 @@ export function UsersTable({
             <TableCell className="font-medium">
               <Button
                 variant="outline"
-                className="hover p-2 cursor-pointer"
+                className="hover cursor-pointer p-2"
                 onClick={() => handleTableUserClick(user)}
               >
                 {user.name}
@@ -54,7 +54,7 @@ export function UsersTable({
               <Link href={`/admin/users/${user.id}`}>
                 <Button
                   variant="link"
-                  className="hover:bg-transparent p-2 cursor-pointer"
+                  className="cursor-pointer p-2 hover:bg-transparent"
                 >
                   {user.email}
                 </Button>

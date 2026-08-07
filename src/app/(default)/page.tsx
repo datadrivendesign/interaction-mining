@@ -22,30 +22,27 @@ export default function Home() {
       {/* Masthead */}
       <section
         id="hero"
-        className="relative flex flex-col items-center w-full max-w-screen-2xl px-4 py-12 lg:px-6 lg:py-18 gap-4 lg:gap-6"
+        className="relative flex w-full max-w-screen-2xl flex-col items-center gap-4 px-4 py-12 lg:gap-6 lg:px-6 lg:py-18"
       >
-        <h1 className="w-full max-w-5xl text-center text-4xl md:text-5xl lg:text-6xl text-foreground font-black tracking-tight">
+        <h1 className="w-full max-w-5xl text-center text-4xl font-black tracking-tight text-foreground md:text-5xl lg:text-6xl">
           Interaction and Design Data <br className="hidden sm:block" />
           for Mobile Apps
         </h1>
-        <div className="relative z-0 flex col-span-1 md:col-span-2 grow w-full max-w-screen-md h-full p-px -mb-4 lg:-mb-6 bg-gradient-to-b from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 rounded-3xl">
-          <div className="absolute z-10 bottom-0 left-0 right-0 flex w-full h-full justify-center items-end bg-gradient-to-b from-transparent from-25% to-background to-90% pointer-events-none">
-            <Link
-              className="block md:hidden mb-8 lg:mb-12"
-              href="/explore"
-            >
+        <div className="relative z-0 col-span-1 -mb-4 flex h-full w-full max-w-screen-md grow rounded-3xl bg-gradient-to-b from-neutral-100 to-neutral-200 p-px md:col-span-2 lg:-mb-6 dark:from-neutral-800 dark:to-neutral-900">
+          <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-10 flex h-full w-full items-end justify-center bg-gradient-to-b from-transparent from-25% to-background to-90%">
+            <Link className="mb-8 block md:hidden lg:mb-12" href="/explore">
               <Button>
                 Explore dataset <ArrowRight size={24} />
               </Button>
             </Link>
           </div>
-          <div className="flex flex-col items-start justify-start w-full h-full p-6 bg-gradient-to-br from-white to-neutral-100 dark:from-neutral-900 dark:to-black rounded-[calc(1.5rem-1px)]">
+          <div className="flex h-full w-full flex-col items-start justify-start rounded-[calc(1.5rem-1px)] bg-gradient-to-br from-white to-neutral-100 p-6 dark:from-neutral-900 dark:to-black">
             <DatasetGallery />
           </div>
         </div>
-        <p className="w-auto max-w-xl text-center text-lg lg:text-xl text-muted-foreground font-medium">
-          Interaction Mining is an open platform for collecting, managing, and sharing
-          mobile interaction datasets.
+        <p className="w-auto max-w-xl text-center text-lg font-medium text-muted-foreground lg:text-xl">
+          Interaction Mining is an open platform for collecting, managing, and
+          sharing mobile interaction datasets.
         </p>
         {/* <div className="relative z-10 flex flex-col grow w-full justify-center items-center">
           <div className="flex gap-6">

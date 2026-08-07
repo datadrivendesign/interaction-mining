@@ -44,7 +44,7 @@ export const IconBox = ({
 }) => (
   <span
     className={cn(
-      "gesture-icon-box inline-flex items-center justify-center flex-shrink-0",
+      "gesture-icon-box inline-flex flex-shrink-0 items-center justify-center",
       ICON_BOX_SIZE,
       "text-[var(--gesture-accent,#854d0e)]", // Inherits amber tone by default, near-black inside marker
       className,
@@ -68,7 +68,7 @@ const CustomSvg = ({
   <IconBox>
     <span className={cn("flex items-center justify-center", CUSTOM_ICON_SIZE)}>
       <Svg
-        className={cn("block w-full h-full gesture-icon-custom", className)}
+        className={cn("gesture-icon-custom block h-full w-full", className)}
         preserveAspectRatio="xMidYMid meet"
       />
     </span>
@@ -91,14 +91,13 @@ export const GestureOptionSchema: z.ZodType<{
   label: string;
   icon?: React.ReactNode;
   subGestures?: any;
-}> = z.lazy(
-  (): z.ZodType<any> =>
-    z.object({
-      value: z.string(),
-      label: z.string(),
-      icon: z.custom<React.ReactNode>().optional(),
-      subGestures: z.array(GestureOptionSchema).optional(),
-    }),
+}> = z.lazy((): z.ZodType<any> =>
+  z.object({
+    value: z.string(),
+    label: z.string(),
+    icon: z.custom<React.ReactNode>().optional(),
+    subGestures: z.array(GestureOptionSchema).optional(),
+  }),
 );
 
 export type GestureOption = z.infer<typeof GestureOptionSchema>;

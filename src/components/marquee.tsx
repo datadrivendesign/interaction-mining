@@ -1,6 +1,14 @@
 "use client";
 
-import { useRef, useState, useEffect, FC, useCallback, useLayoutEffect, useMemo } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  FC,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+} from "react";
 import Marquee from "react-fast-marquee";
 import { useIntersectionObserver, useWindowSize } from "@uidotdev/usehooks";
 
@@ -10,8 +18,8 @@ interface TitleMarqueeProps {
   children: React.ReactNode;
   className?: string;
   title: string;
-  pauseDurationMs?: number;  // pause length at each end
-  speed?: number;            // scrolling speed
+  pauseDurationMs?: number; // pause length at each end
+  speed?: number; // scrolling speed
   mode?: "hover" | "visibility";
 }
 
@@ -42,7 +50,7 @@ export const TitleMarquee: FC<TitleMarqueeProps> = ({
       const containerW = containerRef.current!.getBoundingClientRect().width;
       const contentW = Math.max(
         contentRef.current!.scrollWidth,
-        contentRef.current!.getBoundingClientRect().width
+        contentRef.current!.getBoundingClientRect().width,
       );
       setIsTruncated(contentW > containerW);
     };
@@ -84,24 +92,39 @@ export const TitleMarquee: FC<TitleMarqueeProps> = ({
     }
   };
 
-  const mergedRef = useCallback((node: HTMLDivElement | null) => {
-    // Update our container ref
-    containerRef.current = node;
-    // Forward to intersection observer ref
-    if (typeof ioRef === "function") {
-      ioRef(node);
-    } else if (ioRef && typeof ioRef === "object") {
-      (ioRef as any).current = node;
-    }
-  }, [ioRef]);
+  const mergedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      // Update our container ref
+      containerRef.current = node;
+      // Forward to intersection observer ref
+      if (typeof ioRef === "function") {
+        ioRef(node);
+      } else if (ioRef && typeof ioRef === "object") {
+        (ioRef as any).current = node;
+      }
+    },
+    [ioRef],
+  );
 
-  const contentElement = useMemo(() => (<div ref={contentRef} className={cn("w-full whitespace-nowrap", isTruncated && "*:mr-2")}>{children}</div>
-  ), [children, isTruncated]);
+  const contentElement = useMemo(
+    () => (
+      <div
+        ref={contentRef}
+        className={cn("w-full whitespace-nowrap", isTruncated && "*:mr-2")}
+      >
+        {children}
+      </div>
+    ),
+    [children, isTruncated],
+  );
 
   return (
     <div
       ref={mergedRef}
-      className={cn(isTruncated ? "overflow-hidden" : "truncate flex justify-center", className)}
+      className={cn(
+        isTruncated ? "overflow-hidden" : "flex justify-center truncate",
+        className,
+      )}
       title={title}
       onMouseEnter={handleMouseEnter}
     >
@@ -111,13 +134,16 @@ export const TitleMarquee: FC<TitleMarqueeProps> = ({
           pauseOnHover={false}
           pauseOnClick={false}
           loop={0}
-          play={isTruncated && (mode === "visibility" ? isVisible && isPlay : isPlay)}
+          play={
+            isTruncated &&
+            (mode === "visibility" ? isVisible && isPlay : isPlay)
+          }
           onCycleComplete={handleCycleComplete}
         >
           {contentElement}
         </Marquee>
       ) : (
-        <div className="flex items-center justify-center w-full">
+        <div className="flex w-full items-center justify-center">
           {contentElement}
         </div>
       )}

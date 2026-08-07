@@ -115,7 +115,7 @@ const CandidateGalleryAppCard = ({
       <button
         type="button"
         onClick={onSelect}
-        className="flex min-h-36 cursor-pointer flex-col items-center justify-start gap-2 rounded-md border bg-background p-3 text-center transition hover:border-primary/50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        className="hover:border-primary/50 focus:ring-primary flex min-h-36 cursor-pointer flex-col items-center justify-start gap-2 rounded-md border bg-background p-3 text-center transition hover:shadow-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
       >
         <div className="relative">
           <Image
@@ -126,12 +126,12 @@ const CandidateGalleryAppCard = ({
             sizes="56px"
             className="aspect-square rounded-xl object-cover drop-shadow-sm"
           />
-          <Badge className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">
+          <Badge className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">
             {visibleTaskCount}
           </Badge>
         </div>
         <div className="min-w-0 space-y-1">
-          <h2 className="min-h-10 max-w-full break-all text-sm font-medium leading-tight">
+          <h2 className="min-h-10 max-w-full text-sm leading-tight font-medium break-all">
             {candidateTaskApp.app.metadata.name}
           </h2>
           <div className="flex flex-wrap justify-center gap-1">
@@ -584,7 +584,7 @@ const SourceBadge = ({ generated }: { generated: boolean }) => {
 const CandidateGalleryNoApps = () => {
   const { search } = useCandidateTask();
   return (
-    <div className="col-span-full text-center text-muted-foreground py-8">
+    <div className="col-span-full py-8 text-center text-muted-foreground">
       {search.trim()
         ? `No apps found matching "${search}"`
         : "No candidate apps available"}

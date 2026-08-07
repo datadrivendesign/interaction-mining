@@ -16,7 +16,7 @@ export function CommentSection({
   return (
     <div className="border-t border-neutral-200 dark:border-neutral-800">
       <div className="flex items-center justify-between px-3 py-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+        <span className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           {title}
         </span>
         {count > 0 && (

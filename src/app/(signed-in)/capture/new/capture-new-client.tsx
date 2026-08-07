@@ -182,14 +182,14 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
   };
 
   return (
-    <div className="p-8 max-w-2xl mt-10 mx-auto space-y-8 bg-neutral-150 dark:bg-neutral-900 rounded-lg hover:shadow-2xl transition-shadow duration-300">
-      <ul className="flex justify-between text-center text-sm text-muted-foreground font-medium mb-4">
+    <div className="bg-neutral-150 mx-auto mt-10 max-w-2xl space-y-8 rounded-lg p-8 transition-shadow duration-300 hover:shadow-2xl dark:bg-neutral-900">
+      <ul className="mb-4 flex justify-between text-center text-sm font-medium text-muted-foreground">
         {["Platform", "Select App", "Describe Task"].map((label, index) => (
           <li
             key={label}
-            className={`flex-1 transition-all duration-300 rounded-lg px-2 py-2 ${
+            className={`flex-1 rounded-lg px-2 py-2 transition-all duration-300 ${
               step > index
-                ? "bg-neutral-200 dark:bg-neutral-800 text-foreground shadow-lg mr-2 dark:text-white"
+                ? "mr-2 bg-neutral-200 text-foreground shadow-lg dark:bg-neutral-800 dark:text-white"
                 : ""
             }`}
           >
@@ -207,7 +207,7 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
+      <form onSubmit={handleSubmit} className="animate-fade-in space-y-6">
         {/* Platform */}
         <div className="space-y-2 dark:text-white">
           <Label className="mr-3 font-bold">1. Choose Platform</Label>
@@ -238,13 +238,13 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
           >
             <ToggleGroupItem
               value={Platform.ANDROID}
-              className="w-full dark:text-neutral-200 cursor-pointer"
+              className="w-full cursor-pointer dark:text-neutral-200"
             >
               {prettyOS(Platform.ANDROID)}
             </ToggleGroupItem>
             <ToggleGroupItem
               value={Platform.IOS}
-              className="w-full dark:text-neutral-200 cursor-pointer"
+              className="w-full cursor-pointer dark:text-neutral-200"
             >
               {prettyOS(Platform.IOS)}
             </ToggleGroupItem>
@@ -258,7 +258,7 @@ export default function CaptureNewClient({ user }: { user: Session["user"] }) {
               2. Select App
             </Label>
             {app.name ? (
-              <div className="flex max-w-full items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 sm:max-w-[65%]">
+              <div className="border-primary/40 bg-primary/5 flex max-w-full items-center gap-2 rounded-md border px-2 py-1 sm:max-w-[65%]">
                 <div className="min-w-0">
                   <div className="text-xs font-medium text-muted-foreground">
                     Selected

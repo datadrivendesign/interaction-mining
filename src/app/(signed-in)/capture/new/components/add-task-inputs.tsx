@@ -64,11 +64,11 @@ export default function AddTaskInputs({
   };
 
   return (
-    <div className="space-y-3 w-full">
+    <div className="w-full space-y-3">
       {tasks.map((t, i) => (
         <div
           key={t.id}
-          className={`grid gap-2 items-center ${showMinusButton ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[1fr_auto]"}`}
+          className={`grid items-center gap-2 ${showMinusButton ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[1fr_auto]"}`}
         >
           {showMinusButton && (
             <Button
@@ -77,7 +77,7 @@ export default function AddTaskInputs({
               size="icon"
               aria-label="Remove task"
               onClick={() => removeTask(t.id)}
-              className="self-center h-10"
+              className="h-10 self-center"
             >
               <Minus className="size-4" />
             </Button>
@@ -103,7 +103,7 @@ export default function AddTaskInputs({
             size="icon"
             aria-label="Add task after"
             onClick={() => addTaskAfter(t.id)}
-            className="self-center h-10"
+            className="h-10 self-center"
           >
             <Plus className="size-4" />
           </Button>

@@ -752,7 +752,7 @@ export function ScreenCommentsPanel({
     <aside className="flex h-full min-h-0 w-full flex-col border-l border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800">
         <MessageSquare className="size-3 shrink-0 text-red-500 dark:text-red-400" />
-        <span className="flex-1 truncate text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+        <span className="flex-1 truncate text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           {viewMode === "all" ? "All Issues" : screenLabel}
         </span>
         {panelIssueCount > 0 && (
@@ -766,7 +766,7 @@ export function ScreenCommentsPanel({
               type="button"
               size="sm"
               variant={viewMode === "focused" ? "default" : "outline"}
-              className="h-6 px-2 text-[12px] cursor-pointer hover:"
+              className="hover: h-6 cursor-pointer px-2 text-[12px]"
               onClick={() => setViewMode("focused")}
             >
               Focused
@@ -775,7 +775,7 @@ export function ScreenCommentsPanel({
               type="button"
               size="sm"
               variant={viewMode === "all" ? "default" : "outline"}
-              className="h-6 px-2 text-[12px] cursor-pointer"
+              className="h-6 cursor-pointer px-2 text-[12px]"
               onClick={() => setViewMode("all")}
             >
               All issues
@@ -785,7 +785,7 @@ export function ScreenCommentsPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 max-h-[48%] flex-none flex-col overflow-y-auto overscroll-contain border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex max-h-[48%] min-h-0 flex-none flex-col overflow-y-auto overscroll-contain border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex flex-col gap-2.5 p-3">
             <p className="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
               Add all review feedback here. Click a chip to flag an issue

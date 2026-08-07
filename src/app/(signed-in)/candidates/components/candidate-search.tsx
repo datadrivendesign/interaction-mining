@@ -58,8 +58,8 @@ export const CandidateTaskSearch = () => {
     [genre: string]: ButtonClickState;
   }>(
     Object.fromEntries(
-      iosAppGenres.map((genre) => [genre, ButtonClickState.NotSelected])
-    )
+      iosAppGenres.map((genre) => [genre, ButtonClickState.NotSelected]),
+    ),
   );
 
   const handleButtonClick = (genre: string) => {
@@ -94,15 +94,15 @@ export const CandidateTaskSearch = () => {
   const handleAllButtonClick = () => {
     setButtonClickStates(
       Object.fromEntries(
-        iosAppGenres.map((genre) => [genre, ButtonClickState.NotSelected])
-      )
+        iosAppGenres.map((genre) => [genre, ButtonClickState.NotSelected]),
+      ),
     );
     resetFilters();
   };
 
   return (
     <div className="flex flex-col gap-2 lg:gap-4">
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <InputRoot className="w-full md:w-96">
           <InputIcon>
             <Search className="text-muted-foreground" />
@@ -164,7 +164,7 @@ export const CandidateTaskSearch = () => {
           <div className="mb-2 text-xs text-muted-foreground">
             Click once to include a genre, twice to exclude it.
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap items-center gap-2">
             {iosAppGenres.map((genre) => (
               <Button
                 key={genre}

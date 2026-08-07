@@ -26,7 +26,7 @@ export enum DraftFetchResults {
 }
 
 export async function getDraftFiles(
-  captureId: string
+  captureId: string,
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`uploads/${captureId}/drafts`, false);
@@ -49,7 +49,7 @@ export async function getDraftFiles(
 }
 
 export async function getCaptureFiles(
-  captureId: string
+  captureId: string,
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const files = await listFromS3(`uploads/${captureId}`, false);
@@ -61,7 +61,7 @@ export async function getCaptureFiles(
       };
     }
     const captureFiles = files.data.filter(
-      (file) => !file.fileKey.includes(`${captureId}/drafts`)
+      (file) => !file.fileKey.includes(`${captureId}/drafts`),
     );
     return {
       ok: true,
@@ -80,7 +80,7 @@ export async function getCaptureFiles(
 
 export async function handleDraftSave(
   data: TraceFormData,
-  capture: Capture
+  capture: Capture,
 ): Promise<ActionPayload<DraftTraceFormData>> {
   // grab screen data from trace form data to serialize
   const draftScreenData: DraftFrameData[] = data.screens.map(
@@ -89,7 +89,7 @@ export async function handleDraftSave(
         id: screen.id,
         timestamp: screen.timestamp,
       };
-    }
+    },
   );
   const draftTraceData: DraftTraceFormData = {
     screens: draftScreenData,
@@ -127,7 +127,7 @@ export async function handleDraftSave(
 
 export async function handleTraceSave(
   data: TraceFormData,
-  capture: Capture
+  capture: Capture,
 ): Promise<ActionPayload<Trace>> {
   // create a new trace without screens
   const traceInput: Prisma.TraceCreateWithoutUserInput = {
@@ -203,7 +203,7 @@ export async function handleTraceSave(
           // Process redacted image
           const dataURL = await exportRedactedImage(
             data.redactions[screen.id],
-            screen.src
+            screen.src,
           );
           if (!dataURL) {
             toast.error("Failed to export redacted image.");
@@ -257,8 +257,8 @@ export async function handleTraceSave(
             uploadRes.data.fileUrl;
           return uploadRes;
         }
-      })
-    )
+      }),
+    ),
   );
   if (!uploadScreenResponse || uploadScreenResponse.some((res) => !res.ok)) {
     return {
@@ -342,8 +342,8 @@ export async function handleTraceSave(
           }
           screens[index].vh = uploadRes.data.fileUrl;
           return uploadRes;
-        })
-      )
+        }),
+      ),
     );
     if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
       return {
@@ -367,7 +367,7 @@ export async function handleTraceSave(
       includes: {
         screens: true,
       },
-    }
+    },
   );
   if (!updateTraceRes.ok) {
     return {

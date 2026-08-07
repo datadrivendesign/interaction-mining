@@ -82,7 +82,7 @@ export function CommentComposer({
       {pendingIssue && (
         <>
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-red-600 dark:text-red-300">
+            <p className="text-[10px] font-semibold tracking-widest text-red-600 uppercase dark:text-red-300">
               Complete selected issue
             </p>
             <p className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
@@ -96,7 +96,7 @@ export function CommentComposer({
           <div className="space-y-2">
             {pendingPlaceholders.map((token) => (
               <div key={token} className="space-y-1">
-                <label className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                <label className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
                   {formatPlaceholderLabel(token)}
                 </label>
                 <Input
@@ -112,7 +112,7 @@ export function CommentComposer({
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+            <p className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
               Preview
             </p>
             <div className="max-h-24 overflow-y-auto rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
@@ -151,7 +151,7 @@ export function CommentComposer({
       {showTextarea && (
         <>
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-red-600 dark:text-red-300">
+            <p className="text-[10px] font-semibold tracking-widest text-red-600 uppercase dark:text-red-300">
               Add custom issue
             </p>
             <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
@@ -177,7 +177,7 @@ export function CommentComposer({
             draft.trim() &&
             selectedScreenIds.length > 0 && (
               <div className="space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                <p className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
                   Preview
                 </p>
                 <div className="max-h-24 overflow-y-auto rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300">
@@ -246,10 +246,10 @@ function FeedbackTargetControls({
   return (
     <div className="space-y-1.5 rounded-md border border-neutral-200 bg-neutral-50 p-1.5 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="space-y-1">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+        <p className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           Phase
         </p>
-        <div className="grid min-w-0 w-full grid-cols-3 gap-1">
+        <div className="grid w-full min-w-0 grid-cols-3 gap-1">
           {(
             [
               ["annotation", "Annotate"],
@@ -265,7 +265,7 @@ function FeedbackTargetControls({
                 customDestination === destination ? "default" : "outline"
               }
               title={label}
-              className="h-7 w-full min-w-0 max-w-full justify-center gap-0 px-1 text-[9px] leading-tight whitespace-normal sm:text-[11px]"
+              className="h-7 w-full max-w-full min-w-0 justify-center gap-0 px-1 text-[9px] leading-tight whitespace-normal sm:text-[11px]"
               onClick={() => onSetCustomDestination(destination)}
             >
               <span className="block min-w-0 truncate">{label}</span>
@@ -275,10 +275,10 @@ function FeedbackTargetControls({
       </div>
 
       <div className="space-y-1">
-        <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+        <p className="text-[10px] font-medium tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           Scope
         </p>
-        <div className="grid min-w-0 w-full grid-cols-2 gap-1">
+        <div className="grid w-full min-w-0 grid-cols-2 gap-1">
           {(
             [
               ["screen", hasActiveScreen ? "Screen" : "No screen"],

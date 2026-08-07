@@ -2,8 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface LoadingSpinnerProps
-  extends React.InputHTMLAttributes<HTMLDivElement> {
+export interface LoadingSpinnerProps extends React.InputHTMLAttributes<HTMLDivElement> {
   type?: "short" | "long" | "bars";
 }
 
@@ -43,8 +42,8 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
     return (
       <div
         className={cn(
-          "h-4 w-4 text-foreground animate-spin flex items-center justify-center",
-          className
+          "flex h-4 w-4 animate-spin items-center justify-center text-foreground",
+          className,
         )}
         ref={ref}
         {...props}
@@ -52,7 +51,7 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
         {spinners[type ?? "long"]}
       </div>
     );
-  }
+  },
 );
 LoadingSpinner.displayName = "LoadingSpinner";
 

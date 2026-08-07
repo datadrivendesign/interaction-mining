@@ -9,7 +9,7 @@ export async function fetchVideoFile(fileKey: string): Promise<ListedFiles[]> {
   }
   const regexRule = /\.(mp4|mov)$/;
   const videoFiles = res.data.filter((file) =>
-    regexRule.test(file.fileKey.toLowerCase())
+    regexRule.test(file.fileKey.toLowerCase()),
   );
   if (videoFiles.length === 0) {
     console.error("No video file found");
@@ -23,7 +23,7 @@ export async function fetchVideoFile(fileKey: string): Promise<ListedFiles[]> {
       } else {
         return file;
       }
-    })
+    }),
   );
   return signedUrlRes;
 }
