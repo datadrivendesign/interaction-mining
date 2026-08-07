@@ -50,6 +50,31 @@ interface UseIosScrubPreviewArgs {
   syncFocusToTimestamp: (time: number) => void;
 }
 
+/**
+ * Cheap signature of what was drawn: a handful of pixels spread across the
+ * frame. Identical signatures for different requested moments mean the same
+ * frame came back twice, which would place the fault in the decoder rather than
+ * anywhere our timing can reach.
+ */
+function fingerprintCanvas(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+): string {
+  try {
+    return [0.2, 0.4, 0.5, 0.6, 0.8]
+      .map((fraction) => {
+        const x = Math.floor(canvas.width * fraction);
+        const y = Math.floor(canvas.height * fraction);
+        const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+        return `${r},${g},${b}`;
+      })
+      .join("|");
+  } catch {
+    // Tainted canvas: displayable but not readable, so no fingerprint.
+    return "unreadable";
+  }
+}
+
 export function useIosScrubPreview({
   videoRef,
   settledFrameCanvasRef,
@@ -150,6 +175,18 @@ export function useIosScrubPreview({
     }
     try {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Fingerprint the pixels we just drew. If two reveals at different
+      // timestamps produce the same signature, the decoder handed back the same
+      // frame both times — meaning `seeked` fires before the new frame is
+      // available to drawImage, and no amount of timing on our side can help.
+      if (isScrubProfilingEnabled()) {
+        logScrubEvent("settledFrameDrawn", {
+          at: Math.round(video.currentTime * 1000) / 1000,
+          readyState: video.readyState,
+          seeking: video.seeking,
+          fingerprint: fingerprintCanvas(context, canvas),
+        });
+      }
       return true;
     } catch (error) {
       // Only ever displayed, never read back, so a tainted canvas is harmless —
