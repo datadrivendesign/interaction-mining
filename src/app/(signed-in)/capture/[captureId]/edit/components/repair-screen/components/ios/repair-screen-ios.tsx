@@ -130,6 +130,7 @@ export function RepairScreenIOS({
     displayedPreviewFrameSrc,
     incomingPreviewFrameSrc,
     isIncomingPreviewVisible,
+    settledFrameSrc,
     displayedTimelineTime,
     hasPreviewOverlay,
     scrubPreviewTimeRef,
@@ -143,6 +144,7 @@ export function RepairScreenIOS({
     resetPreviewFrames,
   } = useIosScrubPreview({
     videoRef,
+    extractFrameAt,
     videoDuration,
     isPlaying,
     previewThumbnails,
@@ -301,6 +303,7 @@ export function RepairScreenIOS({
             >
               <RepairVideoPanelIOS
                 videoRef={videoRef}
+                settledFrameSrc={settledFrameSrc}
                 displayedPreviewFrameSrc={displayedPreviewFrameSrc}
                 incomingPreviewFrameSrc={incomingPreviewFrameSrc}
                 isIncomingPreviewVisible={isIncomingPreviewVisible}

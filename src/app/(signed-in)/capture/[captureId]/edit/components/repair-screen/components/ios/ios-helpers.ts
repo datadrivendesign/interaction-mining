@@ -36,6 +36,14 @@ export const PREVIEW_MATCH_TOLERANCE = 2 / 30;
  * a quarter second of extra thumbnail was just latency.
  */
 export const PREVIEW_REVEAL_TIMEOUT_MS = 100;
+/**
+ * Height of the exact frame shown once the playhead settles.
+ *
+ * Matches the preview thumbnails, so the coarse frame sharpening into the exact
+ * one is a change of content and not of resolution.
+ */
+export const SETTLED_FRAME_HEIGHT = 1440;
+export const SETTLED_FRAME_JPEG_QUALITY = 0.9;
 /** Profiling only: how long to wait for a swapped-in thumbnail to report loading. */
 export const PREVIEW_SWAP_WATCHDOG_MS = 600;
 export const VIDEO_LOAD_TIMEOUT_MS = 30000;

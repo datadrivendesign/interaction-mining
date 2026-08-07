@@ -5,6 +5,7 @@ import { VideoPreviewOverlay } from "./video-preview-overlay";
 
 interface RepairVideoPanelIOSProps {
   videoRef: Ref<HTMLVideoElement>;
+  settledFrameSrc: string | null;
   displayedPreviewFrameSrc: string | null;
   incomingPreviewFrameSrc: string | null;
   isIncomingPreviewVisible: boolean;
@@ -16,6 +17,7 @@ interface RepairVideoPanelIOSProps {
 
 export function RepairVideoPanelIOS({
   videoRef,
+  settledFrameSrc,
   displayedPreviewFrameSrc,
   incomingPreviewFrameSrc,
   isIncomingPreviewVisible,
@@ -43,6 +45,7 @@ export function RepairVideoPanelIOS({
       <div className="flex flex-col justify-center items-center w-full h-full gap-4">
         <VideoPreviewOverlay
           videoRef={videoRef}
+          settledFrameSrc={settledFrameSrc}
           displayedPreviewFrameSrc={displayedPreviewFrameSrc}
           incomingPreviewFrameSrc={incomingPreviewFrameSrc}
           isIncomingPreviewVisible={isIncomingPreviewVisible}

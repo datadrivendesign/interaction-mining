@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface VideoPreviewOverlayProps {
   videoRef: Ref<HTMLVideoElement>;
+  settledFrameSrc: string | null;
   displayedPreviewFrameSrc: string | null;
   incomingPreviewFrameSrc: string | null;
   isIncomingPreviewVisible: boolean;
@@ -15,6 +16,7 @@ interface VideoPreviewOverlayProps {
 
 export function VideoPreviewOverlay({
   videoRef,
+  settledFrameSrc,
   displayedPreviewFrameSrc,
   incomingPreviewFrameSrc,
   isIncomingPreviewVisible,
@@ -74,9 +76,25 @@ export function VideoPreviewOverlay({
         />
       ) : null}
       {/*
+        The exact frame for where the playhead came to rest, extracted rather
+        than read off the element. Sits above the thumbnails so the coarse
+        picture sharpens into the right one, and above the element because the
+        element cannot be trusted to have repainted after a paused seek.
+      */}
+      {settledFrameSrc ? (
+        <Image
+          src={settledFrameSrc}
+          alt="Frame at the current position"
+          fill
+          unoptimized
+          sizes="100vw"
+          className="pointer-events-none absolute inset-0 z-[25] h-full w-full rounded-lg object-contain"
+        />
+      ) : null}
+      {/*
         Preview frames come from a coarse thumbnail grid — roughly a second apart
         on a long recording — so what is showing here can sit up to half a second
-        from the playhead. Labelling it means the correction when the real frame
+        from the playhead. Labelling it means the correction when the exact frame
         arrives reads as the picture sharpening rather than the tool changing its
         mind, and it marks the moments when `c` would capture something other
         than what is on screen.
