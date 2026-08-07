@@ -6,6 +6,7 @@ import {
 import { Filmstrip } from "../filmstrip";
 import FrameTimeline from "./extract-frames-timeline";
 import { useHotkeys } from "react-hotkeys-hook";
+import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { extractVideoFrame, useFormFieldKeyPressGuard } from "../../util";
 import { FrameData, Redaction, TraceFormData } from "../../../types";
@@ -192,11 +193,22 @@ export function RepairScreenIOS({
 
   const handleCaptureFrame = useCallback(async () => {
     if (!videoRef.current) return;
-    const f = await extractVideoFrame(videoRef.current, currentTime, {
-      mimeType: "image/png",
-      output: "object-url",
-      preferOffscreenCanvas: true,
-    });
+    let f: FrameData;
+    try {
+      f = await extractVideoFrame(videoRef.current, currentTime, {
+        mimeType: "image/png",
+        output: "object-url",
+        preferOffscreenCanvas: true,
+      });
+    } catch (error) {
+      // A read can now fail rather than guess: a seek that never completes
+      // rejects instead of drawing whatever frame the element still holds.
+      // Without this the rejection was unhandled and `c` simply did nothing,
+      // which is indistinguishable from a missed keypress.
+      console.error(`Could not capture the current frame: ${error}`);
+      toast.error("Could not capture this frame. Try again.");
+      return;
+    }
     registerScreenUrl(f.src);
     setValue(
       "screens",
