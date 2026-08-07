@@ -22,6 +22,8 @@ import { useIosVideoPlayback } from "./use-ios-video-playback";
 import { useIosScrubPreview } from "./use-ios-scrub-preview";
 import { useIosStepHotkeys } from "./use-ios-step-hotkeys";
 import { useIosVideoBootstrap } from "./use-ios-video-bootstrap";
+import { useIosFrameReader } from "./use-ios-frame-reader";
+import { toast } from "sonner";
 import { useScreenBlobRegistry } from "../../../../screen-blob-registry";
 
 export function RepairScreenIOS({
@@ -59,7 +61,7 @@ export function RepairScreenIOS({
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Holds the settled frame, painted from the decoder. See drawSettledFrame.
+  // Holds the settled frame, painted from the offscreen reader.
   const settledFrameCanvasRef = useRef<HTMLCanvasElement>(null);
   const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
   // Highest playhead request already applied, so each is placed once.
@@ -70,6 +72,11 @@ export function RepairScreenIOS({
     // iOS screen recordings capitalize file extension, so we lowercase here
     return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
+
+  // Every pixel read goes through this rather than the displayed element.
+  const { drawFrameInto, extractFrameAt } = useIosFrameReader(
+    videoFiles[0]?.fileUrl,
+  );
 
   // Stable cross-hook callbacks bound to refs. Initial values are no-ops; the
   // refs are wired to the real implementations once downstream hooks initialize.
@@ -100,6 +107,7 @@ export function RepairScreenIOS({
       setValue,
       onResetPreviewFrames,
       registerScreenUrl,
+      extractFrameAt,
     });
 
   // Playback: isPlaying, currentTime, live-photo replay window.
@@ -142,6 +150,7 @@ export function RepairScreenIOS({
   } = useIosScrubPreview({
     videoRef,
     settledFrameCanvasRef,
+    drawFrameInto,
     videoDuration,
     isPlaying,
     previewThumbnails,
@@ -195,12 +204,18 @@ export function RepairScreenIOS({
   });
 
   const handleCaptureFrame = useCallback(async () => {
-    if (!videoRef.current) return;
-    const f = await extractVideoFrame(videoRef.current, currentTime, {
+    // Read from the offscreen copy, never the displayed element. Safari returns
+    // black or a stale frame from a composited video, which was writing images
+    // into traces that carried the right timestamp and the wrong picture.
+    const f = await extractFrameAt(currentTime, {
       mimeType: "image/png",
       output: "object-url",
       preferOffscreenCanvas: true,
     });
+    if (!f) {
+      toast.error("Could not capture this frame. Try again.");
+      return;
+    }
     registerScreenUrl(f.src);
     setValue(
       "screens",
@@ -211,7 +226,14 @@ export function RepairScreenIOS({
     // behind meant hunting for the new frame in the filmstrip first. No seek is
     // needed: the playhead is already at this screen's timestamp.
     selectScreen(f.id, "capture");
-  }, [currentTime, registerScreenUrl, screens, selectScreen, setValue]);
+  }, [
+    currentTime,
+    extractFrameAt,
+    registerScreenUrl,
+    screens,
+    selectScreen,
+    setValue,
+  ]);
 
   // Workspace keybinds
   useHotkeys("space", async (e) => {

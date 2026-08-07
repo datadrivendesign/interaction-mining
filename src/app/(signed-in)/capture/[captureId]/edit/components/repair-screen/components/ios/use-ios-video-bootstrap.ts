@@ -4,7 +4,7 @@ import { ListedFiles } from "@/lib/actions";
 import { UseFormSetValue } from "react-hook-form";
 import { FrameData, TraceFormData } from "../../../types";
 import { DraftFetchResults } from "../../../../util";
-import { extractThumbnails, extractVideoFrame } from "../../util";
+import { extractThumbnails } from "../../util";
 import { recordPhase } from "./scrub-profiler";
 import {
   MAX_TIMELINE_THUMBS,
@@ -30,6 +30,16 @@ interface UseIosVideoBootstrapArgs {
    * leaves form state.
    */
   registerScreenUrl: (url: string) => void;
+  /**
+   * Reads a frame from an offscreen copy of the recording. Screen images must
+   * not come from the displayed element: Safari composites that through a path
+   * canvas cannot read back, so the extracted picture is black or from an
+   * earlier position while carrying the right timestamp.
+   */
+  extractFrameAt: (
+    time: number,
+    options?: { mimeType?: "image/png" | "image/jpeg"; output?: "data-url" | "object-url"; preferOffscreenCanvas?: boolean },
+  ) => Promise<FrameData | null>;
 }
 
 interface UseIosVideoBootstrapResult {
@@ -53,6 +63,7 @@ export function useIosVideoBootstrap({
   setValue,
   onResetPreviewFrames,
   registerScreenUrl,
+  extractFrameAt,
 }: UseIosVideoBootstrapArgs): UseIosVideoBootstrapResult {
   const screensRef = useRef<FrameData[]>(screens);
   const thumbnailObjectUrlsRef = useRef<string[]>([]);
@@ -172,24 +183,17 @@ export function useIosVideoBootstrap({
         const draftScreens: FrameData[] = [];
 
         try {
-          // Warm the video decoder once before extracting any missing frames.
-          const warmupFrame = await extractVideoFrame(video, 0.1, {
-            mimeType: "image/png",
-            output: "object-url",
-            preferOffscreenCanvas: true,
-          });
-          if (warmupFrame.src.startsWith("blob:")) {
-            URL.revokeObjectURL(warmupFrame.src);
-          }
           for (const screen of screensSnapshot) {
             if (!screen.src) {
-              const frame = await extractVideoFrame(video, screen.timestamp, {
+              const frame = await extractFrameAt(screen.timestamp, {
                 mimeType: "image/png",
                 output: "object-url",
                 preferOffscreenCanvas: true,
               });
-              screen.src = frame.src;
-              registerScreenUrl(frame.src);
+              if (frame) {
+                screen.src = frame.src;
+                registerScreenUrl(frame.src);
+              }
             }
             draftScreens.push(screen);
           }
@@ -268,6 +272,7 @@ export function useIosVideoBootstrap({
     };
   }, [
     draftFetchResult,
+    extractFrameAt,
     onResetPreviewFrames,
     registerScreenUrl,
     setValue,
