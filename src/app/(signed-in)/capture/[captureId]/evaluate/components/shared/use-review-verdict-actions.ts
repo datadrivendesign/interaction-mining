@@ -1,14 +1,15 @@
 "use client";
 
-import { Capture, CaptureStatus } from "@prisma/client";
+import { Capture } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
-import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
+import { revalidateCaptureCaches } from "@/lib/actions";
 import { TraceFormData } from "../../../edit/components/types";
 import { handleTraceSave } from "../../../edit/util/export";
 import {
+  approveCapture,
   denyCapture,
   getNextReviewingCaptureId,
   validateApprovePermissions,
@@ -17,6 +18,7 @@ import {
   ReviewFeedbackState,
   serializeReviewFeedbackState,
 } from "../../utils/review-feedback";
+import { summarizeReviewVerdict } from "../../utils/review-verdict-summary";
 
 export function useReviewVerdictActions({
   capture,
@@ -80,11 +82,25 @@ export function useReviewVerdictActions({
       if (!saveRes.ok) {
         throw new Error(saveRes.message);
       }
-      const updateRes = await updateCapture(capture.id, {
-        status: CaptureStatus.APPROVED,
+      // Logged as well as applied, so the log carries the denominator a reject
+      // rate needs.
+      //
+      // Issue fields are empty deliberately: an approval means nothing was left
+      // to send back. Summarizing the live state here recorded the previous
+      // rejection's comments, which reopening a bounced capture loads back in, so
+      // the same issues landed on both the rejection and the approval that
+      // cleared them. `screenCount` stays — it describes the trace, not the
+      // feedback.
+      const approveCaptureRes = await approveCapture(capture, {
+        issueIds: [],
+        issueCategories: [],
+        destinations: [],
+        screenIssueCount: 0,
+        flowIssueCount: 0,
+        screenCount: traceData.screens.length,
       });
-      if (!updateRes.ok) {
-        throw new Error(updateRes.message);
+      if (!approveCaptureRes.ok) {
+        throw new Error(approveCaptureRes.message);
       }
       await revalidateCaptureCaches();
       await navigateAfterVerdict("Capture approved.");
@@ -95,7 +111,7 @@ export function useReviewVerdictActions({
     } finally {
       setIsSubmitting(false);
     }
-  }, [capture, navigateAfterVerdict, traceData]);
+  }, [capture, feedbackState, navigateAfterVerdict, traceData]);
 
   const handleDeny = useCallback(async () => {
     if (!capture || !traceData) {
@@ -113,6 +129,12 @@ export function useReviewVerdictActions({
         serializedFeedback.annotateFeedback,
         serializedFeedback.redactFeedback,
         serializedFeedback.summarizeFeedback,
+        // Serializing flattens the reviewer's issue picks into prose for the
+        // worker. This preserves them as structured data for the review log.
+        summarizeReviewVerdict({
+          feedbackState,
+          screenCount: traceData.screens.length,
+        }),
       );
       if (!denyRes.ok) {
         throw new Error(denyRes.message);
