@@ -107,7 +107,7 @@ function SaveTraceFigure({
 
         <TooltipProvider delayDuration={100}>
           <Image
-            className="relative z-10 h-full w-full rounded-lg border-2 border-blue-500 object-contain"
+            className="relative z-10 h-full w-full rounded-lg border-2 border-blue-500 object-cover"
             src={screen.src}
             alt={`Extracted frame at ${screen.timestamp}`}
             draggable={false}
