@@ -1,54 +1,70 @@
-import { RefObject, useCallback, useRef } from "react";
+import { RefObject, useCallback, useEffect, useRef } from "react";
 import { FrameData } from "../../../types";
 import { ExtractVideoFrameOptions, extractVideoFrame } from "../../util";
-import { isScrubProfilingEnabled, logScrubEvent } from "./scrub-profiler";
 
 /**
- * Wait until the browser has actually painted.
+ * How long a reader stays trustworthy after its last use.
  *
- * A seek finishing does not mean the new frame is the one canvas will read.
- * `seeked` reports that the playback position moved; the decoded picture
- * reaches the surface `drawImage` samples a frame later, and reading in that
- * gap returns the previous frame with the new timestamp. Two frames rather than
- * one because the first callback runs before compositing, not after.
+ * WebKit suspends the video pipeline of an idle element. A seek on a suspended
+ * element still moves `currentTime` and still fires `seeked` — the demuxer
+ * answers — but no frame is pushed through, so `drawImage` keeps handing back
+ * the last picture the element decoded. Measured directly: a read at 26.2s
+ * returned the identical 36-point signature as one taken at 37.2s eleven
+ * seconds of recording earlier, after four seconds of sitting still.
+ *
+ * A reader used within this window has not gone idle and can be reused; past
+ * it, assume the pipeline has been suspended and start a fresh element.
  */
-const waitForPaint = () =>
-  new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
+const READER_WARM_MS = 1500;
 
 /**
- * Reads frames out of the recording the worker is looking at.
+ * Seek somewhere cheap first, to prime a newly created element.
  *
- * An earlier version read from a detached element instead, on the theory that
- * Safari composites a visible video through a path canvas cannot read back.
- * That was measurement error — the fingerprint sampled the diagonal of a
- * letterboxed frame and reported the black bars, so it looked constant no
- * matter what was drawn. Measured properly, the detached element is the one
- * that returns a constant: it decodes during bootstrap's back-to-back
- * extraction, then goes idle, and WebKit releases the decoder for an element
- * that is not in the document. Its later seeks completed in a millisecond
- * against nothing and every read handed back the last frame it had decoded,
- * which is how a screen from elsewhere in the recording ended up on the panel
- * and in captures.
- *
- * The displayed element is on screen and never suspended, so it stays honest.
- * What it does need is time: reads wait for a paint before sampling.
- *
- * @param videoRef - The displayed recording.
+ * `extractVideoThumbnails` has always done this and its thumbnails have always
+ * been correct, which is the strongest evidence available for what a working
+ * read needs.
  */
-export function useIosFrameReader(videoRef: RefObject<HTMLVideoElement | null>) {
+const WARMUP_TIME_SECONDS = 0.1;
+const WARMUP_SCALE = 0.05;
+
+/**
+ * Extracts screen images from the recording.
+ *
+ * Reads happen on a detached element rather than the displayed one, and — the
+ * part that matters — on one that has not been left idle long enough for WebKit
+ * to suspend it. Reading a stale surface is what put the right timestamp on the
+ * wrong picture, in the panel and in captured screens both.
+ *
+ * A long-lived reader is not enough on its own: an earlier version kept exactly
+ * one for the whole session and it froze on whatever bootstrap decoded last,
+ * serving that same frame for every capture afterwards.
+ *
+ * @param videoRef - The displayed recording, used only for its source URL.
+ */
+export function useIosFrameReader(
+  videoRef: RefObject<HTMLVideoElement | null>,
+) {
+  const readerRef = useRef<HTMLVideoElement | null>(null);
+  const readerSrcRef = useRef<string | null>(null);
+  const lastUsedAtRef = useRef(0);
   /**
-   * Tail of the read queue.
-   *
-   * Settled frames, captures and the bootstrap screen pass all read the same
-   * element, and two overlapping seeks on one element resolve on each other's
-   * `seeked` and leave it somewhere neither caller asked for.
-   * `extractVideoThumbnails` learned this the hard way and runs its own loop
-   * strictly sequentially ("parallel messes up seeking"); this applies the same
-   * discipline to callers that cannot see each other.
+   * Tail of the read queue. Two overlapping seeks on one element resolve on
+   * each other's `seeked` and leave it somewhere neither caller asked for;
+   * `extractVideoThumbnails` runs its own loop sequentially for this reason.
    */
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  const disposeReader = useCallback(() => {
+    const reader = readerRef.current;
+    readerRef.current = null;
+    readerSrcRef.current = null;
+    if (reader) {
+      reader.removeAttribute("src");
+      reader.load();
+    }
+  }, []);
+
+  useEffect(() => disposeReader, [disposeReader]);
 
   /** Run `operation` once every read queued before it has finished. */
   const enqueue = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
@@ -60,71 +76,63 @@ export function useIosFrameReader(videoRef: RefObject<HTMLVideoElement | null>) 
   }, []);
 
   /**
-   * Paint the frame the element is currently showing into a canvas.
+   * A reader whose pipeline is known to be awake.
    *
-   * Nothing is seeked. The settled frame is by definition where the playhead
-   * already is, and seeking the displayed element from here would fight the
-   * scrub queue that put it there.
-   *
-   * @param isStillWanted - Consulted after the paint wait and before the draw.
-   *   A read that has been superseded must not reach the canvas, and checking
-   *   once the pixels are already there is too late — the older frame is on
-   *   screen by then, which is the frame workers reported settling on.
-   * @returns Whether a frame was drawn.
+   * Reused during a burst — bootstrap rebuilding a draft's screens is a tight
+   * loop and would otherwise pay for an element per screen — and replaced once
+   * it has been sitting idle.
    */
-  const drawFrameInto = useCallback(
-    (
-      canvas: HTMLCanvasElement,
-      time: number,
-      isStillWanted?: () => boolean,
-    ): Promise<boolean> =>
-      enqueue(async () => {
-        // Cheap exit before taking a turn: by the time a queued read runs, the
-        // pointer has often moved on.
-        if (isStillWanted && !isStillWanted()) {
-          return false;
-        }
-        const video = videoRef.current;
-        if (!video || !video.videoWidth) {
-          return false;
-        }
+  const getWarmReader = useCallback(
+    async (src: string): Promise<HTMLVideoElement | null> => {
+      const isWarm =
+        readerRef.current !== null &&
+        readerSrcRef.current === src &&
+        performance.now() - lastUsedAtRef.current < READER_WARM_MS;
+      if (isWarm) {
+        return readerRef.current;
+      }
+      disposeReader();
 
-        const startedAt = performance.now();
-        await waitForPaint();
-        const stillWanted = !isStillWanted || isStillWanted();
+      const reader = document.createElement("video");
+      reader.crossOrigin = "anonymous";
+      reader.preload = "auto";
+      reader.muted = true;
+      reader.src = src;
 
-        if (isScrubProfilingEnabled()) {
-          logScrubEvent("readerRead", {
-            at: Math.round(time * 1000) / 1000,
-            elementAt: Math.round(video.currentTime * 1000) / 1000,
-            waitedMs: Math.round(performance.now() - startedAt),
-            // A read the display no longer wants, stopped before it could paint.
-            suppressed: !stillWanted,
-          });
-        }
+      const isReady = await new Promise<boolean>((resolve) => {
+        const settle = (ready: boolean) => {
+          reader.removeEventListener("loadeddata", onReady);
+          reader.removeEventListener("error", onError);
+          resolve(ready);
+        };
+        const onReady = () => settle(true);
+        const onError = () => settle(false);
+        reader.addEventListener("loadeddata", onReady, { once: true });
+        reader.addEventListener("error", onError, { once: true });
+      });
+      if (!isReady) {
+        return null;
+      }
 
-        if (!stillWanted) {
-          return false;
-        }
-        if (canvas.width !== video.videoWidth) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-        const context = canvas.getContext("2d");
-        if (!context) {
-          return false;
-        }
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        return true;
-      }),
-    [enqueue, videoRef],
+      // Prime the decoder before the read that matters.
+      const warmup = await extractVideoFrame(reader, WARMUP_TIME_SECONDS, {
+        scale: WARMUP_SCALE,
+        mimeType: "image/jpeg",
+        output: "object-url",
+      });
+      if (warmup.src?.startsWith("blob:")) {
+        URL.revokeObjectURL(warmup.src);
+      }
+
+      readerRef.current = reader;
+      readerSrcRef.current = src;
+      return reader;
+    },
+    [disposeReader],
   );
 
   /**
    * Extract the frame at `time` as a screen image.
-   *
-   * Unlike the settled frame this does move the playhead, so it is only for
-   * deliberate reads: `c` captures, and rebuilding screens during bootstrap.
    *
    * @returns Frame data, or null when the recording could not be read.
    */
@@ -133,22 +141,23 @@ export function useIosFrameReader(videoRef: RefObject<HTMLVideoElement | null>) 
       time: number,
       options?: ExtractVideoFrameOptions,
     ): Promise<FrameData | null> =>
-      // Same queue as the display reads, so a capture and a settled-frame paint
-      // cannot become two seeks racing on one element.
       enqueue(async () => {
-        const video = videoRef.current;
-        if (!video) {
+        const src = videoRef.current?.currentSrc || videoRef.current?.src;
+        if (!src) {
           return null;
         }
-        // `waitForPaint` is the difference between the right timestamp with the
-        // right picture and the right timestamp with the previous one.
-        return extractVideoFrame(video, time, {
-          ...options,
-          waitForPaint: true,
-        });
+        const reader = await getWarmReader(src);
+        if (!reader) {
+          return null;
+        }
+        try {
+          return await extractVideoFrame(reader, time, options);
+        } finally {
+          lastUsedAtRef.current = performance.now();
+        }
       }),
-    [enqueue, videoRef],
+    [enqueue, getWarmReader, videoRef],
   );
 
-  return { drawFrameInto, extractFrameAt };
+  return { extractFrameAt };
 }

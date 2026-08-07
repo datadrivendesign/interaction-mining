@@ -61,8 +61,6 @@ export function RepairScreenIOS({
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Holds the settled frame, painted from the recording once it has landed.
-  const settledFrameCanvasRef = useRef<HTMLCanvasElement>(null);
   const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
   // Highest playhead request already applied, so each is placed once.
   const appliedPlayheadNonceRef = useRef<number | null>(null);
@@ -73,7 +71,7 @@ export function RepairScreenIOS({
     return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
 
-  const { drawFrameInto, extractFrameAt } = useIosFrameReader(videoRef);
+  const { extractFrameAt } = useIosFrameReader(videoRef);
 
   // Stable cross-hook callbacks bound to refs. Initial values are no-ops; the
   // refs are wired to the real implementations once downstream hooks initialize.
@@ -143,11 +141,8 @@ export function RepairScreenIOS({
     scheduleScrubDisplayTime,
     scheduleScrubSeek,
     resetPreviewFrames,
-    isSettledFrameVisible,
   } = useIosScrubPreview({
     videoRef,
-    settledFrameCanvasRef,
-    drawFrameInto,
     videoDuration,
     isPlaying,
     previewThumbnails,
@@ -306,8 +301,6 @@ export function RepairScreenIOS({
             >
               <RepairVideoPanelIOS
                 videoRef={videoRef}
-                settledFrameCanvasRef={settledFrameCanvasRef}
-                isSettledFrameVisible={isSettledFrameVisible}
                 displayedPreviewFrameSrc={displayedPreviewFrameSrc}
                 incomingPreviewFrameSrc={incomingPreviewFrameSrc}
                 isIncomingPreviewVisible={isIncomingPreviewVisible}

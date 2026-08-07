@@ -38,17 +38,6 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 
 interface UseIosScrubPreviewArgs {
   videoRef: RefObject<HTMLVideoElement | null>;
-  /** Canvas the settled frame is painted into. */
-  settledFrameCanvasRef: RefObject<HTMLCanvasElement | null>;
-  /**
-   * Paints the frame the recording has settled on into a canvas, once the
-   * browser has actually painted it.
-   */
-  drawFrameInto: (
-    canvas: HTMLCanvasElement,
-    time: number,
-    isStillWanted?: () => boolean,
-  ) => Promise<boolean>;
   videoDuration: number;
   isPlaying: boolean;
   previewThumbnails: PreviewThumbnail[];
@@ -136,8 +125,6 @@ function describeCanvas(
 
 export function useIosScrubPreview({
   videoRef,
-  settledFrameCanvasRef,
-  drawFrameInto,
   videoDuration,
   isPlaying,
   previewThumbnails,
@@ -172,10 +159,6 @@ export function useIosScrubPreview({
    */
   const settledSeekTargetRef = useRef<number | null>(null);
   const frameCallbackHandleRef = useRef<number | null>(null);
-  /** Invalidates an in-flight frame read when a newer one starts. */
-  const revealTokenRef = useRef(0);
-  /** The control only needs measuring once per session. */
-  const controlMeasuredRef = useRef(false);
   const revealFallbackTimeoutRef = useRef<number | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
@@ -199,31 +182,24 @@ export function useIosScrubPreview({
    * the pointer position, which would have snapped the marker backwards.
    */
   const [isPreviewNeeded, setIsPreviewNeeded] = useState(false);
-  /**
-   * Whether the canvas holding the settled frame should be shown.
-   *
-   * The canvas freezes the frame the playhead came to rest on, so nothing that
-   * happens to the element afterwards can change what the worker is aiming at
-   * while they annotate. It is painted from the element itself, one paint after
-   * the seek lands.
-   */
-  const [isSettledFrameVisible, setIsSettledFrameVisible] = useState(false);
 
   const getNearestPreviewThumbnail = useCallback(
     (time: number) => findNearestPreviewThumbnail(previewThumbnails, time),
     [previewThumbnails],
   );
 
-  /** Measures a preview thumbnail the same way, to calibrate the frame reading. */
+  /**
+   * Measures the preview thumbnail nearest the same moment, the same way.
+   *
+   * The thumbnails come off a fresh element in a tight loop and are the one
+   * source in this panel known to be correct, which makes them the only
+   * available ground truth for a frame read.
+   */
   const describeThumbnailControl = useCallback(async (src: string | null) => {
-    if (controlMeasuredRef.current) {
-      return;
-    }
     if (!src) {
       logScrubEvent("thumbnailControl", { skipped: "no thumbnail yet" });
       return;
     }
-    controlMeasuredRef.current = true;
     try {
       const image = new Image();
       image.crossOrigin = "anonymous";
@@ -247,50 +223,28 @@ export function useIosScrubPreview({
   }, []);
 
   /**
-   * Paint the frame the element is currently decoding into the canvas.
+   * Records what the element reads back as, against the thumbnail for the same
+   * moment.
    *
-   * Synchronous and cheap — no encode, no blob. Reads from the decoder, so it is
-   * correct even when the element is compositing something older.
-   *
-   * @returns Whether a frame was drawn.
+   * Nothing depends on this — the panel shows the element directly now. It is
+   * here because a readback that disagrees with the thumbnail is the signature
+   * of a suspended pipeline, and that is worth being able to see if captures
+   * ever go wrong again.
    */
-  const drawSettledFrame = useCallback(
-    async (time: number, isStillWanted?: () => boolean) => {
-      const canvas = settledFrameCanvasRef.current;
-      if (!canvas) {
-        return false;
+  const measureSettledFrame = useCallback(
+    (time: number) => {
+      if (!isScrubProfilingEnabled()) {
+        return;
       }
-      try {
-        const drew = await drawFrameInto(canvas, time, isStillWanted);
-        if (drew && isScrubProfilingEnabled()) {
-          const context = canvas.getContext("2d");
-          // Both sources measured at the same moment, because we have no valid
-          // reading for either yet — the earlier diagonal sampling was constant
-          // regardless of content, so the displayed element was never actually
-          // ruled out. Whichever signature varies with time is the one that
-          // works.
-          logScrubEvent("frameSources", {
-            at: Math.round(time * 1000) / 1000,
-            reader: context ? describeCanvas(context, canvas) : { noContext: true },
-            live: describeElement(videoRef.current, time),
-          });
-          void describeThumbnailControl(
-            getNearestPreviewThumbnail(time)?.src ?? null,
-          );
-        }
-        return drew;
-      } catch (error) {
-        console.error(`Could not draw settled frame: ${error}`);
-        return false;
-      }
+      logScrubEvent("settledFrame", {
+        at: Math.round(time * 1000) / 1000,
+        live: describeElement(videoRef.current, time),
+      });
+      void describeThumbnailControl(
+        getNearestPreviewThumbnail(time)?.src ?? null,
+      );
     },
-    [
-      describeThumbnailControl,
-      drawFrameInto,
-      getNearestPreviewThumbnail,
-      settledFrameCanvasRef,
-      videoRef,
-    ],
+    [describeThumbnailControl, getNearestPreviewThumbnail, videoRef],
   );
 
   const cancelPendingReveal = useCallback(() => {
@@ -318,57 +272,37 @@ export function useIosScrubPreview({
   const revealWhenFramePresented = useCallback(() => {
     cancelPendingReveal();
 
-    const reveal = async (
+    const reveal = (
       source: "frame-callback" | "timeout",
       mediaTime: number | null,
     ) => {
       cancelPendingReveal();
       const settledTarget = settledSeekTargetRef.current;
-      const revealToken = ++revealTokenRef.current;
-
-      // Reading a frame means seeking the offscreen copy, so the pointer can
-      // move on while this waits. The check is handed down rather than made
-      // here on the way back: by the time the call returns the pixels are
-      // already on the canvas, and refusing to *show* a canvas that has just
-      // been repainted with an older moment does nothing — the canvas is
-      // shared, and whatever is on it is what the next reveal uncovers.
-      const isStillWanted = () => revealToken === revealTokenRef.current;
-      const didDraw =
-        settledTarget === null
-          ? false
-          : await drawSettledFrame(settledTarget, isStillWanted);
-
-      if (!isStillWanted()) {
-        return;
-      }
 
       recordReveal({
         source,
         targetTime: previewTargetTimeRef.current,
         mediaTime,
         settledTarget,
-        paintedToCanvas: didDraw,
       });
-      setIsSettledFrameVisible(didDraw);
-      // Only drop the thumbnail once something real is on the canvas; otherwise
-      // the approximate frame is still the best thing available.
-      if (didDraw) {
-        setIsPreviewNeeded(false);
+      if (settledTarget !== null) {
+        measureSettledFrame(settledTarget);
       }
+      setIsPreviewNeeded(false);
     };
 
     const video = videoRef.current as VideoWithFrameCallback | null;
     revealFallbackTimeoutRef.current = window.setTimeout(
-      () => void reveal("timeout", null),
+      () => reveal("timeout", null),
       PREVIEW_REVEAL_TIMEOUT_MS,
     );
 
     if (video && typeof video.requestVideoFrameCallback === "function") {
       frameCallbackHandleRef.current = video.requestVideoFrameCallback(
-        (_now, metadata) => void reveal("frame-callback", metadata.mediaTime),
+        (_now, metadata) => reveal("frame-callback", metadata.mediaTime),
       );
     }
-  }, [cancelPendingReveal, drawSettledFrame, videoRef]);
+  }, [cancelPendingReveal, measureSettledFrame, videoRef]);
 
   /**
    * Ask for the thumbnail to cover a move to `time` — but only when it would be
@@ -385,7 +319,6 @@ export function useIosScrubPreview({
       // Any pending reveal is now stale — the display is being sent somewhere
       // else, so a frame read for the previous target must not reach the canvas.
       cancelPendingReveal();
-      revealTokenRef.current += 1;
 
       setIsPreviewNeeded((wasNeeded) => {
         if (wasNeeded) {
@@ -468,8 +401,6 @@ export function useIosScrubPreview({
       setScrubPreviewTime(null);
       setPausedPreviewTime(null);
       setIsPreviewNeeded(false);
-      // Playing composites normally, so the element is trustworthy again.
-      setIsSettledFrameVisible(false);
       setDisplayedPreviewFrameSrc(null);
       setIncomingPreviewFrameSrc(null);
       setIsIncomingPreviewVisible(false);
@@ -901,7 +832,6 @@ export function useIosScrubPreview({
     isIncomingPreviewVisible,
     displayedTimelineTime,
     hasPreviewOverlay,
-    isSettledFrameVisible,
     scrubPreviewTimeRef,
     handleSetTime,
     handleScrubPreviewTimeChange,

@@ -4,8 +4,6 @@ import { cn } from "@/lib/utils";
 
 interface VideoPreviewOverlayProps {
   videoRef: Ref<HTMLVideoElement>;
-  settledFrameCanvasRef: Ref<HTMLCanvasElement>;
-  isSettledFrameVisible: boolean;
   displayedPreviewFrameSrc: string | null;
   incomingPreviewFrameSrc: string | null;
   isIncomingPreviewVisible: boolean;
@@ -17,8 +15,6 @@ interface VideoPreviewOverlayProps {
 
 export function VideoPreviewOverlay({
   videoRef,
-  settledFrameCanvasRef,
-  isSettledFrameVisible,
   displayedPreviewFrameSrc,
   incomingPreviewFrameSrc,
   isIncomingPreviewVisible,
@@ -30,11 +26,18 @@ export function VideoPreviewOverlay({
   return (
     <div className="relative flex justify-center items-center w-full h-full">
       {/*
-        Always painted. The preview images stack on top and cover it, so hiding
-        it was never necessary — and toggling opacity on a video forces a
-        compositor layer change, which showed up as a blip each time the overlay
-        came down. Leaving it composited means uncovering it is just the image
-        above it going away.
+        Always painted, and now the only thing the panel shows once a seek
+        settles. A canvas used to sit above this holding a frame read back with
+        drawImage, on the theory that Safari would not repaint a paused element
+        after a seek. The readback was the stale half: WebKit suspends the video
+        pipeline of an idle element, so a seek moves `currentTime` and fires
+        `seeked` while drawImage keeps returning the last frame the element
+        decoded — measured returning a frame from eleven seconds away. The
+        element itself composites; it was being painted over.
+
+        The preview images stack on top and cover it, so hiding it was never
+        necessary — and toggling opacity on a video forces a compositor layer
+        change, which showed up as a blip each time the overlay came down.
       */}
       <video
         ref={videoRef}
@@ -44,20 +47,6 @@ export function VideoPreviewOverlay({
         controls={false}
         onPlay={onPlay}
         onPause={onPause}
-      />
-      {/*
-        The frame the playhead came to rest on, held still. Painted from the
-        element a paint after its seek lands, so it carries what was actually
-        asked for and stays put while the worker annotates it. Hidden during
-        playback, when the element speaks for itself.
-      */}
-      <canvas
-        ref={settledFrameCanvasRef}
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute inset-0 z-[5] h-full w-full rounded-lg object-contain",
-          isSettledFrameVisible ? "opacity-100" : "opacity-0",
-        )}
       />
       {displayedPreviewFrameSrc ? (
         <Image
