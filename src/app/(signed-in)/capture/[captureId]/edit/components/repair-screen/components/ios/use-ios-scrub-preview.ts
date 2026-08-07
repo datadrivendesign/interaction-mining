@@ -9,11 +9,18 @@ import {
 } from "react";
 
 
-import { recordSeekIssued } from "./scrub-profiler";
+import {
+  isScrubProfilingEnabled,
+  logScrubEvent,
+  recordPreviewSwapWithoutLoad,
+  recordReveal,
+  recordSeekIssued,
+} from "./scrub-profiler";
 import {
   PREVIEW_MATCH_TOLERANCE,
   PREVIEW_REVEAL_TIMEOUT_MS,
   PREVIEW_SWAP_DELAY_MS,
+  PREVIEW_SWAP_WATCHDOG_MS,
   PreviewThumbnail,
   SCRUB_SEEK_INTERVAL_MS,
   findNearestPreviewThumbnail,
@@ -121,19 +128,30 @@ export function useIosScrubPreview({
   const revealWhenFramePresented = useCallback(() => {
     cancelPendingReveal();
 
-    const reveal = () => {
+    const reveal = (
+      source: "frame-callback" | "timeout",
+      mediaTime: number | null,
+    ) => {
       cancelPendingReveal();
+      recordReveal({
+        source,
+        targetTime: previewTargetTimeRef.current,
+        mediaTime,
+        currentTime: videoRef.current?.currentTime ?? 0,
+      });
       setIsPreviewNeeded(false);
     };
 
     const video = videoRef.current as VideoWithFrameCallback | null;
     revealFallbackTimeoutRef.current = window.setTimeout(
-      reveal,
+      () => reveal("timeout", null),
       PREVIEW_REVEAL_TIMEOUT_MS,
     );
 
     if (video && typeof video.requestVideoFrameCallback === "function") {
-      frameCallbackHandleRef.current = video.requestVideoFrameCallback(reveal);
+      frameCallbackHandleRef.current = video.requestVideoFrameCallback(
+        (_now, metadata) => reveal("frame-callback", metadata.mediaTime),
+      );
     }
   }, [cancelPendingReveal, videoRef]);
 
@@ -157,6 +175,14 @@ export function useIosScrubPreview({
       setIsPreviewNeeded((wasNeeded) => {
         if (wasNeeded) {
           return true;
+        }
+        if (isScrubProfilingEnabled()) {
+          const thumbnail = getNearestPreviewThumbnail(time);
+          logScrubEvent("previewRequested", {
+            target: Math.round(time * 1000) / 1000,
+            landed: videoRef.current?.currentTime ?? null,
+            thumbnailAt: thumbnail?.timestamp ?? null,
+          });
         }
         // Compared against the element's live position, not a cached one.
         // `lastCommittedVideoTimeRef` only advances while `scrubPreviewTimeRef`
@@ -397,9 +423,29 @@ export function useIosScrubPreview({
 
     setIncomingPreviewFrameSrc(activePreviewFrameSrc);
     setIsIncomingPreviewVisible(false);
+
+    // Watchdog for the swap never completing. `displayedPreviewFrameSrc` only
+    // advances once the incoming image reports `onLoad`, so if Safari skips that
+    // for a cached blob the previous thumbnail stays on screen — which would
+    // look exactly like settling on a frame from an earlier scrub.
+    if (!isScrubProfilingEnabled()) {
+      return;
+    }
+    const watchedSrc = activePreviewFrameSrc;
+    logScrubEvent("previewSwapStarted", { src: watchedSrc.slice(-12) });
+    const watchdog = window.setTimeout(() => {
+      if (activePreviewFrameSrcRef.current === watchedSrc) {
+        recordPreviewSwapWithoutLoad(watchedSrc);
+      }
+    }, PREVIEW_SWAP_WATCHDOG_MS);
+    return () => window.clearTimeout(watchdog);
   }, [activePreviewFrameSrc, displayedPreviewFrameSrc]);
 
   const handleIncomingPreviewLoad = useCallback((loadedSrc: string) => {
+    logScrubEvent("previewImageLoaded", {
+      src: loadedSrc.slice(-12),
+      stillWanted: loadedSrc === activePreviewFrameSrcRef.current,
+    });
     if (loadedSrc !== activePreviewFrameSrcRef.current) {
       return;
     }

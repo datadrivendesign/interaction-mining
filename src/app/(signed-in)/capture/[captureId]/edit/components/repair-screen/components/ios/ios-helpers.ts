@@ -34,6 +34,8 @@ export const PREVIEW_MATCH_TOLERANCE = 2 / 30;
  * enough that a worker does not sit looking at a thumbnail.
  */
 export const PREVIEW_REVEAL_TIMEOUT_MS = 250;
+/** Profiling only: how long to wait for a swapped-in thumbnail to report loading. */
+export const PREVIEW_SWAP_WATCHDOG_MS = 600;
 export const VIDEO_LOAD_TIMEOUT_MS = 30000;
 
 export type PreviewThumbnail = {

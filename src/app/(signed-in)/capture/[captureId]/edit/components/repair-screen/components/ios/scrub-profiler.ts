@@ -54,6 +54,21 @@ interface SeekSample {
 /** A seek not presented within this long counts as a stall, not slow. */
 const STALL_THRESHOLD_MS = 1000;
 
+/** Rolling log of what the panel did, for reconstructing a bad frame after the fact. */
+interface ScrubEvent {
+  /** Milliseconds since the first recorded event. */
+  t: number;
+  type: string;
+  detail: Record<string, unknown>;
+}
+
+const MAX_EVENTS = 400;
+
+const events: ScrubEvent[] = [];
+let firstEventAt: number | null = null;
+let revealsOnStaleFrame = 0;
+let previewSwapsWithoutLoad = 0;
+
 const samples: SeekSample[] = [];
 const phaseTimings: Record<string, number[]> = {};
 let supersededCount = 0;
@@ -67,6 +82,65 @@ let inFlight: {
   frameHandle: number | null;
   stallTimeout: number | null;
 } | null = null;
+
+/**
+ * Append to the rolling event log. Cheap and unconditional once profiling is on,
+ * so the sequence leading to a wrong frame survives long enough to be read.
+ */
+export function logScrubEvent(
+  type: string,
+  detail: Record<string, unknown> = {},
+): void {
+  if (!isScrubProfilingEnabled()) {
+    return;
+  }
+  install();
+  const now = performance.now();
+  firstEventAt = firstEventAt ?? now;
+  events.push({ t: round(now - firstEventAt), type, detail });
+  if (events.length > MAX_EVENTS) {
+    events.shift();
+  }
+}
+
+/**
+ * Record the moment the real element was uncovered.
+ *
+ * `mediaTime` is the frame the browser says it presented. When that disagrees
+ * with the moment being aimed at, the element was uncovered while still showing
+ * something else — the wrong-frame report.
+ */
+export function recordReveal(detail: {
+  source: "frame-callback" | "timeout";
+  targetTime: number | null;
+  mediaTime: number | null;
+  currentTime: number;
+}): void {
+  if (!isScrubProfilingEnabled()) {
+    return;
+  }
+  const shown = detail.mediaTime ?? detail.currentTime;
+  const isStale =
+    detail.targetTime !== null && Math.abs(shown - detail.targetTime) > 0.1;
+  if (isStale) {
+    revealsOnStaleFrame += 1;
+  }
+  logScrubEvent("reveal", {
+    ...detail,
+    frameErrorSec:
+      detail.targetTime === null ? null : round(shown - detail.targetTime, 3),
+    stale: isStale,
+  });
+}
+
+/** A thumbnail swap that never reported its image loading. Suspect for H2. */
+export function recordPreviewSwapWithoutLoad(src: string): void {
+  if (!isScrubProfilingEnabled()) {
+    return;
+  }
+  previewSwapsWithoutLoad += 1;
+  logScrubEvent("previewSwapNoLoad", { src: src.slice(-12) });
+}
 
 export function isScrubProfilingEnabled(): boolean {
   if (isEnabledCache !== null) {
@@ -133,6 +207,10 @@ function summary() {
     stalledButFramePresent: unreportedFrames,
     /** Seeks abandoned because the pointer moved on before they landed. */
     superseded: supersededCount,
+    /** Element uncovered while showing a frame other than the one aimed at. */
+    revealsOnStaleFrame,
+    /** Thumbnail swaps whose image never reported loading. */
+    previewSwapsWithoutLoad,
     latencyMsP50: round(percentile(latencies, 0.5)),
     latencyMsP95: round(percentile(latencies, 0.95)),
     latencyMsMax: round(latencies[latencies.length - 1] ?? 0),
@@ -157,8 +235,23 @@ function summary() {
   return { ...result, phases };
 }
 
+/** The recent event sequence, newest last. Read this after seeing a bad frame. */
+function timeline(count = 60) {
+  const recent = events.slice(-count).map((event) => ({
+    t: event.t,
+    type: event.type,
+    ...event.detail,
+  }));
+  console.table(recent);
+  return recent;
+}
+
 function reset() {
   samples.length = 0;
+  events.length = 0;
+  firstEventAt = null;
+  revealsOnStaleFrame = 0;
+  previewSwapsWithoutLoad = 0;
   supersededCount = 0;
   Object.keys(phaseTimings).forEach((key) => delete phaseTimings[key]);
 }
@@ -170,9 +263,9 @@ function install() {
   isInstalled = true;
   (
     window as unknown as { __odimScrubProfile: unknown }
-  ).__odimScrubProfile = { summary, reset, samples, phaseTimings };
+  ).__odimScrubProfile = { summary, timeline, reset, samples, events, phaseTimings };
   console.info(
-    "[scrub-profiler] recording. Call __odimScrubProfile.summary() when done.",
+    "[scrub-profiler] recording. summary() for totals, timeline() for the last events.",
   );
 }
 
@@ -233,6 +326,7 @@ export function recordSeekIssued(
     supersededCount += 1;
   }
 
+  logScrubEvent("seekIssued", { target: round(requestedTime, 3) });
   const started = performance.now();
   inFlight = {
     video,
@@ -247,7 +341,14 @@ export function recordSeekIssued(
 
   if (typeof videoWithCallback.requestVideoFrameCallback === "function") {
     inFlight.frameHandle = videoWithCallback.requestVideoFrameCallback(
-      (_now, metadata) => settleInFlight(metadata.mediaTime, false),
+      (_now, metadata) => {
+        logScrubEvent("framePresented", {
+          requested: round(requestedTime, 3),
+          mediaTime: round(metadata.mediaTime, 3),
+          errorSec: round(metadata.mediaTime - requestedTime, 3),
+        });
+        settleInFlight(metadata.mediaTime, false);
+      },
     );
     return;
   }
