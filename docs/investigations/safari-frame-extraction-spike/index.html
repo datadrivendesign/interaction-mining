@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Safari frame extraction spike</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --edge: color-mix(in srgb, currentColor 15%, transparent);
+        --bad: #c0362c;
+        --good: #1f7a4d;
+      }
+      body {
+        font: 15px/1.55 ui-sans-serif, system-ui, sans-serif;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 4rem;
+        max-width: 68rem;
+      }
+      h1 {
+        font-size: 1.35rem;
+        margin: 0 0 0.25rem;
+      }
+      .lede {
+        margin: 0 0 1.5rem;
+        max-width: 44rem;
+        opacity: 0.75;
+      }
+      fieldset {
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 0 0 1.5rem;
+      }
+      legend {
+        font-weight: 600;
+        padding: 0 0.4rem;
+      }
+      label {
+        display: inline-flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-right: 1.5rem;
+      }
+      input[type="number"] {
+        width: 5rem;
+      }
+      button {
+        font: inherit;
+        font-weight: 600;
+        padding: 0.45rem 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--edge);
+        background: color-mix(in srgb, currentColor 8%, transparent);
+        color: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      #log {
+        white-space: pre-wrap;
+        font-family: ui-monospace, monospace;
+        font-size: 12.5px;
+        background: color-mix(in srgb, currentColor 6%, transparent);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        max-height: 14rem;
+        overflow: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1rem 0;
+        font-variant-numeric: tabular-nums;
+        font-size: 13.5px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.4rem 0.6rem;
+        border-bottom: 1px solid var(--edge);
+      }
+      .dupe {
+        color: var(--bad);
+        font-weight: 600;
+      }
+      .verdict {
+        font-size: 1.05rem;
+        font-weight: 600;
+        padding: 0.85rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--edge);
+        margin: 1.25rem 0;
+      }
+      .verdict.pass {
+        color: var(--good);
+      }
+      .verdict.fail {
+        color: var(--bad);
+      }
+      .strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 0.6rem;
+      }
+      .strip figure {
+        margin: 0;
+        font-size: 11.5px;
+      }
+      .strip img {
+        width: 100%;
+        border-radius: 4px;
+        border: 1px solid var(--edge);
+        display: block;
+      }
+      .scroller {
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Safari frame extraction spike</h1>
+    <p class="lede">
+      Extracts the same timestamps two ways and compares them: the current
+      pipeline (<code>drawImage</code> from a <code>&lt;video&gt;</code>), and
+      ffmpeg.wasm. Each frame is reduced to a 36-point signature. If a method
+      returns the same signature for different timestamps, that method is handing
+      back one frame regardless of position — the failure being investigated
+      (<a href="https://bugs.webkit.org/show_bug.cgi?id=153588">WebKit 153588</a>).
+      Run it in Safari, on a real iOS capture recording.
+    </p>
+
+    <fieldset>
+      <legend>Input</legend>
+      <p>
+        <label>Recording <input type="file" id="file" accept="video/*" /></label>
+      </p>
+      <p>
+        <label>Samples <input type="number" id="count" value="8" min="2" max="24" /></label>
+        <label
+          >Spread over
+          <input type="number" id="window" step="0.05" min="0" placeholder="whole recording" />
+          s</label
+        >
+        <label
+          >centred at
+          <input type="number" id="centre" step="0.1" min="0" placeholder="middle" />
+          s</label
+        >
+      </p>
+      <p>
+        <label><input type="checkbox" id="runElement" checked /> also test the &lt;video&gt; element</label>
+      </p>
+      <p style="margin:0;opacity:.7;font-size:13px">
+        Leave the spread blank to sample the whole recording — that is the run that
+        catches a read stuck on one frame. Set it to <code>0.6</code> to cluster the
+        samples a couple of frames apart instead, which checks that ffmpeg decodes to
+        the exact timestamp rather than snapping to keyframes. Both need to pass.
+        <br />
+        For the clustered run, centre it on a moment where the screen is actually
+        <em>moving</em> — a scroll or a transition. Half a second of a static app
+        screen yields identical frames honestly, which looks exactly like a broken
+        read and cannot be told apart from one.
+      </p>
+      <p>
+        <button id="run" disabled>Run</button>
+        <button id="export" disabled>Copy results as JSON</button>
+      </p>
+      <p><textarea id="export-out" hidden rows="8" style="width:100%;font-family:ui-monospace,monospace;font-size:12px"></textarea></p>
+    </fieldset>
+
+    <div id="verdict"></div>
+    <div id="results"></div>
+
+    <fieldset>
+      <legend>Log</legend>
+      <div id="log">Pick a recording to begin.</div>
+    </fieldset>
+
+    <script type="module">
+      // Vendored, not from a CDN. Two reasons, both learned the hard way:
+      // ffmpeg.wasm builds its worker with `new URL("./worker.js",
+      // import.meta.url)`, which resolves to a cross-origin URL when the class
+      // itself came from a CDN — the worker never starts and `load()` waits
+      // forever. And a mistyped CDN version 404s into an HTML page that
+      // `toBlobURL` will happily hand to the worker as JavaScript, producing the
+      // same silent hang. Same-origin files cannot do either.
+      import { FFmpeg } from "./vendor/ffmpeg/index.js";
+      import { fetchFile } from "./vendor/util/index.js";
+
+      // The ESM core, not the UMD one the docs reach for. The worker is created
+      // with `type: "module"` unconditionally, so `importScripts` throws and the
+      // fallback is `(await import(coreURL)).default` — and the UMD build has no
+      // default export. Worse, worker.js only rewrites /umd/ to /esm/ when no
+      // explicit coreURL was passed, so pointing it at a local UMD file fails with
+      // nothing more than "failed to import ffmpeg-core.js".
+      //
+      // Single-threaded core deliberately: the multithreaded build needs
+      // SharedArrayBuffer, which needs COOP/COEP headers this page does not have.
+      // Version must match CORE_VERSION in vendor/ffmpeg/const.js.
+      const CORE_JS = new URL("./vendor/core/ffmpeg-core.js", location.href).href;
+      const CORE_WASM = new URL("./vendor/core/ffmpeg-core.wasm", location.href).href;
+      const LOAD_TIMEOUT_MS = 120000;
+      // Bumped whenever this file changes. Logged and exported, so a result can
+      // always be attributed to a build — a stale cached page already caused one
+      // run to be read as if it came from the current one.
+      const PAGE_BUILD = "2026-08-07d";
+
+      const fileInput = document.getElementById("file");
+      const countInput = document.getElementById("count");
+      const windowInput = document.getElementById("window");
+      const centreInput = document.getElementById("centre");
+      const runElementInput = document.getElementById("runElement");
+      const runButton = document.getElementById("run");
+      const logEl = document.getElementById("log");
+      const resultsEl = document.getElementById("results");
+      const verdictEl = document.getElementById("verdict");
+      const exportButton = document.getElementById("export");
+      const exportOut = document.getElementById("export-out");
+
+      /** Everything the run produced, in a shape that survives copy-paste. */
+      let lastRun = null;
+
+      const log = (message) => {
+        logEl.textContent += `\n${message}`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+
+      let ffmpeg = null;
+
+      fileInput.addEventListener("change", () => {
+        runButton.disabled = !fileInput.files?.length;
+      });
+
+      /**
+       * The same 36-point grid used by the in-app profiler, so numbers from this
+       * page and from a real session are comparable.
+       */
+      function signatureOf(imageSource, width, height) {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(imageSource, 0, 0, width, height);
+        const steps = 7;
+        const luminances = [];
+        let signature = 0;
+        for (let row = 1; row < steps; row += 1) {
+          for (let column = 1; column < steps; column += 1) {
+            const x = Math.floor((width * column) / steps);
+            const y = Math.floor((height * row) / steps);
+            const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+            luminances.push(0.299 * r + 0.587 * g + 0.114 * b);
+            signature = (signature * 31 + r * 65536 + g * 256 + b) % 1000000007;
+          }
+        }
+        return {
+          signature,
+          lumaMin: Math.round(Math.min(...luminances)),
+          lumaMax: Math.round(Math.max(...luminances)),
+          lumaMean: Math.round(
+            luminances.reduce((sum, value) => sum + value, 0) / luminances.length,
+          ),
+        };
+      }
+
+      /** Fails loudly if a vendored file is missing or is an error page. */
+      async function checkVendored(url, label, minBytes) {
+        const response = await fetch(url, { method: "HEAD" });
+        if (!response.ok) {
+          throw new Error(
+            `${label} missing (HTTP ${response.status}) at ${url} — re-run the vendor step in the README`,
+          );
+        }
+        const size = Number(response.headers.get("content-length") ?? 0);
+        if (size && size < minBytes) {
+          throw new Error(
+            `${label} is only ${size} bytes, far too small to be real — likely a 404 page`,
+          );
+        }
+        return size;
+      }
+
+      async function loadFfmpeg() {
+        if (ffmpeg) return ffmpeg;
+
+        const wasmBytes = await checkVendored(CORE_WASM, "ffmpeg-core.wasm", 1e6);
+        await checkVendored(CORE_JS, "ffmpeg-core.js", 1e4);
+        // The module worker imports this and reads `.default`. A UMD build has
+        // none, and the resulting error names the file without saying why.
+        const coreSource = await (await fetch(CORE_JS)).text();
+        if (!/export\s+default/.test(coreSource)) {
+          throw new Error(
+            "vendor/core/ffmpeg-core.js has no default export — that is the UMD build; re-download dist/esm/",
+          );
+        }
+        log(`loading ffmpeg core (${(wasmBytes / 1e6).toFixed(1)}MB wasm)…`);
+
+        const instance = new FFmpeg();
+        instance.on("log", ({ message }) => {
+          if (/error|invalid|failed|unable/i.test(message)) log(`  ffmpeg: ${message}`);
+        });
+        // Bounded. The previous version of this page waited forever on a worker
+        // that was never going to start, which reads as "still working".
+        await instance.load(
+          { coreURL: CORE_JS, wasmURL: CORE_WASM },
+          { signal: AbortSignal.timeout(LOAD_TIMEOUT_MS) },
+        );
+        ffmpeg = instance;
+        log("ffmpeg.wasm ready.");
+        return ffmpeg;
+      }
+
+      /** Duration and natural size, read once from an element that is never drawn. */
+      function probe(file) {
+        return new Promise((resolve, reject) => {
+          const video = document.createElement("video");
+          video.preload = "metadata";
+          video.muted = true;
+          video.src = URL.createObjectURL(file);
+          video.addEventListener("loadedmetadata", () => {
+            resolve({
+              video,
+              duration: video.duration,
+              width: video.videoWidth,
+              height: video.videoHeight,
+            });
+          });
+          video.addEventListener("error", () => reject(new Error("probe failed")));
+        });
+      }
+
+      async function extractWithFfmpeg(file, times, extension) {
+        const instance = await loadFfmpeg();
+        const input = `in.${extension}`;
+        await instance.writeFile(input, await fetchFile(file));
+        const frames = [];
+        for (const [index, time] of times.entries()) {
+          const startedAt = performance.now();
+          const output = `f${index}.png`;
+          // -ss ahead of -i is an input seek: ffmpeg lands on the preceding
+          // keyframe and decodes forward to the exact timestamp.
+          await instance.exec([
+            "-ss",
+            time.toFixed(3),
+            "-i",
+            input,
+            "-frames:v",
+            "1",
+            // Declares a single-image output. Without it ffmpeg warns that the
+            // filename has no sequence pattern, which is noise, not a problem.
+            "-update",
+            "1",
+            "-y",
+            output,
+          ]);
+          const data = await instance.readFile(output);
+          const blob = new Blob([data.buffer], { type: "image/png" });
+          const elapsedMs = Math.round(performance.now() - startedAt);
+          frames.push({ time, url: URL.createObjectURL(blob), elapsedMs });
+          await instance.deleteFile(output);
+          log(`  ffmpeg frame at ${time.toFixed(3)}s — ${elapsedMs}ms`);
+        }
+        await instance.deleteFile(input);
+        return frames;
+      }
+
+      async function extractWithElement(video, times) {
+        const frames = [];
+        for (const time of times) {
+          const startedAt = performance.now();
+          await new Promise((resolve) => {
+            const onSeeked = () => {
+              video.removeEventListener("seeked", onSeeked);
+              resolve();
+            };
+            video.addEventListener("seeked", onSeeked, { once: true });
+            video.currentTime = time;
+          });
+          // Two paints of slack, the most generous version of the current
+          // pipeline's assumption that the frame is ready once the seek lands.
+          await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+          frames.push({
+            time,
+            url: canvas.toDataURL("image/png"),
+            elapsedMs: Math.round(performance.now() - startedAt),
+          });
+          log(`  element frame at ${time.toFixed(3)}s`);
+        }
+        return frames;
+      }
+
+      async function measure(frames) {
+        const rows = [];
+        for (const frame of frames) {
+          const image = new Image();
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = reject;
+            image.src = frame.url;
+          });
+          rows.push({
+            ...frame,
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+            ...signatureOf(image, image.naturalWidth, image.naturalHeight),
+          });
+        }
+        return rows;
+      }
+
+      /** Strips the image URLs — a blob: or data: URL means nothing once pasted. */
+      function summarise(method, rows, result) {
+        const timings = rows.map((row) => row.elapsedMs).sort((a, b) => a - b);
+        return {
+          method,
+          distinctSignatures: result.distinct,
+          sampleCount: rows.length,
+          everyFrameDiffers: result.isPass,
+          msPerFrameMedian: timings[Math.floor(timings.length / 2)] ?? null,
+          msPerFrameMax: timings[timings.length - 1] ?? null,
+          frames: rows.map((row) => ({
+            t: Number(row.time.toFixed(3)),
+            signature: row.signature,
+            lumaMin: row.lumaMin,
+            lumaMax: row.lumaMax,
+            lumaMean: row.lumaMean,
+            size: `${row.width}x${row.height}`,
+            elapsedMs: row.elapsedMs,
+          })),
+        };
+      }
+
+      function render(title, rows) {
+        const counts = new Map();
+        rows.forEach((row) =>
+          counts.set(row.signature, (counts.get(row.signature) ?? 0) + 1),
+        );
+        const distinct = counts.size;
+        const isPass = distinct === rows.length;
+
+        const section = document.createElement("section");
+        section.innerHTML = `
+          <h2 style="font-size:1.05rem;margin:1.75rem 0 0.25rem">${title}</h2>
+          <p style="margin:0 0 0.5rem;opacity:.75">
+            ${distinct} distinct signature${distinct === 1 ? "" : "s"} across
+            ${rows.length} timestamps —
+            <strong style="color:var(${isPass ? "--good" : "--bad"})">
+              ${isPass ? "every frame differs" : "duplicates present"}
+            </strong>
+          </p>
+          <div class="scroller">
+            <table>
+              <thead>
+                <tr><th>t (s)</th><th>signature</th><th>luma min/max/mean</th><th></th></tr>
+              </thead>
+              <tbody>
+                ${rows
+                  .map((row) => {
+                    const isDupe = counts.get(row.signature) > 1;
+                    return `<tr${isDupe ? ' class="dupe"' : ""}>
+                      <td>${row.time.toFixed(3)}</td>
+                      <td>${row.signature}</td>
+                      <td>${row.lumaMin} / ${row.lumaMax} / ${row.lumaMean}</td>
+                      <td>${isDupe ? "duplicate" : ""}</td>
+                    </tr>`;
+                  })
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+          <div class="strip">
+            ${rows
+              .map(
+                (row) =>
+                  `<figure><img src="${row.url}" alt="frame at ${row.time.toFixed(
+                    2,
+                  )}s" /><figcaption>${row.time.toFixed(2)}s</figcaption></figure>`,
+              )
+              .join("")}
+          </div>`;
+        resultsEl.append(section);
+        return { isPass, distinct };
+      }
+
+      /**
+       * Compares two methods frame by frame.
+       *
+       * Signatures are NOT comparable across methods: ffmpeg and WebKit round
+       * YUV to RGB differently, so a one-unit channel difference reshuffles the
+       * hash entirely. Luminance survives that, so agreement is judged on it.
+       *
+       * This is the strongest evidence the page can produce. Two independent
+       * decoders agreeing on a frame means that frame is right, and agreeing on
+       * a duplicate means the recording is genuinely static there — which is a
+       * conclusion neither method can reach alone.
+       */
+      function crossCheck(a, b) {
+        const rows = a.frames.map((frame, index) => {
+          const other = b.frames[index];
+          const deltaMean = Math.abs(frame.lumaMean - other.lumaMean);
+          const deltaMax = Math.abs(frame.lumaMax - other.lumaMax);
+          return {
+            t: frame.t,
+            agrees: deltaMean <= 2 && deltaMax <= 3,
+            deltaMean,
+            deltaMax,
+          };
+        });
+        const dupesOf = (method) => {
+          const seen = new Map();
+          method.frames.forEach((frame) =>
+            seen.set(frame.signature, (seen.get(frame.signature) ?? 0) + 1),
+          );
+          return new Set(
+            method.frames
+              .filter((frame) => seen.get(frame.signature) > 1)
+              .map((frame) => frame.t),
+          );
+        };
+        const aDupes = dupesOf(a);
+        const bDupes = dupesOf(b);
+        const sameDupes =
+          aDupes.size === bDupes.size && [...aDupes].every((t) => bDupes.has(t));
+        return {
+          rows,
+          agreementCount: rows.filter((row) => row.agrees).length,
+          duplicatesMatch: sameDupes,
+          duplicateTimes: [...aDupes],
+        };
+      }
+
+      function renderCrossCheck(check) {
+        const section = document.createElement("section");
+        section.innerHTML = `
+          <h2 style="font-size:1.05rem;margin:1.75rem 0 0.25rem">Cross-check</h2>
+          <p style="margin:0 0 0.5rem;opacity:.75">
+            ${check.agreementCount} of ${check.rows.length} timestamps agree between
+            the two methods, by luminance. Signatures are not comparable across
+            methods — the two decoders round colour differently.
+          </p>
+          <div class="scroller"><table>
+            <thead><tr><th>t (s)</th><th>agrees</th><th>&Delta;mean</th><th>&Delta;max</th></tr></thead>
+            <tbody>${check.rows
+              .map(
+                (row) => `<tr${row.agrees ? "" : ' class="dupe"'}>
+                  <td>${row.t.toFixed(3)}</td>
+                  <td>${row.agrees ? "yes" : "NO"}</td>
+                  <td>${row.deltaMean}</td>
+                  <td>${row.deltaMax}</td>
+                </tr>`,
+              )
+              .join("")}</tbody>
+          </table></div>`;
+        resultsEl.append(section);
+      }
+
+      runButton.addEventListener("click", async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        runButton.disabled = true;
+        exportButton.disabled = true;
+        exportOut.hidden = true;
+        lastRun = null;
+        resultsEl.replaceChildren();
+        verdictEl.replaceChildren();
+        logEl.textContent = `page build ${PAGE_BUILD}`;
+        log(navigator.userAgent);
+        log(`${file.name} — ${(file.size / 1e6).toFixed(1)}MB`);
+
+        try {
+          const { video, duration, width, height } = await probe(file);
+          log(`duration ${duration.toFixed(2)}s, ${width}x${height}`);
+
+          const count = Math.max(2, Math.min(24, Number(countInput.value) || 8));
+          const requestedWindow = Number(windowInput.value);
+          const span =
+            Number.isFinite(requestedWindow) && requestedWindow > 0
+              ? Math.min(requestedWindow, duration)
+              : duration;
+          const requestedCentre = Number(centreInput.value);
+          const centre =
+            centreInput.value !== "" && Number.isFinite(requestedCentre)
+              ? requestedCentre
+              : duration / 2;
+          // Kept inside the recording, so a centre near either end still yields
+          // the requested spread rather than clipping samples off the edge.
+          const start = Math.max(0, Math.min(centre - span / 2, duration - span));
+          // Interior samples only: the first and last frame of a recording are
+          // the two a broken read is most likely to return by accident. A span
+          // shorter than the duration centres the samples instead, which is how
+          // frame-accuracy gets tested rather than gross staleness.
+          const times = Array.from(
+            { length: count },
+            (_, index) => start + (span * (index + 1)) / (count + 1),
+          );
+          const spacing = span / (count + 1);
+          log(
+            `${count} samples over ${span.toFixed(2)}s from ${start.toFixed(2)}s, ` +
+              `${spacing.toFixed(3)}s apart` +
+              (spacing < 1 / 30
+                ? " — tighter than one frame at 30fps, so duplicates are expected here"
+                : ""),
+          );
+
+          const extension = /\.mov$/i.test(file.name) ? "mov" : "mp4";
+          lastRun = {
+            pageBuild: PAGE_BUILD,
+            ua: navigator.userAgent,
+            file: { name: file.name, bytes: file.size, extension },
+            recording: { durationSec: duration, width, height },
+            sampling: {
+              count,
+              spanSec: Number(span.toFixed(3)),
+              startSec: Number(start.toFixed(3)),
+              spacingSec: Number(spacing.toFixed(4)),
+              centredAtSec: Number(centre.toFixed(3)),
+              times: times.map((t) => Number(t.toFixed(3))),
+            },
+            methods: [],
+          };
+
+          log("extracting with ffmpeg.wasm…");
+          const ffmpegRows = await measure(
+            await extractWithFfmpeg(file, times, extension),
+          );
+          const ffmpegResult = render("ffmpeg.wasm", ffmpegRows);
+          lastRun.methods.push(summarise("ffmpeg.wasm", ffmpegRows, ffmpegResult));
+          const ffmpegPass = ffmpegResult.isPass;
+
+          let elementPass = null;
+          if (runElementInput.checked) {
+            log("extracting with the <video> element (current pipeline)…");
+            const elementRows = await measure(await extractWithElement(video, times));
+            const elementResult = render(
+              "&lt;video&gt; element + drawImage (current pipeline)",
+              elementRows,
+            );
+            lastRun.methods.push(
+              summarise("video element + drawImage", elementRows, elementResult),
+            );
+            elementPass = elementResult.isPass;
+          }
+
+          // Duplicates alone say nothing. What decides it is whether an
+          // independent decoder agrees — including agreeing that two moments
+          // look the same, which is what a static recording actually is.
+          let check = null;
+          if (lastRun.methods.length === 2) {
+            check = crossCheck(lastRun.methods[0], lastRun.methods[1]);
+            renderCrossCheck(check);
+            lastRun.crossCheck = check;
+          }
+
+          const verdict = document.createElement("div");
+          if (check && check.agreementCount === check.rows.length) {
+            verdict.className = "verdict pass";
+            verdict.textContent = check.duplicatesMatch
+              ? `Both methods agree at all ${check.rows.length} timestamps. ffmpeg.wasm is a correct frame source here` +
+                (check.duplicateTimes.length
+                  ? `, and the repeated frames at ${check.duplicateTimes
+                      .map((t) => `${t.toFixed(2)}s`)
+                      .join(", ")} are static recording, not a broken read — two independent decoders do not invent the same duplicate.`
+                  : ", with every frame distinct.")
+              : `Both methods agree frame by frame, but they disagree about which frames repeat. Look at the strip; something is off.`;
+          } else if (check) {
+            verdict.className = "verdict fail";
+            verdict.textContent =
+              `The two methods disagree at ${
+                check.rows.length - check.agreementCount
+              } of ${check.rows.length} timestamps. One of them is returning the wrong frame — compare the strips to see which.`;
+          } else if (ffmpegPass) {
+            verdict.className = "verdict pass";
+            verdict.textContent =
+              "ffmpeg.wasm returned a distinct frame per timestamp. With no second method to check against, that is consistency, not proof of correctness — re-run with the element test on.";
+          } else {
+            verdict.className = "verdict fail";
+            verdict.textContent =
+              "ffmpeg.wasm returned duplicate frames, with no second method to check them against. Re-run with the element test on: a genuinely static stretch of recording repeats honestly, and only an independent decoder can tell the two apart.";
+          }
+          verdictEl.append(verdict);
+          lastRun.verdict = verdict.textContent.trim();
+          exportButton.disabled = false;
+          log("done. Press \u201cCopy results as JSON\u201d to hand them over.");
+        } catch (error) {
+          log(`FAILED: ${error}`);
+          const verdict = document.createElement("div");
+          verdict.className = "verdict fail";
+          verdict.textContent = `Run failed: ${error}`;
+          verdictEl.append(verdict);
+        } finally {
+          runButton.disabled = false;
+        }
+      });
+
+      exportButton.addEventListener("click", async () => {
+        if (!lastRun) return;
+        const json = JSON.stringify(lastRun, null, 2);
+        try {
+          await navigator.clipboard.writeText(json);
+          exportButton.textContent = "Copied \u2713";
+          setTimeout(() => {
+            exportButton.textContent = "Copy results as JSON";
+          }, 2000);
+        } catch {
+          // Safari refuses clipboard writes it does not consider user-initiated
+          // often enough to be worth a visible fallback rather than an error.
+          exportOut.hidden = false;
+          exportOut.value = json;
+          exportOut.select();
+          exportButton.textContent = "Copy from the box below";
+        }
+      });
+    </script>
+  </body>
+</html>

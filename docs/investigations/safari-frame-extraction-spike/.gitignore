@@ -1,0 +1,3 @@
+# The ffmpeg.wasm core is ~32MB and reconstructible from node_modules plus one
+# curl; the README says how. Never commit it.
+vendor/
