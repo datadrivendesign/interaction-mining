@@ -30,7 +30,7 @@ export function RepairScreenAndroid({
   draftFetchResult: DraftFetchResults;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const { focusViewIndex } = useNavigation();
+  const { focusedScreenId, focusedIndex } = useNavigation();
   const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
     name: ["screens", "vhs", "gestures", "redactions"],
   });
@@ -40,6 +40,8 @@ export function RepairScreenAndroid({
   const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
   const originalRedactions = useRef<{ [key: string]: Redaction[] }>({});
   const currScreens = watchScreens as FrameData[];
+  const focusedAndroidScreen =
+    currScreens.find((screen) => screen.id === focusedScreenId) ?? null;
   const currVHs = watchVHs as { [key: string]: any };
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
   const currRedactions = watchRedactions as { [key: string]: Redaction[] };
@@ -197,12 +199,12 @@ export function RepairScreenAndroid({
                   setShowBoxes={setShowBoxes}
                 />
               </div>
-              {focusViewIndex > -1 && focusViewIndex < currScreens.length ? (
+              {focusedAndroidScreen ? (
                 <FocusViewAndroid
-                  key={focusViewIndex}
-                  vh={currVHs[currScreens[focusViewIndex].id]}
-                  screen={currScreens[focusViewIndex]}
-                  isLastScreen={focusViewIndex === currScreens.length - 1}
+                  key={focusedAndroidScreen.id}
+                  vh={currVHs[focusedAndroidScreen.id]}
+                  screen={focusedAndroidScreen}
+                  isLastScreen={focusedIndex === currScreens.length - 1}
                   showBoxes={showBoxes}
                 />
               ) : (
@@ -229,7 +231,6 @@ export function RepairScreenAndroid({
             gestures={currGestures}
             redactions={currRedactions}
             os={os}
-            handleSetTime={(_: number) => {}} // empty function
           />
         </ResizablePanel>
       </ResizablePanelGroup>
