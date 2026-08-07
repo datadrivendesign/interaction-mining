@@ -61,7 +61,7 @@ export function RepairScreenIOS({
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Holds the settled frame, painted from the offscreen reader.
+  // Holds the settled frame, painted from the recording once it has landed.
   const settledFrameCanvasRef = useRef<HTMLCanvasElement>(null);
   const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
   // Highest playhead request already applied, so each is placed once.
@@ -73,10 +73,7 @@ export function RepairScreenIOS({
     return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
 
-  // Every pixel read goes through this rather than the displayed element.
-  const { drawFrameInto, extractFrameAt } = useIosFrameReader(
-    videoFiles[0]?.fileUrl,
-  );
+  const { drawFrameInto, extractFrameAt } = useIosFrameReader(videoRef);
 
   // Stable cross-hook callbacks bound to refs. Initial values are no-ops; the
   // refs are wired to the real implementations once downstream hooks initialize.

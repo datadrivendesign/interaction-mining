@@ -31,10 +31,11 @@ interface UseIosVideoBootstrapArgs {
    */
   registerScreenUrl: (url: string) => void;
   /**
-   * Reads a frame from an offscreen copy of the recording. Screen images must
-   * not come from the displayed element: Safari composites that through a path
-   * canvas cannot read back, so the extracted picture is black or from an
-   * earlier position while carrying the right timestamp.
+   * Reads a frame out of the recording, waiting for the picture to reach the
+   * surface canvas samples rather than reading the moment the seek reports
+   * done — which yields the previous frame under the new timestamp.
+   *
+   * This seeks the displayed element, which is why `isVideoReady` exists.
    */
   extractFrameAt: (
     time: number,

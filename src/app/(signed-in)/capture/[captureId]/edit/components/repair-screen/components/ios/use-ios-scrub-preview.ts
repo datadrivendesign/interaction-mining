@@ -41,9 +41,8 @@ interface UseIosScrubPreviewArgs {
   /** Canvas the settled frame is painted into. */
   settledFrameCanvasRef: RefObject<HTMLCanvasElement | null>;
   /**
-   * Paints the frame at a given time into a canvas, reading from an offscreen
-   * copy of the recording. Never reads the displayed element: Safari composites
-   * that through a path canvas cannot read back, returning black.
+   * Paints the frame the recording has settled on into a canvas, once the
+   * browser has actually painted it.
    */
   drawFrameInto: (
     canvas: HTMLCanvasElement,
@@ -203,11 +202,10 @@ export function useIosScrubPreview({
   /**
    * Whether the canvas holding the settled frame should be shown.
    *
-   * Safari does not composite a new frame for a paused video after a seek, so
-   * the element can keep displaying an earlier position indefinitely — the
-   * wrong-frame reports. Its decoder is correct, though, which is why captured
-   * screens were always right, so the settled frame is read out with drawImage
-   * and displayed from a canvas rather than trusting the element to repaint.
+   * The canvas freezes the frame the playhead came to rest on, so nothing that
+   * happens to the element afterwards can change what the worker is aiming at
+   * while they annotate. It is painted from the element itself, one paint after
+   * the seek lands.
    */
   const [isSettledFrameVisible, setIsSettledFrameVisible] = useState(false);
 

@@ -46,11 +46,10 @@ export function VideoPreviewOverlay({
         onPause={onPause}
       />
       {/*
-        The settled frame, painted from the decoder rather than left to the
-        element. Safari does not composite a new frame for a paused video after
-        a seek, so uncovering the element could reveal an earlier position; this
-        sits above it and always holds the frame that was actually asked for.
-        Hidden during playback, when the element composites normally.
+        The frame the playhead came to rest on, held still. Painted from the
+        element a paint after its seek lands, so it carries what was actually
+        asked for and stays put while the worker annotates it. Hidden during
+        playback, when the element speaks for itself.
       */}
       <canvas
         ref={settledFrameCanvasRef}
