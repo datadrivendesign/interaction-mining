@@ -45,7 +45,11 @@ interface UseIosScrubPreviewArgs {
    * copy of the recording. Never reads the displayed element: Safari composites
    * that through a path canvas cannot read back, returning black.
    */
-  drawFrameInto: (canvas: HTMLCanvasElement, time: number) => Promise<boolean>;
+  drawFrameInto: (
+    canvas: HTMLCanvasElement,
+    time: number,
+    isStillWanted?: () => boolean,
+  ) => Promise<boolean>;
   videoDuration: number;
   isPlaying: boolean;
   previewThumbnails: PreviewThumbnail[];
@@ -253,13 +257,13 @@ export function useIosScrubPreview({
    * @returns Whether a frame was drawn.
    */
   const drawSettledFrame = useCallback(
-    async (time: number) => {
+    async (time: number, isStillWanted?: () => boolean) => {
       const canvas = settledFrameCanvasRef.current;
       if (!canvas) {
         return false;
       }
       try {
-        const drew = await drawFrameInto(canvas, time);
+        const drew = await drawFrameInto(canvas, time, isStillWanted);
         if (drew && isScrubProfilingEnabled()) {
           const context = canvas.getContext("2d");
           // Both sources measured at the same moment, because we have no valid
@@ -324,13 +328,19 @@ export function useIosScrubPreview({
       const settledTarget = settledSeekTargetRef.current;
       const revealToken = ++revealTokenRef.current;
 
+      // Reading a frame means seeking the offscreen copy, so the pointer can
+      // move on while this waits. The check is handed down rather than made
+      // here on the way back: by the time the call returns the pixels are
+      // already on the canvas, and refusing to *show* a canvas that has just
+      // been repainted with an older moment does nothing — the canvas is
+      // shared, and whatever is on it is what the next reveal uncovers.
+      const isStillWanted = () => revealToken === revealTokenRef.current;
       const didDraw =
-        settledTarget === null ? false : await drawSettledFrame(settledTarget);
+        settledTarget === null
+          ? false
+          : await drawSettledFrame(settledTarget, isStillWanted);
 
-      // Reading a frame means seeking the offscreen copy, so the pointer may
-      // have moved on meanwhile. Showing this frame now would put an older
-      // moment on screen — the exact fault being fixed.
-      if (revealToken !== revealTokenRef.current) {
+      if (!isStillWanted()) {
         return;
       }
 
