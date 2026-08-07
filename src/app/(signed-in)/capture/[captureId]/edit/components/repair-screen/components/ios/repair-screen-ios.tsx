@@ -22,8 +22,6 @@ import { useIosVideoPlayback } from "./use-ios-video-playback";
 import { useIosScrubPreview } from "./use-ios-scrub-preview";
 import { useIosStepHotkeys } from "./use-ios-step-hotkeys";
 import { useIosVideoBootstrap } from "./use-ios-video-bootstrap";
-import { useIosFrameReader } from "./use-ios-frame-reader";
-import { toast } from "sonner";
 import { useScreenBlobRegistry } from "../../../../screen-blob-registry";
 
 export function RepairScreenIOS({
@@ -71,8 +69,6 @@ export function RepairScreenIOS({
     return files.filter((f) => regexRule.test(f.fileKey.toLowerCase()));
   }, [files]);
 
-  const { extractFrameAt } = useIosFrameReader(videoRef);
-
   // Stable cross-hook callbacks bound to refs. Initial values are no-ops; the
   // refs are wired to the real implementations once downstream hooks initialize.
   const onResetPreviewFramesRef = useRef<() => void>(() => {});
@@ -102,7 +98,6 @@ export function RepairScreenIOS({
       setValue,
       onResetPreviewFrames,
       registerScreenUrl,
-      extractFrameAt,
     });
 
   // Playback: isPlaying, currentTime, live-photo replay window.
@@ -130,7 +125,6 @@ export function RepairScreenIOS({
     displayedPreviewFrameSrc,
     incomingPreviewFrameSrc,
     isIncomingPreviewVisible,
-    settledFrameSrc,
     displayedTimelineTime,
     hasPreviewOverlay,
     scrubPreviewTimeRef,
@@ -144,7 +138,6 @@ export function RepairScreenIOS({
     resetPreviewFrames,
   } = useIosScrubPreview({
     videoRef,
-    extractFrameAt,
     videoDuration,
     isPlaying,
     previewThumbnails,
@@ -198,18 +191,12 @@ export function RepairScreenIOS({
   });
 
   const handleCaptureFrame = useCallback(async () => {
-    // Read from the offscreen copy, never the displayed element. Safari returns
-    // black or a stale frame from a composited video, which was writing images
-    // into traces that carried the right timestamp and the wrong picture.
-    const f = await extractFrameAt(currentTime, {
+    if (!videoRef.current) return;
+    const f = await extractVideoFrame(videoRef.current, currentTime, {
       mimeType: "image/png",
       output: "object-url",
       preferOffscreenCanvas: true,
     });
-    if (!f) {
-      toast.error("Could not capture this frame. Try again.");
-      return;
-    }
     registerScreenUrl(f.src);
     setValue(
       "screens",
@@ -220,14 +207,7 @@ export function RepairScreenIOS({
     // behind meant hunting for the new frame in the filmstrip first. No seek is
     // needed: the playhead is already at this screen's timestamp.
     selectScreen(f.id, "capture");
-  }, [
-    currentTime,
-    extractFrameAt,
-    registerScreenUrl,
-    screens,
-    selectScreen,
-    setValue,
-  ]);
+  }, [currentTime, registerScreenUrl, screens, selectScreen, setValue]);
 
   // Workspace keybinds
   useHotkeys("space", async (e) => {
@@ -303,7 +283,6 @@ export function RepairScreenIOS({
             >
               <RepairVideoPanelIOS
                 videoRef={videoRef}
-                settledFrameSrc={settledFrameSrc}
                 displayedPreviewFrameSrc={displayedPreviewFrameSrc}
                 incomingPreviewFrameSrc={incomingPreviewFrameSrc}
                 isIncomingPreviewVisible={isIncomingPreviewVisible}

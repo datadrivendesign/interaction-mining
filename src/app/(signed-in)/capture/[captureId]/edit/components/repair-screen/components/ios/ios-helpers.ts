@@ -30,22 +30,10 @@ export const PREVIEW_SWAP_DELAY_MS = 70;
 export const PREVIEW_MATCH_TOLERANCE = 2 / 30;
 /**
  * Backstop for uncovering the video when `requestVideoFrameCallback` is missing
- * or never fires — which is every paused seek in Safari, so this is the normal
- * path there rather than an edge case. It is only armed once the seek for the
- * current target has completed, so the frame is already painted or about to be;
- * a quarter second of extra thumbnail was just latency.
+ * or never fires. Long enough that a normal presentation wins the race, short
+ * enough that a worker does not sit looking at a thumbnail.
  */
-export const PREVIEW_REVEAL_TIMEOUT_MS = 100;
-/**
- * Height of the exact frame shown once the playhead settles.
- *
- * Matches the preview thumbnails, so the coarse frame sharpening into the exact
- * one is a change of content and not of resolution.
- */
-export const SETTLED_FRAME_HEIGHT = 1440;
-export const SETTLED_FRAME_JPEG_QUALITY = 0.9;
-/** Profiling only: how long to wait for a swapped-in thumbnail to report loading. */
-export const PREVIEW_SWAP_WATCHDOG_MS = 600;
+export const PREVIEW_REVEAL_TIMEOUT_MS = 250;
 export const VIDEO_LOAD_TIMEOUT_MS = 30000;
 
 export type PreviewThumbnail = {

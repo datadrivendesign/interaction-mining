@@ -4,8 +4,8 @@ import { ListedFiles } from "@/lib/actions";
 import { UseFormSetValue } from "react-hook-form";
 import { FrameData, TraceFormData } from "../../../types";
 import { DraftFetchResults } from "../../../../util";
-import { extractThumbnails } from "../../util";
-import { logScrubEvent, recordPhase } from "./scrub-profiler";
+import { extractThumbnails, extractVideoFrame } from "../../util";
+import { recordPhase } from "./scrub-profiler";
 import {
   MAX_TIMELINE_THUMBS,
   PREVIEW_THUMB_HEIGHT,
@@ -30,17 +30,6 @@ interface UseIosVideoBootstrapArgs {
    * leaves form state.
    */
   registerScreenUrl: (url: string) => void;
-  /**
-   * Reads a frame out of the recording, waiting for the picture to reach the
-   * surface canvas samples rather than reading the moment the seek reports
-   * done — which yields the previous frame under the new timestamp.
-   *
-   * This seeks the displayed element, which is why `isVideoReady` exists.
-   */
-  extractFrameAt: (
-    time: number,
-    options?: { mimeType?: "image/png" | "image/jpeg"; output?: "data-url" | "object-url"; preferOffscreenCanvas?: boolean },
-  ) => Promise<FrameData | null>;
 }
 
 interface UseIosVideoBootstrapResult {
@@ -64,7 +53,6 @@ export function useIosVideoBootstrap({
   setValue,
   onResetPreviewFrames,
   registerScreenUrl,
-  extractFrameAt,
 }: UseIosVideoBootstrapArgs): UseIosVideoBootstrapResult {
   const screensRef = useRef<FrameData[]>(screens);
   const thumbnailObjectUrlsRef = useRef<string[]>([]);
@@ -184,17 +172,24 @@ export function useIosVideoBootstrap({
         const draftScreens: FrameData[] = [];
 
         try {
+          // Warm the video decoder once before extracting any missing frames.
+          const warmupFrame = await extractVideoFrame(video, 0.1, {
+            mimeType: "image/png",
+            output: "object-url",
+            preferOffscreenCanvas: true,
+          });
+          if (warmupFrame.src.startsWith("blob:")) {
+            URL.revokeObjectURL(warmupFrame.src);
+          }
           for (const screen of screensSnapshot) {
             if (!screen.src) {
-              const frame = await extractFrameAt(screen.timestamp, {
+              const frame = await extractVideoFrame(video, screen.timestamp, {
                 mimeType: "image/png",
                 output: "object-url",
                 preferOffscreenCanvas: true,
               });
-              if (frame) {
-                screen.src = frame.src;
-                registerScreenUrl(frame.src);
-              }
+              screen.src = frame.src;
+              registerScreenUrl(frame.src);
             }
             draftScreens.push(screen);
           }
@@ -232,7 +227,6 @@ export function useIosVideoBootstrap({
         return;
       }
       try {
-        logScrubEvent("previewThumbnailsStarted", {});
         const previewThumbsStartedAt = performance.now();
         const largePreviewThumbs = await extractThumbnails(
           video,
@@ -262,14 +256,8 @@ export function useIosVideoBootstrap({
           .filter((src) => src.startsWith("blob:"));
         setPreviewThumbnails(largePreviewThumbs);
       } catch (error) {
-        // Not fatal — the settled frame is extracted separately — but it does
-        // cost the worker every preview during a drag, so it says so loudly
-        // rather than leaving an empty grid to be inferred from behaviour.
-        logScrubEvent("previewThumbnailsFailed", {
-          reason: String(error).slice(0, 80),
-        });
+        // Scrubbing keeps working on real frames, so this is not worth a toast.
         console.error(`Error extracting scrub preview thumbnails: ${error}`);
-        toast.error("Scrub previews unavailable for this recording");
       }
     };
     loadVideoAndPopulate();
@@ -280,7 +268,6 @@ export function useIosVideoBootstrap({
     };
   }, [
     draftFetchResult,
-    extractFrameAt,
     onResetPreviewFrames,
     registerScreenUrl,
     setValue,

@@ -9,26 +9,15 @@ import {
 } from "react";
 
 
-import {
-  isScrubProfilingEnabled,
-  logScrubEvent,
-  recordPreviewSwapWithoutLoad,
-  recordReveal,
-  recordSeekIssued,
-} from "./scrub-profiler";
+import { recordSeekIssued } from "./scrub-profiler";
 import {
   PREVIEW_MATCH_TOLERANCE,
   PREVIEW_REVEAL_TIMEOUT_MS,
   PREVIEW_SWAP_DELAY_MS,
-  PREVIEW_SWAP_WATCHDOG_MS,
   PreviewThumbnail,
   SCRUB_SEEK_INTERVAL_MS,
-  SETTLED_FRAME_HEIGHT,
-  SETTLED_FRAME_JPEG_QUALITY,
   findNearestPreviewThumbnail,
-  revokeBlobUrls,
 } from "./ios-helpers";
-import { FrameData } from "../../../types";
 
 /**
  * `requestVideoFrameCallback` is not in every TypeScript DOM lib, and is absent
@@ -42,25 +31,6 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 
 interface UseIosScrubPreviewArgs {
   videoRef: RefObject<HTMLVideoElement | null>;
-  /**
-   * Extracts the exact frame at a moment, reading from a freshly primed element.
-   *
-   * The displayed element cannot supply it. Measured against the thumbnails as
-   * a control, it returns one constant frame for every position — 498574917 at
-   * 5s, 10s, 15s and 20s alike, while the thumbnails returned four different
-   * signatures and repeated each one exactly. It does not repaint either, so
-   * uncovering it after a paused seek shows whatever it last presented.
-   */
-  extractFrameAt: (
-    time: number,
-    options?: {
-      scale?: number;
-      mimeType?: "image/png" | "image/jpeg";
-      quality?: number;
-      output?: "data-url" | "object-url";
-      preferOffscreenCanvas?: boolean;
-    },
-  ) => Promise<FrameData | null>;
   videoDuration: number;
   isPlaying: boolean;
   previewThumbnails: PreviewThumbnail[];
@@ -71,84 +41,8 @@ interface UseIosScrubPreviewArgs {
   syncFocusToTimestamp: (time: number) => void;
 }
 
-/**
- * Draws the displayed element into a scratch canvas and measures it, so the two
- * sources can be compared under the same ruler.
- */
-function describeElement(
-  video: HTMLVideoElement | null,
-  time: number,
-): Record<string, unknown> {
-  if (!video || !video.videoWidth) {
-    return { unavailable: true };
-  }
-  try {
-    const scratch = document.createElement("canvas");
-    scratch.width = video.videoWidth;
-    scratch.height = video.videoHeight;
-    const context = scratch.getContext("2d");
-    if (!context) {
-      return { noContext: true };
-    }
-    context.drawImage(video, 0, 0, scratch.width, scratch.height);
-    return {
-      ...describeCanvas(context, scratch),
-      elementTime: Math.round(video.currentTime * 1000) / 1000,
-      requested: Math.round(time * 1000) / 1000,
-    };
-  } catch (error) {
-    return { failed: String(error).slice(0, 60) };
-  }
-}
-
-/**
- * Describes what is actually on a canvas.
- *
- * The previous version sampled five points along the diagonal, which on a
- * letterboxed recording lands in the black bars — reporting uniform black for
- * every frame regardless of content, and sending two investigations down the
- * wrong path. This samples a grid across the whole frame and reports the spread,
- * so "uniformly blank" and "real content" cannot be confused.
- */
-function describeCanvas(
-  context: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
-): Record<string, unknown> {
-  try {
-    const steps = 7;
-    const luminances: number[] = [];
-    let signature = 0;
-    for (let row = 1; row < steps; row += 1) {
-      for (let column = 1; column < steps; column += 1) {
-        const x = Math.floor((canvas.width * column) / steps);
-        const y = Math.floor((canvas.height * row) / steps);
-        const [r, g, b] = context.getImageData(x, y, 1, 1).data;
-        luminances.push(0.299 * r + 0.587 * g + 0.114 * b);
-        // Order-dependent rolling signature, so two different frames rarely match.
-        signature = (signature * 31 + r * 65536 + g * 256 + b) % 1000000007;
-      }
-    }
-    const min = Math.min(...luminances);
-    const max = Math.max(...luminances);
-    const mean =
-      luminances.reduce((sum, value) => sum + value, 0) / luminances.length;
-    return {
-      size: `${canvas.width}x${canvas.height}`,
-      lumaMin: Math.round(min),
-      lumaMax: Math.round(max),
-      lumaMean: Math.round(mean),
-      // A frame with no spread across 36 points is blank, not content.
-      looksBlank: max - min < 4,
-      signature,
-    };
-  } catch (error) {
-    return { unreadable: String(error).slice(0, 60) };
-  }
-}
-
 export function useIosScrubPreview({
   videoRef,
-  extractFrameAt,
   videoDuration,
   isPlaying,
   previewThumbnails,
@@ -172,22 +66,8 @@ export function useIosScrubPreview({
   const activePreviewFrameSrcRef = useRef<string | null>(null);
   /** The moment the display is trying to represent, wherever the request came from. */
   const previewTargetTimeRef = useRef<number | null>(null);
-  /**
-   * Target of the last seek that actually finished.
-   *
-   * Not the same as `video.currentTime`, and the difference is the whole point:
-   * assigning `currentTime` moves the official playback position immediately, so
-   * reads report where the element was *asked* to go, not what it is showing. On
-   * a fast drag more than half of seeks are superseded before completing, so the
-   * painted frame can be several positions behind what `currentTime` claims.
-   */
-  const settledSeekTargetRef = useRef<number | null>(null);
   const frameCallbackHandleRef = useRef<number | null>(null);
   const revealFallbackTimeoutRef = useRef<number | null>(null);
-  /** Invalidates an extraction whose target has since moved. */
-  const settleTokenRef = useRef(0);
-  /** The object URL currently on screen, so it can be revoked when replaced. */
-  const settledFrameSrcRef = useRef<string | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [pausedPreviewTime, setPausedPreviewTime] = useState<number | null>(
@@ -210,91 +90,11 @@ export function useIosScrubPreview({
    * the pointer position, which would have snapped the marker backwards.
    */
   const [isPreviewNeeded, setIsPreviewNeeded] = useState(false);
-  /**
-   * The exact frame for the moment the playhead came to rest on.
-   *
-   * Extracted rather than read off the displayed element, and it replaces the
-   * thumbnail only once it exists — so the panel goes coarse-but-right to
-   * exactly-right, and never to whatever the element happens to be stuck on.
-   */
-  const [settledFrameSrc, setSettledFrameSrc] = useState<string | null>(null);
 
   const getNearestPreviewThumbnail = useCallback(
     (time: number) => findNearestPreviewThumbnail(previewThumbnails, time),
     [previewThumbnails],
   );
-
-  /**
-   * Measures the preview thumbnail nearest the same moment, the same way.
-   *
-   * The thumbnails come off a fresh element in a tight loop and are the one
-   * source in this panel known to be correct, which makes them the only
-   * available ground truth for a frame read.
-   */
-  const describeThumbnailControl = useCallback(async (src: string | null) => {
-    if (!src) {
-      logScrubEvent("thumbnailControl", { skipped: "no thumbnail yet" });
-      return;
-    }
-    try {
-      const image = new Image();
-      image.crossOrigin = "anonymous";
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error("control image failed"));
-        image.src = src;
-      });
-      const scratch = document.createElement("canvas");
-      scratch.width = image.naturalWidth;
-      scratch.height = image.naturalHeight;
-      const context = scratch.getContext("2d");
-      if (!context) {
-        return;
-      }
-      context.drawImage(image, 0, 0);
-      logScrubEvent("thumbnailControl", describeCanvas(context, scratch));
-    } catch (error) {
-      logScrubEvent("thumbnailControl", { failed: String(error).slice(0, 60) });
-    }
-  }, []);
-
-  /**
-   * Records what the element reads back as, against the thumbnail for the same
-   * moment.
-   *
-   * Nothing depends on this — the panel shows the element directly now. It is
-   * here because a readback that disagrees with the thumbnail is the signature
-   * of a suspended pipeline, and that is worth being able to see if captures
-   * ever go wrong again.
-   */
-  const measureSettledFrame = useCallback(
-    (time: number) => {
-      if (!isScrubProfilingEnabled()) {
-        return;
-      }
-      logScrubEvent("settledFrame", {
-        at: Math.round(time * 1000) / 1000,
-        live: describeElement(videoRef.current, time),
-      });
-      void describeThumbnailControl(
-        getNearestPreviewThumbnail(time)?.src ?? null,
-      );
-    },
-    [describeThumbnailControl, getNearestPreviewThumbnail, videoRef],
-  );
-
-  /**
-   * Drop the exact frame, because the moment it represents is no longer the
-   * moment being shown.
-   */
-  const clearSettledFrame = useCallback(() => {
-    settleTokenRef.current += 1;
-    revokeBlobUrls(
-      settledFrameSrcRef.current ? [settledFrameSrcRef.current] : [],
-    );
-    settledFrameSrcRef.current = null;
-    setSettledFrameSrc(null);
-  }, []);
 
   const cancelPendingReveal = useCallback(() => {
     const video = videoRef.current as VideoWithFrameCallback | null;
@@ -321,72 +121,21 @@ export function useIosScrubPreview({
   const revealWhenFramePresented = useCallback(() => {
     cancelPendingReveal();
 
-    const reveal = async (
-      source: "frame-callback" | "timeout",
-      mediaTime: number | null,
-    ) => {
+    const reveal = () => {
       cancelPendingReveal();
-      const settledTarget = settledSeekTargetRef.current;
-
-      recordReveal({
-        source,
-        targetTime: previewTargetTimeRef.current,
-        mediaTime,
-        settledTarget,
-      });
-      if (settledTarget === null) {
-        return;
-      }
-      measureSettledFrame(settledTarget);
-
-      const settleToken = ++settleTokenRef.current;
-      const video = videoRef.current;
-      const scale = video?.videoHeight
-        ? Math.min(1, SETTLED_FRAME_HEIGHT / video.videoHeight)
-        : 1;
-      const frame = await extractFrameAt(settledTarget, {
-        scale,
-        mimeType: "image/jpeg",
-        quality: SETTLED_FRAME_JPEG_QUALITY,
-        output: "object-url",
-        preferOffscreenCanvas: true,
-      });
-
-      // The playhead moved while this was being read. Showing it now would put
-      // an older moment on screen, which is the whole fault being fixed.
-      if (settleToken !== settleTokenRef.current) {
-        revokeBlobUrls(frame?.src ? [frame.src] : []);
-        return;
-      }
-      if (!frame?.src) {
-        return;
-      }
-
-      logScrubEvent("settledFrameExtracted", {
-        at: Math.round(settledTarget * 1000) / 1000,
-      });
-      revokeBlobUrls(
-        settledFrameSrcRef.current ? [settledFrameSrcRef.current] : [],
-      );
-      settledFrameSrcRef.current = frame.src;
-      setSettledFrameSrc(frame.src);
-      // Only now is there something exact to show. Until this point the coarse
-      // thumbnail is the best available and has to stay up.
       setIsPreviewNeeded(false);
     };
 
     const video = videoRef.current as VideoWithFrameCallback | null;
     revealFallbackTimeoutRef.current = window.setTimeout(
-      () => void reveal("timeout", null),
+      reveal,
       PREVIEW_REVEAL_TIMEOUT_MS,
     );
 
     if (video && typeof video.requestVideoFrameCallback === "function") {
-      frameCallbackHandleRef.current = video.requestVideoFrameCallback(
-        (_now, metadata) => void reveal("frame-callback", metadata.mediaTime),
-      );
+      frameCallbackHandleRef.current = video.requestVideoFrameCallback(reveal);
     }
-  }, [cancelPendingReveal, extractFrameAt, measureSettledFrame, videoRef]);
+  }, [cancelPendingReveal, videoRef]);
 
   /**
    * Ask for the thumbnail to cover a move to `time` — but only when it would be
@@ -401,28 +150,22 @@ export function useIosScrubPreview({
   const requestPreviewFor = useCallback(
     (time: number) => {
       // Any pending reveal is now stale — the display is being sent somewhere
-      // else, so a frame read for the previous target must not reach the panel.
+      // else, so a frame presented for the previous target must not uncover the
+      // element.
       cancelPendingReveal();
-      clearSettledFrame();
 
       setIsPreviewNeeded((wasNeeded) => {
         if (wasNeeded) {
           return true;
         }
-        if (isScrubProfilingEnabled()) {
-          const thumbnail = getNearestPreviewThumbnail(time);
-          logScrubEvent("previewRequested", {
-            target: Math.round(time * 1000) / 1000,
-            landed: videoRef.current?.currentTime ?? null,
-            thumbnailAt: thumbnail?.timestamp ?? null,
-          });
-        }
-        // Measured from the last completed seek. Using `currentTime` here made
-        // the element look perfectly current the instant a seek was requested,
-        // so the thumbnail was judged worse and suppressed — leaving a stale
-        // frame on screen during exactly the drags where it lags most.
-        const landed = settledSeekTargetRef.current;
-        if (landed === null) {
+        // Compared against the element's live position, not a cached one.
+        // `lastCommittedVideoTimeRef` only advances while `scrubPreviewTimeRef`
+        // is null, which is never true mid-scrub or mid-step, so it goes stale
+        // exactly when this comparison matters — drifting past the thumbnail's
+        // error and making the rule flip-flop, which is what flashed the panel
+        // while a step key was held.
+        const landed = videoRef.current?.currentTime;
+        if (landed === undefined) {
           return true;
         }
         const thumbnail = getNearestPreviewThumbnail(time);
@@ -432,7 +175,7 @@ export function useIosScrubPreview({
         return Math.abs(thumbnail.timestamp - time) < Math.abs(landed - time);
       });
     },
-    [cancelPendingReveal, clearSettledFrame, getNearestPreviewThumbnail, videoRef],
+    [cancelPendingReveal, getNearestPreviewThumbnail, videoRef],
   );
 
   const activePreviewFrameSrc = useMemo(() => {
@@ -461,12 +204,11 @@ export function useIosScrubPreview({
 
   // Reset all preview frame state. Used by bootstrap on video reload and live-photo start.
   const resetPreviewFrames = useCallback(() => {
-    clearSettledFrame();
     setIsPreviewNeeded(false);
     setDisplayedPreviewFrameSrc(null);
     setIncomingPreviewFrameSrc(null);
     setIsIncomingPreviewVisible(false);
-  }, [clearSettledFrame]);
+  }, []);
 
   // Clear scrub state whenever the video starts playing.
   useEffect(() => {
@@ -487,13 +229,11 @@ export function useIosScrubPreview({
       setScrubPreviewTime(null);
       setPausedPreviewTime(null);
       setIsPreviewNeeded(false);
-      // Playing composites normally, so the element speaks for itself.
-      clearSettledFrame();
       setDisplayedPreviewFrameSrc(null);
       setIncomingPreviewFrameSrc(null);
       setIsIncomingPreviewVisible(false);
     }
-  }, [clearSettledFrame, isPlaying]);
+  }, [isPlaying]);
 
   // Wire the seek queue to the video's "seeked" event.
   useEffect(() => {
@@ -551,10 +291,6 @@ export function useIosScrubPreview({
         isSeekInFlightRef.current = false;
         pendingSeekTimeRef.current = null;
 
-        // This seek finished with nothing queued behind it, so its target is what
-        // the element is now painting.
-        settledSeekTargetRef.current = video.currentTime;
-
         // Has the playhead come to rest? The drag is over and nothing newer is
         // queued, so wherever the element landed is the final position.
         //
@@ -580,17 +316,11 @@ export function useIosScrubPreview({
         // for mouse-up, which is what made the picture change under the worker
         // just as they decided what to capture.
         const previewTarget = previewTargetTimeRef.current;
-        const settledTarget = settledSeekTargetRef.current;
-        // Compared against the seek that completed, not against currentTime.
-        // currentTime reports the request, so comparing it to the target was
-        // comparing the target with itself — always "caught up", which uncovered
-        // the element while it was still painting an earlier position.
         const hasCaughtUp =
           scrubQueuedSeekTimeRef.current === null &&
           scrubSeekTimeoutRef.current === null &&
           previewTarget !== null &&
-          settledTarget !== null &&
-          Math.abs(settledTarget - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
+          Math.abs(video.currentTime - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
 
         if (hasCaughtUp) {
           revealWhenFramePresented();
@@ -626,9 +356,6 @@ export function useIosScrubPreview({
   useEffect(() => {
     return () => {
       cancelPendingReveal();
-      revokeBlobUrls(
-        settledFrameSrcRef.current ? [settledFrameSrcRef.current] : [],
-      );
       if (scrubSeekTimeoutRef.current !== null) {
         window.clearTimeout(scrubSeekTimeoutRef.current);
       }
@@ -670,29 +397,9 @@ export function useIosScrubPreview({
 
     setIncomingPreviewFrameSrc(activePreviewFrameSrc);
     setIsIncomingPreviewVisible(false);
-
-    // Watchdog for the swap never completing. `displayedPreviewFrameSrc` only
-    // advances once the incoming image reports `onLoad`, so if Safari skips that
-    // for a cached blob the previous thumbnail stays on screen — which would
-    // look exactly like settling on a frame from an earlier scrub.
-    if (!isScrubProfilingEnabled()) {
-      return;
-    }
-    const watchedSrc = activePreviewFrameSrc;
-    logScrubEvent("previewSwapStarted", { src: watchedSrc.slice(-12) });
-    const watchdog = window.setTimeout(() => {
-      if (activePreviewFrameSrcRef.current === watchedSrc) {
-        recordPreviewSwapWithoutLoad(watchedSrc);
-      }
-    }, PREVIEW_SWAP_WATCHDOG_MS);
-    return () => window.clearTimeout(watchdog);
   }, [activePreviewFrameSrc, displayedPreviewFrameSrc]);
 
   const handleIncomingPreviewLoad = useCallback((loadedSrc: string) => {
-    logScrubEvent("previewImageLoaded", {
-      src: loadedSrc.slice(-12),
-      stillWanted: loadedSrc === activePreviewFrameSrcRef.current,
-    });
     if (loadedSrc !== activePreviewFrameSrcRef.current) {
       return;
     }
@@ -921,7 +628,6 @@ export function useIosScrubPreview({
     displayedPreviewFrameSrc,
     incomingPreviewFrameSrc,
     isIncomingPreviewVisible,
-    settledFrameSrc,
     displayedTimelineTime,
     hasPreviewOverlay,
     scrubPreviewTimeRef,

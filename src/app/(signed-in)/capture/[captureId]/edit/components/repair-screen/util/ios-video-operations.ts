@@ -3,22 +3,12 @@ import { ListedFiles } from "@/lib/actions";
 
 type ExtractedImageMimeType = "image/png" | "image/jpeg";
 
-export type ExtractVideoFrameOptions = {
+type ExtractVideoFrameOptions = {
   scale?: number;
   mimeType?: ExtractedImageMimeType;
   quality?: number;
   output?: "data-url" | "object-url";
   preferOffscreenCanvas?: boolean;
-  /**
-   * Wait for a paint between the seek landing and the pixels being sampled.
-   *
-   * `seeked` reports that the playback position moved, not that the decoded
-   * picture has reached the surface canvas reads; sampling in that gap returns
-   * the previous frame carrying the new timestamp. Off by default because
-   * bootstrap extracts dozens of thumbnails in a loop and they are correct
-   * without it — worth the two frames only for reads a worker will look at.
-   */
-  waitForPaint?: boolean;
 };
 
 type FrameCanvas = HTMLCanvasElement | OffscreenCanvas;
@@ -29,17 +19,7 @@ const DEFAULT_EXTRACT_OPTIONS: Required<ExtractVideoFrameOptions> = {
   quality: 0.92,
   output: "data-url",
   preferOffscreenCanvas: false,
-  waitForPaint: false,
 };
-
-/** Deadline for a thumbnail element to report metadata before giving up on it. */
-const THUMBNAIL_VIDEO_LOAD_TIMEOUT_MS = 20000;
-
-/** Resolves once the browser has composited, not merely scheduled, a frame. */
-const waitForPaint = () =>
-  new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
 
 const resolveExtractOptions = (
   scaleOrOptions?: number | ExtractVideoFrameOptions,
@@ -61,30 +41,19 @@ const resolveExtractOptions = (
 
 const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
   await new Promise<void>((resolve, reject) => {
-    const cleanup = () => {
+    const onSeeked = () => {
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("error", onError);
-    };
-    const onSeeked = () => {
-      cleanup();
       resolve();
     };
     const onError = (e: Event) => {
-      cleanup();
+      video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("error", onError);
       reject(e);
     };
     video.addEventListener("seeked", onSeeked, { once: true });
     video.addEventListener("error", onError, { once: true });
     video.currentTime = t;
-    // Assigning a position the element already holds can finish without ever
-    // starting a seek, and then no `seeked` is coming. `seeking` is set
-    // synchronously by the seek algorithm, so its still being false here means
-    // there is nothing to wait for — waiting anyway hangs the caller, and this
-    // is the common case for capturing at the current playhead.
-    if (!video.seeking) {
-      cleanup();
-      resolve();
-    }
   });
 };
 
@@ -173,9 +142,6 @@ async function grabFrameViaCanvas(
   options: Required<ExtractVideoFrameOptions>
 ): Promise<FrameData> {
   await seekVideoToTime(video, t);
-  if (options.waitForPaint) {
-    await waitForPaint();
-  }
   const canvas = drawFrameToCanvas(
     video,
     options.scale,
@@ -229,59 +195,12 @@ export async function extractVideoThumbnails(
   const thumbVideo = document.createElement("video");
   thumbVideo.crossOrigin = "anonymous";
   thumbVideo.preload = "metadata";
-  thumbVideo.src = video.currentSrc || video.src;
-  try {
-    // Rejects rather than waits forever. Without an error path or a deadline
-    // this promise could never settle — a browser that will not give this
-    // element a decoder simply never fires `loadedmetadata` — and the caller
-    // was left with an empty thumbnail grid and no indication why. That is what
-    // a scrub with no preview and no badge looks like.
-    await new Promise<void>((resolve, reject) => {
-      const finish = (error?: Error) => {
-        clearTimeout(timeout);
-        thumbVideo.removeEventListener("loadedmetadata", onLoaded);
-        thumbVideo.removeEventListener("error", onError);
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      };
-      const onLoaded = () => finish();
-      const onError = () =>
-        finish(new Error("Thumbnail video failed to load"));
-      const timeout = setTimeout(
-        () => finish(new Error("Thumbnail video load timed out")),
-        THUMBNAIL_VIDEO_LOAD_TIMEOUT_MS
-      );
-      thumbVideo.addEventListener("loadedmetadata", onLoaded, { once: true });
-      thumbVideo.addEventListener("error", onError, { once: true });
-    });
-    return await extractThumbnailsFrom(
-      thumbVideo,
-      video,
-      videoDuration,
-      maxThumbs,
-      thumbHeight,
-      options
-    );
-  } finally {
-    // Releases the decoder. Left attached to a source, every call leaked a live
-    // media element for the rest of the session — two per bootstrap — and
-    // browsers cap how many they will decode at once.
-    thumbVideo.removeAttribute("src");
-    thumbVideo.load();
-  }
-}
-
-async function extractThumbnailsFrom(
-  thumbVideo: HTMLVideoElement,
-  video: HTMLVideoElement,
-  videoDuration: number,
-  maxThumbs: number,
-  thumbHeight: number,
-  options?: ExtractVideoFrameOptions
-): Promise<ListedFiles[]> {
+  thumbVideo.src = video.src;
+  await new Promise<void>((res) =>
+    thumbVideo.addEventListener("loadedmetadata", () => res(), {
+      once: true,
+    })
+  );
   // determine how many thumbnails to extract
   const duration = videoDuration;
   const fps = 60;
