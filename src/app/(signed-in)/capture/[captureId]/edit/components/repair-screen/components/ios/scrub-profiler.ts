@@ -35,6 +35,20 @@ interface SeekSample {
   latencyMs: number;
   /** Never presented within the stall threshold. */
   stalled: boolean;
+  /**
+   * Element state captured at stall time, to tell two very different things
+   * apart: an element genuinely stuck mid-seek, which is the failure that makes
+   * native scrubbing unusable, versus a seek that completed while
+   * `requestVideoFrameCallback` simply never fired — a reporting gap with no
+   * effect on what the worker sees.
+   */
+  stallState?: {
+    currentTime: number;
+    seeking: boolean;
+    readyState: number;
+    /** The element sits at the requested moment despite no frame callback. */
+    reachedTarget: boolean;
+  };
 }
 
 /** A seek not presented within this long counts as a stall, not slow. */
@@ -47,6 +61,7 @@ let isEnabledCache: boolean | null = null;
 let isInstalled = false;
 
 let inFlight: {
+  video: HTMLVideoElement;
   requestedTime: number;
   startedAt: number;
   frameHandle: number | null;
@@ -101,10 +116,21 @@ function summary() {
     )
     .sort((a, b) => a - b);
 
+  const stalls = samples.filter((sample) => sample.stalled);
+  // A stall where the element reached the target and is no longer seeking means
+  // the frame was there and only the callback went missing.
+  const unreportedFrames = stalls.filter(
+    (sample) => sample.stallState?.reachedTarget && !sample.stallState.seeking,
+  ).length;
+
   const result = {
     seeks: samples.length,
     presented: presented.length,
-    stalls: samples.filter((sample) => sample.stalled).length,
+    stalls: stalls.length,
+    /** Stalls that were really the element stuck mid-seek. */
+    stalledStuck: stalls.length - unreportedFrames,
+    /** Stalls that were only a missing frame callback. */
+    stalledButFramePresent: unreportedFrames,
     /** Seeks abandoned because the pointer moved on before they landed. */
     superseded: supersededCount,
     latencyMsP50: round(percentile(latencies, 0.5)),
@@ -157,11 +183,21 @@ function settleInFlight(presentedTime: number | null, stalled: boolean) {
   if (inFlight.stallTimeout !== null) {
     window.clearTimeout(inFlight.stallTimeout);
   }
+
+  const { video, requestedTime } = inFlight;
   samples.push({
-    requestedTime: inFlight.requestedTime,
+    requestedTime,
     presentedTime,
     latencyMs: performance.now() - inFlight.startedAt,
     stalled,
+    stallState: stalled
+      ? {
+          currentTime: video.currentTime,
+          seeking: video.seeking,
+          readyState: video.readyState,
+          reachedTarget: Math.abs(video.currentTime - requestedTime) <= 0.05,
+        }
+      : undefined,
   });
   inFlight = null;
 }
@@ -199,6 +235,7 @@ export function recordSeekIssued(
 
   const started = performance.now();
   inFlight = {
+    video,
     requestedTime,
     startedAt: started,
     frameHandle: null,
