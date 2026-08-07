@@ -13,6 +13,7 @@ interface UseIosStepHotkeysArgs {
   ) => void;
   handleScrubCommit: (time: number) => void;
   setPausedPreviewTime: (time: number | null) => void;
+  onScrubActiveChange: (active: boolean) => void;
 }
 
 /**
@@ -28,11 +29,34 @@ export function useIosStepHotkeys({
   scheduleScrubSeek,
   handleScrubCommit,
   setPausedPreviewTime,
+  onScrubActiveChange,
 }: UseIosStepHotkeysArgs) {
   const stepCommitTimeoutRef = useRef<number | null>(null);
   const steppedTargetTimeRef = useRef<number | null>(null);
+  const isSteppingRef = useRef(false);
 
   useEffect(() => {
+    // Holding a step key is scrubbing by keyboard, so it reports itself as an
+    // active scrub for the duration. Without that, each throttled seek landed
+    // with nothing queued behind it, which reads as "the playhead has settled" —
+    // so the preview was torn down and rebuilt on every repeat, flashing the
+    // video element in and out for as long as the key was held.
+    const beginStepping = () => {
+      if (isSteppingRef.current) {
+        return;
+      }
+      isSteppingRef.current = true;
+      onScrubActiveChange(true);
+    };
+
+    const endStepping = () => {
+      if (!isSteppingRef.current) {
+        return;
+      }
+      isSteppingRef.current = false;
+      onScrubActiveChange(false);
+    };
+
     const flushSteppedTarget = () => {
       if (steppedTargetTimeRef.current === null) {
         return;
@@ -49,6 +73,8 @@ export function useIosStepHotkeys({
       stepCommitTimeoutRef.current = window.setTimeout(() => {
         stepCommitTimeoutRef.current = null;
         flushSteppedTarget();
+        // Idle long enough to count as released, so the reveal can happen.
+        endStepping();
       }, STEP_COMMIT_DELAY_MS);
     };
 
@@ -72,7 +98,9 @@ export function useIosStepHotkeys({
       }
 
       event.preventDefault();
-      const delta = event.key === "," ? -FRAME_STEP_SECONDS : FRAME_STEP_SECONDS;
+      beginStepping();
+      const delta =
+        event.key === "," ? -FRAME_STEP_SECONDS : FRAME_STEP_SECONDS;
       const baseTime =
         steppedTargetTimeRef.current ??
         scrubPreviewTimeRef.current ??
@@ -96,6 +124,7 @@ export function useIosStepHotkeys({
         stepCommitTimeoutRef.current = null;
       }
       flushSteppedTarget();
+      endStepping();
     };
 
     window.addEventListener("keydown", handleFrameStepKeydown);
@@ -107,6 +136,7 @@ export function useIosStepHotkeys({
   }, [
     currentTimeRef,
     handleScrubCommit,
+    onScrubActiveChange,
     scheduleScrubDisplayTime,
     scheduleScrubSeek,
     scrubPreviewTimeRef,

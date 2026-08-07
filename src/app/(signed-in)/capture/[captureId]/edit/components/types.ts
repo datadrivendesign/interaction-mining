@@ -85,20 +85,12 @@ export const GestureSchema = z
     },
   );
 
-export const ScreenGestureSchema = z
-  .object({
-    screens: ScreenSchema,
-    gestures: GestureSchema,
-  })
-  .refine(
-    (data) => {
-      // Check all screens except the last one have gestures
-      return data.screens.slice(0, -1).every((screen) => {
-        return data.gestures[screen.id];
-      });
-    },
-    { message: "Each screen except the last one must have a gesture" },
-  );
+// Screen-annotation completeness is not a schema. Layering `.refine` on top of
+// field validation under-reports, because zod skips a refine once the schema
+// beneath it fails, so a screen missing its marker hid every screen missing its
+// gesture entirely. It lives in `getScreenAnnotationIssue`
+// (repair-screen/util/gesture-description-template.ts), which both the
+// filmstrip's error ring and the step gates in page.tsx call.
 
 export const RedactionSchema = z
   .record(

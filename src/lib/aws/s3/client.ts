@@ -31,12 +31,12 @@ export async function uploadToS3(
   file: File,
   prefix: string,
   key: string,
-  contentType: string
+  contentType: string,
 ): Promise<ActionPayload<ListedFiles>> {
   const generatePresignedUpload = await generatePresignedUploadURL(
     prefix,
     key,
-    contentType
+    contentType,
   );
 
   if (!generatePresignedUpload.ok) {
@@ -76,7 +76,7 @@ export async function uploadToS3(
     } else {
       // get signed url for private files
       const signedUrlRes = await generateSignedCloudFrontURL(
-        uploadData.fileKey
+        uploadData.fileKey,
       );
       if (signedUrlRes.ok) {
         fileUrl = signedUrlRes.data.signedUrl;

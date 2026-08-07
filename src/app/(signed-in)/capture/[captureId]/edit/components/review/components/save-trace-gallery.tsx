@@ -29,7 +29,7 @@ export function SaveTraceGallery() {
 
   return (
     <section className="block h-full w-full p-5">
-      <div className="flex w-full overflow-x-scroll touch-pan-x">
+      <div className="flex w-full touch-pan-x overflow-x-scroll">
         <div className="flex min-w-full gap-5">
           {screens.map((screen: FrameData, index: number) => (
             <SaveTraceFigure
@@ -98,16 +98,16 @@ function SaveTraceFigure({
 
   return (
     <figure
-      className={`relative flex flex-col bg-neutral-100 dark:bg-neutral-900 shrink-0 shadow-xs ${cardWidthClass}`}
+      className={`relative flex shrink-0 flex-col bg-neutral-100 shadow-xs dark:bg-neutral-900 ${cardWidthClass}`}
     >
       <div className="relative w-full" ref={containerRef}>
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+        <div className="absolute top-1 right-1 z-20 min-w-[1.5rem] rounded bg-black/60 px-1 py-0.5 text-center font-mono text-xs text-white">
           {index + 1}
         </div>
 
         <TooltipProvider delayDuration={100}>
           <Image
-            className="relative z-10 object-cover w-full h-full rounded-lg object-contain border-blue-500 border-2"
+            className="relative z-10 h-full w-full rounded-lg border-2 border-blue-500 object-cover"
             src={screen.src}
             alt={`Extracted frame at ${screen.timestamp}`}
             draggable={false}
@@ -119,7 +119,7 @@ function SaveTraceFigure({
 
           {isDrag && (
             <svg
-              className="absolute inset-0 z-10 w-full h-full pointer-events-none overflow-visible"
+              className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
               width="100%"
               height="100%"
             >
@@ -161,7 +161,7 @@ function SaveTraceFigure({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className="cursor-pointer absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-70 w-6 h-6 md:w-7 md:h-7"
+                  className="absolute z-20 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-yellow-300 opacity-70 md:h-7 md:w-7"
                   style={{
                     left: `${(gesture.x ?? 0) * 100}%`,
                     top: `${(gesture.y ?? 0) * 100}%`,
@@ -180,7 +180,7 @@ function SaveTraceFigure({
             <Tooltip key={redaction.id}>
               <TooltipTrigger asChild>
                 <div
-                  className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                  className="absolute z-15 cursor-pointer border-1 border-yellow-500 bg-black hover:shadow-lg hover:shadow-yellow-500/50"
                   style={{
                     left: `${redaction.x * 100}%`,
                     top: `${redaction.y * 100}%`,
@@ -197,8 +197,8 @@ function SaveTraceFigure({
         </TooltipProvider>
       </div>
 
-      <div className="prose prose-neutral dark:prose-invert leading-snug font-sm font-semibold dark:text-neutral-900 overflow-auto h-full w-full whitespace-pre-wrap">
-        <p className="text-sm text-center dark:text-neutral-300">
+      <div className="font-sm prose h-full w-full overflow-auto leading-snug font-semibold whitespace-pre-wrap prose-neutral dark:prose-invert dark:text-neutral-900">
+        <p className="text-center text-sm dark:text-neutral-300">
           {gesture?.description ?? ""}
         </p>
       </div>

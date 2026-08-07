@@ -26,7 +26,7 @@ export async function userFetcher([_, userId, options]: [
 export function useUser(userId: string, options: UserFetcherOptions = {}) {
   const { data, error, isLoading } = useSWR(
     ["user", userId, options],
-    userFetcher
+    userFetcher,
   );
 
   return {

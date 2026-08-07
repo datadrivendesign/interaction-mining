@@ -15,17 +15,17 @@ import LogoSm from "@/public/logo_sm.svg";
 
 export default function NavigationBar() {
   return (
-    <nav className="sticky z-40 top-0 flex w-full h-16 justify-center bg-background border-b border-muted-background">
-      <div className="flex w-full max-w-screen-2xl p-4 lg:px-6 lg:py-4 justify-between">
-        <div className="flex basis-1/2 h-full">
+    <nav className="sticky top-0 z-40 flex h-16 w-full justify-center border-b border-muted-background bg-background">
+      <div className="flex w-full max-w-screen-2xl justify-between p-4 lg:px-6 lg:py-4">
+        <div className="flex h-full basis-1/2">
           <Link
             href={"/"}
-            className="text-2xl font-semibold leading-none tracking-tighter"
+            className="text-2xl leading-none font-semibold tracking-tighter"
           >
-            <LogoSm className="block w-auto h-8 fill-foreground" />
+            <LogoSm className="block h-8 w-auto fill-foreground" />
           </Link>
         </div>
-        <div className="flex basis-1/2 h-full gap-4 lg:gap-6 justify-end items-center">
+        <div className="flex h-full basis-1/2 items-center justify-end gap-4 lg:gap-6">
           <SessionContent />
         </div>
       </div>

@@ -118,7 +118,7 @@ export default function Page() {
     <main className="relative z-0 flex min-h-dvh w-full flex-col items-center justify-start">
       <div className="relative z-0 flex h-full w-full flex-col items-center justify-start gap-4 p-3 sm:p-4 md:px-16 md:py-8">
         <Card className="w-full max-w-screen-sm">
-          <CardHeader className="px-5 pb-3 pt-4 sm:px-6 sm:pt-6">
+          <CardHeader className="px-5 pt-4 pb-3 sm:px-6 sm:pt-6">
             <CardTitle className="text-2xl">Start capture session</CardTitle>
             <CardDescription>
               {os == "android"
@@ -126,12 +126,12 @@ export default function Page() {
                 : "Open your Camera app and scan the QR code to navigate to the capture session page."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+          <CardContent className="px-5 pt-0 pb-5 sm:px-6 sm:pb-6">
             <div className="grid w-full gap-4 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:items-start">
               <div className="flex justify-center md:justify-start">
                 {!isCaptureLoading && capture ? (
                   <QRCodeSVG
-                    className="aspect-square h-auto w-full max-w-52 rounded-xl bg-white p-4 object-contain sm:max-w-60 md:max-w-full"
+                    className="aspect-square h-auto w-full max-w-52 rounded-xl bg-white object-contain p-4 sm:max-w-60 md:max-w-full"
                     value={
                       os === Platform.ANDROID
                         ? `${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}/api/capture/${captureId}`
@@ -139,7 +139,7 @@ export default function Page() {
                     }
                   />
                 ) : (
-                  <div className="aspect-square h-auto w-full max-w-52 animate-pulse rounded-xl bg-neutral-200 p-4 object-contain dark:bg-neutral-800 sm:max-w-60 md:max-w-full"></div>
+                  <div className="aspect-square h-auto w-full max-w-52 animate-pulse rounded-xl bg-neutral-200 object-contain p-4 sm:max-w-60 md:max-w-full dark:bg-neutral-800"></div>
                 )}
               </div>
               <div className="flex min-w-0 flex-col gap-3">
@@ -160,10 +160,10 @@ export default function Page() {
                   <div className="min-w-0 flex-1">
                     {!isCaptureLoading && capture?.app ? (
                       <>
-                        <h2 className="line-clamp-2 break-words text-base font-semibold leading-snug">
+                        <h2 className="line-clamp-2 text-base leading-snug font-semibold break-words">
                           {capture.app.metadata.name}
                         </h2>
-                        <p className="line-clamp-1 break-words text-sm text-muted-foreground">
+                        <p className="line-clamp-1 text-sm break-words text-muted-foreground">
                           {capture.app.metadata.company}
                         </p>
                       </>
@@ -183,11 +183,11 @@ export default function Page() {
                     </Badge>
                   ) : null}
                 </div>
-                <div className="border-l-4 border-neutral-400 bg-neutral-50 py-1 pl-3 pr-2 dark:bg-neutral-900">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <div className="border-l-4 border-neutral-400 bg-neutral-50 py-1 pr-2 pl-3 dark:bg-neutral-900">
+                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     Task to record
                   </span>
-                  <p className="break-words text-sm font-medium leading-snug">
+                  <p className="text-sm leading-snug font-medium break-words">
                     {!isCaptureLoading && capture?.task?.description
                       ? capture.task.description
                       : "Loading task..."}
@@ -204,14 +204,14 @@ export default function Page() {
         {filteredUserUploads.length > 0 ? (
           <>
             <Card className="w-full max-w-screen-sm">
-              <CardHeader className="px-5 pb-3 pt-4 sm:px-6 sm:pt-6">
+              <CardHeader className="px-5 pt-4 pb-3 sm:px-6 sm:pt-6">
                 <CardTitle className="text-2xl">Task recording</CardTitle>
                 <CardDescription>
                   Your uploaded recording appears here. Remember to turn on
                   &ldquo;Do Not Disturb&rdquo; before recording.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+              <CardContent className="px-5 pt-0 pb-5 sm:px-6 sm:pb-6">
                 <div className="flex w-full flex-col">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <h2 className="font-semibold">Uploaded files</h2>
@@ -274,7 +274,7 @@ export default function Page() {
                 onClick={redirectToTraceProcess}
                 disabled={captureState < CaptureState.UPLOADED}
                 tooltip={"Navigate to trace creation editor"}
-                className="w-full sm:w-auto cursor-pointer"
+                className="w-full cursor-pointer sm:w-auto"
               >
                 Go to editor <ArrowRight />
               </Button>
@@ -289,7 +289,7 @@ export default function Page() {
               onClick={redirectToTraceProcess}
               disabled
               tooltip={"Navigate to trace creation editor"}
-              className="w-full sm:w-auto cursor-pointer"
+              className="w-full cursor-pointer sm:w-auto"
             >
               Go to editor <ArrowRight />
             </Button>

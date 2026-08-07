@@ -25,11 +25,11 @@ export async function captureFetcher([_, captureId, options]: [
 
 export function useCapture(
   captureId: string,
-  options: CaptureFetcherOptions = {}
+  options: CaptureFetcherOptions = {},
 ) {
   const { data, error, isLoading } = useSWR(
     ["capture", captureId, options],
-    captureFetcher
+    captureFetcher,
   );
 
   return {
@@ -57,11 +57,11 @@ export async function userCaptureFetcher([_, userId, options]: [
 
 export function useUserCaptures(
   userId: string,
-  options: CaptureFetcherOptions = {}
+  options: CaptureFetcherOptions = {},
 ) {
   const { data, error, isLoading } = useSWR(
     ["userCapture", userId, options],
-    captureFetcher
+    captureFetcher,
   );
 
   return {

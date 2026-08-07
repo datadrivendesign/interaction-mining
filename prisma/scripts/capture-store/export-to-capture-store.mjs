@@ -37,14 +37,24 @@ import {
   GetObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
-import { createWriteStream, mkdirSync, writeFileSync, existsSync, appendFileSync, readFileSync } from "fs";
+import {
+  createWriteStream,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  appendFileSync,
+  readFileSync,
+} from "fs";
 import { pipeline } from "stream/promises";
 import { parseArgs } from "node:util";
 
 // ── logger ────────────────────────────────────────────────────────────────────
 
 const LOG_DIR = resolve(__dirname, "logs");
-const runTimestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+const runTimestamp = new Date()
+  .toISOString()
+  .replace(/[:.]/g, "-")
+  .slice(0, 19);
 const LOG_FILE = join(LOG_DIR, `export-${runTimestamp}.log`);
 
 mkdirSync(LOG_DIR, { recursive: true });
@@ -89,7 +99,7 @@ async function s3GetObject(key) {
 
 async function s3ListObjects(prefix) {
   const res = await s3.send(
-    new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix })
+    new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix }),
   );
   return res.Contents ?? [];
 }
@@ -195,7 +205,7 @@ async function exportCapture(capture, outDir, dryRun) {
   // 1. Try latest S3 draft
   const allFiles = await s3ListObjects(`uploads/${captureId}/`);
   const draftKey = latestDraftKey(
-    allFiles.filter((o) => o.Key.includes("/drafts/"))
+    allFiles.filter((o) => o.Key.includes("/drafts/")),
   );
   if (draftKey) {
     interactionHistory = await downloadJson(draftKey);
@@ -204,7 +214,9 @@ async function exportCapture(capture, outDir, dryRun) {
 
   // 2. Fall back to original-metadata.json
   if (!interactionHistory) {
-    const origMeta = await downloadJson(`uploads/${captureId}/original-metadata.json`);
+    const origMeta = await downloadJson(
+      `uploads/${captureId}/original-metadata.json`,
+    );
     if (origMeta?.screens) {
       // original-metadata uses absolute ms timestamps — normalize to relative seconds
       const relativeTimestamps = normalizeTimestamps(origMeta.screens);
@@ -217,7 +229,9 @@ async function exportCapture(capture, outDir, dryRun) {
         redactions: origMeta.redactions ?? {},
         description: origMeta.description ?? "",
         ...(origMeta.iOSVersion ? { iOSVersion: origMeta.iOSVersion } : {}),
-        ...(origMeta.iPhoneVersion ? { iPhoneVersion: origMeta.iPhoneVersion } : {}),
+        ...(origMeta.iPhoneVersion
+          ? { iPhoneVersion: origMeta.iPhoneVersion }
+          : {}),
       };
       source = "original-metadata.json";
     }
@@ -267,7 +281,9 @@ async function exportCapture(capture, outDir, dryRun) {
   }
 
   if (!interactionHistory) {
-    log(`  [skip] no draft or metadata found in S3 and no linked trace in MongoDB`);
+    log(
+      `  [skip] no draft or metadata found in S3 and no linked trace in MongoDB`,
+    );
     return false;
   }
 
@@ -276,7 +292,9 @@ async function exportCapture(capture, outDir, dryRun) {
   const videoAlreadyDownloaded = existsSync(videoPath);
   const videoEntry = videoAlreadyDownloaded
     ? null
-    : allFiles.find((f) => f.Key.endsWith(".mp4") && !f.Key.includes("/drafts/"));
+    : allFiles.find(
+        (f) => f.Key.endsWith(".mp4") && !f.Key.includes("/drafts/"),
+      );
 
   if (!videoAlreadyDownloaded && !videoEntry) {
     log(`  [skip] no video found in S3 under uploads/${captureId}/`);
@@ -287,7 +305,7 @@ async function exportCapture(capture, outDir, dryRun) {
     log(
       `  [dry-run] source=${source}, ${interactionHistory.screens.length} screens, ` +
         `video=${videoAlreadyDownloaded ? "already downloaded" : videoEntry.Key}, ` +
-        `task="${capture.task?.description ?? "?"}"`
+        `task="${capture.task?.description ?? "?"}"`,
     );
     return true;
   }
@@ -297,7 +315,7 @@ async function exportCapture(capture, outDir, dryRun) {
   // ── write interaction_history.json ─────────────────────────────────────────
   writeFileSync(
     join(captureDir, "interaction_history.json"),
-    JSON.stringify(interactionHistory, null, 2)
+    JSON.stringify(interactionHistory, null, 2),
   );
   log(`  source: ${source}`);
 
@@ -320,7 +338,7 @@ async function exportCapture(capture, outDir, dryRun) {
   };
   writeFileSync(
     join(captureDir, `${captureId}.json`),
-    JSON.stringify(captureMeta, null, 2)
+    JSON.stringify(captureMeta, null, 2),
   );
 
   // ── download recording.mp4 ─────────────────────────────────────────────────
@@ -377,30 +395,36 @@ Captures that already have a Trace record are automatically skipped.`);
     process.exit(1);
   }
 
-
   const outDir = values.out;
   const dryRun = values["dry-run"];
 
   // Collect IDs from all input sources
   const explicitIds = values["capture-ids"]
-    ? values["capture-ids"].split(",").map((s) => s.trim()).filter(Boolean)
+    ? values["capture-ids"]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
-  const jsonIds = values["json-file"] ? extractIdsFromJson(values["json-file"]) : { captureIds: [], taskIds: [] };
+  const jsonIds = values["json-file"]
+    ? extractIdsFromJson(values["json-file"])
+    : { captureIds: [], taskIds: [] };
 
   // Merge capture IDs from --capture-ids and captureIds in the JSON file
-  const allExplicitIds = [...new Set([
-    ...explicitIds,
-    ...jsonIds.captureIds,
-  ])];
+  const allExplicitIds = [...new Set([...explicitIds, ...jsonIds.captureIds])];
 
   // Merge task IDs from --task-ids and taskIds in the JSON file (legacy support)
-  const uniqueTaskIds = [...new Set([
-    ...(values["task-ids"]
-      ? values["task-ids"].split(",").map((s) => s.trim()).filter(Boolean)
-      : []),
-    ...jsonIds.taskIds,
-  ])];
+  const uniqueTaskIds = [
+    ...new Set([
+      ...(values["task-ids"]
+        ? values["task-ids"]
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : []),
+      ...jsonIds.taskIds,
+    ]),
+  ];
 
   let captures = [];
 
@@ -428,7 +452,9 @@ Captures that already have a Trace record are automatically skipped.`);
 
   log(`Found ${captures.length + withTrace.length} capture(s) total`);
   if (withTrace.length > 0) {
-    log(`Skipping ${withTrace.length} capture(s) that already have a Trace record`);
+    log(
+      `Skipping ${withTrace.length} capture(s) that already have a Trace record`,
+    );
   }
   log(`Exporting ${captures.length} capture(s)`);
   log(`Log file: ${LOG_FILE}`);
@@ -450,7 +476,9 @@ Captures that already have a Trace record are automatically skipped.`);
     }
   }
 
-  log(`\nDone. ${exported} exported, ${skipped} skipped (no source/video), ${withTrace.length} skipped (already traced), ${errors} errors.`);
+  log(
+    `\nDone. ${exported} exported, ${skipped} skipped (no source/video), ${withTrace.length} skipped (already traced), ${errors} errors.`,
+  );
 }
 
 main()

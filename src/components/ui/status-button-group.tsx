@@ -24,7 +24,7 @@ export function StatusButtonGroup({
 }: StatusButtonGroupProps) {
   return (
     <div className="flex items-center gap-2">
-      <label className="text-base font-bold text-foreground whitespace-nowrap">
+      <label className="text-base font-bold whitespace-nowrap text-foreground">
         {label}
       </label>
       <div className="flex items-center gap-2">
@@ -37,7 +37,7 @@ export function StatusButtonGroup({
               onClick={() => onChange(option)}
               className={cn(
                 selected === option.value ? "bg-blue-500/100 text-white" : "",
-                "text-xs hover:bg-blue-500/100 hover:text-white pointer-cursor"
+                "pointer-cursor text-xs hover:bg-blue-500/100 hover:text-white",
               )}
             >
               {option.label}

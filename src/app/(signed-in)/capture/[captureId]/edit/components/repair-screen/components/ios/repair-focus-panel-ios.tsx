@@ -28,8 +28,8 @@ export function RepairFocusPanelIOS({
             variant="ghost"
             size="icon-sm"
             className={cn(
-              "pointer-events-auto rounded-full bg-background/80 backdrop-blur-sm shadow-sm border",
-              isLivePhotoActive && "text-amber-500 animate-pulse",
+              "pointer-events-auto rounded-full border bg-background/80 shadow-sm backdrop-blur-sm",
+              isLivePhotoActive && "animate-pulse text-amber-500",
             )}
             onClick={() => onLivePhoto(focusedScreen.timestamp)}
             tooltip="Replay ±1s around this frame"
@@ -46,8 +46,8 @@ export function RepairFocusPanelIOS({
           isLastScreen={isLastScreen}
         />
       ) : (
-        <div className="flex justify-center items-center w-full h-full">
-          <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+        <div className="flex h-full w-full items-center justify-center">
+          <span className="text-3xl font-semibold text-muted-foreground lg:text-4xl">
             Select a screen from the capture filmstrip.
           </span>
         </div>

@@ -2,7 +2,7 @@ import { Redaction } from "../components/types";
 
 export function computeIoU(
   a: { x: number; y: number; width: number; height: number },
-  b: { x: number; y: number; width: number; height: number }
+  b: { x: number; y: number; width: number; height: number },
 ) {
   const xA = Math.max(a.x, b.x);
   const yA = Math.max(a.y, b.y);
@@ -25,7 +25,7 @@ export function redactVH(
   node: any, // TODO: make some rough types for vh nodes
   redactions: Redaction[],
   imgWidth: number,
-  imgHeight: number
+  imgHeight: number,
 ) {
   // check
   if (node.bounds_in_screen) {
@@ -62,7 +62,7 @@ export function redactVH(
   // recursive case
   if (node.children && node.children.length > 0) {
     node.children.forEach((child: any) =>
-      redactVH(child, redactions, imgWidth, imgHeight)
+      redactVH(child, redactions, imgWidth, imgHeight),
     );
   }
 }

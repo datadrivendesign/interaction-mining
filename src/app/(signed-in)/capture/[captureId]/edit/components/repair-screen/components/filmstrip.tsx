@@ -15,7 +15,7 @@ import Image from "next/image";
 import { card } from "../util";
 import { spring } from "@/lib/motion";
 import { findGestureOption } from "@/lib/utils/gesture-options";
-import { validateGestureDescription } from "../util";
+import { isScreenAnnotationComplete } from "../util";
 import { useEffect, useRef } from "react";
 
 export function Filmstrip({
@@ -23,20 +23,17 @@ export function Filmstrip({
   gestures,
   redactions,
   os,
-  handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
   os: Platform;
-  handleSetTime: (t: number) => void;
 }) {
-  const { focusViewIndex, setFocusViewIndex, handleDeleteScreen } =
-    useNavigation();
+  const { focusedScreenId, selectScreen, handleDeleteScreen } = useNavigation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (focusViewIndex < 0) {
+    if (focusedScreenId === null) {
       return;
     }
 
@@ -46,8 +43,10 @@ export function Filmstrip({
         return;
       }
 
+      // Queried by id, not position: an insert shifts every later index, so a
+      // positional selector can scroll to the wrong thumbnail.
       const selectedItem = container.querySelector<HTMLElement>(
-        `[data-index="${focusViewIndex}"]`,
+        `[data-screen-id="${focusedScreenId}"]`,
       );
       if (!selectedItem) {
         return;
@@ -71,11 +70,11 @@ export function Filmstrip({
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [focusViewIndex, screens.length]);
+  }, [focusedScreenId, screens.length]);
 
   return (
     <div ref={containerRef} className="h-full overflow-x-auto">
-      <ul className="relative z-0 flex h-full p-2 gap-1">
+      <ul className="relative z-0 flex h-full gap-1 p-2">
         <AnimatePresence mode="popLayout">
           {screens?.map((screen: FrameData, index: number) => {
             const isLast = screens.length - 1 === index;
@@ -87,16 +86,13 @@ export function Filmstrip({
                 gesture={gestures[screen.id]}
                 redactions={redactions[screen.id] ?? []}
                 os={os}
-                isSelected={focusViewIndex === index}
+                isSelected={focusedScreenId === screen.id}
                 hasError={
                   isLast
                     ? false
-                    : !gestures[screen.id] ||
-                      gestures[screen.id].type === null ||
-                      !validateGestureDescription(gestures[screen.id])
+                    : !isScreenAnnotationComplete(gestures[screen.id])
                 }
-                onClick={() => setFocusViewIndex(index)}
-                handleSetTime={handleSetTime}
+                onClick={() => selectScreen(screen.id, "filmstrip")}
                 handleDeleteFrame={handleDeleteScreen}
               />
             );
@@ -115,7 +111,6 @@ function FilmstripItem({
   os,
   isSelected,
   hasError = false,
-  handleSetTime,
   handleDeleteFrame,
   onClick,
 }: {
@@ -126,8 +121,7 @@ function FilmstripItem({
   os: Platform;
   isSelected?: boolean;
   hasError?: boolean;
-  handleSetTime: (t: number) => void;
-  handleDeleteFrame: (index: number) => void;
+  handleDeleteFrame: (screenId: string) => void;
   onClick?: () => void;
 }) {
   const hasGestureCoordinates =
@@ -138,8 +132,8 @@ function FilmstripItem({
 
   return (
     <motion.li
-      className="cursor-pointer min-w-fit h-full max-w-full"
-      data-index={index}
+      className="h-full max-w-full min-w-fit cursor-pointer"
+      data-screen-id={screen.id}
       variants={card}
       initial="initial"
       animate="animate"
@@ -147,16 +141,13 @@ function FilmstripItem({
       layout="position"
       transition={spring()}
       key={`${screen.timestamp}-${screen.id}`}
-      onClick={() => {
-        onClick?.();
-        handleSetTime(screen.timestamp);
-      }}
+      onClick={onClick}
     >
       {/* Toolbar */}
-      <div className="flex flex-row w-full items-center justify-between">
-        <div className="flex justify-center items-center bg-background rounded-lg">
+      <div className="flex w-full flex-row items-center justify-between">
+        <div className="flex items-center justify-center rounded-lg bg-background">
           <span
-            className="text-xs text-muted-foreground tracking-tight leading-none slashed-zero tabular-nums"
+            className="text-xs leading-none tracking-tight text-muted-foreground slashed-zero tabular-nums"
             title={`Jump to time: ${prettyNumber(screen.timestamp, os)}s`}
           >
             {`${prettyNumber(screen.timestamp, os)}s`}
@@ -166,17 +157,17 @@ function FilmstripItem({
           onClick={(e) => {
             // Prevent bubbling to parent click handlers that set focus/time
             e.stopPropagation();
-            handleDeleteFrame(index);
+            handleDeleteFrame(screen.id);
           }}
-          className="inline-flex self-end items-center cursor-pointer"
+          className="inline-flex cursor-pointer items-center self-end"
           title="Delete snapshot"
         >
           <X className="size-4 text-muted-foreground hover:opacity-75" />
         </button>
       </div>
-      <div className="relative h-[calc(100%-1rem)] rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
+      <div className="relative h-[calc(100%-1rem)] overflow-clip rounded-sm object-contain transition-all duration-200 ease-in-out select-none">
         {/* Index overlay */}
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+        <div className="absolute top-1 right-1 z-20 min-w-[1.5rem] rounded bg-black/60 px-1 py-0.5 text-center font-mono text-xs text-white">
           {index + 1}
         </div>
         <TooltipProvider delayDuration={0}>
@@ -185,11 +176,11 @@ function FilmstripItem({
               {(isSelected || hasError) && (
                 <div
                   className={cn(
-                    "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
+                    "absolute z-10 flex h-full w-full items-center justify-center rounded-sm",
                     isSelected
-                      ? "ring-3 ring-inset ring-blue-500"
+                      ? "ring-3 ring-blue-500 ring-inset"
                       : hasError
-                        ? "ring-3 ring-inset ring-yellow-500"
+                        ? "ring-3 ring-yellow-500 ring-inset"
                         : "",
                   )}
                 >
@@ -201,9 +192,9 @@ function FilmstripItem({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <div className="text-sm">Add a gesture.</div>
-              <div className="flex w-full justify-between items-center gap-2 text-sm">
+              <div className="flex w-full items-center justify-between gap-2 text-sm">
                 <span>
-                  <Kbd className="text-muted-foreground rounded-sm">Tab</Kbd>
+                  <Kbd className="rounded-sm text-muted-foreground">Tab</Kbd>
                 </span>
                 to next screen.
               </div>
@@ -212,12 +203,12 @@ function FilmstripItem({
         </TooltipProvider>
         <div
           className={cn(
-            "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
+            "relative h-full min-w-fit transition-all duration-200 ease-in-out select-none",
             hasError
               ? isSelected
-                ? "grayscale brightness-70"
-                : "grayscale brightness-50"
-              : "grayscale-0 brightness-100",
+                ? "brightness-70 grayscale"
+                : "brightness-50 grayscale"
+              : "brightness-100 grayscale-0",
           )}
         >
           {/* {children} */}
@@ -236,7 +227,7 @@ function FilmstripItem({
               }}
             />
           ) : (
-            <div className="flex items-center justify-center h-full w-full bg-muted/20">
+            <div className="bg-muted/20 flex h-full w-full items-center justify-center">
               <div className="text-xs text-muted-foreground">Loading...</div>
             </div>
           )}
@@ -258,9 +249,9 @@ function FilmstripItem({
           {gesture?.type && (
             <div
               className={cn(
-                "absolute pointer-events-none z-20",
+                "pointer-events-none absolute z-20",
                 hasGestureCoordinates
-                  ? "left-0 top-0 -translate-x-1/2 -translate-y-1/2"
+                  ? "top-0 left-0 -translate-x-1/2 -translate-y-1/2"
                   : "inset-0 flex items-center justify-center",
               )}
               style={
@@ -272,7 +263,7 @@ function FilmstripItem({
                   : undefined
               }
             >
-              <div className="size-6 rounded-full border border-black/20 bg-yellow-300/85 shadow-xs flex items-center justify-center">
+              <div className="flex size-6 items-center justify-center rounded-full border border-black/20 bg-yellow-300/85 shadow-xs">
                 {findGestureOption(gesture.type)?.icon}
               </div>
             </div>

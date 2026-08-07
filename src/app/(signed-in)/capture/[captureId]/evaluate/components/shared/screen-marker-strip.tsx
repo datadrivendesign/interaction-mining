@@ -115,7 +115,7 @@ export function ScreenMarkerStrip({
     <div className="space-y-2 rounded-xl border border-neutral-200 bg-white/90 px-3 py-3 dark:border-neutral-800 dark:bg-neutral-900/70">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+          <p className="text-[12px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
             Screen Markers
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
@@ -184,8 +184,8 @@ export function ScreenMarkerStrip({
               onClick={() => onSelectScreen(screen.id, screen.timestamp)}
             >
               {isPreviewVisible && hasIssues && (
-                <span className="pointer-events-none absolute left-1/2 top-5 z-20 w-44 -translate-x-1/2 select-none rounded-md border border-neutral-200 bg-white/95 px-2 py-1.5 text-left shadow-md dark:border-neutral-700 dark:bg-neutral-950/95">
-                  <span className="block text-[9px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                <span className="pointer-events-none absolute top-5 left-1/2 z-20 w-44 -translate-x-1/2 rounded-md border border-neutral-200 bg-white/95 px-2 py-1.5 text-left shadow-md select-none dark:border-neutral-700 dark:bg-neutral-950/95">
+                  <span className="block text-[9px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
                     Screen {index + 1} • {screen.timestamp.toFixed(1)}s
                   </span>
                   <span className="mt-1 block space-y-0.5 text-[10px] leading-snug text-neutral-700 dark:text-neutral-200">
@@ -216,7 +216,7 @@ export function ScreenMarkerStrip({
               />
               <span
                 className={cn(
-                  "mt-1 block text-[9px] font-medium leading-none",
+                  "mt-1 block text-[9px] leading-none font-medium",
                   isActive
                     ? "text-neutral-800 dark:text-neutral-100"
                     : "text-neutral-500 dark:text-neutral-400",

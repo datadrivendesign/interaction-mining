@@ -80,10 +80,10 @@ const ToolButtonsSection = ({
 }) => {
   return (
     <div className="rounded-md border border-sky-200/80 bg-sky-50/95 px-2 py-2 shadow-sm dark:border-sky-800 dark:bg-sky-900/95">
-      <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="mb-1 text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
         Tools
       </div>
-      <div className="flex flex-row items-center justify-evenly w-full">
+      <div className="flex w-full flex-row items-center justify-evenly">
         {toolButtons.map((tool) => {
           const Icon = tool.icon;
           const isActive = mode === tool.mode;
@@ -99,7 +99,7 @@ const ToolButtonsSection = ({
                 size="icon"
                 onClick={() => setMode(tool.mode)}
                 className={cn(
-                  "size-8 rounded-sm border border-transparent cursor-pointer",
+                  "size-8 cursor-pointer rounded-sm border border-transparent",
                   isActive
                     ? "bg-blue-500 text-white hover:bg-blue-500 hover:text-white"
                     : "text-muted-foreground hover:bg-neutral-200/70 dark:hover:bg-neutral-800/70",
@@ -126,14 +126,14 @@ const ToolButtonsSection = ({
 const ShortcutsSection = () => {
   return (
     <div className="rounded-md px-1 py-1.5">
-      <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="mb-1 text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
         Shortcuts
       </div>
       <div className="space-y-1.5">
         {shortcutRows.map((item) => (
           <div
             key={item.key}
-            className="flex min-w-0 items-center gap-2 text-[10px] font-medium leading-none text-muted-foreground"
+            className="flex min-w-0 items-center gap-2 text-[10px] leading-none font-medium text-muted-foreground"
           >
             <div className="flex h-6 w-[8rem] shrink-0 items-center justify-center">
               {item.shortcut}
@@ -157,7 +157,7 @@ export default function Toolbar({
 }) {
   return (
     <TooltipProvider delayDuration={0}>
-      <Card className="pointer-events-auto absolute left-3 top-3 z-20 h-fit w-56 max-w-[calc(100vw-1.5rem)] rounded-md border bg-background p-0 shadow-md">
+      <Card className="pointer-events-auto absolute top-3 left-3 z-20 h-fit w-56 max-w-[calc(100vw-1.5rem)] rounded-md border bg-background p-0 shadow-md">
         <CardHeader className="flex flex-col items-start gap-2 p-1.5">
           <CardDescription className="w-full space-y-2">
             <ToolButtonsSection mode={mode} setMode={setMode} />

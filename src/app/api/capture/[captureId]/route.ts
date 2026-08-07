@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCapture, getTask } from '@/lib/actions';
+import { NextRequest, NextResponse } from "next/server";
+import { getCapture, getTask } from "@/lib/actions";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ captureId: string }> }
+  { params }: { params: Promise<{ captureId: string }> },
 ) {
   try {
     const { captureId } = await params;
@@ -13,14 +13,14 @@ export async function GET(
       return NextResponse.json({ error: result.message }, { status: 404 });
     }
 
-    const taskId = result.data.taskId;  
+    const taskId = result.data.taskId;
     let taskDetails = null;
 
     if (taskId) {
       try {
         taskDetails = await getTask(taskId);
       } catch (taskError) {
-        console.error('Error fetching task:', taskError);
+        console.error("Error fetching task:", taskError);
       }
     }
 
@@ -32,19 +32,20 @@ export async function GET(
         otp: result.data.otp,
         src: result.data.src,
       },
-      task: taskDetails ? {
-        id: taskDetails.id,
-        os: taskDetails.os,
-        description: taskDetails.description,
-        traceIds: taskDetails.traceIds,
-      } : null
+      task: taskDetails
+        ? {
+            id: taskDetails.id,
+            os: taskDetails.os,
+            description: taskDetails.description,
+            traceIds: taskDetails.traceIds,
+          }
+        : null,
     });
-
   } catch (error) {
-    console.error('Endpoint error:', error);
+    console.error("Endpoint error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

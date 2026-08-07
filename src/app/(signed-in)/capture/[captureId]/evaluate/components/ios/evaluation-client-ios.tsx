@@ -236,7 +236,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
       {!isTraceLoading && (
         <ResizablePanelGroup
           direction={isCompactLayout ? "vertical" : "horizontal"}
-          className="min-h-0 h-full w-full flex-1"
+          className="h-full min-h-0 w-full flex-1"
         >
           {/* Left: Video + Feedback + Approve/Deny */}
           <ResizablePanel
@@ -252,7 +252,7 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                   ? 37
                   : 28
             }
-            className="min-h-0 bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full overflow-hidden flex flex-col"
+            className="box-border flex h-full min-h-0 w-full flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-950"
           >
             {traceData && capture && (
               <ReviewVideoPanelIOS
@@ -294,11 +294,11 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
                   : 65
             }
             maxSize={isCompactLayout ? 72 : 80}
-            className="min-h-0 box-border w-full h-full"
+            className="box-border h-full min-h-0 w-full"
           >
             <ResizablePanelGroup
               direction="horizontal"
-              className="w-full h-full"
+              className="h-full w-full"
             >
               {/* Gallery — left/center */}
               <ResizablePanel

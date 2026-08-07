@@ -57,7 +57,7 @@ export function UsersPanel() {
       } else {
         console.error(
           "Failed to fetch filter options:",
-          filterOptionsRes.message
+          filterOptionsRes.message,
         );
       }
     };
@@ -70,7 +70,7 @@ export function UsersPanel() {
       ? searchParams.get("users")?.split(",")
       : [];
     setUsersFiltered(
-      usersList.filter((user) => usersIds?.includes(user.value))
+      usersList.filter((user) => usersIds?.includes(user.value)),
     );
     const role = (searchParams.get("role") ?? "") as Role | "";
     setRoleFiltered(role);
@@ -117,7 +117,7 @@ export function UsersPanel() {
   }, [page, itemsPerPage, searchParams]);
 
   const validUsers = users.filter(
-    (user) => user.name !== null && user.email !== null
+    (user) => user.name !== null && user.email !== null,
   );
 
   // pagination logic
@@ -128,8 +128,8 @@ export function UsersPanel() {
       constructUserPanelURL(
         page,
         usersFiltered.map((user) => user.value),
-        roleFiltered
-      )
+        roleFiltered,
+      ),
     );
   };
 
@@ -141,22 +141,22 @@ export function UsersPanel() {
       constructUserPanelURL(
         page,
         newUsersFiltered.map((user) => user.value),
-        roleFiltered
-      )
+        roleFiltered,
+      ),
     );
   };
 
   const handleUserFilterRemove = (option: ComboboxOption) => {
     const newUsersFiltered = usersFiltered.filter(
-      (user) => user.value !== option.value
+      (user) => user.value !== option.value,
     );
     setUsersFiltered(newUsersFiltered);
     router.push(
       constructUserPanelURL(
         page,
         newUsersFiltered.map((user) => user.value),
-        roleFiltered
-      )
+        roleFiltered,
+      ),
     );
   };
 
@@ -168,8 +168,8 @@ export function UsersPanel() {
       constructUserPanelURL(
         page,
         usersFiltered.map((user) => user.value),
-        newSelectedRole
-      )
+        newSelectedRole,
+      ),
     );
   };
 
@@ -186,7 +186,7 @@ export function UsersPanel() {
       user.id &&
       user.name &&
       usersFiltered.every(
-        (filteredUser: ComboboxOption) => filteredUser.value !== user.id
+        (filteredUser: ComboboxOption) => filteredUser.value !== user.id,
       )
     ) {
       handleUserFilterSelect({
@@ -199,7 +199,7 @@ export function UsersPanel() {
   return (
     <>
       <div className="justify-between">
-        <p className="text-start mt-1 text-lg font-bold tracking-tight">
+        <p className="mt-1 text-start text-lg font-bold tracking-tight">
           Users Fetched{" "}
           <span className="text-muted-foreground">({usersCount})</span>
         </p>
@@ -214,10 +214,10 @@ export function UsersPanel() {
         />
       </div>
       {/* Users Table */}
-      <div className="rounded-xl bg-muted/10 p-4">
+      <div className="bg-muted/10 rounded-xl p-4">
         {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <Loader2 className="w-10 h-10 animate-spin" />
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin" />
           </div>
         ) : (
           <UsersTable

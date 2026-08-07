@@ -3,14 +3,14 @@ import { RefObject, useCallback, useEffect, useRef, useState } from "react";
 interface UseIosVideoPlaybackArgs {
   videoRef: RefObject<HTMLVideoElement | null>;
   videoDuration: number;
-  focusViewIndex: number;
+  focusedScreenId: string | null;
   onLivePhotoStart?: () => void;
 }
 
 export function useIosVideoPlayback({
   videoRef,
   videoDuration,
-  focusViewIndex,
+  focusedScreenId,
   onLivePhotoStart,
 }: UseIosVideoPlaybackArgs) {
   const rafRef = useRef<number>(0);
@@ -53,7 +53,7 @@ export function useIosVideoPlayback({
   useEffect(() => {
     livePhotoEndRef.current = null;
     setIsLivePhotoActive(false);
-  }, [focusViewIndex]);
+  }, [focusedScreenId]);
 
   const handlePlayPause = useCallback(async () => {
     const video = videoRef.current;

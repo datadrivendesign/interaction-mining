@@ -32,19 +32,18 @@ export const ScreenSchema = z
         scrollDeltaY: z.number().nullable(),
         description: z.string().nullable(),
       }),
-      redactions: z
-        .array(
-          z.object({
-            x: z.number(),
-            y: z.number(),
-            width: z.number(),
-            height: z.number(),
-            annotation: z.string(),
-          })
-        ),
+      redactions: z.array(
+        z.object({
+          x: z.number(),
+          y: z.number(),
+          width: z.number(),
+          height: z.number(),
+          annotation: z.string(),
+        }),
+      ),
       vh: z.string(),
       traceId: z.string(),
-    })
+    }),
   )
   .min(1, { message: "At least one screen is required" });
 
@@ -64,7 +63,7 @@ export const GestureSchema = z.record(
     description: z.string({
       message: "Description is required",
     }),
-  })
+  }),
 );
 
 export const ScreenGestureSchema = z
@@ -76,7 +75,7 @@ export const ScreenGestureSchema = z
     (data) => {
       return data.screens.every((screen) => data.gestures[screen.id]);
     },
-    { message: "Each screen must have a gesture" }
+    { message: "Each screen must have a gesture" },
   );
 
 export const RedactionSchema = z
@@ -89,8 +88,8 @@ export const RedactionSchema = z
         width: z.number(),
         height: z.number(),
         annotation: z.string(),
-      })
-    )
+      }),
+    ),
   )
   .refine(
     (data) => {
@@ -104,7 +103,7 @@ export const RedactionSchema = z
       }
       return true;
     },
-    { message: "Each redaction must have an annotation." }
+    { message: "Each redaction must have an annotation." },
   );
 
 export const TraceFormSchema: ZodType<TraceFormData> = z
@@ -128,5 +127,5 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
 
       return true;
     },
-    { message: "Each screen must have a gesture" }
+    { message: "Each screen must have a gesture" },
   );

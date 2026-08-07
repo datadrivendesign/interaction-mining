@@ -39,10 +39,10 @@ export function AdminNavBar({
         className={currentRoute === "/admin/tasks" ? "bg-muted" : ""}
       >
         <Link href="/admin/tasks">
-          <AlertCircle className="w-4 h-4 mr-2" />
+          <AlertCircle className="mr-2 h-4 w-4" />
           Review Tasks
         </Link>
-      </Button>
+      </Button>,
     );
   }
 
@@ -57,10 +57,10 @@ export function AdminNavBar({
         className={currentRoute === "/admin/users" ? "bg-muted" : ""}
       >
         <Link href="/admin/users">
-          <Users className="w-4 h-4 mr-2" />
+          <Users className="mr-2 h-4 w-4" />
           All Users Panel
         </Link>
-      </Button>
+      </Button>,
     );
   }
 
@@ -75,15 +75,15 @@ export function AdminNavBar({
         className={currentRoute === link.href ? "bg-muted" : ""}
       >
         <Link href={link.href}>
-          {link.icon && <span className="w-4 h-4 mr-2">{link.icon}</span>}
+          {link.icon && <span className="mr-2 h-4 w-4">{link.icon}</span>}
           {link.label}
         </Link>
-      </Button>
+      </Button>,
     );
   });
 
   return (
-    <div className="flex items-center gap-2 mt-2">
+    <div className="mt-2 flex items-center gap-2">
       <span className="text-md font-bold tracking-tight">{label}</span>
       <ButtonGroup>{navButtons}</ButtonGroup>
     </div>

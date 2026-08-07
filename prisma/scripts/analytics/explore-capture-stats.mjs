@@ -32,7 +32,7 @@ const captureStatus = {
 // Load user IDs from gitignored data file (see prisma/scripts/data/known-user-ids.json).
 const userIdsFile = resolve(__dirname, "../data/known-user-ids.json");
 const configuredExcludedUserIds = existsSync(userIdsFile)
-  ? JSON.parse(readFileSync(userIdsFile, "utf-8")).excludedUserIds ?? []
+  ? (JSON.parse(readFileSync(userIdsFile, "utf-8")).excludedUserIds ?? [])
   : [];
 
 /**
@@ -41,7 +41,9 @@ const configuredExcludedUserIds = existsSync(userIdsFile)
  * @returns {value is (typeof OPERATIONS)[keyof typeof OPERATIONS]}
  */
 function isOperation(value) {
-  return value === OPERATIONS.BASIC_STATS || value === OPERATIONS.APPROVAL_METRICS;
+  return (
+    value === OPERATIONS.BASIC_STATS || value === OPERATIONS.APPROVAL_METRICS
+  );
 }
 
 /**
@@ -71,7 +73,6 @@ Examples:
   node prisma/scripts/explore-capture-stats.mjs -o ${OPERATIONS.APPROVAL_METRICS} -p ios -e`);
 }
 
-
 /**
  * Load captures for an app OS, optional status filter, excluding given user IDs.
  * @param {import("@prisma/client").PrismaClient} db
@@ -79,12 +80,11 @@ Examples:
  * @returns {Promise<import("@prisma/client").Capture[]>}
  */
 async function fetchCaptures(db, opts) {
-  const statuses =
-    opts.statuses ?? [
-      captureStatus.APPROVED,
-      captureStatus.PROCESSING,
-      captureStatus.REVIEWING,
-    ];
+  const statuses = opts.statuses ?? [
+    captureStatus.APPROVED,
+    captureStatus.PROCESSING,
+    captureStatus.REVIEWING,
+  ];
 
   return db.capture.findMany({
     where: {

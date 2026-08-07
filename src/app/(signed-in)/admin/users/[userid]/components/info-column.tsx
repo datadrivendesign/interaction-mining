@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 
 export function InfoColumn({ user }: { user: User }) {
   return (
-    <div className="py-32 space-y-6 md:col-span-1">
-      <Avatar className="w-32 h-32">
+    <div className="space-y-6 py-32 md:col-span-1">
+      <Avatar className="h-32 w-32">
         <AvatarImage
           src={user.image ?? ""}
           alt="User avatar"

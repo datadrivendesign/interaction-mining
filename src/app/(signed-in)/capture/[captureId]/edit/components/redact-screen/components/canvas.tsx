@@ -11,7 +11,11 @@ import Konva from "konva";
 
 import { FrameData, Redaction } from "../../types";
 import { cn } from "@/lib/utils";
-import { RedactCanvasContext, vhBox, vhRootBounds } from "./redact-screen-canvas";
+import {
+  RedactCanvasContext,
+  vhBox,
+  vhRootBounds,
+} from "./redact-screen-canvas";
 import OverlayContainer from "./stage-overlay";
 import { RedactKonvaLayer } from "./redact-konva-layer";
 import { useRedactDrawing } from "./use-redact-drawing";
@@ -36,7 +40,10 @@ export interface CanvasRef {
 }
 
 const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
-  function CanvasComponent({ screen, redactions, vh, onImageStatusChange }, ref) {
+  function CanvasComponent(
+    { screen, redactions, vh, onImageStatusChange },
+    ref,
+  ) {
     const { vhBoxes, rootBounds } = vh;
     const {
       mode,
@@ -137,23 +144,25 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       [deleteRedaction],
     );
 
-    const handlePanningStart = useCallback(() => setIsPanning(true), [
-      setIsPanning,
-    ]);
-    const handlePanningEnd = useCallback(() => setIsPanning(false), [
-      setIsPanning,
-    ]);
+    const handlePanningStart = useCallback(
+      () => setIsPanning(true),
+      [setIsPanning],
+    );
+    const handlePanningEnd = useCallback(
+      () => setIsPanning(false),
+      [setIsPanning],
+    );
 
     useImperativeHandle(ref, () => ({
       getStage: () => stageRef.current,
     }));
 
     return (
-      <div className="relative w-full h-full">
+      <div className="relative h-full w-full">
         <div
           ref={containerCallbackRef}
           className={cn(
-            "relative w-full h-full",
+            "relative h-full w-full",
             mode === "select" && "cursor-normal",
             mode === "pencil" && "cursor-crosshair",
             mode === "eraser" && "cursor-normal",

@@ -93,28 +93,28 @@ export function Gallery() {
   }, [inspectData, appId]);
 
   return (
-    <div className="flex w-full max-w-screen-2xl h-full min-h-0 flex-1 place-self-center">
+    <div className="flex h-full min-h-0 w-full max-w-screen-2xl flex-1 place-self-center">
       <aside
         className={clsx(
           inspectData ? "hidden md:flex" : "flex",
-          "flex-col shrink-0 basis-full md:basis-[320px] h-full min-h-0 border-r border-muted-background divide-y divide-dimmed-background overflow-auto",
+          "h-full min-h-0 shrink-0 basis-full flex-col divide-y divide-dimmed-background overflow-auto border-r border-muted-background md:basis-[320px]",
         )}
       >
         {data.map((data, index) => (
           <div
             key={index}
             className={clsx(
-              "flex flex-col p-4 cursor-pointer",
+              "flex cursor-pointer flex-col p-4",
               inspectData?.id === data?.id
                 ? "bg-muted-background"
                 : "bg-transparent",
             )}
             onClick={() => setInspectData(data)}
           >
-            <h2 className="text-base font-medium line-clamp-1">
+            <h2 className="line-clamp-1 text-base font-medium">
               {data?.description}
             </h2>
-            <span className="text-sm text-muted-foreground line-clamp-1">
+            <span className="line-clamp-1 text-sm text-muted-foreground">
               {prettyTime(data?.created, {
                 format: "LLLL dd, yyyy",
               })}
@@ -122,13 +122,13 @@ export function Gallery() {
           </div>
         ))}
       </aside>
-      <div className="flex flex-col basis-full md:basis-[1216px] max-w-[1216px] overflow-x-hidden pr-4">
+      <div className="flex max-w-[1216px] basis-full flex-col overflow-x-hidden pr-4 md:basis-[1216px]">
         {inspectData ? (
           <InspectView data={inspectData} />
         ) : (
-          <div className="flex flex-col items-center justify-center w-full h-full">
-            <Search size={48} className="text-muted-foreground mb-2" />
-            <span className="text-lg font-semibold text-neutral-400 tracking-tight">
+          <div className="flex h-full w-full flex-col items-center justify-center">
+            <Search size={48} className="mb-2 text-muted-foreground" />
+            <span className="text-lg font-semibold tracking-tight text-neutral-400">
               Select a trace to inspect
             </span>
           </div>
@@ -217,14 +217,14 @@ function ScreenThumb({
   return (
     <div
       className={clsx(
-        "flex flex-col items-center shrink-0 min-h-0 gap-1",
+        "flex min-h-0 shrink-0 flex-col items-center gap-1",
         isLandscape ? "" : "max-w-[13rem]",
       )}
       style={thumbStyle}
     >
       <div
         className={clsx(
-          "relative min-h-0 flex items-center justify-center max-w-full",
+          "relative flex min-h-0 max-w-full items-center justify-center",
           naturalSize ? "w-full" : "",
         )}
       >
@@ -234,19 +234,19 @@ function ScreenThumb({
           transition={{ duration: 0.5 }}
         >
           <div
-            className="h-64 w-28 max-w-full rounded-lg bg-neutral-100 dark:bg-neutral-900 animate-pulse"
+            className="h-64 w-28 max-w-full animate-pulse rounded-lg bg-neutral-100 dark:bg-neutral-900"
             style={{ maxHeight: imageMaxHeight }}
           />
         </motion.div>
         <figure
           ref={containerRef}
           className={clsx(
-            "relative inline-flex max-w-full border border-neutral-500/10 rounded-lg shadow-xs overflow-hidden leading-none",
+            "relative inline-flex max-w-full overflow-hidden rounded-lg border border-neutral-500/10 leading-none shadow-xs",
             naturalSize ? "w-full" : "w-[min(13rem,100%)]",
           )}
           style={figureStyle}
         >
-          <div className="absolute right-2 top-2 z-30 rounded-full border border-white/25 bg-black/20 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+          <div className="absolute top-2 right-2 z-30 rounded-full border border-white/25 bg-black/20 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
             {index + 1}
           </div>
           <Image
@@ -254,7 +254,7 @@ function ScreenThumb({
             alt={`screen-${screen?.id}`}
             className={clsx(
               loaded ? "visible" : "invisible",
-              "relative z-0 block object-contain w-full h-full",
+              "relative z-0 block h-full w-full object-contain",
             )}
             width={0}
             height={0}
@@ -264,7 +264,7 @@ function ScreenThumb({
           />
           {isDrag && (
             <svg
-              className="absolute inset-0 z-10 w-full h-full pointer-events-none overflow-visible"
+              className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
               width="100%"
               height="100%"
             >
@@ -306,7 +306,7 @@ function ScreenThumb({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="absolute z-20 flex items-center justify-center w-6 bg-yellow-400 opacity-75 hover:opacity-100 cursor-pointer rounded-full aspect-square -translate-x-1/2 -translate-y-1/2 transition-opacity duration-100 ease-in-out"
+                    className="absolute z-20 flex aspect-square w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-yellow-400 opacity-75 transition-opacity duration-100 ease-in-out hover:opacity-100"
                     style={{
                       left: `${(screen.gesture.x ?? 0) * 100}%`,
                       top: `${(screen.gesture.y ?? 0) * 100}%`,
@@ -324,7 +324,7 @@ function ScreenThumb({
               <Tooltip key={`${redaction.annotation}-${i}`}>
                 <TooltipTrigger asChild>
                   <div
-                    className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                    className="absolute z-15 cursor-pointer border-1 border-yellow-500 bg-black hover:shadow-lg hover:shadow-yellow-500/50"
                     style={{
                       left: `${redaction.x * 100}%`,
                       top: `${redaction.y * 100}%`,
@@ -342,14 +342,14 @@ function ScreenThumb({
         </figure>
       </div>
       {/* Gesture caption */}
-      <div className="prose prose-neutral dark:prose-invert leading-snug font-semibold dark:text-neutral-900 shrink-0 h-16 w-full overflow-y-auto whitespace-pre-wrap pt-1">
+      <div className="prose h-16 w-full shrink-0 overflow-y-auto pt-1 leading-snug font-semibold whitespace-pre-wrap prose-neutral dark:prose-invert dark:text-neutral-900">
         {description ? (
-          <p className="text-xs text-center dark:text-neutral-300">
+          <p className="text-center text-xs dark:text-neutral-300">
             {description}
           </p>
         ) : isFinalScreen ? (
           <div className="flex justify-center">
-            <span className="inline-flex items-center rounded-md border border-green-500/25 bg-green-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
+            <span className="inline-flex items-center rounded-md border border-green-500/25 bg-green-500/10 px-2 py-1 text-[11px] font-semibold tracking-wide text-green-700 uppercase dark:text-green-300">
               Final Screen
             </span>
           </div>
@@ -406,17 +406,17 @@ export function InspectView({ data }: { data: Trace }) {
   }, []);
 
   return (
-    <div className="flex flex-col grow w-full h-full min-h-0 overflow-hidden p-4 md:p-6 pr-0">
+    <div className="flex h-full min-h-0 w-full grow flex-col overflow-hidden p-4 pr-0 md:p-6">
       <button
         onClick={() => setInspectData(null)}
-        className="inline-flex md:hidden cursor-pointer mb-2"
+        className="mb-2 inline-flex cursor-pointer md:hidden"
       >
-        <ArrowLeft className="cursor-pointer size-6 text-muted-foreground mr-1" />
-        <span className="text-base text-muted-foreground font-semibold">
+        <ArrowLeft className="mr-1 size-6 cursor-pointer text-muted-foreground" />
+        <span className="text-base font-semibold text-muted-foreground">
           Back
         </span>
       </button>
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-4 shrink-0">
+      <div className="mb-4 flex shrink-0 flex-col items-start justify-between gap-4 lg:flex-row">
         <section>
           <h1 className="text-lg font-bold tracking-tight">
             {data?.description}
@@ -439,7 +439,7 @@ export function InspectView({ data }: { data: Trace }) {
             </span>
           </div>
         </section>
-        <div className="hidden md:flex gap-2">
+        <div className="hidden gap-2 md:flex">
           <Button
             variant={"secondary"}
             onClick={handleDownload}
@@ -450,10 +450,10 @@ export function InspectView({ data }: { data: Trace }) {
           </Button>
         </div>
       </div>
-      <section className="flex-1 min-h-0 w-full mb-4">
+      <section className="mb-4 min-h-0 w-full flex-1">
         <div
           ref={scrollContainerRef}
-          className="flex h-full w-full overflow-x-auto overflow-y-hidden touch-pan-x pb-3"
+          className="flex h-full w-full touch-pan-x overflow-x-auto overflow-y-hidden pb-3"
         >
           <div className="flex h-full items-start gap-4">
             {data?.screens.map((screen: Screen, index: number) => (

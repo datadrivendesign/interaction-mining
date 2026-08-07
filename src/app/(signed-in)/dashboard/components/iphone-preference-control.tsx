@@ -132,7 +132,7 @@ export function DevicePreferenceControl() {
   };
 
   return (
-    <div className="flex flex-col rounded-lg bg-muted-background p-3 gap-3">
+    <div className="flex flex-col gap-3 rounded-lg bg-muted-background p-3">
       <div className="flex flex-col gap-2">
         <Label className="text-sm font-medium">
           Default iPhone (iOS tasks)

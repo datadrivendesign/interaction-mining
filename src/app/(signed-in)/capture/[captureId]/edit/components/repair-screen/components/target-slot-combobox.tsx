@@ -193,7 +193,7 @@ export function TargetSlotCombobox({
           id={targetInputId}
           ref={inputRef}
           className={cn(
-            "h-7 min-w-24 max-w-40 rounded border bg-background px-2 text-xs",
+            "h-7 max-w-40 min-w-24 rounded border bg-background px-2 text-xs",
             showError ? "border-red-500" : "",
           )}
           aria-label={slot.label}

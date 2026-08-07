@@ -24,15 +24,19 @@ export function VideoPreviewOverlay({
   onIncomingPreviewLoad,
 }: VideoPreviewOverlayProps) {
   return (
-    <div className="relative flex justify-center items-center w-full h-full">
+    <div className="relative flex h-full w-full items-center justify-center">
+      {/*
+        Always painted. The preview images stack on top and cover it, so hiding
+        it was never necessary — and toggling opacity on a video forces a
+        compositor layer change, which showed up as a blip each time the overlay
+        came down. Leaving it composited means uncovering it is just the image
+        above it going away.
+      */}
       <video
         ref={videoRef}
         crossOrigin="anonymous"
         preload="auto"
-        className={cn(
-          "relative z-0 max-w-full max-h-full rounded-lg object-contain transition-opacity",
-          hasPreviewOverlay ? "opacity-0" : "opacity-100",
-        )}
+        className="relative z-0 max-h-full max-w-full rounded-lg object-contain"
         controls={false}
         onPlay={onPlay}
         onPause={onPause}
@@ -61,6 +65,21 @@ export function VideoPreviewOverlay({
             isIncomingPreviewVisible ? "opacity-100" : "opacity-0",
           )}
         />
+      ) : null}
+      {/*
+        Preview frames come from a coarse thumbnail grid — roughly a second apart
+        on a long recording — so what is showing here can sit up to half a second
+        from the playhead. Labelling it means the correction when the real frame
+        arrives reads as the picture sharpening rather than the tool changing its
+        mind, and it marks the moments when `c` would capture something other
+        than what is on screen.
+      */}
+      {hasPreviewOverlay ? (
+        <div className="pointer-events-none absolute top-3 left-1/2 z-30 -translate-x-1/2">
+          <span className="inline-flex items-center rounded-md border border-black/15 bg-black/55 px-2 py-1 text-[11px] font-semibold tracking-wide text-white shadow-sm dark:border-white/25 dark:bg-white/90 dark:text-black">
+            Preview
+          </span>
+        </div>
       ) : null}
     </div>
   );

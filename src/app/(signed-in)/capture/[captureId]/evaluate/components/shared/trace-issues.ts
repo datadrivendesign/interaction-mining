@@ -28,19 +28,23 @@ export const TRACE_ISSUE_CATEGORIES: Record<
 > = {
   gesture_annotation: {
     label: "Gesture Placement / Type",
-    description: "Fix gesture position, type, or capture timing around the action.",
+    description:
+      "Fix gesture position, type, or capture timing around the action.",
   },
   description_quality: {
     label: "Description Quality",
-    description: "Clarify what the worker is doing and remove weak or incorrect commentary.",
+    description:
+      "Clarify what the worker is doing and remove weak or incorrect commentary.",
   },
   missing_screens: {
     label: "Screen Capture / Privacy",
-    description: "Add missing states, wait for stable content, and catch privacy redaction issues.",
+    description:
+      "Add missing states, wait for stable content, and catch privacy redaction issues.",
   },
   task_recording: {
     label: "Flow Realism / Recording",
-    description: "Adjust the overall task or recording so it looks realistic and distinct.",
+    description:
+      "Adjust the overall task or recording so it looks realistic and distinct.",
   },
 };
 

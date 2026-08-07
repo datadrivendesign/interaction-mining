@@ -6,8 +6,8 @@ import { auth } from "../auth";
 import { ActionPayload } from "./types";
 
 export async function updateUserRole(
-  userId: string, 
-  newRole: Role
+  userId: string,
+  newRole: Role,
 ): Promise<ActionPayload<null>> {
   // do security checks to make sure only admin can update role
   const session = await auth();
@@ -25,7 +25,7 @@ export async function updateUserRole(
       data: null,
     };
   }
-  if (session.user.id === userId && newRole === Role.USER)  {
+  if (session.user.id === userId && newRole === Role.USER) {
     return {
       ok: false,
       message: "Cannot demote yourself from admin role",

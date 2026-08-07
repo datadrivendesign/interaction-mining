@@ -20,15 +20,15 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   onChange,
 }) => {
   return (
-    <div className="absolute pointer-events-auto">
+    <div className="pointer-events-auto absolute">
       <Card className="flex flex-col items-start p-4 shadow-lg">
-        <Label className="text-sm font-semibold mb-2">Redact type</Label>
+        <Label className="mb-2 text-sm font-semibold">Redact type</Label>
         <TabSelect className="mb-4" defaultValue="black">
           <TabSelectList>
             <TabSelectTrigger value="black">Black</TabSelectTrigger>
           </TabSelectList>
         </TabSelect>
-        <Label className="text-sm font-semibold mb-2">Note</Label>
+        <Label className="mb-2 text-sm font-semibold">Note</Label>
         <Textarea
           placeholder="Describe your interaction..."
           defaultValue={annotation}

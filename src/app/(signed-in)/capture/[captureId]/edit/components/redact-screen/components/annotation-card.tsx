@@ -185,7 +185,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
       <Card className="pointer-events-auto h-fit w-52 max-w-[calc(100vw-2rem)] rounded-md border bg-background p-0 shadow-md">
         <div className="w-full space-y-2 p-1.5">
           <div className="flex w-full items-center justify-between">
-            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            <span className="text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
               Annotation
             </span>
             <div className="flex items-center gap-1">
@@ -217,7 +217,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             </p>
           ) : (
             <div className="rounded-md border border-sky-200/80 bg-sky-50/95 px-2.5 py-2 shadow-sm dark:border-sky-800 dark:bg-sky-900/95">
-              <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <div className="mb-1 text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
                 Label
               </div>
               <div className="space-y-2">
@@ -226,7 +226,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     <input
                       ref={inputRef}
                       className={cn(
-                        "h-8 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground",
+                        "border-input h-8 w-full rounded-md border bg-background px-3 text-sm text-foreground",
                       )}
                       aria-label="Redaction label"
                       placeholder="Search or type label..."

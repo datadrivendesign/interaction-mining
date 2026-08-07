@@ -1,3 +1,3 @@
-export default function Teams () {
-    return <></>
+export default function Teams() {
+  return <></>;
 }

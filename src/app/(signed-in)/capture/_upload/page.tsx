@@ -61,7 +61,7 @@ export default function Page() {
 
   return (
     <>
-      <div className="flex w-dvw min-h-dvh justify-center items-start p-8 md:p-16">
+      <div className="flex min-h-dvh w-dvw items-start justify-center p-8 md:p-16">
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle>Let&rsquo;s find your capture session</CardTitle>
@@ -71,7 +71,7 @@ export default function Page() {
           </CardHeader>
           <CardContent className="flex flex-col items-center">
             {state?.error && (
-              <span className="text-red-500 dark:text-red-400 text-sm mb-4">
+              <span className="mb-4 text-sm text-red-500 dark:text-red-400">
                 {state.error}
               </span>
             )}

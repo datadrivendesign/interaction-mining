@@ -22,7 +22,7 @@ import { auth } from "@/lib/auth";
 export async function generatePresignedUploadURL(
   prefix: string,
   fileName: string,
-  contentType: string
+  contentType: string,
 ): Promise<
   ActionPayload<{
     uploadUrl: string;
@@ -66,7 +66,7 @@ export async function generatePresignedUploadURL(
  */
 export async function listFromS3(
   key: string,
-  generateSignedUrl: boolean = true // don't generate signed if not needed
+  generateSignedUrl: boolean = true, // don't generate signed if not needed
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const command = new ListObjectsV2Command({
@@ -106,7 +106,7 @@ export async function listFromS3(
           fileName: file.Key.split("/").pop() || "",
           fileUrl: fileUrl,
         };
-      })
+      }),
     );
 
     if (filePayload.some((file) => file.fileUrl === "")) {
@@ -210,12 +210,12 @@ export async function uploadAndroidAPIDataToS3(
   file: File,
   prefix: string,
   key: string,
-  contentType: string
+  contentType: string,
 ): Promise<ActionPayload<any>> {
   const generatePresignedUpload = await generatePresignedUploadURL(
     prefix,
     key,
-    contentType
+    contentType,
   );
 
   if (!generatePresignedUpload.ok) {
@@ -252,7 +252,7 @@ export async function uploadAndroidAPIDataToS3(
 
 export async function generateSignedCloudFrontURL(
   fileKey: string,
-  expiryHours: number = 2
+  expiryHours: number = 2,
 ): Promise<ActionPayload<{ signedUrl: string }>> {
   const session = await auth();
   if (!session || !session.user) {
@@ -267,7 +267,7 @@ export async function generateSignedCloudFrontURL(
 
     const privateKey = Buffer.from(
       process.env._AWS_CLOUDFRONT_PRIVATE_KEY!,
-      "base64"
+      "base64",
     ).toString("utf-8");
     const signedUrl = getSignedCloudfrontUrl({
       url: cloudfrontUrl,

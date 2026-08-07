@@ -30,7 +30,7 @@ export function RepairScreenAndroid({
   draftFetchResult: DraftFetchResults;
 }) {
   const { setValue } = useFormContext<TraceFormData>();
-  const { focusViewIndex } = useNavigation();
+  const { focusedScreenId, focusedIndex } = useNavigation();
   const [watchScreens, watchVHs, watchGestures, watchRedactions] = useWatch({
     name: ["screens", "vhs", "gestures", "redactions"],
   });
@@ -40,6 +40,8 @@ export function RepairScreenAndroid({
   const originalGestures = useRef<{ [key: string]: ScreenGesture }>({});
   const originalRedactions = useRef<{ [key: string]: Redaction[] }>({});
   const currScreens = watchScreens as FrameData[];
+  const focusedAndroidScreen =
+    currScreens.find((screen) => screen.id === focusedScreenId) ?? null;
   const currVHs = watchVHs as { [key: string]: any };
   const currGestures = watchGestures as { [key: string]: ScreenGesture };
   const currRedactions = watchRedactions as { [key: string]: Redaction[] };
@@ -164,7 +166,7 @@ export function RepairScreenAndroid({
   }, [currScreens.length, files, setValue, draftFetchResult]);
 
   return (
-    <div className="w-full h-full">
+    <div className="h-full w-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel
           defaultSize={75}
@@ -177,9 +179,9 @@ export function RepairScreenAndroid({
               defaultSize={33}
               minSize={25}
               maxSize={50}
-              className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
+              className="box-border flex h-full min-h-0 flex-col items-center justify-center bg-neutral-50 p-4 md:p-6 dark:bg-neutral-950"
             >
-              <div className="flex flex-col justify-center items-center w-full h-full gap-4">
+              <div className="flex h-full w-full flex-col items-center justify-center gap-4">
                 <Button onClick={resetFormState}>
                   <ListRestart /> Reset Screens
                 </Button>
@@ -197,17 +199,17 @@ export function RepairScreenAndroid({
                   setShowBoxes={setShowBoxes}
                 />
               </div>
-              {focusViewIndex > -1 && focusViewIndex < currScreens.length ? (
+              {focusedAndroidScreen ? (
                 <FocusViewAndroid
-                  key={focusViewIndex}
-                  vh={currVHs[currScreens[focusViewIndex].id]}
-                  screen={currScreens[focusViewIndex]}
-                  isLastScreen={focusViewIndex === currScreens.length - 1}
+                  key={focusedAndroidScreen.id}
+                  vh={currVHs[focusedAndroidScreen.id]}
+                  screen={focusedAndroidScreen}
+                  isLastScreen={focusedIndex === currScreens.length - 1}
                   showBoxes={showBoxes}
                 />
               ) : (
-                <div className="flex justify-center items-center w-full h-full">
-                  <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+                <div className="flex h-full w-full items-center justify-center">
+                  <span className="text-3xl font-semibold text-muted-foreground lg:text-4xl">
                     Select a screen from the filmstrip.
                   </span>
                 </div>
@@ -229,7 +231,6 @@ export function RepairScreenAndroid({
             gestures={currGestures}
             redactions={currRedactions}
             os={os}
-            handleSetTime={(_: number) => {}} // empty function
           />
         </ResizablePanel>
       </ResizablePanelGroup>

@@ -141,9 +141,9 @@ export default function Page() {
   return (
     <div className="flex min-h-dvh w-full flex-col items-center justify-start gap-3 p-3 sm:p-4 md:gap-4 md:p-16">
       <Card className="w-full max-w-screen-sm">
-        <CardHeader className="px-5 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-5">
+        <CardHeader className="px-5 pt-3 pb-1 sm:px-6 sm:pt-5 sm:pb-2">
           <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl">
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm tabular-nums text-neutral-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm text-neutral-950 tabular-nums dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
               1
             </span>
             <span>Install the target app</span>
@@ -152,7 +152,7 @@ export default function Page() {
             Install the target app to complete the task
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-5 pb-4 pt-0 sm:px-6 sm:pb-5">
+        <CardContent className="px-5 pt-0 pb-4 sm:px-6 sm:pb-5">
           <div className="flex min-w-0 items-start gap-3 sm:gap-4">
             <figure className="w-12 shrink-0 sm:w-20 md:w-24">
               {!isDataLoading && app ? (
@@ -165,24 +165,24 @@ export default function Page() {
                   sizes={"100vw"}
                 />
               ) : (
-                <div className="aspect-square w-full animate-pulse rounded-xl bg-neutral-200 object-contain dark:bg-neutral-800 sm:rounded-3xl" />
+                <div className="aspect-square w-full animate-pulse rounded-xl bg-neutral-200 object-contain sm:rounded-3xl dark:bg-neutral-800" />
               )}
             </figure>
             <div className="flex min-w-0 flex-1 flex-col items-start justify-between">
               <div className="mb-3 flex min-w-0 flex-col items-start">
                 {!isDataLoading && app ? (
-                  <h2 className="line-clamp-2 break-words font-semibold leading-snug">
+                  <h2 className="line-clamp-2 leading-snug font-semibold break-words">
                     {app.metadata.name}
                   </h2>
                 ) : (
-                  <span className="w-24 h-4.5 md:h-5 bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-3"></span>
+                  <span className="mb-3 h-4.5 w-24 animate-pulse bg-neutral-200 md:h-5 dark:bg-neutral-800"></span>
                 )}
                 {!isDataLoading && app ? (
-                  <p className="line-clamp-1 break-words text-sm font-medium text-muted-foreground md:text-base">
+                  <p className="line-clamp-1 text-sm font-medium break-words text-muted-foreground md:text-base">
                     {app.metadata.company}
                   </p>
                 ) : (
-                  <span className="w-24 h-4 bg-neutral-200 dark:bg-neutral-800 animate-pulse" />
+                  <span className="h-4 w-24 animate-pulse bg-neutral-200 dark:bg-neutral-800" />
                 )}
               </div>
               {!isDataLoading && app ? (
@@ -218,23 +218,23 @@ export default function Page() {
         </CardContent>
       </Card>
       <Card className="w-full max-w-screen-sm">
-        <CardHeader className="px-5 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-5">
+        <CardHeader className="px-5 pt-3 pb-1 sm:px-6 sm:pt-5 sm:pb-2">
           <CardTitle className="flex items-start gap-3 text-xl leading-tight sm:text-2xl">
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm tabular-nums text-neutral-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm text-neutral-950 tabular-nums dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
               2
             </span>
             <span>Make a screen recording of the following task</span>
           </CardTitle>
           <CardDescription hidden>Record the following task</CardDescription>
         </CardHeader>
-        <CardContent className="px-5 pb-4 pt-0 sm:px-6 sm:pb-5">
+        <CardContent className="px-5 pt-0 pb-4 sm:px-6 sm:pb-5">
           <div className="mb-4">
             {!isDataLoading && capture?.task ? (
-              <div className="w-full border-l-4 border-neutral-400 bg-neutral-50 py-1 pl-3 pr-2 dark:bg-neutral-900">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="w-full border-l-4 border-neutral-400 bg-neutral-50 py-1 pr-2 pl-3 dark:bg-neutral-900">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Task to record
                 </span>
-                <p className="break-words text-sm font-medium leading-snug">
+                <p className="text-sm leading-snug font-medium break-words">
                   {capture?.task?.description
                     ? capture?.task?.description
                     : "No description provided."}
@@ -268,7 +268,7 @@ export default function Page() {
             <AccordionItem value="item-1">
               <AccordionTrigger>How do I record my screen?</AccordionTrigger>
               <AccordionContent>
-                <article className="prose prose-neutral dark:prose-invert leading-snug mb-4">
+                <article className="prose mb-4 leading-snug prose-neutral dark:prose-invert">
                   <p>
                     Consult your phone or tablet&rsquo;s documentation to learn
                     how to record your screen.
@@ -279,15 +279,15 @@ export default function Page() {
                   target="_blank"
                   className="no-underline"
                 >
-                  <div className="flex flex-col justify-start items-start p-4 md:p-6 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
-                    <span className="text-sm text-muted-foreground mb-1 overflow-hidden line-clamp-1">
+                  <div className="flex flex-col items-start justify-start rounded-lg bg-neutral-100 p-4 md:p-6 dark:bg-neutral-900">
+                    <span className="mb-1 line-clamp-1 overflow-hidden text-sm text-muted-foreground">
                       Apple Support
                     </span>
-                    <span className="text-base text-blue-500 underline font-medium mb-1 overflow-hidden line-clamp-1">
+                    <span className="mb-1 line-clamp-1 overflow-hidden text-base font-medium text-blue-500 underline">
                       Record the screen on your iPhone, iPad, or iPod touch -
                       Apple Support
                     </span>
-                    <p className="text-sm overflow-hidden line-clamp-1">
+                    <p className="line-clamp-1 overflow-hidden text-sm">
                       In iOS 11 or later, you can create a screen recording and
                       capture sound.
                     </p>
@@ -299,22 +299,22 @@ export default function Page() {
         </CardContent>
       </Card>
       <Card className="w-full max-w-screen-sm">
-        <CardHeader className="px-5 pb-1 pt-3 sm:px-6 sm:pb-2 sm:pt-5">
+        <CardHeader className="px-5 pt-3 pb-1 sm:px-6 sm:pt-5 sm:pb-2">
           <CardTitle className="flex items-start gap-3 text-xl leading-tight sm:text-2xl">
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm tabular-nums text-neutral-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm text-neutral-950 tabular-nums dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-50">
               3
             </span>
             <span>Upload your screen recording of the task</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-5 pb-4 pt-0 sm:px-6 sm:pb-5">
+        <CardContent className="px-5 pt-0 pb-4 sm:px-6 sm:pb-5">
           {filteredUserUploads && filteredUserUploads.length > 0 && (
-            <div className="flex flex-col mb-4">
-              <h2 className="font-semibold mb-2">Uploaded files</h2>
+            <div className="mb-4 flex flex-col">
+              <h2 className="mb-2 font-semibold">Uploaded files</h2>
               <span className="inline-flex items-center text-sm text-muted-foreground">
                 {isDataLoading ? (
                   <>
-                    <Loader2 className="size-4 animate-spin mr-1.5" />
+                    <Loader2 className="mr-1.5 size-4 animate-spin" />
                     Loading...
                   </>
                 ) : (
@@ -361,15 +361,15 @@ export default function Page() {
             </div>
           )}
           {state?.error && (
-            <div className="border border-red-500 bg-red-500/10 rounded-xl px-4 py-2 mb-4">
-              <span className="text-red-500 dark:text-red-400 text-sm">
+            <div className="mb-4 rounded-xl border border-red-500 bg-red-500/10 px-4 py-2">
+              <span className="text-sm text-red-500 dark:text-red-400">
                 {state.error}
               </span>
             </div>
           )}
           <div
             className={cn(
-              "flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-dashed border-neutral-200 p-4 text-neutral-500 transition-colors duration-150 ease-in-out hover:border-neutral-500 hover:text-neutral-700 dark:border-neutral-800 dark:text-neutral-400 hover:dark:text-neutral-200 dark:hover:border-neutral-400 md:p-6",
+              "flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-dashed border-neutral-200 p-4 text-neutral-500 transition-colors duration-150 ease-in-out hover:border-neutral-500 hover:text-neutral-700 md:p-6 dark:border-neutral-800 dark:text-neutral-400 dark:hover:border-neutral-400 hover:dark:text-neutral-200",
               file ? "border border-solid" : "border-2 border-dashed",
             )}
             onClick={() => fileInputRef.current?.click()}
@@ -387,7 +387,7 @@ export default function Page() {
               e.stopPropagation();
             }}
           >
-            <span className="inline-flex min-w-0 max-w-full flex-col items-center text-center text-sm">
+            <span className="inline-flex max-w-full min-w-0 flex-col items-center text-center text-sm">
               {file ? (
                 <File className="mb-2 size-6 shrink-0" />
               ) : (

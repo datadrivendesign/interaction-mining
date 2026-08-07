@@ -5,7 +5,6 @@ import { auth } from "@/lib/auth/auth";
 
 // This function retrieves the current session using the auth function
 export async function getSessionData(): Promise<Session | null> {
-    const session = await auth();
-    return session;
-  };
-
+  const session = await auth();
+  return session;
+}

@@ -140,7 +140,7 @@ export default function AddAppForm({
   return (
     <div className="flex flex-col gap-2">
       <Button
-        className="text-sm p-2 dark:text-black"
+        className="p-2 text-sm dark:text-black"
         onClick={(e) => {
           e.preventDefault();
           setShowAddApp(!showAddApp);
@@ -149,14 +149,14 @@ export default function AddAppForm({
         {showAddApp ? `- Close Form` : `+ Add New ${prettyOS(platform)} App`}
       </Button>
       {showAddApp && (
-        <div className="space-y-1 animate-fade-in">
+        <div className="animate-fade-in space-y-1">
           <Label htmlFor="newAppId">
             Paste{" "}
             {platform === Platform.ANDROID
               ? "Google Play URL or package name"
               : "App Store URL or app ID"}
           </Label>
-          <div className="flex flex-col md:flex-row gap-2 w-3/4">
+          <div className="flex w-3/4 flex-col gap-2 md:flex-row">
             <input
               type="text"
               id="newAppId"
@@ -167,7 +167,7 @@ export default function AddAppForm({
                   ? "e.g. https://play.google.com/store/apps/details?id=com.whatsapp"
                   : "e.g. https://apps.apple.com/us/app/uber-request-a-ride/id368677368"
               }`}
-              className="w-full border rounded px-3 py-2"
+              className="w-full rounded border px-3 py-2"
             />
             <Button
               type="button"

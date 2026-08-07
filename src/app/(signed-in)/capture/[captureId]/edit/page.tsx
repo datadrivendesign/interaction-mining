@@ -19,10 +19,14 @@ import { toast } from "sonner";
 import {
   DraftTraceFormData,
   RedactionSchema,
-  ScreenGestureSchema,
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
+import {
+  SCREEN_ANNOTATION_ISSUE_ACTIONS,
+  ScreenAnnotationIssue,
+  getScreenAnnotationIssue,
+} from "./components/repair-screen/util";
 
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
@@ -36,7 +40,13 @@ import RedactScreen from "./components/redact-screen";
 import { RedactScreenJumpTarget } from "./components/redact-screen/redact-screen";
 import RedactDoc from "./components/redact-screen/doc.mdx";
 
-import { DraftFetchResults, getDraftFiles, handleDraftSave } from "./util";
+import {
+  DraftFetchResults,
+  countUnlabelledRedactions,
+  dedupeScreensById,
+  getDraftFiles,
+  handleDraftSave,
+} from "./util";
 import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
@@ -69,6 +79,105 @@ const FEEDBACK_STEP_ORDER = [
   TraceSteps.Review,
 ];
 
+type IncompleteScreen = {
+  screenNumber: number;
+  issue: ScreenAnnotationIssue;
+};
+
+/**
+ * Screens whose annotation is unfinished, numbered the way the filmstrip numbers
+ * them. The last screen is the goal state and needs no gesture.
+ *
+ * Scanned per screen rather than parsed with a zod schema. Zod skips a `.refine`
+ * when the schema beneath it failed, and the ways an annotation can be
+ * incomplete sit at different levels — a missing marker fails field validation,
+ * unfilled template slots fail a refine, a screen with no gesture at all fails a
+ * different refine — so any field-level failure hid the rest. Both gates share
+ * this function so they cannot drift apart or under-report.
+ */
+function collectIncompleteScreens(
+  screens: TraceFormData["screens"],
+  gestures: TraceFormData["gestures"],
+): IncompleteScreen[] {
+  return screens
+    .slice(0, -1)
+    .map((screen, index) => ({
+      screenNumber: index + 1,
+      issue: getScreenAnnotationIssue(gestures[screen.id]),
+    }))
+    .filter((entry): entry is IncompleteScreen => entry.issue !== null);
+}
+
+type UnlabelledRedactionScreen = {
+  screenNumber: number;
+  boxCount: number;
+};
+
+/**
+ * Screens carrying redaction boxes with no label, numbered the way the filmstrip
+ * numbers them.
+ *
+ * Scanned rather than parsed for the same reason as `collectIncompleteScreens`:
+ * `RedactionSchema`'s refine returns on the first unlabelled box and reports one
+ * record-level message, so it can say neither which screen nor how many boxes.
+ *
+ * Slightly stricter than the schema, which only rejects an empty string — a
+ * whitespace-only label is no more useful to a reviewer than a blank one.
+ */
+function collectUnlabelledRedactions(
+  screens: TraceFormData["screens"],
+  redactions: TraceFormData["redactions"],
+): UnlabelledRedactionScreen[] {
+  return screens
+    .map((screen, index) => ({
+      screenNumber: index + 1,
+      boxCount: countUnlabelledRedactions(redactions[screen.id]),
+    }))
+    .filter((entry) => entry.boxCount > 0);
+}
+
+/** One message naming the screens whose redaction boxes still need labels. */
+function describeUnlabelledRedactions(
+  entries: UnlabelledRedactionScreen[],
+): string {
+  const describe = (entry: UnlabelledRedactionScreen) =>
+    `Screen ${entry.screenNumber}: label ${
+      entry.boxCount === 1
+        ? "the redaction box"
+        : `${entry.boxCount} redaction boxes`
+    }`;
+
+  if (entries.length === 1) {
+    return `${describe(entries[0])}.`;
+  }
+  if (entries.length <= 4) {
+    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
+  }
+  return `${entries.length} screens have unlabelled redaction boxes: ${entries
+    .map((entry) => entry.screenNumber)
+    .join(", ")}.`;
+}
+
+/**
+ * One message saying what each unfinished screen needs. Past four screens the
+ * reasons stop fitting a toast, so it falls back to numbers and points at the
+ * filmstrip, which rings exactly the same set.
+ */
+function describeIncompleteScreens(entries: IncompleteScreen[]): string {
+  const describe = (entry: IncompleteScreen) =>
+    `Screen ${entry.screenNumber}: ${SCREEN_ANNOTATION_ISSUE_ACTIONS[entry.issue]}`;
+
+  if (entries.length === 1) {
+    return `${describe(entries[0])}.`;
+  }
+  if (entries.length <= 4) {
+    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
+  }
+  return `${entries.length} screens need work: ${entries
+    .map((entry) => entry.screenNumber)
+    .join(", ")}. The filmstrip rings them in yellow.`;
+}
+
 export default function Page() {
   const CHECKLIST_LAYOUT_STORAGE_KEY = "edit-feedback-checklist-layout";
   const params = useParams();
@@ -97,6 +206,10 @@ export default function Page() {
     useState<RepairScreenJumpTarget | null>(null);
   const [redactScreenJumpTarget, setRedactScreenJumpTarget] =
     useState<RedactScreenJumpTarget | null>(null);
+  // Identifies each jump request so the editors can apply one exactly once.
+  // A counter rather than a timestamp: two clicks inside the same millisecond
+  // would otherwise share a nonce, and the second jump would be dropped.
+  const jumpNonceRef = useRef(0);
   const [checklistLayoutMode, setChecklistLayoutMode] =
     useState<ChecklistLayoutMode>(() => {
       if (typeof window === "undefined") {
@@ -184,6 +297,15 @@ export default function Page() {
       const draftFileResponse = await fetch(
         signedLatestDraftFileRes.data.signedUrl,
       );
+      // Checked, because an error response body is not draft JSON and parsing it
+      // throws somewhere far less obvious than here.
+      if (!draftFileResponse.ok) {
+        setDraftFetchResult(DraftFetchResults.ERROR);
+        console.error(
+          `Failed to download draft file: ${draftFileResponse.status}`,
+        );
+        return;
+      }
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
 
       // Check if we already have screens with src data to avoid overwriting
@@ -204,10 +326,13 @@ export default function Page() {
       }
 
       if (!hasScreensWithSrc) {
+        // Screen id keys selection, gestures, redactions and VHs, so a repeated
+        // id in a draft would make all four ambiguous.
+        const draftScreens = dedupeScreensById(draftFormData.screens);
         // grab screens
         methods.setValue(
           "screens",
-          draftFormData.screens.map((screen) => ({
+          draftScreens.map((screen) => ({
             id: screen.id,
             src: "",
             timestamp: screen.timestamp,
@@ -215,14 +340,24 @@ export default function Page() {
         );
         // grab vh from android screens
         const draftVHs: { [key: string]: any } = {};
-        draftFormData.screens.forEach((screen) => {
+        draftScreens.forEach((screen) => {
           draftVHs[screen.id] = null;
         });
         methods.setValue("vhs", draftVHs);
       }
       setDraftFetchResult(DraftFetchResults.SUCCESS);
     };
-    fetchFiles();
+    // Every early return above reports failure, but a *thrown* failure had
+    // nowhere to go: `fetch` rejects on a network error rather than returning
+    // something falsy, and `.json()` throws on a body that is not JSON. Either
+    // escaped as an unhandled rejection, so the state never left LOADING and the
+    // editor sat on "Loading saved draft data..." for good — with the error state
+    // it needed already built and wired to a message telling the worker what to
+    // do about it.
+    fetchFiles().catch((error) => {
+      setDraftFetchResult(DraftFetchResults.ERROR);
+      console.error(`Failed to load draft data: ${error}`);
+    });
   }, [captureId, draftFetchResult, methods]);
 
   // Fetch video files once when component mounts - files won't change during edit session
@@ -558,65 +693,81 @@ export default function Page() {
     setIsSubmitting(true);
     // check zod schema validation for each step
     if (stepIndex === TraceSteps.Capture) {
-      // validate all screen gestures except the last one
-      const allButLastScreenIds = methods
-        .getValues()
-        .screens.slice(0, -1)
-        .map((s) => s.id);
-      const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
-          allButLastScreenIds.includes(id),
-        ),
+      const { screens: currentScreens, gestures: currentGestures } =
+        methods.getValues();
+      const incompleteScreens = collectIncompleteScreens(
+        currentScreens,
+        currentGestures,
       );
-      // Validate the "gestures"
-      const validation = ScreenGestureSchema.safeParse({
-        ...methods.getValues(),
-        gestures: allButLastScreenGestures,
-      });
-      if (!validation.success) {
-        console.error(validation.error.issues);
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
+      if (incompleteScreens.length > 0) {
+        toast.error(describeIncompleteScreens(incompleteScreens));
         setIsSubmitting(false);
         return;
       }
     } else if (stepIndex === TraceSteps.Redact) {
-      // Validate the "redactions"
-      const validation = RedactionSchema.safeParse(
-        methods.getValues().redactions,
+      const { screens: currentScreens, redactions: currentRedactions } =
+        methods.getValues();
+      // Unlabelled boxes first, named per screen. The schema can only say "each
+      // redaction must have an annotation", which leaves the worker opening
+      // screens one by one to find out where.
+      const unlabelledRedactions = collectUnlabelledRedactions(
+        currentScreens,
+        currentRedactions,
       );
+      if (unlabelledRedactions.length > 0) {
+        toast.error(describeUnlabelledRedactions(unlabelledRedactions));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Then the structural check, for anything malformed the UI should not be
+      // able to produce.
+      const validation = RedactionSchema.safeParse(currentRedactions);
       if (!validation.success) {
         console.error(validation.error.issues);
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
+        new Set(validation.error.issues.map((issue) => issue.message)).forEach(
+          (message) => toast.error(message),
+        );
         setIsSubmitting(false);
         return;
       }
     } else if (stepIndex === TraceSteps.Review) {
-      // validate all screen gestures except the last one
-      const allButLastScreenIds = methods
-        .getValues()
-        .screens.slice(0, -1)
-        .map((s) => s.id);
+      const { screens: currentScreens, gestures: currentGestures } =
+        methods.getValues();
+      // Gestures first, with the same predicate and reporting as the capture
+      // step. TraceFormSchema's refines under-report for the reason described on
+      // collectIncompleteScreens, and this is the gate that decides whether a
+      // trace reaches a reviewer — a screen captured after passing the capture
+      // step would otherwise slip through unannotated.
+      const incompleteScreens = collectIncompleteScreens(
+        currentScreens,
+        currentGestures,
+      );
+      if (incompleteScreens.length > 0) {
+        toast.error(describeIncompleteScreens(incompleteScreens));
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Then the rest of the trace — the description above all, which is only
+      // written at this step.
+      const allButLastScreenIds = currentScreens.slice(0, -1).map((s) => s.id);
       const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(methods.getValues().gestures).filter(([id, _]) =>
+        Object.entries(currentGestures).filter(([id]) =>
           allButLastScreenIds.includes(id),
         ),
       );
-      // Validate the entire trace form, especially "description"
       const validation = TraceFormSchema.safeParse({
         ...methods.getValues(),
         gestures: allButLastScreenGestures,
       });
       if (!validation.success) {
-        const errors = validation.error.issues || "Invalid input";
-        errors.forEach((error) => {
-          toast.error(error.message);
-        });
+        console.error(validation.error.issues);
+        // Deduplicated: the schema reports per field, so one cause can surface
+        // several times with the same wording.
+        new Set(validation.error.issues.map((issue) => issue.message)).forEach(
+          (message) => toast.error(message),
+        );
         setIsSubmitting(false);
         return;
       }
@@ -727,9 +878,10 @@ export default function Page() {
       return;
     }
 
+    jumpNonceRef.current += 1;
     const nextTarget = {
       screenId,
-      nonce: Date.now(),
+      nonce: jumpNonceRef.current,
     };
 
     if (stepIndex === TraceSteps.Redact) {
@@ -749,12 +901,12 @@ export default function Page() {
       <FormProvider {...methods}>
         <ScreenBlobRegistryProvider>
           <main
-            className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
+            className="relative flex h-[calc(100dvh-64px)] w-dvw flex-col overflow-hidden bg-white dark:bg-black"
             style={{ "--nav-height": `${height}px` } as React.CSSProperties}
           >
             {!isTraceLoading ? (
               <>
-                <div className="relative flex flex-col w-full h-[calc(100%-var(--nav-height))]">
+                <div className="relative flex h-[calc(100%-var(--nav-height))] w-full flex-col">
                   <div className="flex min-h-0 min-w-0 flex-1">
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                       {hasAnyFeedback &&
@@ -789,7 +941,7 @@ export default function Page() {
                             }
                           />
                         )}
-                      <div className="flex w-full min-h-0 min-w-0 flex-1 flex-col items-center">
+                      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col items-center">
                         {editorRender()}
                       </div>
                     </div>
@@ -827,9 +979,9 @@ export default function Page() {
                 </div>
                 <nav
                   ref={navRef}
-                  className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
+                  className="sticky bottom-0 flex h-auto w-full shrink grow-0 justify-between border-t border-neutral-200 bg-white px-6 py-4 backdrop-blur-sm dark:border-neutral-800 dark:bg-black"
                 >
-                  <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2">
                     <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
                       <span className="inline-flex items-center text-muted-foreground">
                         New Trace <ChevronRight className="size-6" />{" "}
@@ -860,7 +1012,7 @@ export default function Page() {
                       Back to Upload
                     </Button>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Button
                       className="mr-8 hover:cursor-pointer"
                       variant="outline"
@@ -869,7 +1021,7 @@ export default function Page() {
                     >
                       {isAutosavingRef.current ? (
                         <>
-                          <Loader2 className="size-4 animate-spin mr-2" />
+                          <Loader2 className="mr-2 size-4 animate-spin" />
                           Autosaving...
                         </>
                       ) : (
@@ -877,7 +1029,7 @@ export default function Page() {
                       )}
                     </Button>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Button
                       className="hover:cursor-pointer"
                       variant="outline"
@@ -910,9 +1062,9 @@ export default function Page() {
                 </nav>
               </>
             ) : (
-              <div className="flex flex-col grow justify-center items-center w-full h-full">
-                <Loader2 className="text-muted-foreground size-8 animate-spin" />
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+              <div className="flex h-full w-full grow flex-col items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                <h1 className="text-xl font-bold tracking-tight md:text-2xl">
                   Loading capture...
                 </h1>
               </div>

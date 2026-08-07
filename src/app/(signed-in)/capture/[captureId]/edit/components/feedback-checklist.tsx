@@ -78,7 +78,7 @@ function renderInlineMarkdown(text: string): React.ReactNode[] {
       nodes.push(
         <code
           key={match.index}
-          className="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-xs font-mono"
+          className="rounded bg-amber-100 px-1 py-0.5 font-mono text-xs dark:bg-amber-900/50"
         >
           {match[3]}
         </code>,
@@ -201,7 +201,8 @@ export function FeedbackChecklist({
       const paired = group.screenIds.map((id, i) => ({
         id,
         label: group.screenLabels[i],
-        num: parseInt(group.screenLabels[i].replace(/^Screen\s+/i, ""), 10) || 0,
+        num:
+          parseInt(group.screenLabels[i].replace(/^Screen\s+/i, ""), 10) || 0,
       }));
       paired.sort((a, b) => a.num - b.num);
       group.screenIds = paired.map((p) => p.id);
@@ -270,9 +271,9 @@ export function FeedbackChecklist({
           const itemId = displayItem.id;
           const isJumpable = Boolean(
             item.screenId &&
-              !item.unresolved &&
-              !displayItem.isMultiScreen &&
-              onJumpToScreen,
+            !item.unresolved &&
+            !displayItem.isMultiScreen &&
+            onJumpToScreen,
           );
           const isChecked = checkedItems.has(itemId);
           const id = `feedback-${itemId}`;
@@ -291,7 +292,7 @@ export function FeedbackChecklist({
                       <div
                         className={cn(
                           isChecked
-                            ? "line-through text-muted-foreground"
+                            ? "text-muted-foreground line-through"
                             : "text-neutral-800 dark:text-neutral-200",
                         )}
                       >
@@ -328,7 +329,7 @@ export function FeedbackChecklist({
                         className={cn(
                           "underline decoration-1 underline-offset-2 transition-colors",
                           isChecked
-                            ? "line-through text-muted-foreground decoration-muted-foreground"
+                            ? "text-muted-foreground line-through decoration-muted-foreground"
                             : "text-violet-700 decoration-violet-400 hover:text-violet-800 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200",
                         )}
                       >
@@ -347,7 +348,7 @@ export function FeedbackChecklist({
                     <div
                       className={cn(
                         isChecked
-                          ? "line-through text-muted-foreground"
+                          ? "text-muted-foreground line-through"
                           : "text-neutral-800 dark:text-neutral-200",
                       )}
                     >
@@ -493,7 +494,7 @@ export function FeedbackChecklist({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-8 cursor-pointer shrink-0 text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
+            className="size-8 shrink-0 cursor-pointer text-amber-700 hover:bg-amber-200/60 dark:text-amber-300 dark:hover:bg-amber-900/40"
             onClick={() => setIsCollapsed(true)}
             aria-label="Collapse feedback checklist"
           >
@@ -533,7 +534,7 @@ export function FeedbackChecklist({
 
   const TopLayoutFeedbackChecklist = () => {
     return (
-      <div className="flex-shrink-0 w-full border-b border-amber-300 bg-amber-50/95 dark:border-amber-700 dark:bg-amber-950/30">
+      <div className="w-full flex-shrink-0 border-b border-amber-300 bg-amber-50/95 dark:border-amber-700 dark:bg-amber-950/30">
         <div className="flex w-full items-center justify-between gap-2 px-3 py-1.5">
           <button
             type="button"

@@ -139,10 +139,7 @@ export function GestureSelection({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className={cn(
-            POPOVER_CONTENT_CLASS,
-            "group/gesture-popover",
-          )}
+          className={cn(POPOVER_CONTENT_CLASS, "group/gesture-popover")}
           side={openAbove ? "top" : "bottom"}
           align="start"
           sideOffset={6}
@@ -281,14 +278,14 @@ export function GestureSelection({
                           </span>
                         </CommandItem>
                       ),
-                )}
+                    )}
               </CommandGroup>
             </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
       {dragHelperText ? (
-        <div className="mt-1.5 inline-flex items-center rounded-md border border-black/20 dark:border-white/25 bg-black/85 dark:bg-white/90 px-2 py-1 text-xs font-semibold tracking-wide text-white dark:text-black shadow-sm">
+        <div className="mt-1.5 inline-flex items-center rounded-md border border-black/20 bg-black/85 px-2 py-1 text-xs font-semibold tracking-wide text-white shadow-sm dark:border-white/25 dark:bg-white/90 dark:text-black">
           {dragHelperText}
         </div>
       ) : null}
