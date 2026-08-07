@@ -171,6 +171,16 @@ export function useIosVideoBootstrap({
         }));
         const draftScreens: FrameData[] = [];
 
+        // Every failure below is contained to the one frame it affects, and the
+        // screen is kept either way.
+        //
+        // This used to be a single try around the whole loop, with the list
+        // written to form state afterwards — so one failed read left the list
+        // truncated at that screen, and a failed warm-up left it empty. Autosave
+        // runs every three minutes and writes form state without checking it, so
+        // the truncated list would go over the worker's draft and take the rest
+        // of their annotation work with it, reporting "Draft autosaved" while
+        // doing so.
         try {
           // Warm the video decoder once before extracting any missing frames.
           const warmupFrame = await extractVideoFrame(video, 0.1, {
@@ -181,8 +191,16 @@ export function useIosVideoBootstrap({
           if (warmupFrame.src.startsWith("blob:")) {
             URL.revokeObjectURL(warmupFrame.src);
           }
-          for (const screen of screensSnapshot) {
-            if (!screen.src) {
+        } catch (error) {
+          // Only a warm-up. The reads below may still succeed, and none of this
+          // is worth a screen.
+          console.error(`Could not warm the video decoder: ${error}`);
+        }
+
+        let unrebuiltScreenCount = 0;
+        for (const screen of screensSnapshot) {
+          if (!screen.src) {
+            try {
               const frame = await extractVideoFrame(video, screen.timestamp, {
                 mimeType: "image/png",
                 output: "object-url",
@@ -190,11 +208,23 @@ export function useIosVideoBootstrap({
               });
               screen.src = frame.src;
               registerScreenUrl(frame.src);
+            } catch (error) {
+              // Keep the screen regardless. Its timestamp is the record of where
+              // the worker marked something, and its id keys the gestures and
+              // redactions they have already written — dropping it discards all
+              // of that to save an image that can be re-extracted.
+              unrebuiltScreenCount += 1;
+              console.error(
+                `Could not rebuild the image for screen ${screen.id}: ${error}`,
+              );
             }
-            draftScreens.push(screen);
           }
-        } catch (error) {
-          console.error(`Error extracting video frames: ${error}`);
+          draftScreens.push(screen);
+        }
+        if (unrebuiltScreenCount > 0) {
+          toast.error(
+            `${unrebuiltScreenCount} of ${screensSnapshot.length} screens could not be rebuilt from the recording. Their annotations are intact.`,
+          );
         }
 
         setValue(

@@ -69,10 +69,41 @@ const SEEK_POLL_INTERVAL_MS = 500;
  */
 const SEEK_ABSOLUTE_TIMEOUT_MS = 10000;
 
+/**
+ * How far the element may sit from the requested moment and still count as the
+ * frame that was asked for. Roughly two frames at 30fps, which covers the snap to
+ * the nearest decodable frame.
+ */
+const SUPERSEDED_SEEK_TOLERANCE_SEC = 2 / 30;
+
 /** Deadline for a thumbnail element to report metadata before giving up on it. */
 const THUMBNAIL_VIDEO_LOAD_TIMEOUT_MS = 20000;
 
+/**
+ * Close enough to skip seeking altogether: the caller is asking for the position
+ * the element is already at. Deliberately far tighter than the superseded
+ * tolerance, which has to absorb frame snapping — this one must only fire when the
+ * request is genuinely the current position, so it never trades frame accuracy for
+ * speed.
+ */
+const ALREADY_AT_POSITION_SEC = 0.001;
+
 const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
+  // Nothing to wait for. `seeking` is checked because a seek already in flight
+  // means `currentTime` is somebody else's request, not where the element is —
+  // and that flag was set when their seek started, so reading it now is sound in
+  // a way that reading it straight after our own assignment would not be.
+  //
+  // Worth the special case: pressing `c` asks for exactly the current playhead,
+  // no seek starts, no `seeked` is ever coming, and without this the capture waits
+  // out the full poll interval before drawing a frame that was ready immediately.
+  if (
+    !video.seeking &&
+    Math.abs(video.currentTime - t) <= ALREADY_AT_POSITION_SEC
+  ) {
+    return;
+  }
+
   await new Promise<void>((resolve, reject) => {
     let timeout: number | null = null;
     const cleanup = () => {
@@ -121,9 +152,13 @@ const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
  * Two overlapping seeks on one element resolve on each other's `seeked` and leave
  * the decoder where neither caller asked, so the loser draws the winner's frame.
  * `extractVideoThumbnails` has always known this — "parallel messes up seeking" —
- * and runs its own loop sequentially, but the displayed element is read by three
- * callers that cannot see one another: `c` captures, the bootstrap screen pass,
- * and the scrub queue moving the playhead underneath both.
+ * and runs its own loop sequentially, but the displayed element is read by two
+ * callers that cannot see one another: `c` captures and the bootstrap screen pass.
+ *
+ * It does NOT cover the scrub queue, which writes `video.currentTime` directly and
+ * never comes through here. A drag can therefore retarget the element mid-read;
+ * `grabFrameViaCanvas` catches that afterwards by checking where the element
+ * actually ended up, rather than pretending this lock is enough.
  *
  * Keyed per element rather than globally, so a capture does not have to queue
  * behind ninety thumbnail extractions on a different element.
@@ -230,6 +265,23 @@ async function grabFrameViaCanvas(
   options: Required<ExtractVideoFrameOptions>
 ): Promise<FrameData> {
   await seekVideoToTime(video, t);
+  // Did somebody else move the playhead while this was waiting?
+  //
+  // The read queue only serializes extractions against each other. The scrub
+  // queue writes `video.currentTime` directly and is not in it, so a drag during
+  // a read retargets the element — and this seek's `seeked` handler may well be
+  // woken by the drag's seek instead of its own. Drawing then yields the frame
+  // the drag landed on, filed under the timestamp that was asked for.
+  //
+  // `currentTime` answers with the requested position, which is exactly what is
+  // wanted here: if it no longer reads as `t`, the request was replaced. The
+  // tolerance covers the element snapping to the nearest decodable frame once the
+  // seek completes.
+  if (Math.abs(video.currentTime - t) > SUPERSEDED_SEEK_TOLERANCE_SEC) {
+    throw new Error(
+      `Seek to ${t}s was superseded by a seek to ${video.currentTime}s`,
+    );
+  }
   const canvas = drawFrameToCanvas(
     video,
     options.scale,
