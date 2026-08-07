@@ -1,0 +1,9 @@
+# Formats staged files before they are committed, so nothing reaches CI badly
+# formatted and nobody has to fix formatting in a follow-up commit.
+#
+# Only staged files, so this stays fast. It rewrites what you are committing —
+# after the repo-wide reformat that is a no-op in practice, and it stops a
+# differently-configured editor from reintroducing drift.
+#
+# To commit without it, once: git commit --no-verify
+npx lint-staged
