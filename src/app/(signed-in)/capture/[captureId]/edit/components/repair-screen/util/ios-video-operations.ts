@@ -32,6 +32,9 @@ const DEFAULT_EXTRACT_OPTIONS: Required<ExtractVideoFrameOptions> = {
   waitForPaint: false,
 };
 
+/** Deadline for a thumbnail element to report metadata before giving up on it. */
+const THUMBNAIL_VIDEO_LOAD_TIMEOUT_MS = 20000;
+
 /** Resolves once the browser has composited, not merely scheduled, a frame. */
 const waitForPaint = () =>
   new Promise<void>((resolve) => {
@@ -226,12 +229,59 @@ export async function extractVideoThumbnails(
   const thumbVideo = document.createElement("video");
   thumbVideo.crossOrigin = "anonymous";
   thumbVideo.preload = "metadata";
-  thumbVideo.src = video.src;
-  await new Promise<void>((res) =>
-    thumbVideo.addEventListener("loadedmetadata", () => res(), {
-      once: true,
-    })
-  );
+  thumbVideo.src = video.currentSrc || video.src;
+  try {
+    // Rejects rather than waits forever. Without an error path or a deadline
+    // this promise could never settle — a browser that will not give this
+    // element a decoder simply never fires `loadedmetadata` — and the caller
+    // was left with an empty thumbnail grid and no indication why. That is what
+    // a scrub with no preview and no badge looks like.
+    await new Promise<void>((resolve, reject) => {
+      const finish = (error?: Error) => {
+        clearTimeout(timeout);
+        thumbVideo.removeEventListener("loadedmetadata", onLoaded);
+        thumbVideo.removeEventListener("error", onError);
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      };
+      const onLoaded = () => finish();
+      const onError = () =>
+        finish(new Error("Thumbnail video failed to load"));
+      const timeout = setTimeout(
+        () => finish(new Error("Thumbnail video load timed out")),
+        THUMBNAIL_VIDEO_LOAD_TIMEOUT_MS
+      );
+      thumbVideo.addEventListener("loadedmetadata", onLoaded, { once: true });
+      thumbVideo.addEventListener("error", onError, { once: true });
+    });
+    return await extractThumbnailsFrom(
+      thumbVideo,
+      video,
+      videoDuration,
+      maxThumbs,
+      thumbHeight,
+      options
+    );
+  } finally {
+    // Releases the decoder. Left attached to a source, every call leaked a live
+    // media element for the rest of the session — two per bootstrap — and
+    // browsers cap how many they will decode at once.
+    thumbVideo.removeAttribute("src");
+    thumbVideo.load();
+  }
+}
+
+async function extractThumbnailsFrom(
+  thumbVideo: HTMLVideoElement,
+  video: HTMLVideoElement,
+  videoDuration: number,
+  maxThumbs: number,
+  thumbHeight: number,
+  options?: ExtractVideoFrameOptions
+): Promise<ListedFiles[]> {
   // determine how many thumbnails to extract
   const duration = videoDuration;
   const fps = 60;

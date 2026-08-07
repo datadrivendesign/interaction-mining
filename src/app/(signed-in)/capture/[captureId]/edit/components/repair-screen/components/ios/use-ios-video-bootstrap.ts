@@ -5,7 +5,7 @@ import { UseFormSetValue } from "react-hook-form";
 import { FrameData, TraceFormData } from "../../../types";
 import { DraftFetchResults } from "../../../../util";
 import { extractThumbnails } from "../../util";
-import { recordPhase } from "./scrub-profiler";
+import { logScrubEvent, recordPhase } from "./scrub-profiler";
 import {
   MAX_TIMELINE_THUMBS,
   PREVIEW_THUMB_HEIGHT,
@@ -232,6 +232,7 @@ export function useIosVideoBootstrap({
         return;
       }
       try {
+        logScrubEvent("previewThumbnailsStarted", {});
         const previewThumbsStartedAt = performance.now();
         const largePreviewThumbs = await extractThumbnails(
           video,
@@ -261,8 +262,14 @@ export function useIosVideoBootstrap({
           .filter((src) => src.startsWith("blob:"));
         setPreviewThumbnails(largePreviewThumbs);
       } catch (error) {
-        // Scrubbing keeps working on real frames, so this is not worth a toast.
+        // Not fatal — the settled frame is extracted separately — but it does
+        // cost the worker every preview during a drag, so it says so loudly
+        // rather than leaving an empty grid to be inferred from behaviour.
+        logScrubEvent("previewThumbnailsFailed", {
+          reason: String(error).slice(0, 80),
+        });
         console.error(`Error extracting scrub preview thumbnails: ${error}`);
+        toast.error("Scrub previews unavailable for this recording");
       }
     };
     loadVideoAndPopulate();

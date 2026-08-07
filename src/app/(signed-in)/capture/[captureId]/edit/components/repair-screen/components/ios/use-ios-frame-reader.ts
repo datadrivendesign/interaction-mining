@@ -27,6 +27,9 @@ const READER_WARM_MS = 1500;
 const WARMUP_TIME_SECONDS = 0.1;
 const WARMUP_SCALE = 0.05;
 
+/** Deadline for a new reader to report data before the read gives up on it. */
+const READER_LOAD_TIMEOUT_MS = 15000;
+
 /**
  * Extracts screen images from the recording.
  *
@@ -54,7 +57,13 @@ export function useIosFrameReader(
    */
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
 
+  const idleDisposeTimeoutRef = useRef<number | null>(null);
+
   const disposeReader = useCallback(() => {
+    if (idleDisposeTimeoutRef.current !== null) {
+      window.clearTimeout(idleDisposeTimeoutRef.current);
+      idleDisposeTimeoutRef.current = null;
+    }
     const reader = readerRef.current;
     readerRef.current = null;
     readerSrcRef.current = null;
@@ -63,6 +72,25 @@ export function useIosFrameReader(
       reader.load();
     }
   }, []);
+
+  /**
+   * Let go of the element once it has gone cold.
+   *
+   * It is useless past that point anyway — a suspended element serves stale
+   * frames — and browsers cap how many videos they will decode at once. Holding
+   * one for the whole session spends a slot that the thumbnail extraction needs,
+   * and when that extraction cannot get a decoder there are no scrub previews at
+   * all.
+   */
+  const scheduleIdleDispose = useCallback(() => {
+    if (idleDisposeTimeoutRef.current !== null) {
+      window.clearTimeout(idleDisposeTimeoutRef.current);
+    }
+    idleDisposeTimeoutRef.current = window.setTimeout(() => {
+      idleDisposeTimeoutRef.current = null;
+      disposeReader();
+    }, READER_WARM_MS);
+  }, [disposeReader]);
 
   useEffect(() => disposeReader, [disposeReader]);
 
@@ -99,14 +127,22 @@ export function useIosFrameReader(
       reader.muted = true;
       reader.src = src;
 
+      // Bounded, because every read is queued behind this one: a load that never
+      // reports back would stop the panel producing frames at all rather than
+      // costing a single one.
       const isReady = await new Promise<boolean>((resolve) => {
         const settle = (ready: boolean) => {
+          window.clearTimeout(timeout);
           reader.removeEventListener("loadeddata", onReady);
           reader.removeEventListener("error", onError);
           resolve(ready);
         };
         const onReady = () => settle(true);
         const onError = () => settle(false);
+        const timeout = window.setTimeout(
+          () => settle(false),
+          READER_LOAD_TIMEOUT_MS,
+        );
         reader.addEventListener("loadeddata", onReady, { once: true });
         reader.addEventListener("error", onError, { once: true });
       });
@@ -154,9 +190,10 @@ export function useIosFrameReader(
           return await extractVideoFrame(reader, time, options);
         } finally {
           lastUsedAtRef.current = performance.now();
+          scheduleIdleDispose();
         }
       }),
-    [enqueue, getWarmReader, videoRef],
+    [enqueue, getWarmReader, scheduleIdleDispose, videoRef],
   );
 
   return { extractFrameAt };
