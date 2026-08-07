@@ -25,14 +25,18 @@ export function VideoPreviewOverlay({
 }: VideoPreviewOverlayProps) {
   return (
     <div className="relative flex justify-center items-center w-full h-full">
+      {/*
+        Always painted. The preview images stack on top and cover it, so hiding
+        it was never necessary — and toggling opacity on a video forces a
+        compositor layer change, which showed up as a blip each time the overlay
+        came down. Leaving it composited means uncovering it is just the image
+        above it going away.
+      */}
       <video
         ref={videoRef}
         crossOrigin="anonymous"
         preload="auto"
-        className={cn(
-          "relative z-0 max-w-full max-h-full rounded-lg object-contain transition-opacity",
-          hasPreviewOverlay ? "opacity-0" : "opacity-100",
-        )}
+        className="relative z-0 max-w-full max-h-full rounded-lg object-contain"
         controls={false}
         onPlay={onPlay}
         onPause={onPause}

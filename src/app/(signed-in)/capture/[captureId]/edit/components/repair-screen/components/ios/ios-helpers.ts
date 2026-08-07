@@ -16,6 +16,12 @@ export const PREVIEW_SWAP_DELAY_MS = 70;
  * element is showing what was asked for.
  */
 export const PREVIEW_MATCH_TOLERANCE = 2 / 30;
+/**
+ * Backstop for uncovering the video when `requestVideoFrameCallback` is missing
+ * or never fires. Long enough that a normal presentation wins the race, short
+ * enough that a worker does not sit looking at a thumbnail.
+ */
+export const PREVIEW_REVEAL_TIMEOUT_MS = 250;
 export const VIDEO_LOAD_TIMEOUT_MS = 30000;
 
 export type PreviewThumbnail = {

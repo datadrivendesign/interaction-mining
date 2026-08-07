@@ -11,11 +11,22 @@ import {
 
 import {
   PREVIEW_MATCH_TOLERANCE,
+  PREVIEW_REVEAL_TIMEOUT_MS,
   PREVIEW_SWAP_DELAY_MS,
   PreviewThumbnail,
   SCRUB_SEEK_INTERVAL_MS,
   findNearestPreviewThumbnail,
 } from "./ios-helpers";
+
+/**
+ * `requestVideoFrameCallback` is not in every TypeScript DOM lib, and is absent
+ * on older browsers, so it is described here and feature-detected at the call
+ * site rather than assumed.
+ */
+type VideoWithFrameCallback = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: () => void) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
+};
 
 interface UseIosScrubPreviewArgs {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -54,6 +65,8 @@ export function useIosScrubPreview({
   const activePreviewFrameSrcRef = useRef<string | null>(null);
   /** The moment the display is trying to represent, wherever the request came from. */
   const previewTargetTimeRef = useRef<number | null>(null);
+  const frameCallbackHandleRef = useRef<number | null>(null);
+  const revealFallbackTimeoutRef = useRef<number | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [pausedPreviewTime, setPausedPreviewTime] = useState<number | null>(
@@ -82,6 +95,47 @@ export function useIosScrubPreview({
     [previewThumbnails],
   );
 
+  const cancelPendingReveal = useCallback(() => {
+    const video = videoRef.current as VideoWithFrameCallback | null;
+    if (frameCallbackHandleRef.current !== null) {
+      video?.cancelVideoFrameCallback?.(frameCallbackHandleRef.current);
+      frameCallbackHandleRef.current = null;
+    }
+    if (revealFallbackTimeoutRef.current !== null) {
+      window.clearTimeout(revealFallbackTimeoutRef.current);
+      revealFallbackTimeoutRef.current = null;
+    }
+  }, [videoRef]);
+
+  /**
+   * Uncover the element once it has actually presented a frame.
+   *
+   * `seeked` only says the seek finished, not that anything has been painted,
+   * and uncovering in that gap is what showed a blank flash before the frame
+   * appeared. `requestVideoFrameCallback` fires on presentation, which is the
+   * event we actually want. A timeout backs it up: on a browser that does not
+   * implement it, or does not fire it for a paused element, the reveal still
+   * happens rather than leaving the thumbnail up for good.
+   */
+  const revealWhenFramePresented = useCallback(() => {
+    cancelPendingReveal();
+
+    const reveal = () => {
+      cancelPendingReveal();
+      setIsPreviewNeeded(false);
+    };
+
+    const video = videoRef.current as VideoWithFrameCallback | null;
+    revealFallbackTimeoutRef.current = window.setTimeout(
+      reveal,
+      PREVIEW_REVEAL_TIMEOUT_MS,
+    );
+
+    if (video && typeof video.requestVideoFrameCallback === "function") {
+      frameCallbackHandleRef.current = video.requestVideoFrameCallback(reveal);
+    }
+  }, [cancelPendingReveal, videoRef]);
+
   /**
    * Ask for the thumbnail to cover a move to `time` — but only when it would be
    * an improvement on what is already displayed.
@@ -94,24 +148,33 @@ export function useIosScrubPreview({
    */
   const requestPreviewFor = useCallback(
     (time: number) => {
+      // Any pending reveal is now stale — the display is being sent somewhere
+      // else, so a frame presented for the previous target must not uncover the
+      // element.
+      cancelPendingReveal();
+
       setIsPreviewNeeded((wasNeeded) => {
         if (wasNeeded) {
           return true;
         }
-        const landed = lastCommittedVideoTimeRef.current;
-        if (landed === null) {
+        // Compared against the element's live position, not a cached one.
+        // `lastCommittedVideoTimeRef` only advances while `scrubPreviewTimeRef`
+        // is null, which is never true mid-scrub or mid-step, so it goes stale
+        // exactly when this comparison matters — drifting past the thumbnail's
+        // error and making the rule flip-flop, which is what flashed the panel
+        // while a step key was held.
+        const landed = videoRef.current?.currentTime;
+        if (landed === undefined) {
           return true;
         }
         const thumbnail = getNearestPreviewThumbnail(time);
         if (!thumbnail) {
           return false;
         }
-        return (
-          Math.abs(thumbnail.timestamp - time) < Math.abs(landed - time)
-        );
+        return Math.abs(thumbnail.timestamp - time) < Math.abs(landed - time);
       });
     },
-    [getNearestPreviewThumbnail],
+    [cancelPendingReveal, getNearestPreviewThumbnail, videoRef],
   );
 
   const activePreviewFrameSrc = useMemo(() => {
@@ -258,7 +321,7 @@ export function useIosScrubPreview({
           Math.abs(video.currentTime - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
 
         if (hasCaughtUp) {
-          setIsPreviewNeeded(false);
+          revealWhenFramePresented();
         }
 
         if (
@@ -285,11 +348,12 @@ export function useIosScrubPreview({
     return () => {
       video.removeEventListener("seeked", syncSeekTime);
     };
-  }, [updateCurrentTime, videoRef]);
+  }, [revealWhenFramePresented, updateCurrentTime, videoRef]);
 
   // Cleanup all timers/RAFs on unmount.
   useEffect(() => {
     return () => {
+      cancelPendingReveal();
       if (scrubSeekTimeoutRef.current !== null) {
         window.clearTimeout(scrubSeekTimeoutRef.current);
       }
@@ -300,7 +364,7 @@ export function useIosScrubPreview({
         window.clearTimeout(previewSwapTimeoutRef.current);
       }
     };
-  }, []);
+  }, [cancelPendingReveal]);
 
   // Cross-fade swap between displayed and incoming preview frames.
   useEffect(() => {
