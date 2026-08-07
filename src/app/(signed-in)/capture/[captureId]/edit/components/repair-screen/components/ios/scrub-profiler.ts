@@ -114,23 +114,26 @@ export function recordReveal(detail: {
   source: "frame-callback" | "timeout";
   targetTime: number | null;
   mediaTime: number | null;
-  currentTime: number;
+  settledTarget: number | null;
 }): void {
   if (!isScrubProfilingEnabled()) {
     return;
   }
-  const shown = detail.mediaTime ?? detail.currentTime;
-  const isStale =
-    detail.targetTime !== null && Math.abs(shown - detail.targetTime) > 0.1;
+  // Deliberately never falls back to `video.currentTime`. That reports the
+  // requested position, so measuring error against it always yields zero and
+  // hides precisely the fault this is meant to catch. Safari does not fire
+  // requestVideoFrameCallback for a paused seek, so `mediaTime` is usually
+  // absent and the completed seek's target is the best available evidence.
+  const shown = detail.mediaTime ?? detail.settledTarget;
+  const frameErrorSec =
+    shown === null || detail.targetTime === null
+      ? null
+      : round(shown - detail.targetTime, 3);
+  const isStale = frameErrorSec !== null && Math.abs(frameErrorSec) > 0.1;
   if (isStale) {
     revealsOnStaleFrame += 1;
   }
-  logScrubEvent("reveal", {
-    ...detail,
-    frameErrorSec:
-      detail.targetTime === null ? null : round(shown - detail.targetTime, 3),
-    stale: isStale,
-  });
+  logScrubEvent("reveal", { ...detail, frameErrorSec, stale: isStale });
 }
 
 /** A thumbnail swap that never reported its image loading. Suspect for H2. */

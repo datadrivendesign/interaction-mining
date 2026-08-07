@@ -73,6 +73,16 @@ export function useIosScrubPreview({
   const activePreviewFrameSrcRef = useRef<string | null>(null);
   /** The moment the display is trying to represent, wherever the request came from. */
   const previewTargetTimeRef = useRef<number | null>(null);
+  /**
+   * Target of the last seek that actually finished.
+   *
+   * Not the same as `video.currentTime`, and the difference is the whole point:
+   * assigning `currentTime` moves the official playback position immediately, so
+   * reads report where the element was *asked* to go, not what it is showing. On
+   * a fast drag more than half of seeks are superseded before completing, so the
+   * painted frame can be several positions behind what `currentTime` claims.
+   */
+  const settledSeekTargetRef = useRef<number | null>(null);
   const frameCallbackHandleRef = useRef<number | null>(null);
   const revealFallbackTimeoutRef = useRef<number | null>(null);
 
@@ -137,7 +147,7 @@ export function useIosScrubPreview({
         source,
         targetTime: previewTargetTimeRef.current,
         mediaTime,
-        currentTime: videoRef.current?.currentTime ?? 0,
+        settledTarget: settledSeekTargetRef.current,
       });
       setIsPreviewNeeded(false);
     };
@@ -184,14 +194,12 @@ export function useIosScrubPreview({
             thumbnailAt: thumbnail?.timestamp ?? null,
           });
         }
-        // Compared against the element's live position, not a cached one.
-        // `lastCommittedVideoTimeRef` only advances while `scrubPreviewTimeRef`
-        // is null, which is never true mid-scrub or mid-step, so it goes stale
-        // exactly when this comparison matters — drifting past the thumbnail's
-        // error and making the rule flip-flop, which is what flashed the panel
-        // while a step key was held.
-        const landed = videoRef.current?.currentTime;
-        if (landed === undefined) {
+        // Measured from the last completed seek. Using `currentTime` here made
+        // the element look perfectly current the instant a seek was requested,
+        // so the thumbnail was judged worse and suppressed — leaving a stale
+        // frame on screen during exactly the drags where it lags most.
+        const landed = settledSeekTargetRef.current;
+        if (landed === null) {
           return true;
         }
         const thumbnail = getNearestPreviewThumbnail(time);
@@ -317,6 +325,10 @@ export function useIosScrubPreview({
         isSeekInFlightRef.current = false;
         pendingSeekTimeRef.current = null;
 
+        // This seek finished with nothing queued behind it, so its target is what
+        // the element is now painting.
+        settledSeekTargetRef.current = video.currentTime;
+
         // Has the playhead come to rest? The drag is over and nothing newer is
         // queued, so wherever the element landed is the final position.
         //
@@ -342,11 +354,17 @@ export function useIosScrubPreview({
         // for mouse-up, which is what made the picture change under the worker
         // just as they decided what to capture.
         const previewTarget = previewTargetTimeRef.current;
+        const settledTarget = settledSeekTargetRef.current;
+        // Compared against the seek that completed, not against currentTime.
+        // currentTime reports the request, so comparing it to the target was
+        // comparing the target with itself — always "caught up", which uncovered
+        // the element while it was still painting an earlier position.
         const hasCaughtUp =
           scrubQueuedSeekTimeRef.current === null &&
           scrubSeekTimeoutRef.current === null &&
           previewTarget !== null &&
-          Math.abs(video.currentTime - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
+          settledTarget !== null &&
+          Math.abs(settledTarget - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
 
         if (hasCaughtUp) {
           revealWhenFramePresented();
