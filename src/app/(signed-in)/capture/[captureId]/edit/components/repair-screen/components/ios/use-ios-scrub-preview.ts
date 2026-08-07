@@ -10,6 +10,7 @@ import {
 
 
 import {
+  PREVIEW_MATCH_TOLERANCE,
   PREVIEW_SWAP_DELAY_MS,
   PreviewThumbnail,
   SCRUB_SEEK_INTERVAL_MS,
@@ -51,6 +52,8 @@ export function useIosScrubPreview({
   const previewSwapTimeoutRef = useRef<number | null>(null);
   const lastCommittedVideoTimeRef = useRef<number | null>(null);
   const activePreviewFrameSrcRef = useRef<string | null>(null);
+  /** The moment the display is trying to represent, wherever the request came from. */
+  const previewTargetTimeRef = useRef<number | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [pausedPreviewTime, setPausedPreviewTime] = useState<number | null>(
@@ -64,27 +67,68 @@ export function useIosScrubPreview({
   >(null);
   const [isIncomingPreviewVisible, setIsIncomingPreviewVisible] =
     useState(false);
+  /**
+   * Whether the thumbnail is still needed.
+   *
+   * Separate from `scrubPreviewTime`, which is where the *pointer* is and must
+   * keep driving the timeline marker for the whole drag. Conflating the two is
+   * why the thumbnail could not be taken down mid-drag: hiding it meant clearing
+   * the pointer position, which would have snapped the marker backwards.
+   */
+  const [isPreviewNeeded, setIsPreviewNeeded] = useState(false);
 
   const getNearestPreviewThumbnail = useCallback(
     (time: number) => findNearestPreviewThumbnail(previewThumbnails, time),
     [previewThumbnails],
   );
 
+  /**
+   * Ask for the thumbnail to cover a move to `time` — but only when it would be
+   * an improvement on what is already displayed.
+   *
+   * Once the real frame is on screen, a small nudge should keep it: the element
+   * is showing a frame a few hundredths of a second away, while the nearest
+   * thumbnail can be half a second off. Swapping to the thumbnail would be a
+   * downgrade, and doing that on every small movement is what would make the
+   * panel strobe between the two sources.
+   */
+  const requestPreviewFor = useCallback(
+    (time: number) => {
+      setIsPreviewNeeded((wasNeeded) => {
+        if (wasNeeded) {
+          return true;
+        }
+        const landed = lastCommittedVideoTimeRef.current;
+        if (landed === null) {
+          return true;
+        }
+        const thumbnail = getNearestPreviewThumbnail(time);
+        if (!thumbnail) {
+          return false;
+        }
+        return (
+          Math.abs(thumbnail.timestamp - time) < Math.abs(landed - time)
+        );
+      });
+    },
+    [getNearestPreviewThumbnail],
+  );
+
   const activePreviewFrameSrc = useMemo(() => {
+    if (!isPreviewNeeded) {
+      return null;
+    }
     const sourceTime = scrubPreviewTime ?? pausedPreviewTime;
-    const selected =
-      sourceTime !== null ? getNearestPreviewThumbnail(sourceTime) : null;
-
-    if (scrubPreviewTime !== null) {
-      return selected?.src ?? null;
+    if (sourceTime === null) {
+      return null;
     }
-
-    if (pausedPreviewTime !== null) {
-      return selected?.src ?? null;
-    }
-
-    return null;
-  }, [getNearestPreviewThumbnail, pausedPreviewTime, scrubPreviewTime]);
+    return getNearestPreviewThumbnail(sourceTime)?.src ?? null;
+  }, [
+    getNearestPreviewThumbnail,
+    isPreviewNeeded,
+    pausedPreviewTime,
+    scrubPreviewTime,
+  ]);
 
   const displayedTimelineTime = scrubPreviewTime ?? currentTime;
   const hasPreviewOverlay =
@@ -96,6 +140,7 @@ export function useIosScrubPreview({
 
   // Reset all preview frame state. Used by bootstrap on video reload and live-photo start.
   const resetPreviewFrames = useCallback(() => {
+    setIsPreviewNeeded(false);
     setDisplayedPreviewFrameSrc(null);
     setIncomingPreviewFrameSrc(null);
     setIsIncomingPreviewVisible(false);
@@ -116,8 +161,10 @@ export function useIosScrubPreview({
       pendingScrubDisplayTimeRef.current = null;
       isScrubPreviewActiveRef.current = false;
       scrubPreviewTimeRef.current = null;
+      previewTargetTimeRef.current = null;
       setScrubPreviewTime(null);
       setPausedPreviewTime(null);
+      setIsPreviewNeeded(false);
       setDisplayedPreviewFrameSrc(null);
       setIncomingPreviewFrameSrc(null);
       setIsIncomingPreviewVisible(false);
@@ -195,6 +242,23 @@ export function useIosScrubPreview({
         if (hasPlayheadSettled && scrubPreviewTimeRef.current !== null) {
           scrubPreviewTimeRef.current = null;
           setScrubPreviewTime(null);
+        }
+
+        // Mid-drag reveal. Nothing further is queued, so this frame is where the
+        // pointer is pointing — and the real element is showing it, while the
+        // thumbnail is a nearest-neighbour guess up to half a second away.
+        // Holding still during a drag now shows the truth rather than saving it
+        // for mouse-up, which is what made the picture change under the worker
+        // just as they decided what to capture.
+        const previewTarget = previewTargetTimeRef.current;
+        const hasCaughtUp =
+          scrubQueuedSeekTimeRef.current === null &&
+          scrubSeekTimeoutRef.current === null &&
+          previewTarget !== null &&
+          Math.abs(video.currentTime - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
+
+        if (hasCaughtUp) {
+          setIsPreviewNeeded(false);
         }
 
         if (
@@ -321,6 +385,8 @@ export function useIosScrubPreview({
       const video = videoRef.current;
       if (!video) return;
       video.pause();
+      previewTargetTimeRef.current = t;
+      requestPreviewFor(t);
       if (scrubPreviewTimeRef.current === null) {
         setPausedPreviewTime(t);
       }
@@ -337,6 +403,7 @@ export function useIosScrubPreview({
     },
     [
       livePhotoEndRef,
+      requestPreviewFor,
       setIsLivePhotoActive,
       syncFocusToTimestamp,
       updateCurrentTime,
@@ -398,6 +465,10 @@ export function useIosScrubPreview({
     scrubDisplayRafRef.current = null;
     const nextTime = pendingScrubDisplayTimeRef.current;
     scrubPreviewTimeRef.current = nextTime;
+    previewTargetTimeRef.current = nextTime;
+    if (nextTime !== null) {
+      requestPreviewFor(nextTime);
+    }
     setScrubPreviewTime(nextTime);
 
     if (nextTime === null || !isScrubPreviewActiveRef.current) {
@@ -405,7 +476,7 @@ export function useIosScrubPreview({
     }
 
     scheduleScrubSeek(nextTime, false, false);
-  }, [scheduleScrubSeek]);
+  }, [requestPreviewFor, scheduleScrubSeek]);
 
   const scheduleScrubDisplayTime = useCallback(
     (time: number | null, immediate: boolean = false) => {
