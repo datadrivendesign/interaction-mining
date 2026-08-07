@@ -1,17 +1,24 @@
 import { useCallback } from "react";
 import { FrameData } from "../../../types";
+import { SelectScreenSource } from "../../repair-screen";
 import { findNearestScreenIndex } from "./ios-helpers";
 
 interface UseIosScreenFocusSyncArgs {
   screens: FrameData[];
-  focusViewIndex: number;
-  setFocusViewIndex: (index: number) => void;
+  focusedScreenId: string | null;
+  selectScreen: (screenId: string | null, source: SelectScreenSource) => void;
 }
 
+/**
+ * Derives the focused screen from a playhead position — the one-way half of the
+ * relationship. Selections made this way are tagged `"playhead"`, which is
+ * excluded from moving the recording, so the derivation cannot feed back into
+ * the position it came from.
+ */
 export function useIosScreenFocusSync({
   screens,
-  focusViewIndex,
-  setFocusViewIndex,
+  focusedScreenId,
+  selectScreen,
 }: UseIosScreenFocusSyncArgs) {
   const getNearestScreenIndex = useCallback(
     (time: number) => findNearestScreenIndex(screens, time),
@@ -21,11 +28,15 @@ export function useIosScreenFocusSync({
   const syncFocusToTimestamp = useCallback(
     (time: number) => {
       const nextIndex = getNearestScreenIndex(time);
-      if (nextIndex >= 0 && nextIndex !== focusViewIndex) {
-        setFocusViewIndex(nextIndex);
+      if (nextIndex < 0) {
+        return;
+      }
+      const nextScreenId = screens[nextIndex].id;
+      if (nextScreenId !== focusedScreenId) {
+        selectScreen(nextScreenId, "playhead");
       }
     },
-    [focusViewIndex, getNearestScreenIndex, setFocusViewIndex],
+    [focusedScreenId, getNearestScreenIndex, screens, selectScreen],
   );
 
   return { getNearestScreenIndex, syncFocusToTimestamp };

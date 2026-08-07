@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FrameData, Redaction } from "../../types";
+import { countUnlabelledRedactions } from "../../../util";
 
 export function Filmstrip({
   screens,
@@ -25,6 +26,9 @@ export function Filmstrip({
           screen={screen}
           redactions={redactions[screen.id] ?? []}
           isSelected={focusViewIndex === index}
+          // Same predicate the step gate uses, so the screens ringed here are
+          // exactly the screens its error names.
+          hasError={countUnlabelledRedactions(redactions[screen.id]) > 0}
           onClick={() => setFocusViewIndex(index)}
         ></FilmstripItem>
       ))}
