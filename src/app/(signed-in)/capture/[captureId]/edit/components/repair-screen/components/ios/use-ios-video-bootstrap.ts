@@ -256,8 +256,13 @@ export function useIosVideoBootstrap({
           .filter((src) => src.startsWith("blob:"));
         setPreviewThumbnails(largePreviewThumbs);
       } catch (error) {
-        // Scrubbing keeps working on real frames, so this is not worth a toast.
+        // Worth a toast after all. The previous note here reasoned that scrubbing
+        // still falls back to real frames, which is true — but the worker loses
+        // every preview during a drag and is given no reason for it. That state
+        // had to be diagnosed from behaviour once already, because a console
+        // error is silence to anyone not holding devtools open.
         console.error(`Error extracting scrub preview thumbnails: ${error}`);
+        toast.error("Scrub previews unavailable — scrubbing still works");
       }
     };
     loadVideoAndPopulate();
