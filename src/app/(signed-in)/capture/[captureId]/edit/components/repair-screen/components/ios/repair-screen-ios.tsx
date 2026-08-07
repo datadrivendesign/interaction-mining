@@ -187,6 +187,7 @@ export function RepairScreenIOS({
     scheduleScrubSeek,
     handleScrubCommit,
     setPausedPreviewTime,
+    onScrubActiveChange: handleScrubActiveChange,
   });
 
   const handleCaptureFrame = useCallback(async () => {
