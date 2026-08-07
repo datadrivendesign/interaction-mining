@@ -41,8 +41,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return session;
     },
+    /**
+     * Only invoked by the middleware wrapper, and there is no middleware in this
+     * app — so this is currently unreachable. Corrected anyway, because the bug it
+     * had is one that only shows up once somebody adds middleware and inherits it.
+     *
+     * `!!auth` was an existence check, and Auth.js populates that object with
+     * `{ message: … }` on a server configuration error rather than leaving it null
+     * (GHSA-8fpg-xm3f-6cx3). Existence therefore meant "authenticated" for every
+     * request the moment the config broke. Keying on `user` is the pattern the
+     * advisory recommends, and matches what `requireAuth` and the admin gate
+     * already do — the error object carries no user, so this fails closed.
+     */
     async authorized({ auth }) {
-      return !!auth;
+      return Boolean(auth?.user);
     },
   },
 });
