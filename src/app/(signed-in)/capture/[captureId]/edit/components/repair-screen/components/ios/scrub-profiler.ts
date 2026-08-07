@@ -1,13 +1,23 @@
 /**
- * Temporary instrumentation for deciding whether the thumbnail preview pipeline
- * can be replaced by native video seeking.
+ * Instrumentation for the scrub pipeline.
  *
- * Measures the two numbers that decide it:
+ * Written to answer whether the thumbnail preview could be replaced by native
+ * video seeking. It could not, and the numbers that settled it are worth keeping
+ * around:
  *
  *  - how long a seek takes to actually put a frame on screen, and how often that
- *    never happens (the reason native scrubbing felt broken before), and
- *  - how much of bootstrap is spent extracting preview thumbnails, which is what
- *    going native would buy back.
+ *    never happens, and
+ *  - how much of bootstrap is spent extracting preview thumbnails.
+ *
+ * It has since earned a second job. `stalls` distinguishes the two browsers in a
+ * way nothing else here does: `requestVideoFrameCallback` fires for a paused seek
+ * in Chrome and never fires in Safari, so a Safari session reports every seek as
+ * a stall while Chrome reports none. That is the same underlying fault as
+ * <https://bugs.webkit.org/show_bug.cgi?id=153588>, which is why the settled
+ * frame can be wrong on Safari and is not wrong on Chrome.
+ *
+ * So this is not dead code awaiting deletion — it is how that bug gets measured
+ * next time, and how any audit of already-captured screens would be checked.
  *
  * Off unless switched on, so it costs a boolean check per seek otherwise. Enable
  * with `?scrubProfiling=1` on the URL, or persistently:
@@ -15,8 +25,6 @@
  *     localStorage.setItem("odim:scrub-profiling", "1")
  *
  * Then scrub around and call `__odimScrubProfile.summary()` in the console.
- *
- * Delete this file once the question is settled.
  */
 
 type VideoWithFrameCallback = HTMLVideoElement & {
