@@ -1,5 +1,5 @@
 import { findTraceIssue } from "../components/shared/trace-issues";
-import { ReviewFeedbackState } from "./review-feedback";
+import { ReviewComment, ReviewFeedbackState } from "./review-feedback";
 
 /**
  * Structured shape of a single review verdict, persisted to `CaptureReview`.
@@ -38,8 +38,18 @@ export function summarizeReviewVerdict({
   feedbackState: ReviewFeedbackState;
   screenCount: number;
 }): ReviewVerdictSummary {
-  const screenComments = Object.values(feedbackState.commentsByScreen).flat();
-  const allComments = [...screenComments, ...feedbackState.flowComments];
+  // Only what this reviewer wrote this round.
+  //
+  // Reopening a bounced capture hydrates the previous review's prose back in,
+  // flagged `imported`. Counting those made every re-review report the round
+  // before it, and prose carries no `issueId`, so they inflated the counts while
+  // naming nothing. Round N's issues are already on round N's row.
+  const isThisRound = (comment: ReviewComment) => !comment.imported;
+  const screenComments = Object.values(feedbackState.commentsByScreen)
+    .flat()
+    .filter(isThisRound);
+  const flowComments = feedbackState.flowComments.filter(isThisRound);
+  const allComments = [...screenComments, ...flowComments];
 
   const issueIds = new Set<string>();
   const issueCategories = new Set<string>();
@@ -63,7 +73,7 @@ export function summarizeReviewVerdict({
     issueCategories: Array.from(issueCategories),
     destinations: Array.from(destinations),
     screenIssueCount: screenComments.length,
-    flowIssueCount: feedbackState.flowComments.length,
+    flowIssueCount: flowComments.length,
     screenCount,
   };
 }

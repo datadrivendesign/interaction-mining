@@ -82,19 +82,15 @@ export function useReviewVerdictActions({
       if (!saveRes.ok) {
         throw new Error(saveRes.message);
       }
-      // Logged as well as applied, so the review log carries the denominator a
-      // reject rate needs.
+      // Logged as well as applied, so the log carries the denominator a reject
+      // rate needs.
       //
-      // The structured fields are deliberately empty. Summarizing the live
-      // feedback state here recorded whatever the *previous* rejection had
-      // flagged, because reopening a bounced capture loads that feedback back in
-      // — so the same five screen issues appeared on the rejection and again on
-      // the approval that cleared them. Any query dividing issues by reviews
-      // then double-counts, which is precisely the number this table exists to
-      // get right. An approval means nothing was left to send back.
-      //
-      // `screenCount` stays: it describes the trace, not the feedback, and it is
-      // the denominator.
+      // Issue fields are empty deliberately: an approval means nothing was left
+      // to send back. Summarizing the live state here recorded the previous
+      // rejection's comments, which reopening a bounced capture loads back in, so
+      // the same issues landed on both the rejection and the approval that
+      // cleared them. `screenCount` stays — it describes the trace, not the
+      // feedback.
       const approveCaptureRes = await approveCapture(capture, {
         issueIds: [],
         issueCategories: [],
