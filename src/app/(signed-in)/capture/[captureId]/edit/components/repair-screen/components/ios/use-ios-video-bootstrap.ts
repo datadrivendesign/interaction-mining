@@ -5,6 +5,7 @@ import { UseFormSetValue } from "react-hook-form";
 import { FrameData, TraceFormData } from "../../../types";
 import { DraftFetchResults } from "../../../../util";
 import { extractThumbnails, extractVideoFrame } from "../../util";
+import { recordPhase } from "./scrub-profiler";
 import {
   MAX_TIMELINE_THUMBS,
   PREVIEW_THUMB_HEIGHT,
@@ -93,6 +94,7 @@ export function useIosVideoBootstrap({
       if (draftFetchResult === DraftFetchResults.LOADING) {
         return;
       }
+      const bootstrapStartedAt = performance.now();
       try {
         isProcessingRef.current = true;
         setIsVideoReady(false);
@@ -136,6 +138,7 @@ export function useIosVideoBootstrap({
         if (video.duration === 0) {
           throw new Error("Video duration not available");
         }
+        const timelineThumbsStartedAt = performance.now();
         const thumbs = await extractThumbnails(
           video,
           video.duration,
@@ -148,10 +151,13 @@ export function useIosVideoBootstrap({
             preferOffscreenCanvas: true,
           },
         );
+        recordPhase("timelineThumbnails", performance.now() - timelineThumbsStartedAt);
         thumbnailObjectUrlsRef.current = thumbs
           .map((thumb) => thumb.src)
           .filter((src) => src.startsWith("blob:"));
         setThumbnails(thumbs);
+        // The phase that disappears if the preview pipeline is removed.
+        const previewThumbsStartedAt = performance.now();
         const largePreviewThumbs = await extractThumbnails(
           video,
           video.duration,
@@ -164,6 +170,11 @@ export function useIosVideoBootstrap({
             preferOffscreenCanvas: true,
           },
         );
+        recordPhase(
+          "previewThumbnails",
+          performance.now() - previewThumbsStartedAt,
+        );
+        recordPhase("previewThumbnailCount", largePreviewThumbs.length);
         previewThumbnailObjectUrlsRef.current = largePreviewThumbs
           .map((thumb) => thumb.src)
           .filter((src) => src.startsWith("blob:"));
@@ -203,6 +214,7 @@ export function useIosVideoBootstrap({
           "screens",
           draftScreens.sort((a, b) => a.timestamp - b.timestamp),
         );
+        recordPhase("bootstrapTotal", performance.now() - bootstrapStartedAt);
         // Done seeking the live element. Anything holding a playhead position
         // can place it now without bootstrap dragging it away.
         setIsVideoReady(true);

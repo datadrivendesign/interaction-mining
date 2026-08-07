@@ -9,6 +9,7 @@ import {
 } from "react";
 
 
+import { recordSeekIssued } from "./scrub-profiler";
 import {
   PREVIEW_MATCH_TOLERANCE,
   PREVIEW_REVEAL_TIMEOUT_MS,
@@ -243,6 +244,7 @@ export function useIosScrubPreview({
       isSeekInFlightRef.current = true;
       pendingSeekTimeRef.current = nextTime;
       video.currentTime = nextTime;
+      recordSeekIssued(video, nextTime);
       if (scrubPreviewTimeRef.current === null) {
         lastCommittedVideoTimeRef.current = nextTime;
         updateCurrentTime(nextTime);
@@ -463,6 +465,7 @@ export function useIosScrubPreview({
       isSeekInFlightRef.current = true;
       pendingSeekTimeRef.current = t;
       video.currentTime = t;
+      recordSeekIssued(video, t);
       updateCurrentTime(t);
     },
     [
