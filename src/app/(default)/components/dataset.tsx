@@ -78,7 +78,7 @@ export default async function Dataset() {
         </div>
       </div>
       <div className="col-span-1 row-span-1 flex h-full w-full rounded-3xl bg-gradient-to-br from-neutral-100 to-neutral-200 p-px dark:from-neutral-800 dark:to-neutral-900">
-        <div className="to-neutral- 100 flex w-full grow flex-col overflow-hidden rounded-[calc(1.5rem-1px)] bg-gradient-to-br from-white p-6 dark:from-neutral-900 dark:to-black">
+        <div className="flex w-full grow flex-col overflow-hidden rounded-[calc(1.5rem-1px)] bg-gradient-to-br from-white to-neutral-100 p-6 dark:from-neutral-900 dark:to-black">
           <div className="mb-4 flex flex-col items-start text-purple-500 dark:text-purple-400">
             <div className="mb-2 flex aspect-square size-10 items-center justify-center rounded-lg border-2 border-purple-500 bg-purple-50 dark:bg-purple-950">
               <DraftingCompass className="size-6" />
