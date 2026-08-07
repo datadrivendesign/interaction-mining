@@ -40,20 +40,34 @@ const resolveExtractOptions = (
 };
 
 /**
- * How long to wait for a seek to report back before drawing anyway.
+ * How often to check whether a seek that has not reported back is real.
  *
  * Asking for the position the element already holds may complete without firing
  * `seeked` at all, and an unbounded wait there hangs the caller for good —
- * capturing at the current playhead is exactly that case. Falling through is safe
- * precisely when it happens, because the frame on the element is already the one
- * being asked for.
+ * capturing at the current playhead is exactly that case.
  *
- * Deliberately a deadline rather than a `video.seeking` check. Skipping the wait
- * whenever `seeking` reads false would draw before the frame arrives on any engine
- * that sets the flag asynchronously, which trades a hang for a wrong frame — the
- * far worse of the two, and the failure this whole area has already been bitten by.
+ * The check is `video.seeking`, but taken at this interval rather than
+ * immediately. Read at once it is worthless — engines may not have set the flag
+ * yet — while a seek still in flight half a second later has certainly set it. So
+ * a set flag means "keep waiting, the frame is coming" and a clear one means
+ * "nothing is coming, what is on the element is already the answer".
+ *
+ * The earlier version of this resolved unconditionally at the deadline, which
+ * turned a slow seek into a frame drawn before it arrived: the right timestamp
+ * with the previous picture. That is the failure this whole area has been bitten
+ * by repeatedly, and a busy decoder makes it reachable — screens are extracted
+ * immediately after 35 timeline thumbnails.
  */
-const SEEK_SETTLE_TIMEOUT_MS = 500;
+const SEEK_POLL_INTERVAL_MS = 500;
+
+/**
+ * Absolute cap on waiting for one seek.
+ *
+ * Rejects rather than drawing. Ten seconds of a seek not completing is a real
+ * failure, and guessing at the frame is how a wrong image ends up in a trace
+ * under a plausible timestamp — which reviewers then judge. Callers report it.
+ */
+const SEEK_ABSOLUTE_TIMEOUT_MS = 10000;
 
 /** Deadline for a thumbnail element to report metadata before giving up on it. */
 const THUMBNAIL_VIDEO_LOAD_TIMEOUT_MS = 20000;
@@ -76,10 +90,25 @@ const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
       cleanup();
       reject(e);
     };
-    timeout = window.setTimeout(() => {
+    const startedAt = performance.now();
+    const check = () => {
+      const waited = performance.now() - startedAt;
+      if (video.seeking && waited < SEEK_ABSOLUTE_TIMEOUT_MS) {
+        // A real seek is in flight. Resolving now would draw the frame it is
+        // replacing.
+        timeout = window.setTimeout(check, SEEK_POLL_INTERVAL_MS);
+        return;
+      }
       cleanup();
+      if (video.seeking) {
+        reject(
+          new Error(`Seek to ${t}s did not complete within ${waited | 0}ms`),
+        );
+        return;
+      }
       resolve();
-    }, SEEK_SETTLE_TIMEOUT_MS);
+    };
+    timeout = window.setTimeout(check, SEEK_POLL_INTERVAL_MS);
     video.addEventListener("seeked", onSeeked, { once: true });
     video.addEventListener("error", onError, { once: true });
     video.currentTime = t;
