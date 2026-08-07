@@ -57,6 +57,36 @@ interface UseIosScrubPreviewArgs {
 }
 
 /**
+ * Draws the displayed element into a scratch canvas and measures it, so the two
+ * sources can be compared under the same ruler.
+ */
+function describeElement(
+  video: HTMLVideoElement | null,
+  time: number,
+): Record<string, unknown> {
+  if (!video || !video.videoWidth) {
+    return { unavailable: true };
+  }
+  try {
+    const scratch = document.createElement("canvas");
+    scratch.width = video.videoWidth;
+    scratch.height = video.videoHeight;
+    const context = scratch.getContext("2d");
+    if (!context) {
+      return { noContext: true };
+    }
+    context.drawImage(video, 0, 0, scratch.width, scratch.height);
+    return {
+      ...describeCanvas(context, scratch),
+      elementTime: Math.round(video.currentTime * 1000) / 1000,
+      requested: Math.round(time * 1000) / 1000,
+    };
+  } catch (error) {
+    return { failed: String(error).slice(0, 60) };
+  }
+}
+
+/**
  * Describes what is actually on a canvas.
  *
  * The previous version sampled five points along the diagonal, which on a
@@ -184,7 +214,11 @@ export function useIosScrubPreview({
 
   /** Measures a preview thumbnail the same way, to calibrate the frame reading. */
   const describeThumbnailControl = useCallback(async (src: string | null) => {
-    if (!src || controlMeasuredRef.current) {
+    if (controlMeasuredRef.current) {
+      return;
+    }
+    if (!src) {
+      logScrubEvent("thumbnailControl", { skipped: "no thumbnail yet" });
       return;
     }
     controlMeasuredRef.current = true;
@@ -228,13 +262,16 @@ export function useIosScrubPreview({
         const drew = await drawFrameInto(canvas, time);
         if (drew && isScrubProfilingEnabled()) {
           const context = canvas.getContext("2d");
-          logScrubEvent("settledFrameDrawn", {
+          // Both sources measured at the same moment, because we have no valid
+          // reading for either yet — the earlier diagonal sampling was constant
+          // regardless of content, so the displayed element was never actually
+          // ruled out. Whichever signature varies with time is the one that
+          // works.
+          logScrubEvent("frameSources", {
             at: Math.round(time * 1000) / 1000,
-            ...(context ? describeCanvas(context, canvas) : { noContext: true }),
+            reader: context ? describeCanvas(context, canvas) : { noContext: true },
+            live: describeElement(videoRef.current, time),
           });
-          // A known-good image through the same measurement, as a control. If
-          // this shows spread and the drawn frame does not, the draw is blank;
-          // if both look blank, the measurement is at fault again.
           void describeThumbnailControl(
             getNearestPreviewThumbnail(time)?.src ?? null,
           );
@@ -250,6 +287,7 @@ export function useIosScrubPreview({
       drawFrameInto,
       getNearestPreviewThumbnail,
       settledFrameCanvasRef,
+      videoRef,
     ],
   );
 
