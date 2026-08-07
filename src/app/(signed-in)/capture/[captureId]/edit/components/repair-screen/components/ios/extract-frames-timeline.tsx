@@ -34,7 +34,7 @@ export type FrameTimelineProps = {
   currentTime: number;
   videoDuration: number;
   isPlaying: boolean;
-  handleSetTime: (t: number) => void;
+  handleSetTime: (t: number, options?: { syncFocus?: boolean }) => void;
   handlePlayPause: () => void;
   handleCapture: () => void;
   onScrubPreviewTimeChange?: (t: number | null) => void;
@@ -164,14 +164,16 @@ export default function FrameTimeline({
     ? { type: "tween" as const, ease: "linear" as const, duration: 0.04 }
     : spring({ duration: 0.12 });
 
+  // Mouse equivalents of the j/l keys, so they drag the focused screen along
+  // the same way an explicit seek does.
   const handleSkipForward = () => {
     const newTime = Math.min(currentTime + 5, videoDuration);
-    handleSetTime(newTime);
+    handleSetTime(newTime, { syncFocus: true });
   };
 
   const handleSkipBackward = () => {
     const newTime = Math.max(currentTime - 5, 0);
-    handleSetTime(newTime);
+    handleSetTime(newTime, { syncFocus: true });
   };
 
   const displayedThumbnails = useMemo(() => {

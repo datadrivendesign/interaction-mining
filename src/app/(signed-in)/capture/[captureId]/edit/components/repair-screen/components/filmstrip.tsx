@@ -23,16 +23,13 @@ export function Filmstrip({
   gestures,
   redactions,
   os,
-  handleSetTime,
 }: {
   screens: FrameData[];
   gestures: { [key: string]: ScreenGesture };
   redactions: { [screenId: string]: Redaction[] };
   os: Platform;
-  handleSetTime: (t: number) => void;
 }) {
-  const { focusedScreenId, setFocusedScreenId, handleDeleteScreen } =
-    useNavigation();
+  const { focusedScreenId, selectScreen, handleDeleteScreen } = useNavigation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,8 +90,7 @@ export function Filmstrip({
                 hasError={
                   isLast ? false : !isScreenAnnotationComplete(gestures[screen.id])
                 }
-                onClick={() => setFocusedScreenId(screen.id)}
-                handleSetTime={handleSetTime}
+                onClick={() => selectScreen(screen.id, "filmstrip")}
                 handleDeleteFrame={handleDeleteScreen}
               />
             );
@@ -113,7 +109,6 @@ function FilmstripItem({
   os,
   isSelected,
   hasError = false,
-  handleSetTime,
   handleDeleteFrame,
   onClick,
 }: {
@@ -124,7 +119,6 @@ function FilmstripItem({
   os: Platform;
   isSelected?: boolean;
   hasError?: boolean;
-  handleSetTime: (t: number) => void;
   handleDeleteFrame: (screenId: string) => void;
   onClick?: () => void;
 }) {
@@ -145,10 +139,7 @@ function FilmstripItem({
       layout="position"
       transition={spring()}
       key={`${screen.timestamp}-${screen.id}`}
-      onClick={() => {
-        onClick?.();
-        handleSetTime(screen.timestamp);
-      }}
+      onClick={onClick}
     >
       {/* Toolbar */}
       <div className="flex flex-row w-full items-center justify-between">

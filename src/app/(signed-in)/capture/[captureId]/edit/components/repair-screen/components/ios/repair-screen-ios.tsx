@@ -35,12 +35,8 @@ export function RepairScreenIOS({
   os: Platform;
   draftFetchResult: DraftFetchResults;
 }) {
-  const {
-    focusedScreenId,
-    setFocusedScreenId,
-    focusedIndex,
-    registerSeekToTime,
-  } = useNavigation();
+  const { focusedScreenId, selectScreen, focusedIndex, playheadRequest } =
+    useNavigation();
   const { setValue } = useFormContext<TraceFormData>();
   const { register: registerScreenUrl } = useScreenBlobRegistry();
   const [watchScreens, watchGestures, watchRedactions] = useWatch({
@@ -64,8 +60,8 @@ export function RepairScreenIOS({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
-  // Holds a jump's seek target while the recording is still loading.
-  const pendingJumpSeekRef = useRef<number | null>(null);
+  // Highest playhead request already applied, so each is placed once.
+  const appliedPlayheadNonceRef = useRef<number | null>(null);
 
   const videoFiles = useMemo(() => {
     const regexRule = /\.(mp4|mov)$/;
@@ -89,7 +85,7 @@ export function RepairScreenIOS({
   const { syncFocusToTimestamp } = useIosScreenFocusSync({
     screens,
     focusedScreenId,
-    setFocusedScreenId,
+    selectScreen,
   });
 
   // Bootstrap: load video, populate screens, expose duration + thumbnails.
@@ -152,39 +148,27 @@ export function RepairScreenIOS({
     syncFocusToTimestamp,
   });
 
-  // Let a jump to a screen (feedback checklist chip) carry the playhead with it.
-  // `syncFocus: false` matters: handleSetTime otherwise re-derives focus from the
-  // nearest screen timestamp, which lands on a neighbour when two screens sit
-  // close together and would override the jump that asked for this seek.
+  // Reconcile the recording towards where it has been asked to sit.
+  //
+  // Declarative on purpose. Bootstrap seeks the live element while extracting
+  // frames — the warmup grab alone drags it to 0.1s — so a seek issued during
+  // loading gets undone. Expressing the target as state means this effect simply
+  // runs again once `isVideoReady` flips, instead of a queue trying to guess the
+  // right moment to fire.
+  //
+  // No focus sync: the request came *from* a selection, and re-deriving focus
+  // from the landed timestamp is what let a click settle on a neighbouring
+  // screen when two sit close together.
   useEffect(() => {
-    registerSeekToTime((timestamp) => {
-      // Bootstrap seeks the live video element while extracting frames — the
-      // warmup grab alone drags it to 0.1s — and the `seeked` listener writes
-      // that back over currentTime. Seeking before it finishes gets undone, and
-      // a jump applies only once, so it never self-corrects. Hold it instead.
-      if (!isVideoReady) {
-        pendingJumpSeekRef.current = timestamp;
-        return;
-      }
-      handleSetTime(timestamp, { syncFocus: false });
-    });
-    return () => registerSeekToTime(null);
-  }, [handleSetTime, isVideoReady, registerSeekToTime]);
-
-  // Place a jump seek that arrived while the recording was still loading.
-  // Reachable whenever the step is re-entered with a jump still armed: this
-  // component and the video both remount, so the jump lands mid-bootstrap.
-  useEffect(() => {
-    if (!isVideoReady) {
+    if (!playheadRequest || !isVideoReady) {
       return;
     }
-    const pendingSeek = pendingJumpSeekRef.current;
-    if (pendingSeek === null) {
+    if (appliedPlayheadNonceRef.current === playheadRequest.nonce) {
       return;
     }
-    pendingJumpSeekRef.current = null;
-    handleSetTime(pendingSeek, { syncFocus: false });
-  }, [handleSetTime, isVideoReady]);
+    appliedPlayheadNonceRef.current = playheadRequest.nonce;
+    handleSetTime(playheadRequest.time);
+  }, [handleSetTime, isVideoReady, playheadRequest]);
 
   // Now that scrub-preview exists, point the lazy refs at the real callbacks.
   useEffect(() => {
@@ -203,6 +187,7 @@ export function RepairScreenIOS({
     scheduleScrubSeek,
     handleScrubCommit,
     setPausedPreviewTime,
+    onScrubActiveChange: handleScrubActiveChange,
   });
 
   const handleCaptureFrame = useCallback(async () => {
@@ -221,8 +206,8 @@ export function RepairScreenIOS({
     // so capturing is always followed by annotating it — and leaving focus
     // behind meant hunting for the new frame in the filmstrip first. No seek is
     // needed: the playhead is already at this screen's timestamp.
-    setFocusedScreenId(f.id);
-  }, [currentTime, registerScreenUrl, screens, setFocusedScreenId, setValue]);
+    selectScreen(f.id, "capture");
+  }, [currentTime, registerScreenUrl, screens, selectScreen, setValue]);
 
   // Workspace keybinds
   useHotkeys("space", async (e) => {
@@ -249,7 +234,7 @@ export function RepairScreenIOS({
     "j",
     (e) => {
       e.preventDefault();
-      handleSetTime(currentTime - 5);
+      handleSetTime(currentTime - 5, { syncFocus: true });
     },
     [currentTime, handleSetTime],
   );
@@ -258,7 +243,7 @@ export function RepairScreenIOS({
     "l",
     (e) => {
       e.preventDefault();
-      handleSetTime(currentTime + 5);
+      handleSetTime(currentTime + 5, { syncFocus: true });
     },
     [currentTime, handleSetTime],
   );
@@ -338,7 +323,6 @@ export function RepairScreenIOS({
               gestures={gestures}
               redactions={redactions}
               os={os}
-              handleSetTime={handleSetTime}
             />
             <FrameTimeline
               thumbnails={thumbnails}

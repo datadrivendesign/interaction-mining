@@ -5,6 +5,7 @@ import { UseFormSetValue } from "react-hook-form";
 import { FrameData, TraceFormData } from "../../../types";
 import { DraftFetchResults } from "../../../../util";
 import { extractThumbnails, extractVideoFrame } from "../../util";
+import { recordPhase } from "./scrub-profiler";
 import {
   MAX_TIMELINE_THUMBS,
   PREVIEW_THUMB_HEIGHT,
@@ -57,6 +58,11 @@ export function useIosVideoBootstrap({
   const thumbnailObjectUrlsRef = useRef<string[]>([]);
   const previewThumbnailObjectUrlsRef = useRef<string[]>([]);
   const isProcessingRef = useRef(false);
+  /**
+   * Identifies the current bootstrap run, so work deferred past the interactive
+   * phase can tell whether it is still wanted.
+   */
+  const bootstrapRunIdRef = useRef(0);
 
   const [videoDuration, setVideoDuration] = useState(0);
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -83,6 +89,7 @@ export function useIosVideoBootstrap({
   // Bootstrap effect: load the video, extract thumbnails + preview thumbnails,
   // and populate any screens missing a frame image.
   useEffect(() => {
+    const runId = bootstrapRunIdRef.current;
     const loadVideoAndPopulate = async () => {
       if (isProcessingRef.current) {
         return;
@@ -93,6 +100,10 @@ export function useIosVideoBootstrap({
       if (draftFetchResult === DraftFetchResults.LOADING) {
         return;
       }
+      const bootstrapStartedAt = performance.now();
+      // Captured for the deferred phase below, which runs outside the try block.
+      let video: HTMLVideoElement;
+      let duration: number;
       try {
         isProcessingRef.current = true;
         setIsVideoReady(false);
@@ -103,7 +114,7 @@ export function useIosVideoBootstrap({
         setThumbnails([]);
         setPreviewThumbnails([]);
         onResetPreviewFrames();
-        const video = videoRef.current;
+        video = videoRef.current;
         video.src = videoFiles[0].fileUrl;
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -136,6 +147,8 @@ export function useIosVideoBootstrap({
         if (video.duration === 0) {
           throw new Error("Video duration not available");
         }
+        duration = video.duration;
+        const timelineThumbsStartedAt = performance.now();
         const thumbs = await extractThumbnails(
           video,
           video.duration,
@@ -148,26 +161,11 @@ export function useIosVideoBootstrap({
             preferOffscreenCanvas: true,
           },
         );
+        recordPhase("timelineThumbnails", performance.now() - timelineThumbsStartedAt);
         thumbnailObjectUrlsRef.current = thumbs
           .map((thumb) => thumb.src)
           .filter((src) => src.startsWith("blob:"));
         setThumbnails(thumbs);
-        const largePreviewThumbs = await extractThumbnails(
-          video,
-          video.duration,
-          Math.min(90, Math.max(52, Math.ceil(video.duration))),
-          PREVIEW_THUMB_HEIGHT,
-          {
-            mimeType: "image/jpeg",
-            quality: PREVIEW_THUMB_JPEG_QUALITY,
-            output: "object-url",
-            preferOffscreenCanvas: true,
-          },
-        );
-        previewThumbnailObjectUrlsRef.current = largePreviewThumbs
-          .map((thumb) => thumb.src)
-          .filter((src) => src.startsWith("blob:"));
-        setPreviewThumbnails(largePreviewThumbs);
         const screensSnapshot = screensRef.current.map((screen) => ({
           ...screen,
         }));
@@ -203,17 +201,76 @@ export function useIosVideoBootstrap({
           "screens",
           draftScreens.sort((a, b) => a.timestamp - b.timestamp),
         );
+        recordPhase("bootstrapTotal", performance.now() - bootstrapStartedAt);
         // Done seeking the live element. Anything holding a playhead position
         // can place it now without bootstrap dragging it away.
         setIsVideoReady(true);
       } catch (e) {
         console.error("Error loading video blob:", e);
         toast.error("Error loading video for frame extraction");
+        return;
       } finally {
         isProcessingRef.current = false;
       }
+
+      // Scrub-preview thumbnails, deliberately after the step is interactive.
+      //
+      // Nothing on screen needs them: with an empty grid the preview overlay
+      // never renders and scrubbing falls through to real video frames, which
+      // measured at 14-38ms median across Chrome and Safari. Blocking on this
+      // was between a third and a half of the wait to enter the step.
+      //
+      // Extraction runs on its own cloned element, so it cannot disturb the
+      // playhead — but it does compete for decode bandwidth, so seeks in the
+      // first seconds may be slower than once it has finished.
+      if (bootstrapRunIdRef.current !== runId) {
+        return;
+      }
+      try {
+        const previewThumbsStartedAt = performance.now();
+        const largePreviewThumbs = await extractThumbnails(
+          video,
+          duration,
+          Math.min(90, Math.max(52, Math.ceil(duration))),
+          PREVIEW_THUMB_HEIGHT,
+          {
+            mimeType: "image/jpeg",
+            quality: PREVIEW_THUMB_JPEG_QUALITY,
+            output: "object-url",
+            preferOffscreenCanvas: true,
+          },
+        );
+        // The worker may have left the step while this ran. Its blob URLs are
+        // not in the ref yet, so the unmount sweep cannot see them.
+        if (bootstrapRunIdRef.current !== runId) {
+          revokeBlobUrls(largePreviewThumbs.map((thumb) => thumb.src));
+          return;
+        }
+        recordPhase(
+          "previewThumbnails",
+          performance.now() - previewThumbsStartedAt,
+        );
+        recordPhase("previewThumbnailCount", largePreviewThumbs.length);
+        previewThumbnailObjectUrlsRef.current = largePreviewThumbs
+          .map((thumb) => thumb.src)
+          .filter((src) => src.startsWith("blob:"));
+        setPreviewThumbnails(largePreviewThumbs);
+      } catch (error) {
+        // Worth a toast after all. The previous note here reasoned that scrubbing
+        // still falls back to real frames, which is true — but the worker loses
+        // every preview during a drag and is given no reason for it. That state
+        // had to be diagnosed from behaviour once already, because a console
+        // error is silence to anyone not holding devtools open.
+        console.error(`Error extracting scrub preview thumbnails: ${error}`);
+        toast.error("Scrub previews unavailable — scrubbing still works");
+      }
     };
     loadVideoAndPopulate();
+    return () => {
+      // Invalidate the run so deferred extraction stops and cleans up after
+      // itself if the worker leaves the step.
+      bootstrapRunIdRef.current += 1;
+    };
   }, [
     draftFetchResult,
     onResetPreviewFrames,

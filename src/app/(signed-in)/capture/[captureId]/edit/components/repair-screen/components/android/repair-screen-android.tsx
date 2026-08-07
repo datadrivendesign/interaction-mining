@@ -231,7 +231,6 @@ export function RepairScreenAndroid({
             gestures={currGestures}
             redactions={currRedactions}
             os={os}
-            handleSetTime={(_: number) => {}} // empty function
           />
         </ResizablePanel>
       </ResizablePanelGroup>

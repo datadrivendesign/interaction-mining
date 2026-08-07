@@ -9,12 +9,25 @@ import {
 } from "react";
 
 
+import { recordSeekIssued } from "./scrub-profiler";
 import {
+  PREVIEW_MATCH_TOLERANCE,
+  PREVIEW_REVEAL_TIMEOUT_MS,
   PREVIEW_SWAP_DELAY_MS,
   PreviewThumbnail,
   SCRUB_SEEK_INTERVAL_MS,
   findNearestPreviewThumbnail,
 } from "./ios-helpers";
+
+/**
+ * `requestVideoFrameCallback` is not in every TypeScript DOM lib, and is absent
+ * on older browsers, so it is described here and feature-detected at the call
+ * site rather than assumed.
+ */
+type VideoWithFrameCallback = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: () => void) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
+};
 
 interface UseIosScrubPreviewArgs {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -51,6 +64,10 @@ export function useIosScrubPreview({
   const previewSwapTimeoutRef = useRef<number | null>(null);
   const lastCommittedVideoTimeRef = useRef<number | null>(null);
   const activePreviewFrameSrcRef = useRef<string | null>(null);
+  /** The moment the display is trying to represent, wherever the request came from. */
+  const previewTargetTimeRef = useRef<number | null>(null);
+  const frameCallbackHandleRef = useRef<number | null>(null);
+  const revealFallbackTimeoutRef = useRef<number | null>(null);
 
   const [scrubPreviewTime, setScrubPreviewTime] = useState<number | null>(null);
   const [pausedPreviewTime, setPausedPreviewTime] = useState<number | null>(
@@ -64,27 +81,118 @@ export function useIosScrubPreview({
   >(null);
   const [isIncomingPreviewVisible, setIsIncomingPreviewVisible] =
     useState(false);
+  /**
+   * Whether the thumbnail is still needed.
+   *
+   * Separate from `scrubPreviewTime`, which is where the *pointer* is and must
+   * keep driving the timeline marker for the whole drag. Conflating the two is
+   * why the thumbnail could not be taken down mid-drag: hiding it meant clearing
+   * the pointer position, which would have snapped the marker backwards.
+   */
+  const [isPreviewNeeded, setIsPreviewNeeded] = useState(false);
 
   const getNearestPreviewThumbnail = useCallback(
     (time: number) => findNearestPreviewThumbnail(previewThumbnails, time),
     [previewThumbnails],
   );
 
+  const cancelPendingReveal = useCallback(() => {
+    const video = videoRef.current as VideoWithFrameCallback | null;
+    if (frameCallbackHandleRef.current !== null) {
+      video?.cancelVideoFrameCallback?.(frameCallbackHandleRef.current);
+      frameCallbackHandleRef.current = null;
+    }
+    if (revealFallbackTimeoutRef.current !== null) {
+      window.clearTimeout(revealFallbackTimeoutRef.current);
+      revealFallbackTimeoutRef.current = null;
+    }
+  }, [videoRef]);
+
+  /**
+   * Uncover the element once it has actually presented a frame.
+   *
+   * `seeked` only says the seek finished, not that anything has been painted,
+   * and uncovering in that gap is what showed a blank flash before the frame
+   * appeared. `requestVideoFrameCallback` fires on presentation, which is the
+   * event we actually want. A timeout backs it up: on a browser that does not
+   * implement it, or does not fire it for a paused element, the reveal still
+   * happens rather than leaving the thumbnail up for good.
+   */
+  const revealWhenFramePresented = useCallback(() => {
+    cancelPendingReveal();
+
+    const reveal = () => {
+      cancelPendingReveal();
+      setIsPreviewNeeded(false);
+    };
+
+    const video = videoRef.current as VideoWithFrameCallback | null;
+    revealFallbackTimeoutRef.current = window.setTimeout(
+      reveal,
+      PREVIEW_REVEAL_TIMEOUT_MS,
+    );
+
+    if (video && typeof video.requestVideoFrameCallback === "function") {
+      frameCallbackHandleRef.current = video.requestVideoFrameCallback(reveal);
+    }
+  }, [cancelPendingReveal, videoRef]);
+
+  /**
+   * Ask for the thumbnail to cover a move to `time` — but only when it would be
+   * an improvement on what is already displayed.
+   *
+   * Once the real frame is on screen, a small nudge should keep it: the element
+   * is showing a frame a few hundredths of a second away, while the nearest
+   * thumbnail can be half a second off. Swapping to the thumbnail would be a
+   * downgrade, and doing that on every small movement is what would make the
+   * panel strobe between the two sources.
+   */
+  const requestPreviewFor = useCallback(
+    (time: number) => {
+      // Any pending reveal is now stale — the display is being sent somewhere
+      // else, so a frame presented for the previous target must not uncover the
+      // element.
+      cancelPendingReveal();
+
+      setIsPreviewNeeded((wasNeeded) => {
+        if (wasNeeded) {
+          return true;
+        }
+        // Compared against the element's live position, not a cached one.
+        // `lastCommittedVideoTimeRef` only advances while `scrubPreviewTimeRef`
+        // is null, which is never true mid-scrub or mid-step, so it goes stale
+        // exactly when this comparison matters — drifting past the thumbnail's
+        // error and making the rule flip-flop, which is what flashed the panel
+        // while a step key was held.
+        const landed = videoRef.current?.currentTime;
+        if (landed === undefined) {
+          return true;
+        }
+        const thumbnail = getNearestPreviewThumbnail(time);
+        if (!thumbnail) {
+          return false;
+        }
+        return Math.abs(thumbnail.timestamp - time) < Math.abs(landed - time);
+      });
+    },
+    [cancelPendingReveal, getNearestPreviewThumbnail, videoRef],
+  );
+
   const activePreviewFrameSrc = useMemo(() => {
+    if (!isPreviewNeeded) {
+      return null;
+    }
     const sourceTime = scrubPreviewTime ?? pausedPreviewTime;
-    const selected =
-      sourceTime !== null ? getNearestPreviewThumbnail(sourceTime) : null;
-
-    if (scrubPreviewTime !== null) {
-      return selected?.src ?? null;
+    if (sourceTime === null) {
+      return null;
     }
-
-    if (pausedPreviewTime !== null) {
-      return selected?.src ?? null;
-    }
-
-    return null;
-  }, [getNearestPreviewThumbnail, pausedPreviewTime, scrubPreviewTime]);
+    return getNearestPreviewThumbnail(sourceTime)?.src ?? null;
+  }, [
+    getNearestPreviewThumbnail,
+    isPreviewNeeded,
+    pausedPreviewTime,
+    scrubPreviewTime,
+  ]);
 
   const displayedTimelineTime = scrubPreviewTime ?? currentTime;
   const hasPreviewOverlay =
@@ -96,6 +204,7 @@ export function useIosScrubPreview({
 
   // Reset all preview frame state. Used by bootstrap on video reload and live-photo start.
   const resetPreviewFrames = useCallback(() => {
+    setIsPreviewNeeded(false);
     setDisplayedPreviewFrameSrc(null);
     setIncomingPreviewFrameSrc(null);
     setIsIncomingPreviewVisible(false);
@@ -116,8 +225,10 @@ export function useIosScrubPreview({
       pendingScrubDisplayTimeRef.current = null;
       isScrubPreviewActiveRef.current = false;
       scrubPreviewTimeRef.current = null;
+      previewTargetTimeRef.current = null;
       setScrubPreviewTime(null);
       setPausedPreviewTime(null);
+      setIsPreviewNeeded(false);
       setDisplayedPreviewFrameSrc(null);
       setIncomingPreviewFrameSrc(null);
       setIsIncomingPreviewVisible(false);
@@ -133,6 +244,7 @@ export function useIosScrubPreview({
       isSeekInFlightRef.current = true;
       pendingSeekTimeRef.current = nextTime;
       video.currentTime = nextTime;
+      recordSeekIssued(video, nextTime);
       if (scrubPreviewTimeRef.current === null) {
         lastCommittedVideoTimeRef.current = nextTime;
         updateCurrentTime(nextTime);
@@ -197,6 +309,23 @@ export function useIosScrubPreview({
           setScrubPreviewTime(null);
         }
 
+        // Mid-drag reveal. Nothing further is queued, so this frame is where the
+        // pointer is pointing — and the real element is showing it, while the
+        // thumbnail is a nearest-neighbour guess up to half a second away.
+        // Holding still during a drag now shows the truth rather than saving it
+        // for mouse-up, which is what made the picture change under the worker
+        // just as they decided what to capture.
+        const previewTarget = previewTargetTimeRef.current;
+        const hasCaughtUp =
+          scrubQueuedSeekTimeRef.current === null &&
+          scrubSeekTimeoutRef.current === null &&
+          previewTarget !== null &&
+          Math.abs(video.currentTime - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
+
+        if (hasCaughtUp) {
+          revealWhenFramePresented();
+        }
+
         if (
           scrubPreviewTimeRef.current === null &&
           (lastCommittedVideoTime === null ||
@@ -221,11 +350,12 @@ export function useIosScrubPreview({
     return () => {
       video.removeEventListener("seeked", syncSeekTime);
     };
-  }, [updateCurrentTime, videoRef]);
+  }, [revealWhenFramePresented, updateCurrentTime, videoRef]);
 
   // Cleanup all timers/RAFs on unmount.
   useEffect(() => {
     return () => {
+      cancelPendingReveal();
       if (scrubSeekTimeoutRef.current !== null) {
         window.clearTimeout(scrubSeekTimeoutRef.current);
       }
@@ -236,7 +366,7 @@ export function useIosScrubPreview({
         window.clearTimeout(previewSwapTimeoutRef.current);
       }
     };
-  }, []);
+  }, [cancelPendingReveal]);
 
   // Cross-fade swap between displayed and incoming preview frames.
   useEffect(() => {
@@ -311,13 +441,18 @@ export function useIosScrubPreview({
 
       t = Math.max(0, Math.min(t, videoDuration));
 
-      if (options?.syncFocus ?? true) {
+      // Opt-in. A seek only drags the focused screen along when the seek itself
+      // was the worker's intent — scrubbing, frame stepping, the ±5s keys. A seek
+      // that exists because a screen was selected must not reassign selection.
+      if (options?.syncFocus) {
         syncFocusToTimestamp(t);
       }
 
       const video = videoRef.current;
       if (!video) return;
       video.pause();
+      previewTargetTimeRef.current = t;
+      requestPreviewFor(t);
       if (scrubPreviewTimeRef.current === null) {
         setPausedPreviewTime(t);
       }
@@ -330,10 +465,12 @@ export function useIosScrubPreview({
       isSeekInFlightRef.current = true;
       pendingSeekTimeRef.current = t;
       video.currentTime = t;
+      recordSeekIssued(video, t);
       updateCurrentTime(t);
     },
     [
       livePhotoEndRef,
+      requestPreviewFor,
       setIsLivePhotoActive,
       syncFocusToTimestamp,
       updateCurrentTime,
@@ -395,6 +532,10 @@ export function useIosScrubPreview({
     scrubDisplayRafRef.current = null;
     const nextTime = pendingScrubDisplayTimeRef.current;
     scrubPreviewTimeRef.current = nextTime;
+    previewTargetTimeRef.current = nextTime;
+    if (nextTime !== null) {
+      requestPreviewFor(nextTime);
+    }
     setScrubPreviewTime(nextTime);
 
     if (nextTime === null || !isScrubPreviewActiveRef.current) {
@@ -402,7 +543,7 @@ export function useIosScrubPreview({
     }
 
     scheduleScrubSeek(nextTime, false, false);
-  }, [scheduleScrubSeek]);
+  }, [requestPreviewFor, scheduleScrubSeek]);
 
   const scheduleScrubDisplayTime = useCallback(
     (time: number | null, immediate: boolean = false) => {
