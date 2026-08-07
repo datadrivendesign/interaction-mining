@@ -115,6 +115,7 @@ export function recordReveal(detail: {
   targetTime: number | null;
   mediaTime: number | null;
   settledTarget: number | null;
+  paintedToCanvas?: boolean;
 }): void {
   if (!isScrubProfilingEnabled()) {
     return;

@@ -38,6 +38,8 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 
 interface UseIosScrubPreviewArgs {
   videoRef: RefObject<HTMLVideoElement | null>;
+  /** Canvas the settled frame is painted into. See `drawSettledFrame`. */
+  settledFrameCanvasRef: RefObject<HTMLCanvasElement | null>;
   videoDuration: number;
   isPlaying: boolean;
   previewThumbnails: PreviewThumbnail[];
@@ -50,6 +52,7 @@ interface UseIosScrubPreviewArgs {
 
 export function useIosScrubPreview({
   videoRef,
+  settledFrameCanvasRef,
   videoDuration,
   isPlaying,
   previewThumbnails,
@@ -107,11 +110,54 @@ export function useIosScrubPreview({
    * the pointer position, which would have snapped the marker backwards.
    */
   const [isPreviewNeeded, setIsPreviewNeeded] = useState(false);
+  /**
+   * Whether the canvas holding the settled frame should be shown.
+   *
+   * Safari does not composite a new frame for a paused video after a seek, so
+   * the element can keep displaying an earlier position indefinitely — the
+   * wrong-frame reports. Its decoder is correct, though, which is why captured
+   * screens were always right, so the settled frame is read out with drawImage
+   * and displayed from a canvas rather than trusting the element to repaint.
+   */
+  const [isSettledFrameVisible, setIsSettledFrameVisible] = useState(false);
 
   const getNearestPreviewThumbnail = useCallback(
     (time: number) => findNearestPreviewThumbnail(previewThumbnails, time),
     [previewThumbnails],
   );
+
+  /**
+   * Paint the frame the element is currently decoding into the canvas.
+   *
+   * Synchronous and cheap — no encode, no blob. Reads from the decoder, so it is
+   * correct even when the element is compositing something older.
+   *
+   * @returns Whether a frame was drawn.
+   */
+  const drawSettledFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = settledFrameCanvasRef.current;
+    if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
+      return false;
+    }
+    if (canvas.width !== video.videoWidth) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return false;
+    }
+    try {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return true;
+    } catch (error) {
+      // Only ever displayed, never read back, so a tainted canvas is harmless —
+      // but a failed draw means falling back to the element.
+      console.error(`Could not draw settled frame: ${error}`);
+      return false;
+    }
+  }, [settledFrameCanvasRef, videoRef]);
 
   const cancelPendingReveal = useCallback(() => {
     const video = videoRef.current as VideoWithFrameCallback | null;
@@ -143,12 +189,17 @@ export function useIosScrubPreview({
       mediaTime: number | null,
     ) => {
       cancelPendingReveal();
+      const didDraw = drawSettledFrame();
       recordReveal({
         source,
         targetTime: previewTargetTimeRef.current,
         mediaTime,
         settledTarget: settledSeekTargetRef.current,
+        paintedToCanvas: didDraw,
       });
+      // Falls back to uncovering the element when the draw fails, which is the
+      // old behaviour and still correct everywhere but Safari.
+      setIsSettledFrameVisible(didDraw);
       setIsPreviewNeeded(false);
     };
 
@@ -163,7 +214,7 @@ export function useIosScrubPreview({
         (_now, metadata) => reveal("frame-callback", metadata.mediaTime),
       );
     }
-  }, [cancelPendingReveal, videoRef]);
+  }, [cancelPendingReveal, drawSettledFrame, videoRef]);
 
   /**
    * Ask for the thumbnail to cover a move to `time` — but only when it would be
@@ -263,6 +314,8 @@ export function useIosScrubPreview({
       setScrubPreviewTime(null);
       setPausedPreviewTime(null);
       setIsPreviewNeeded(false);
+      // Playing composites normally, so the element is trustworthy again.
+      setIsSettledFrameVisible(false);
       setDisplayedPreviewFrameSrc(null);
       setIncomingPreviewFrameSrc(null);
       setIsIncomingPreviewVisible(false);
@@ -694,6 +747,7 @@ export function useIosScrubPreview({
     isIncomingPreviewVisible,
     displayedTimelineTime,
     hasPreviewOverlay,
+    isSettledFrameVisible,
     scrubPreviewTimeRef,
     handleSetTime,
     handleScrubPreviewTimeChange,

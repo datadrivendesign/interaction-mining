@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 
 interface VideoPreviewOverlayProps {
   videoRef: Ref<HTMLVideoElement>;
+  settledFrameCanvasRef: Ref<HTMLCanvasElement>;
+  isSettledFrameVisible: boolean;
   displayedPreviewFrameSrc: string | null;
   incomingPreviewFrameSrc: string | null;
   isIncomingPreviewVisible: boolean;
@@ -15,6 +17,8 @@ interface VideoPreviewOverlayProps {
 
 export function VideoPreviewOverlay({
   videoRef,
+  settledFrameCanvasRef,
+  isSettledFrameVisible,
   displayedPreviewFrameSrc,
   incomingPreviewFrameSrc,
   isIncomingPreviewVisible,
@@ -40,6 +44,21 @@ export function VideoPreviewOverlay({
         controls={false}
         onPlay={onPlay}
         onPause={onPause}
+      />
+      {/*
+        The settled frame, painted from the decoder rather than left to the
+        element. Safari does not composite a new frame for a paused video after
+        a seek, so uncovering the element could reveal an earlier position; this
+        sits above it and always holds the frame that was actually asked for.
+        Hidden during playback, when the element composites normally.
+      */}
+      <canvas
+        ref={settledFrameCanvasRef}
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 z-[5] h-full w-full rounded-lg object-contain",
+          isSettledFrameVisible ? "opacity-100" : "opacity-0",
+        )}
       />
       {displayedPreviewFrameSrc ? (
         <Image

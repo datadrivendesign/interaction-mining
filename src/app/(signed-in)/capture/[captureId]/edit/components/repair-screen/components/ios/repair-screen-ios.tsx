@@ -59,6 +59,8 @@ export function RepairScreenIOS({
   );
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Holds the settled frame, painted from the decoder. See drawSettledFrame.
+  const settledFrameCanvasRef = useRef<HTMLCanvasElement>(null);
   const didKeyPressStartInFormField = useFormFieldKeyPressGuard();
   // Highest playhead request already applied, so each is placed once.
   const appliedPlayheadNonceRef = useRef<number | null>(null);
@@ -136,8 +138,10 @@ export function RepairScreenIOS({
     scheduleScrubDisplayTime,
     scheduleScrubSeek,
     resetPreviewFrames,
+    isSettledFrameVisible,
   } = useIosScrubPreview({
     videoRef,
+    settledFrameCanvasRef,
     videoDuration,
     isPlaying,
     previewThumbnails,
@@ -283,6 +287,8 @@ export function RepairScreenIOS({
             >
               <RepairVideoPanelIOS
                 videoRef={videoRef}
+                settledFrameCanvasRef={settledFrameCanvasRef}
+                isSettledFrameVisible={isSettledFrameVisible}
                 displayedPreviewFrameSrc={displayedPreviewFrameSrc}
                 incomingPreviewFrameSrc={incomingPreviewFrameSrc}
                 isIncomingPreviewVisible={isIncomingPreviewVisible}
