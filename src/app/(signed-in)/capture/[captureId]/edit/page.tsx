@@ -297,6 +297,15 @@ export default function Page() {
       const draftFileResponse = await fetch(
         signedLatestDraftFileRes.data.signedUrl,
       );
+      // Checked, because an error response body is not draft JSON and parsing it
+      // throws somewhere far less obvious than here.
+      if (!draftFileResponse.ok) {
+        setDraftFetchResult(DraftFetchResults.ERROR);
+        console.error(
+          `Failed to download draft file: ${draftFileResponse.status}`,
+        );
+        return;
+      }
       const draftFormData: DraftTraceFormData = await draftFileResponse.json();
 
       // Check if we already have screens with src data to avoid overwriting
@@ -338,7 +347,17 @@ export default function Page() {
       }
       setDraftFetchResult(DraftFetchResults.SUCCESS);
     };
-    fetchFiles();
+    // Every early return above reports failure, but a *thrown* failure had
+    // nowhere to go: `fetch` rejects on a network error rather than returning
+    // something falsy, and `.json()` throws on a body that is not JSON. Either
+    // escaped as an unhandled rejection, so the state never left LOADING and the
+    // editor sat on "Loading saved draft data..." for good — with the error state
+    // it needed already built and wired to a message telling the worker what to
+    // do about it.
+    fetchFiles().catch((error) => {
+      setDraftFetchResult(DraftFetchResults.ERROR);
+      console.error(`Failed to load draft data: ${error}`);
+    });
   }, [captureId, draftFetchResult, methods]);
 
   // Fetch video files once when component mounts - files won't change during edit session
