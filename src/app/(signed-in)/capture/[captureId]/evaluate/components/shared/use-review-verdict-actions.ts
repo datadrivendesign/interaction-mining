@@ -83,14 +83,26 @@ export function useReviewVerdictActions({
         throw new Error(saveRes.message);
       }
       // Logged as well as applied, so the review log carries the denominator a
-      // reject rate needs. Any comments left on an approved capture ride along.
-      const approveCaptureRes = await approveCapture(
-        capture,
-        summarizeReviewVerdict({
-          feedbackState,
-          screenCount: traceData.screens.length,
-        }),
-      );
+      // reject rate needs.
+      //
+      // The structured fields are deliberately empty. Summarizing the live
+      // feedback state here recorded whatever the *previous* rejection had
+      // flagged, because reopening a bounced capture loads that feedback back in
+      // — so the same five screen issues appeared on the rejection and again on
+      // the approval that cleared them. Any query dividing issues by reviews
+      // then double-counts, which is precisely the number this table exists to
+      // get right. An approval means nothing was left to send back.
+      //
+      // `screenCount` stays: it describes the trace, not the feedback, and it is
+      // the denominator.
+      const approveCaptureRes = await approveCapture(capture, {
+        issueIds: [],
+        issueCategories: [],
+        destinations: [],
+        screenIssueCount: 0,
+        flowIssueCount: 0,
+        screenCount: traceData.screens.length,
+      });
       if (!approveCaptureRes.ok) {
         throw new Error(approveCaptureRes.message);
       }
