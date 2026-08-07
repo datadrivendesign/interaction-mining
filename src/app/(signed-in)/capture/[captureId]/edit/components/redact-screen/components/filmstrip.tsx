@@ -18,7 +18,7 @@ export function Filmstrip({
   setFocusViewIndex: (index: number) => void;
 }) {
   return (
-    <ul className="relative z-0 flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+    <ul className="relative z-0 flex h-full gap-1 overflow-x-auto px-2 pt-2 pb-4">
       {screens?.map((screen: FrameData, index: number) => (
         <FilmstripItem
           key={screen.id}
@@ -53,23 +53,23 @@ function FilmstripItem({
 } & React.HTMLAttributes<HTMLLIElement>) {
   return (
     <li
-      className="cursor-pointer min-w-fit h-full"
+      className="h-full min-w-fit cursor-pointer"
       data-index={index}
       {...props}
     >
-      <div className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
+      <div className="relative h-full overflow-clip rounded-sm object-contain transition-all duration-200 ease-in-out select-none">
         {/* Index overlay */}
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-xs font-mono rounded px-1 py-0.5 min-w-[1.5rem] text-center">
+        <div className="absolute top-1 right-1 z-20 min-w-[1.5rem] rounded bg-black/60 px-1 py-0.5 text-center font-mono text-xs text-white">
           {index + 1}
         </div>
         {(isSelected || hasError) && (
           <div
             className={cn(
-              "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
+              "absolute z-10 flex h-full w-full items-center justify-center rounded-sm",
               isSelected
-                ? "ring-3 ring-inset ring-blue-500"
+                ? "ring-3 ring-blue-500 ring-inset"
                 : hasError
-                  ? "ring-3 ring-inset ring-red-500"
+                  ? "ring-3 ring-red-500 ring-inset"
                   : "",
             )}
           >
@@ -85,8 +85,8 @@ function FilmstripItem({
         )}
         <div
           className={cn(
-            "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
-            hasError ? "grayscale brightness-50" : "grayscale-0 brightness-100",
+            "relative h-full min-w-fit transition-all duration-200 ease-in-out select-none",
+            hasError ? "brightness-50 grayscale" : "brightness-100 grayscale-0",
           )}
         >
           <Image

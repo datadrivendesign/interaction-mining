@@ -110,7 +110,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
               ? [stageRef.current.x(), stageRef.current.y()]
               : [0, 0],
         },
-      }
+      },
     );
 
     // Helper to calculate pointer position accounting for current transform.
@@ -175,7 +175,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           });
         }
       },
-      [offsetX, offsetY, displayWidth, displayHeight, mode, getRelativePointer]
+      [offsetX, offsetY, displayWidth, displayHeight, mode, getRelativePointer],
     );
 
     // handler for mouse move event
@@ -205,7 +205,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         displayWidth,
         displayHeight,
         getRelativePointer,
-      ]
+      ],
     );
 
     // handler for mouse up event
@@ -217,7 +217,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           setNewRect(null);
         }
       },
-      [newRect, createRedaction, mode, setMode]
+      [newRect, createRedaction, mode, setMode],
     );
 
     // function to update the rectangle properties
@@ -227,7 +227,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           updateRedaction(id, rect);
         }
       },
-      [selectedRedaction, updateRedaction]
+      [selectedRedaction, updateRedaction],
     );
 
     // handler for when user clicks a rectangle
@@ -247,7 +247,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         const newY = (pos.y - offsetY) / displayHeight;
         updateRect(id, { x: newX, y: newY });
       },
-      [offsetX, offsetY, displayWidth, displayHeight, updateRect]
+      [offsetX, offsetY, displayWidth, displayHeight, updateRect],
     );
 
     // function to handle transformation of rectangles
@@ -294,7 +294,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           height: clampedHeight,
         });
       },
-      [offsetX, offsetY, displayWidth, displayHeight, updateRect]
+      [offsetX, offsetY, displayWidth, displayHeight, updateRect],
     );
 
     useEffect(() => {
@@ -305,7 +305,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
       if (mode !== "select") {
         selectRedaction(null);
         setOverlay((prev: any) =>
-          prev.filter((o: any) => o.type !== `annotation`)
+          prev.filter((o: any) => o.type !== `annotation`),
         );
 
         transformer.nodes([]);
@@ -315,7 +315,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
 
       if (selectedRedaction) {
         const selectedNode = stage.findOne(
-          `#redaction-${selectedRedaction.id}`
+          `#redaction-${selectedRedaction.id}`,
         );
 
         if (selectedNode) {
@@ -342,14 +342,14 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
           ]);
         } else {
           console.warn(
-            `No node found for selected redaction with id: ${selectedRedaction.id}`
+            `No node found for selected redaction with id: ${selectedRedaction.id}`,
           );
         }
       } else {
         transformer.nodes([]);
         transformer.getLayer().batchDraw();
         setOverlay((prev: any) =>
-          prev.filter((o: any) => o.type !== `annotation`)
+          prev.filter((o: any) => o.type !== `annotation`),
         );
       }
     }, [selectedRedaction, mode, selectRedaction, updateRect]);
@@ -450,24 +450,24 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
     }, [image, redactions]);
 
     return (
-      <div className="relative w-full h-full">
+      <div className="relative h-full w-full">
         <div
           ref={
             mergeRefs(
               refMeasure,
-              containerRef
+              containerRef,
             ) as React.MutableRefObject<HTMLDivElement | null>
           }
           className={cn(
-            "relative w-full h-full",
+            "relative h-full w-full",
             mode === "select" && "cursor-normal",
             mode === "pencil" && "cursor-crosshair",
-            mode === "eraser" && "cursor-normal"
+            mode === "eraser" && "cursor-normal",
           )}
         >
-          <div className="absolute top-0 left-0 z-10 flex items-center justify-between w-full p-2">
+          <div className="absolute top-0 left-0 z-10 flex w-full items-center justify-between p-2">
             <button
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md shadow-md hover:bg-blue-600"
+              className="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-md hover:bg-blue-600"
               onClick={handleExport}
             >
               Export
@@ -530,7 +530,7 @@ const CanvasComponent = forwardRef<CanvasRef, CanvasComponentProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 export default CanvasComponent;

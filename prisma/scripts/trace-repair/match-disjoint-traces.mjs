@@ -51,7 +51,9 @@ const STRATEGIES = /** @type {const} */ ({
 
 /** @param {unknown} v */
 function isStrategy(v) {
-  return v === STRATEGIES.BACKREF || v === STRATEGIES.TASK || v === STRATEGIES.BOTH;
+  return (
+    v === STRATEGIES.BACKREF || v === STRATEGIES.TASK || v === STRATEGIES.BOTH
+  );
 }
 
 /**

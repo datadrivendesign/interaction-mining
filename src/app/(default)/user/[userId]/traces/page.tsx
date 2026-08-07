@@ -1,3 +1,3 @@
-export default function Traces () {
-    return <></>
+export default function Traces() {
+  return <></>;
 }

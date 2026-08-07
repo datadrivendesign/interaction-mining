@@ -15,7 +15,7 @@ export function FilterBadge({ label, onRemove }: FilterBadgeProps) {
   return (
     <Badge
       variant="secondary"
-      className="flex items-center gap-2 pr-2 hover:bg-red-500/100 dark:hover:bg-red-500/100 hover:text-white cursor-pointer"
+      className="flex cursor-pointer items-center gap-2 pr-2 hover:bg-red-500/100 hover:text-white dark:hover:bg-red-500/100"
       onClick={onRemove}
     >
       <X className="h-2 w-2" />

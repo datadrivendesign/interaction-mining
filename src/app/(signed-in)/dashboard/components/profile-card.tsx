@@ -28,7 +28,7 @@ export function ProfileCard({
             alt="User avatar"
           />
           <AvatarFallback>
-            <div className="w-full h-full bg-muted-background flex items-center justify-center">
+            <div className="flex h-full w-full items-center justify-center bg-muted-background">
               <span className="text-2xl font-semibold">
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}
               </span>
@@ -37,8 +37,8 @@ export function ProfileCard({
         </Avatar>
         <div className="flex flex-col space-y-3">
           <div>
-            <h1 className="break-words text-xl font-semibold">{user?.name}</h1>
-            <span className="block break-all text-sm text-muted-foreground">
+            <h1 className="text-xl font-semibold break-words">{user?.name}</h1>
+            <span className="block text-sm break-all text-muted-foreground">
               {user?.email}
             </span>
           </div>

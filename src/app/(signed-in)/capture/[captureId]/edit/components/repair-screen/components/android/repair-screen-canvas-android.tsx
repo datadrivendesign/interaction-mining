@@ -216,9 +216,9 @@ export default function RepairScreenCanvasAndroid({
           onDragEnd={handleDragEnd}
           modifiers={[restrictToParentElement]}
         >
-          <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
+          <div className="flex h-full w-full items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
             <div
-              className="relative w-fit inline-flex h-full"
+              className="relative inline-flex h-full w-fit"
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
             >
               <DroppableArea>
@@ -230,7 +230,7 @@ export default function RepairScreenCanvasAndroid({
                   !gesture.y &&
                   !isLastScreen ? (
                     <motion.div
-                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                      className="pointer-events-none absolute z-50 origin-left rounded-md bg-neutral-200 px-2 py-1 shadow-md dark:bg-neutral-800"
                       initial={{
                         x: 8 + tooltip!.x,
                         y: 8 + tooltip!.y,
@@ -257,7 +257,7 @@ export default function RepairScreenCanvasAndroid({
                   <DraggableMarker position={markerPixelPosition} />
                 ) : null}
                 {isLastScreen ? (
-                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                  <div className="pointer-events-none absolute top-3 left-1/2 z-50 -translate-x-1/2">
                     <div className="rounded-md bg-emerald-600/70 px-3 py-1.5 text-xs font-semibold text-white/95 shadow-sm">
                       Goal screen reached. No gesture required.
                     </div>
@@ -268,7 +268,7 @@ export default function RepairScreenCanvasAndroid({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair "} w-auto h-full rounded-lg select-none z-50`}
+                  className={`${isLastScreen ? "cursor-default" : "cursor-crosshair"} z-50 h-full w-auto rounded-lg select-none`}
                   width={0}
                   height={0}
                   sizes="100vw"

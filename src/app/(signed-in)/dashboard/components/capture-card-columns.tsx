@@ -249,9 +249,9 @@ export function NoCapturesCard() {
   return (
     <Card className="p-12">
       <div className="flex flex-col items-center justify-center text-center">
-        <Upload className="size-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No captures yet</h3>
-        <p className="text-muted-foreground mb-4">
+        <Upload className="mb-4 size-12 text-muted-foreground" />
+        <h3 className="mb-2 text-lg font-semibold">No captures yet</h3>
+        <p className="mb-4 text-muted-foreground">
           Start by creating your first capture to begin contributing to the
           dataset.
         </p>

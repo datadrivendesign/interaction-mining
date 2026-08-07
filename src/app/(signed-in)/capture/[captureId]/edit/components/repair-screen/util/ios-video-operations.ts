@@ -23,7 +23,7 @@ const DEFAULT_EXTRACT_OPTIONS: Required<ExtractVideoFrameOptions> = {
 
 const resolveExtractOptions = (
   scaleOrOptions?: number | ExtractVideoFrameOptions,
-  overrideOptions?: ExtractVideoFrameOptions
+  overrideOptions?: ExtractVideoFrameOptions,
 ): Required<ExtractVideoFrameOptions> => {
   if (typeof scaleOrOptions === "number") {
     return {
@@ -165,9 +165,9 @@ const seekVideoToTime = async (video: HTMLVideoElement, t: number) => {
  */
 const readQueues = new WeakMap<HTMLVideoElement, Promise<unknown>>();
 
-const enqueueRead = <T,>(
+const enqueueRead = <T>(
   video: HTMLVideoElement,
-  operation: () => Promise<T>
+  operation: () => Promise<T>,
 ): Promise<T> => {
   const previous = readQueues.get(video) ?? Promise.resolve();
   const run = previous.then(operation, operation);
@@ -175,7 +175,7 @@ const enqueueRead = <T,>(
   // reads behind it. The caller still sees the rejection through `run`.
   readQueues.set(
     video,
-    run.catch(() => undefined)
+    run.catch(() => undefined),
   );
   return run;
 };
@@ -183,7 +183,7 @@ const enqueueRead = <T,>(
 const drawFrameToCanvas = (
   video: HTMLVideoElement,
   scale: number,
-  preferOffscreenCanvas: boolean
+  preferOffscreenCanvas: boolean,
 ): FrameCanvas => {
   const cw = Math.floor(video.videoWidth * scale);
   const ch = Math.floor(video.videoHeight * scale);
@@ -212,7 +212,7 @@ const drawFrameToCanvas = (
 const canvasToBlob = async (
   canvas: FrameCanvas,
   mimeType: ExtractedImageMimeType,
-  quality: number
+  quality: number,
 ) => {
   if ("convertToBlob" in canvas) {
     return canvas.convertToBlob({
@@ -231,7 +231,7 @@ const canvasToBlob = async (
         resolve(blob);
       },
       mimeType,
-      mimeType === "image/jpeg" ? quality : undefined
+      mimeType === "image/jpeg" ? quality : undefined,
     );
   });
 };
@@ -262,7 +262,7 @@ const blobToDataUrl = async (blob: Blob) =>
 async function grabFrameViaCanvas(
   video: HTMLVideoElement,
   t: number,
-  options: Required<ExtractVideoFrameOptions>
+  options: Required<ExtractVideoFrameOptions>,
 ): Promise<FrameData> {
   await seekVideoToTime(video, t);
   // Did somebody else move the playhead while this was waiting?
@@ -285,7 +285,7 @@ async function grabFrameViaCanvas(
   const canvas = drawFrameToCanvas(
     video,
     options.scale,
-    options.output === "object-url" && options.preferOffscreenCanvas
+    options.output === "object-url" && options.preferOffscreenCanvas,
   );
   const blob = await canvasToBlob(canvas, options.mimeType, options.quality);
   const src =
@@ -311,7 +311,7 @@ export async function extractVideoFrame(
   video: HTMLVideoElement,
   t: number,
   scaleOrOptions?: number | ExtractVideoFrameOptions,
-  overrideOptions?: ExtractVideoFrameOptions
+  overrideOptions?: ExtractVideoFrameOptions,
 ): Promise<FrameData> {
   const options = resolveExtractOptions(scaleOrOptions, overrideOptions);
   return enqueueRead(video, () => grabFrameViaCanvas(video, t, options));
@@ -330,7 +330,7 @@ export async function extractVideoThumbnails(
   videoDuration: number,
   maxThumbs: number = 30,
   thumbHeight: number = 128,
-  options?: ExtractVideoFrameOptions
+  options?: ExtractVideoFrameOptions,
 ): Promise<ListedFiles[]> {
   const thumbVideo = document.createElement("video");
   thumbVideo.crossOrigin = "anonymous";
@@ -373,7 +373,7 @@ export async function extractVideoThumbnails(
       videoDuration,
       maxThumbs,
       thumbHeight,
-      options
+      options,
     );
   } finally {
     // Releases the element's hold on the resource. Whether a detached media
@@ -392,7 +392,7 @@ async function extractThumbnailsFrom(
   videoDuration: number,
   maxThumbs: number,
   thumbHeight: number,
-  options?: ExtractVideoFrameOptions
+  options?: ExtractVideoFrameOptions,
 ): Promise<ListedFiles[]> {
   // determine how many thumbnails to extract
   const duration = videoDuration;
@@ -438,14 +438,14 @@ export const extractThumbnails = async (
   videoDuration: number,
   maxThumbs: number = 30,
   thumbHeight: number = 128,
-  options?: ExtractVideoFrameOptions
+  options?: ExtractVideoFrameOptions,
 ) => {
   const thumbnailFiles = await extractVideoThumbnails(
     video,
     videoDuration,
     maxThumbs,
     thumbHeight,
-    options
+    options,
   );
   const thumbs = thumbnailFiles.map((f, index) => ({
     src: f.fileUrl,

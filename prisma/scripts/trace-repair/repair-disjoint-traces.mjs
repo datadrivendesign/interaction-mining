@@ -95,7 +95,13 @@ async function fetchCapturesByIds(db, captureIds) {
   if (captureIds.length === 0) return new Map();
   const rows = await db.capture.findMany({
     where: { id: { in: captureIds } },
-    select: { id: true, traceId: true, taskId: true, appId: true, status: true },
+    select: {
+      id: true,
+      traceId: true,
+      taskId: true,
+      appId: true,
+      status: true,
+    },
   });
   return new Map(rows.map((r) => [r.id, r]));
 }

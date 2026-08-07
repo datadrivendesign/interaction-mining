@@ -31,8 +31,7 @@ type AppleLookupResult = {
 };
 
 type GetIosAppParams =
-  | { id: string; appId?: string }
-  | { id?: string; appId: string };
+  { id: string; appId?: string } | { id?: string; appId: string };
 
 type AndroidStoreCategory = {
   name: string;

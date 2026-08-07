@@ -25,10 +25,13 @@ export interface ImageRect {
 export function useRedactStageViewport({
   imageSrc,
 }: UseRedactStageViewportArgs) {
-  const [refMeasure, { width: measuredWidth, height: measuredHeight } = {
-    width: 0,
-    height: 0,
-  }] = useMeasure();
+  const [
+    refMeasure,
+    { width: measuredWidth, height: measuredHeight } = {
+      width: 0,
+      height: 0,
+    },
+  ] = useMeasure();
   const containerRef = useRef<HTMLDivElement>(null);
   const containerCallbackRef = useMemo(
     () =>
@@ -72,8 +75,7 @@ export function useRedactStageViewport({
     );
     // Start landscape frames at a smaller initial fit so they do not dominate
     // the redact focus area on first load.
-    const initialScale =
-      image.width > image.height ? fitScale * 0.5 : fitScale;
+    const initialScale = image.width > image.height ? fitScale * 0.5 : fitScale;
     const displayWidth = image.width * initialScale;
     const displayHeight = image.height * initialScale;
     const offsetX = (width - displayWidth) / 2;

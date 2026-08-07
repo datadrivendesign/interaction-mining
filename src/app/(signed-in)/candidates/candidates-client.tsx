@@ -24,8 +24,8 @@ function CandidatesPageContent() {
   };
 
   return (
-    <div className="flex w-dvw min-h-dvh justify-center items-start p-8 md:p-16">
-      <div className="flex flex-col gap-4 w-full">
+    <div className="flex min-h-dvh w-dvw items-start justify-center p-8 md:p-16">
+      <div className="flex w-full flex-col gap-4">
         <h1 className="text-2xl font-bold">Candidates</h1>
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-2">
@@ -39,12 +39,12 @@ function CandidatesPageContent() {
           >
             {isLoading || isRefreshing ? (
               <>
-                <RefreshCcw className="w-4 h-4 animate-spin" />
+                <RefreshCcw className="h-4 w-4 animate-spin" />
                 Refreshing...
               </>
             ) : (
               <>
-                Refresh Apps <RefreshCcw className="w-4 h-4" />
+                Refresh Apps <RefreshCcw className="h-4 w-4" />
               </>
             )}
           </Button>

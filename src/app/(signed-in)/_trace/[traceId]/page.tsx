@@ -16,7 +16,6 @@ export default async function Page({
         trace = res.data;
       }
     });
-
   } catch {
     notFound();
   }

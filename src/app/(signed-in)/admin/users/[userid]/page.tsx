@@ -13,7 +13,7 @@ export default async function ManageUserPage({
   const userRes = await getUser(
     userid,
     {},
-    { select: { id: true, name: true, email: true, role: true, image: true } }
+    { select: { id: true, name: true, email: true, role: true, image: true } },
   );
   if (!userRes.ok) {
     notFound();
@@ -21,8 +21,8 @@ export default async function ManageUserPage({
   const user = userRes.data;
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-16">
+    <div className="mx-auto max-w-7xl">
+      <div className="grid grid-cols-1 gap-16 md:grid-cols-4">
         <InfoColumn user={user} />
         <CapturesColumn userId={userid} />
       </div>

@@ -48,7 +48,10 @@ const EMPTY_OBJECT_ID = "000000000000000000000000";
 async function loadDiffFile(filePath) {
   const raw = await readFile(filePath, "utf8");
   const parsed = JSON.parse(raw);
-  if (!Array.isArray(parsed.onlyInAppFilter) || !Array.isArray(parsed.onlyInCaptureFilter)) {
+  if (
+    !Array.isArray(parsed.onlyInAppFilter) ||
+    !Array.isArray(parsed.onlyInCaptureFilter)
+  ) {
     throw new Error(
       `Unexpected JSON shape at ${filePath}: missing onlyInAppFilter / onlyInCaptureFilter arrays`,
     );

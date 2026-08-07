@@ -27,12 +27,12 @@ import { PrismaClient } from "@prisma/client";
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
-    store:          { type: "string" },
-    "capture-ids":  { type: "string" },
-    "from-status":  { type: "string", default: "PROCESSING" },
-    "to-status":    { type: "string" },
-    "dry-run":      { type: "boolean", default: false },
-    help:           { type: "boolean", short: "h" },
+    store: { type: "string" },
+    "capture-ids": { type: "string" },
+    "from-status": { type: "string", default: "PROCESSING" },
+    "to-status": { type: "string" },
+    "dry-run": { type: "boolean", default: false },
+    help: { type: "boolean", short: "h" },
   },
 });
 
@@ -79,7 +79,10 @@ async function main() {
 
   const storeIds = values.store ? getCaptureIdsFromStore(values.store) : [];
   const explicitIds = values["capture-ids"]
-    ? values["capture-ids"].split(",").map((s) => s.trim()).filter(Boolean)
+    ? values["capture-ids"]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
   const ids = [...new Set([...storeIds, ...explicitIds])];
 
@@ -88,7 +91,9 @@ async function main() {
     return;
   }
 
-  console.log(`${ids.length} capture(s) candidate for ${fromStatus} → ${toStatus}`);
+  console.log(
+    `${ids.length} capture(s) candidate for ${fromStatus} → ${toStatus}`,
+  );
 
   if (dryRun) {
     // Show which ones would actually be affected (currently in fromStatus)
@@ -96,7 +101,9 @@ async function main() {
       where: { id: { in: ids }, status: fromStatus },
       select: { id: true },
     });
-    console.log(`(dry-run) ${matching.length} capture(s) currently in ${fromStatus} would be updated.`);
+    console.log(
+      `(dry-run) ${matching.length} capture(s) currently in ${fromStatus} would be updated.`,
+    );
     return;
   }
 
@@ -105,9 +112,13 @@ async function main() {
     data: { status: toStatus },
   });
 
-  console.log(`Updated ${result.count} capture(s) from ${fromStatus} to ${toStatus}.`);
+  console.log(
+    `Updated ${result.count} capture(s) from ${fromStatus} to ${toStatus}.`,
+  );
   if (result.count < ids.length) {
-    console.log(`(${ids.length - result.count} skipped — already in a different status)`);
+    console.log(
+      `(${ids.length - result.count} skipped — already in a different status)`,
+    );
   }
 }
 

@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 
-
 import { recordSeekIssued } from "./scrub-profiler";
 import {
   PREVIEW_MATCH_TOLERANCE,
@@ -320,7 +319,8 @@ export function useIosScrubPreview({
           scrubQueuedSeekTimeRef.current === null &&
           scrubSeekTimeoutRef.current === null &&
           previewTarget !== null &&
-          Math.abs(video.currentTime - previewTarget) <= PREVIEW_MATCH_TOLERANCE;
+          Math.abs(video.currentTime - previewTarget) <=
+            PREVIEW_MATCH_TOLERANCE;
 
         if (hasCaughtUp) {
           revealWhenFramePresented();

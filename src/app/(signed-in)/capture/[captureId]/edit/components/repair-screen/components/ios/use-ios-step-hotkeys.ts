@@ -99,7 +99,8 @@ export function useIosStepHotkeys({
 
       event.preventDefault();
       beginStepping();
-      const delta = event.key === "," ? -FRAME_STEP_SECONDS : FRAME_STEP_SECONDS;
+      const delta =
+        event.key === "," ? -FRAME_STEP_SECONDS : FRAME_STEP_SECONDS;
       const baseTime =
         steppedTargetTimeRef.current ??
         scrubPreviewTimeRef.current ??

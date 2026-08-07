@@ -111,9 +111,9 @@ export function FilterCapture({
 
   return (
     <div className="bg-muted/30 rounded-lg p-2">
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex items-center gap-2">
-          <label className="text-base font-bold text-foreground whitespace-nowrap">
+          <label className="text-base font-bold whitespace-nowrap text-foreground">
             App:
           </label>
           <Combobox
@@ -131,7 +131,7 @@ export function FilterCapture({
         {/* Clear Filters Button */}
         <div className="flex items-center justify-end self-end">
           <Button variant="destructive" size="sm" onClick={handleClearFilters}>
-            <Trash className="w-4 h-4" />
+            <Trash className="h-4 w-4" />
             Clear
           </Button>
         </div>
@@ -140,8 +140,8 @@ export function FilterCapture({
       {appsFiltered.length > 0 && (
         <div className="space-y-2">
           <div>
-            <div className="flex items-center mb-2">
-              <span className="text-sm font-medium text-foreground mr-2">
+            <div className="mb-2 flex items-center">
+              <span className="mr-2 text-sm font-medium text-foreground">
                 Selected Apps:
               </span>
               <span className="text-sm text-muted-foreground">

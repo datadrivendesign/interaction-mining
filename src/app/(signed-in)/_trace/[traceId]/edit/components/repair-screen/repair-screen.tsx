@@ -2,9 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import {
-  CircleAlert,
-} from "lucide-react";
+import { CircleAlert } from "lucide-react";
 
 import {
   ResizableHandle,
@@ -51,20 +49,20 @@ export default function RepairScreen({ trace }: { trace: any }) {
   useHotkeys("left", (e) => {
     e.preventDefault();
     handlePrevious();
-  })
+  });
 
   useHotkeys("right", (e) => {
     e.preventDefault();
     handleNext();
-  })
+  });
 
   useHotkeys("tab", (e) => {
     e.preventDefault();
     handleTab();
-  })
+  });
 
   return (
-    <div className="w-full h-full">
+    <div className="h-full w-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
           {focusViewIndex > -1 ? (
@@ -75,8 +73,8 @@ export default function RepairScreen({ trace }: { trace: any }) {
               os={os}
             />
           ) : (
-            <div className="flex justify-center items-center w-full h-full">
-              <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-3xl font-semibold text-muted-foreground lg:text-4xl">
                 Select a screen from the filmstrip.
               </span>
             </div>
@@ -117,7 +115,7 @@ function FocusView({
       y: null,
       scrollDeltaX: 0,
       scrollDeltaY: 0,
-    }
+    },
   );
 
   // Update gesture in form data
@@ -135,7 +133,7 @@ function FocusView({
 
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden">
+      <div className="flex h-full w-full justify-center overflow-hidden">
         <RepairScreenCanvas
           key={screen.id}
           screen={screen}
@@ -162,7 +160,7 @@ function Filmstrip({
   setFocusViewIndex: (index: number) => void;
 }) {
   return (
-    <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+    <ul className="flex h-full gap-1 overflow-x-auto px-2 pt-2 pb-4">
       {screens?.map((screen: Screen, index: number) => (
         <FilmstripItem
           key={screen.id}
@@ -208,27 +206,27 @@ function FilmstripItem({
   return (
     <>
       <li
-        className="cursor-pointer min-w-fit h-full"
+        className="h-full min-w-fit cursor-pointer"
         data-index={index}
         {...props}
       >
-        <div className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none object-contain">
+        <div className="relative h-full overflow-clip rounded-sm object-contain transition-all duration-200 ease-in-out select-none">
           {(isSelected || hasError) && (
             <div
               className={cn(
-                "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
+                "absolute z-10 flex h-full w-full items-center justify-center rounded-sm",
                 isSelected
-                  ? "ring-2 ring-inset ring-yellow-500"
+                  ? "ring-2 ring-yellow-500 ring-inset"
                   : hasError
-                    ? "ring-2 ring-inset ring-red-500"
-                    : ""
+                    ? "ring-2 ring-red-500 ring-inset"
+                    : "",
               )}
             >
               {hasError && (
                 <CircleAlert
                   className={cn(
                     "size-6",
-                    isSelected ? "text-yellow-500" : "text-red-500"
+                    isSelected ? "text-yellow-500" : "text-red-500",
                   )}
                 />
               )}
@@ -236,10 +234,10 @@ function FilmstripItem({
           )}
           <div
             className={cn(
-              "relative min-w-fit h-full transition-all duration-200 ease-in-out select-none",
+              "relative h-full min-w-fit transition-all duration-200 ease-in-out select-none",
               hasError
-                ? "grayscale brightness-50"
-                : "grayscale-0 brightness-100"
+                ? "brightness-50 grayscale"
+                : "brightness-100 grayscale-0",
             )}
           >
             {children}

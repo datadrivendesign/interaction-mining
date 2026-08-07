@@ -211,7 +211,7 @@ export function GallerySearch() {
         />
       </InputRoot>
       <Select value={platform} onValueChange={handleSetOS}>
-        <SelectTrigger className="w-full max-w-32 h-full!">
+        <SelectTrigger className="h-full! w-full max-w-32">
           <SelectValue placeholder="Select a platform" />
         </SelectTrigger>
         <SelectContent>
@@ -268,9 +268,9 @@ export function Gallery() {
   return (
     <>
       {isLoading && (
-        <div className="flex flex-col col-span-full justify-center items-center text-center text-muted-foreground">
-          <Loader2 className="animate-spin w-8 h-8" />
-          <span className="text-md font-medium leading-tight tracking-tight mt-2">
+        <div className="col-span-full flex flex-col items-center justify-center text-center text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="text-md mt-2 leading-tight font-medium tracking-tight">
             Loading apps...
           </span>
         </div>
@@ -278,7 +278,7 @@ export function Gallery() {
 
       <div
         className={cn(
-          "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 p-4 lg:p-6",
+          "grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 md:grid-cols-3 md:gap-4 lg:grid-cols-4 lg:p-6",
           isLoading && "opacity-50",
         )}
       >
@@ -295,19 +295,19 @@ export function Gallery() {
                 width={0}
                 height={0}
                 sizes="100vw"
-                className="flex grow-0 shrink-0 basis-12 rounded-xl mr-4 aspect-square drop-shadow-md"
+                className="mr-4 flex aspect-square shrink-0 grow-0 basis-12 rounded-xl drop-shadow-md"
               />
-              <div className="flex flex-col grow min-w-0 justify-center">
+              <div className="flex min-w-0 grow flex-col justify-center">
                 <TitleMarquee
                   mode="hover"
                   title={app.metadata.name}
                   className="min-w-0"
                 >
-                  <h2 className="text-sm font-medium leading-tight tracking-tight">
+                  <h2 className="text-sm leading-tight font-medium tracking-tight">
                     {app.metadata.name}
                   </h2>
                 </TitleMarquee>
-                <span className="text-sm text-muted-foreground line-clamp-1 leading-tight truncate">
+                <span className="line-clamp-1 truncate text-sm leading-tight text-muted-foreground">
                   {app.metadata.company || "Unknown Company"}
                 </span>
               </div>
@@ -320,7 +320,7 @@ export function Gallery() {
         )}
       </div>
       {totalPages > 1 && (
-        <div className="w-full flex justify-center">
+        <div className="flex w-full justify-center">
           <AdminPagination
             currentPage={page}
             totalPages={totalPages}

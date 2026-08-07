@@ -24,7 +24,7 @@ export function VideoPreviewOverlay({
   onIncomingPreviewLoad,
 }: VideoPreviewOverlayProps) {
   return (
-    <div className="relative flex justify-center items-center w-full h-full">
+    <div className="relative flex h-full w-full items-center justify-center">
       {/*
         Always painted. The preview images stack on top and cover it, so hiding
         it was never necessary — and toggling opacity on a video forces a
@@ -36,7 +36,7 @@ export function VideoPreviewOverlay({
         ref={videoRef}
         crossOrigin="anonymous"
         preload="auto"
-        className="relative z-0 max-w-full max-h-full rounded-lg object-contain"
+        className="relative z-0 max-h-full max-w-full rounded-lg object-contain"
         controls={false}
         onPlay={onPlay}
         onPause={onPause}
@@ -75,7 +75,7 @@ export function VideoPreviewOverlay({
         than what is on screen.
       */}
       {hasPreviewOverlay ? (
-        <div className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2">
+        <div className="pointer-events-none absolute top-3 left-1/2 z-30 -translate-x-1/2">
           <span className="inline-flex items-center rounded-md border border-black/15 bg-black/55 px-2 py-1 text-[11px] font-semibold tracking-wide text-white shadow-sm dark:border-white/25 dark:bg-white/90 dark:text-black">
             Preview
           </span>

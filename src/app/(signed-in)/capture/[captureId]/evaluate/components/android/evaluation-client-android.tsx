@@ -283,14 +283,14 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
       {!isTraceLoading && (
         <ResizablePanelGroup
           direction={isCompactLayout ? "vertical" : "horizontal"}
-          className="min-h-0 h-full w-full flex-1"
+          className="h-full min-h-0 w-full flex-1"
         >
           {/* Left: Feedback + Approve/Deny */}
           <ResizablePanel
             defaultSize={isCompactLayout ? 38 : 25}
             minSize={isCompactLayout ? 28 : 25}
             maxSize={isCompactLayout ? 55 : 30}
-            className="min-h-0 bg-neutral-50 dark:bg-neutral-950 box-border w-full h-full overflow-hidden flex flex-col"
+            className="box-border flex h-full min-h-0 w-full flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-950"
           >
             {traceData && capture && (
               <ReviewContextPanelAndroid
@@ -307,11 +307,11 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             defaultSize={isCompactLayout ? 62 : 75}
             minSize={isCompactLayout ? 45 : 65}
             maxSize={isCompactLayout ? 72 : 80}
-            className="min-h-0 box-border w-full h-full"
+            className="box-border h-full min-h-0 w-full"
           >
             <ResizablePanelGroup
               direction="horizontal"
-              className="w-full h-full"
+              className="h-full w-full"
             >
               {/* Gallery — left/center */}
               <ResizablePanel

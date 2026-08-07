@@ -16,12 +16,12 @@ import Link from "next/link";
  */
 export function CaptureCard({ capture }: { capture: Capture }) {
   return (
-    <Card className="rounded-md hover:shadow-sm transition p-2">
+    <Card className="rounded-md p-2 transition hover:shadow-sm">
       <CardHeader className="flex flex-row items-center gap-4">
         <Image
           src={capture.app?.metadata?.icon || "/placeholder.png"}
           alt="App Icon"
-          className="w-10 h-10 rounded object-cover"
+          className="h-10 w-10 rounded object-cover"
           width={40}
           height={40}
         />
@@ -36,7 +36,7 @@ export function CaptureCard({ capture }: { capture: Capture }) {
                 : "Unknown OS"}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground line-clamp-1">
+          <p className="line-clamp-1 text-sm text-muted-foreground">
             {capture.task?.description ?? "No description"}
           </p>
         </div>

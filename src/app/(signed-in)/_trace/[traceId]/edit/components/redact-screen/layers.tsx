@@ -17,26 +17,26 @@ export default function Layers({
     useContext(RedactCanvasContext);
   // const [selected, setSelected] = useState<number | null>(null);
   return (
-    <aside className="absolute z-10 right-4 flex flex-col grow justify-center items-center w-full  max-w-2xs h-full max-h-[calc(100%-2rem)] gap-2 bg-neutral-100 dark:bg-neutral-900 p-2 rounded-lg shadow-lg overflow-hidden">
-      <span className="inline-flex items-center w-full text-left text-xs font-semibold">
-        <Layers3 className="size-3 mr-1.5 text-muted-foreground" />
+    <aside className="absolute right-4 z-10 flex h-full max-h-[calc(100%-2rem)] w-full max-w-2xs grow flex-col items-center justify-center gap-2 overflow-hidden rounded-lg bg-neutral-100 p-2 shadow-lg dark:bg-neutral-900">
+      <span className="inline-flex w-full items-center text-left text-xs font-semibold">
+        <Layers3 className="mr-1.5 size-3 text-muted-foreground" />
         Layers
       </span>
-      <div className="flex flex-col w-full overflow-auto">
+      <div className="flex w-full flex-col overflow-auto">
         {redactions.length > 0 ? (
           redactions.map((redaction, index) => (
             <div
               key={index}
               className={cn(
-                "flex justify-between w-full px-2 py-1 rounded cursor-pointer",
+                "flex w-full cursor-pointer justify-between rounded px-2 py-1",
                 selectedRedaction?.id === redaction.id
                   ? "bg-blue-500 text-white"
-                  : "bg-transparent hover:bg-neutral-200 dark:hover:bg-neutral-800 text-muted-foreground"
+                  : "bg-transparent text-muted-foreground hover:bg-neutral-200 dark:hover:bg-neutral-800",
               )}
               onClick={() => selectRedaction(redaction.id)}
             >
               <span className="inline-flex items-center text-sm font-medium select-none">
-                <Square className="size-3 mr-1.5" />
+                <Square className="mr-1.5 size-3" />
                 {redaction.annotation && redaction.annotation !== ""
                   ? redaction.annotation
                   : `Unnamed redaction`}
@@ -45,8 +45,8 @@ export default function Layers({
                 <X
                   className={cn(
                     selectedRedaction?.id === redaction.id
-                      ? "block size-4 hover:opacity-75 transition-opacity duration-300 ease-in-out cursor-pointer"
-                      : "hidden"
+                      ? "block size-4 cursor-pointer transition-opacity duration-300 ease-in-out hover:opacity-75"
+                      : "hidden",
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -57,7 +57,7 @@ export default function Layers({
             </div>
           ))
         ) : (
-          <div className="flex justify-center items-center w-full p-1 pb-2 text-muted-foreground">
+          <div className="flex w-full items-center justify-center p-1 pb-2 text-muted-foreground">
             <span className="text-sm font-medium">No redactions</span>
           </div>
         )}

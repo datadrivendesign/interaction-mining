@@ -37,7 +37,7 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
       file,
       prefix,
       Date.now().toString() + extname(file.name),
-      file.type
+      file.type,
     );
 
     if (!res.ok) {
@@ -59,7 +59,7 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
           fileName: res.data.fileName,
           fileUrl: res.data.fileUrl,
         },
-      ]
+      ],
     );
   } catch (error: any) {
     console.error("Upload failed", error);

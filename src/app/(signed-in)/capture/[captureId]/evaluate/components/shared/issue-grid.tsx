@@ -121,7 +121,7 @@ export function IssueGrid({
         <span title={issue.label}>{issue.chipLabel ?? issue.label}</span>
         <span
           className={cn(
-            "inline-flex rounded-full px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
+            "inline-flex rounded-full px-1 py-0.5 text-[9px] font-semibold tracking-wide uppercase",
             issue.scope === "flow"
               ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200"
               : "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200",
@@ -130,12 +130,12 @@ export function IssueGrid({
           {issue.scope === "flow" ? "Flow" : "Screen"}
         </span>
         {isSelected && (
-          <span className="inline-flex rounded-full bg-red-700 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white dark:bg-red-200 dark:text-red-950">
+          <span className="inline-flex rounded-full bg-red-700 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-white uppercase dark:bg-red-200 dark:text-red-950">
             Add details
           </span>
         )}
         {!compact && isUsed && !isSelected && (
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200">
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-900/60 dark:text-emerald-200">
             <Check className="size-2.5" />
             Used
           </span>
@@ -148,7 +148,7 @@ export function IssueGrid({
     <div className="space-y-3">
       <div className="space-y-2">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-neutral-400" />
+          <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-neutral-400" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -159,7 +159,7 @@ export function IssueGrid({
 
         {recentIssues.length > 0 && normalizedQuery.length === 0 && (
           <div className="space-y-1.5">
-            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+            <p className="flex items-center gap-1 text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
               <Clock3 className="size-3" />
               Recently used
             </p>
@@ -185,7 +185,7 @@ export function IssueGrid({
             <div key={category} className="space-y-1.5">
               <button
                 type="button"
-                className="flex w-full items-start gap-2 cursor-pointer rounded-lg border border-neutral-200 bg-white/80 px-2.5 py-2 text-left transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-700"
+                className="flex w-full cursor-pointer items-start gap-2 rounded-lg border border-neutral-200 bg-white/80 px-2.5 py-2 text-left transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900/60 dark:hover:border-neutral-700"
                 onClick={() =>
                   setCollapsedCategories((prev) => ({
                     ...prev,
@@ -200,7 +200,7 @@ export function IssueGrid({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-600 dark:text-neutral-300">
+                    <p className="text-[11px] font-semibold tracking-widest text-neutral-600 uppercase dark:text-neutral-300">
                       {meta.label}
                     </p>
                     <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
@@ -217,7 +217,7 @@ export function IssueGrid({
                 <div className="space-y-2 pl-5">
                   {screenIssues.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                      <p className="text-[10px] font-medium tracking-wider text-sky-700 uppercase dark:text-sky-300">
                         Screen issues
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -227,7 +227,7 @@ export function IssueGrid({
                   )}
                   {flowIssues.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                      <p className="text-[10px] font-medium tracking-wider text-amber-700 uppercase dark:text-amber-300">
                         Flow issues
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -243,7 +243,7 @@ export function IssueGrid({
       )}
 
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+        <p className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           Custom
         </p>
         <button

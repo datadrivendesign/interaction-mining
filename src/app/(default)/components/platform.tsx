@@ -2,31 +2,36 @@ export default function Platform() {
   return (
     <section
       id="platform"
-      className="grid grid-cols-3 w-full max-w-screen-lg px-4 md:px-6 gap-4 md:gap-6 justify-center items-start"
+      className="grid w-full max-w-screen-lg grid-cols-3 items-start justify-center gap-4 px-4 md:gap-6 md:px-6"
     >
-      <div className="flex col-span-3 w-full h-full p-px bg-gradient-to-br from-muted-background to-dimmed-background rounded-3xl">
-        <div className="flex flex-col md:flex-row w-full h-full p-6 gap-6 bg-gradient-to-br from-dimmed-background to-background rounded-[calc(1.5rem-1px)] overflow-hidden">
-          <div className="flex flex-col basis-3/5">
-            <h2 className="text-foreground text-3xl font-semibold tracking-tight sr-only">
+      <div className="col-span-3 flex h-full w-full rounded-3xl bg-gradient-to-br from-muted-background to-dimmed-background p-px">
+        <div className="flex h-full w-full flex-col gap-6 overflow-hidden rounded-[calc(1.5rem-1px)] bg-gradient-to-br from-dimmed-background to-background p-6 md:flex-row">
+          <div className="flex basis-3/5 flex-col">
+            <h2 className="sr-only text-3xl font-semibold tracking-tight text-foreground">
               Built on trust.
             </h2>
-            <p className="w-full text-3xl text-muted-foreground font-medium tracking-tight mb-4">
-              <span className="text-foreground font-semibold tracking-tight">
+            <p className="mb-4 w-full text-3xl font-medium tracking-tight text-muted-foreground">
+              <span className="font-semibold tracking-tight text-foreground">
                 Built on trust.
               </span>{" "}
-              Contributors collect, clean, and annotate their own interaction data before sharing it.
+              Contributors collect, clean, and annotate their own interaction
+              data before sharing it.
             </p>
-            <p className="inline-flex items-center w-full max-w-md text-3xl text-muted-foreground font-medium tracking-tight">
-              Let&lsquo;s try{" "}<span className="px-3 py-1 mx-2 rounded-full ring ring-neutral-200 dark:ring-neutral-800 text-foreground cursor-pointer">repairing</span>{" "}your trace.
+            <p className="inline-flex w-full max-w-md items-center text-3xl font-medium tracking-tight text-muted-foreground">
+              Let&lsquo;s try{" "}
+              <span className="mx-2 cursor-pointer rounded-full px-3 py-1 text-foreground ring ring-neutral-200 dark:ring-neutral-800">
+                repairing
+              </span>{" "}
+              your trace.
             </p>
           </div>
-          <div className="flex justify-center items-center basis-2/5 aspect-video p-6 bg-muted-background rounded-2xl">
-            <span className="text-foreground text-6xl font-black tracking-tight">
+          <div className="flex aspect-video basis-2/5 items-center justify-center rounded-2xl bg-muted-background p-6">
+            <span className="text-6xl font-black tracking-tight text-foreground">
               SICK INTERACTIVE DEMO HERE
             </span>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

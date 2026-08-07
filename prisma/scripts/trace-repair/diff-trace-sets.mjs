@@ -34,7 +34,7 @@ const captureStatus = {
 // Load user IDs to exclude from gitignored data file (see prisma/scripts/data/known-user-ids.json).
 const userIdsFile = resolve(__dirname, "../data/known-user-ids.json");
 const excludedUserIds = existsSync(userIdsFile)
-  ? JSON.parse(readFileSync(userIdsFile, "utf-8")).excludedUserIds ?? []
+  ? (JSON.parse(readFileSync(userIdsFile, "utf-8")).excludedUserIds ?? [])
   : [];
 
 /**
@@ -106,10 +106,7 @@ async function main() {
   ]);
 
   const onlyInAppFilter = difference(appFilterIds, captureFilterIds).sort();
-  const onlyInCaptureFilter = difference(
-    captureFilterIds,
-    appFilterIds,
-  ).sort();
+  const onlyInCaptureFilter = difference(captureFilterIds, appFilterIds).sort();
 
   console.log(
     JSON.stringify(

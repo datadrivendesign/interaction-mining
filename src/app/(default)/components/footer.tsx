@@ -4,15 +4,27 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="flex flex-col w-full justify-center items-center">
-      <div className="flex flex-col items-center max-w-screen-xl p-4 md:p-6 gap-4">
-        <Image className="w-fit h-12 mb-2" src="/illinois_logo.png" alt="University of Illinois Urbana-Champaign Logo" width={0} height={0} sizes="100vw" />
-        <div className="flex text-sm text-muted-foreground *:px-2 md:*:px-3 *:not-last:border-r *:border-muted-foreground/25">
-          <Link className="hover:underline" href="/legal/copyright">Content Policy</Link>
-          <Link className="hover:underline" href="/legal/tos">Terms of Usage</Link>
+    <footer className="flex w-full flex-col items-center justify-center">
+      <div className="flex max-w-screen-xl flex-col items-center gap-4 p-4 md:p-6">
+        <Image
+          className="mb-2 h-12 w-fit"
+          src="/illinois_logo.png"
+          alt="University of Illinois Urbana-Champaign Logo"
+          width={0}
+          height={0}
+          sizes="100vw"
+        />
+        <div className="flex text-sm text-muted-foreground *:border-muted-foreground/25 *:px-2 *:not-last:border-r md:*:px-3">
+          <Link className="hover:underline" href="/legal/copyright">
+            Content Policy
+          </Link>
+          <Link className="hover:underline" href="/legal/tos">
+            Terms of Usage
+          </Link>
         </div>
         <p className="text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Data-Driven Design Group. All rights reserved.
+          © {new Date().getFullYear()} Data-Driven Design Group. All rights
+          reserved.
         </p>
       </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-3 items-center justify-between w-full max-w-screen-lg p-4 md:p-6 gap-4 text-sm text-muted-foreground">

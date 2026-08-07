@@ -38,7 +38,7 @@ interface CandidateTaskContextType {
   handleSetTaskStatus: (
     id: string,
     taskIndex: number,
-    status: "open" | "hidden"
+    status: "open" | "hidden",
   ) => Promise<boolean>;
   loadMore: () => void;
   resetFilters: () => void;
@@ -46,7 +46,7 @@ interface CandidateTaskContextType {
 }
 
 const CandidateTaskContext = createContext<CandidateTaskContextType | null>(
-  null
+  null,
 );
 
 export function CandidateTaskProvider({ children }: { children: ReactNode }) {
@@ -112,7 +112,7 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
         setIsLoadingMore(false);
       }
     },
-    [showTaken, pageSize, debouncedSearch, selectedGenres, excludeGenres]
+    [showTaken, pageSize, debouncedSearch, selectedGenres, excludeGenres],
   );
 
   // Auto-fetch when filters change
@@ -138,7 +138,7 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
   const handleSetTaskStatus = async (
     id: string,
     taskIndex: number,
-    status: "open" | "hidden"
+    status: "open" | "hidden",
   ) => {
     const result = await setCandidateTaskStatus({ id, taskIndex, status });
     if (!result.ok || !result.data) {
@@ -147,9 +147,7 @@ export function CandidateTaskProvider({ children }: { children: ReactNode }) {
     }
 
     setCandidateTaskApps((prev) =>
-      prev.map((app) =>
-        app.id === id ? result.data!.candidateTaskApp : app
-      )
+      prev.map((app) => (app.id === id ? result.data!.candidateTaskApp : app)),
     );
     toast.success(status === "hidden" ? "Task hidden" : "Task restored");
     return true;
@@ -201,7 +199,7 @@ export function useCandidateTask() {
   const context = useContext(CandidateTaskContext);
   if (!context) {
     throw new Error(
-      "useCandidateTask must be used within CandidateTaskProvider"
+      "useCandidateTask must be used within CandidateTaskProvider",
     );
   }
   return context;

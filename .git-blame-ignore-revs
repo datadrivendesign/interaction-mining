@@ -1,0 +1,8 @@
+# Revisions that changed formatting only. Skipped by `git blame`, so a
+# whole-repo reformat does not put every line's authorship on whoever ran it.
+#
+# Honoured automatically by GitHub. For local use, once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: format the repository with prettier
+c4b37cec9ee2630e0b9dc42790c863216e1e9ba3

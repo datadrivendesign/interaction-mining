@@ -1,12 +1,7 @@
 "use client";
 
 import Konva from "konva";
-import React, {
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import { RedactCanvasContext } from "./redact-screen-canvas";
 
 export interface Overlay {

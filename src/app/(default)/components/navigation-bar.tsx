@@ -16,29 +16,29 @@ import LogoSm from "@/public/logo_sm.svg";
 
 export default function NavigationBar() {
   return (
-    <nav className="sticky z-40 top-0 flex w-full justify-center bg-background border-b border-muted-background">
-      <div className="flex w-full max-w-screen-2xl p-4 lg:px-6 lg:py-4 justify-between">
-        <div className="flex items-center basis-1/2 h-full gap-4 lg:gap-6 ">
+    <nav className="sticky top-0 z-40 flex w-full justify-center border-b border-muted-background bg-background">
+      <div className="flex w-full max-w-screen-2xl justify-between p-4 lg:px-6 lg:py-4">
+        <div className="flex h-full basis-1/2 items-center gap-4 lg:gap-6">
           <Link
             href={"/"}
-            className="text-2xl font-semibold leading-none tracking-tighter"
+            className="text-2xl leading-none font-semibold tracking-tighter"
           >
-            <LogoSm className="block w-auto h-8 fill-foreground" />
+            <LogoSm className="block h-8 w-auto fill-foreground" />
           </Link>
           <Link href="/explore">
-            <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
+            <span className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors duration-150 ease-in-out hover:text-muted-foreground/90">
               Explore
             </span>
           </Link>
           <Link href="/contribute">
-            <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
+            <span className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors duration-150 ease-in-out hover:text-muted-foreground/90">
               Get Involved
             </span>
           </Link>
         </div>
-        <div className="flex gap-4 lg:gap-6 basis-1/2 h-full justify-end items-center">
+        <div className="flex h-full basis-1/2 items-center justify-end gap-4 lg:gap-6">
           <Link href="/archive/rico" target="_blank">
-            <span className="inline-flex items-center text-sm text-muted-foreground hover:text-muted-foreground/90 font-medium transition-colors duration-150 ease-in-out">
+            <span className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors duration-150 ease-in-out hover:text-muted-foreground/90">
               Rico Dataset <ArrowUpRight className="ml-0.5 size-4" />
             </span>
           </Link>

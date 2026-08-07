@@ -1,0 +1,26 @@
+# Generated, and enormous. Reformatting it guarantees conflicts on every install.
+package-lock.json
+
+# Virtualenv: third-party vendored code, including Playwright's bundled Node
+# driver. 400 files of somebody else's JavaScript.
+.venv/
+
+# Build output
+.next/
+out/
+dist/
+public/
+
+# Agent scratch space. Gitignored, and vendors third-party builds.
+plans/
+
+# Vendored third-party code — not ours to format.
+**/vendor/
+
+# Prose is not what the churn problem is about, and prettier reflows tables and
+# wraps paragraphs in ways that make documentation diffs unreadable. Left alone
+# deliberately, matching the existing eslint ignore.
+*.md
+**/*.md
+*.mdx
+**/*.mdx

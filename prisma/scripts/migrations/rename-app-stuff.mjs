@@ -3,13 +3,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-
   // Update all captures
   await prisma.capture.updateMany({
     where: { NOT: { appId_: null } },
-    data: {
-      
-    }
+    data: {},
   });
 }
 
