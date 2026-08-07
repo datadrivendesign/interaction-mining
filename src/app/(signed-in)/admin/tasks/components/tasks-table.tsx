@@ -47,7 +47,7 @@ export function TasksTable({
             <TableCell className="font-medium">
               <Button
                 variant="outline"
-                className="hover p-2 cursor-pointer"
+                className="hover cursor-pointer p-2"
                 onClick={() => handleTableUserClick(capture)}
               >
                 {capture.user?.name ?? "Unknown"}
@@ -61,7 +61,7 @@ export function TasksTable({
               >
                 <Button
                   variant="link"
-                  className="hover:bg-transparent p-2 cursor-pointer"
+                  className="cursor-pointer p-2 hover:bg-transparent"
                 >
                   {capture.user?.email ?? "Unknown"}
                 </Button>
@@ -70,13 +70,13 @@ export function TasksTable({
             <TableCell>
               <Button
                 variant="outline"
-                className="hover p-2 cursor-pointer"
+                className="hover cursor-pointer p-2"
                 onClick={() => handleTableAppClick(capture)}
               >
                 {capture.app.metadata.name}
               </Button>
             </TableCell>
-            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+            <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
               {formatCaptureTimestampFromObjectId(capture.id) ?? "Unknown"}
             </TableCell>
             <TableCell>
@@ -85,7 +85,7 @@ export function TasksTable({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button className="hover p-2 cursor-pointer">
+                <Button className="hover cursor-pointer p-2">
                   {capture.task.description}
                 </Button>
               </Link>

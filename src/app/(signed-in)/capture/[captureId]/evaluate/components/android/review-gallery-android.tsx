@@ -73,13 +73,13 @@ export function ReviewGalleryAndroid({
   }, [activeScreenId]);
 
   return (
-    <section className="flex flex-col w-full h-full">
+    <section className="flex h-full w-full flex-col">
       {/* Description strip — matches panel header style */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-4 h-9 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
-        <span className="text-[10px] font-medium uppercase tracking-widest text-neutral-400 dark:text-neutral-600 shrink-0">
+      <div className="flex h-9 flex-shrink-0 items-center gap-2 border-b border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
+        <span className="shrink-0 text-[10px] font-medium tracking-widest text-neutral-400 uppercase dark:text-neutral-600">
           Gallery
         </span>
-        <p className="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+        <p className="truncate text-xs text-neutral-600 dark:text-neutral-400">
           {sortedScreens.length} screen{sortedScreens.length === 1 ? "" : "s"}
           {screensWithIssues > 0 ? ` • ${screensWithIssues} flagged` : ""}
           {captureTimestamp ? ` • Created ${captureTimestamp}` : ""}
@@ -89,7 +89,7 @@ export function ReviewGalleryAndroid({
       {/* Scroll area */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden touch-auto px-4 pt-4 pb-3"
+        className="min-h-0 flex-1 touch-auto overflow-x-auto overflow-y-hidden px-4 pt-4 pb-3"
       >
         <div className="flex h-full items-start gap-3 pb-1">
           {sortedScreens.map((screen, index) => (
@@ -188,7 +188,7 @@ function ReviewFigureAndroid({
   return (
     <figure
       ref={cardRef}
-      className={`relative flex flex-col shrink-0 ${cardWidthClass}`}
+      className={`relative flex shrink-0 flex-col ${cardWidthClass}`}
     >
       <div
         className="relative w-full cursor-pointer"
@@ -202,7 +202,7 @@ function ReviewFigureAndroid({
         )}
 
         {/* Screen number */}
-        <div className="absolute top-1 right-1 z-20 bg-black/60 text-white text-[10px] font-mono rounded px-1 py-0.5 min-w-[1.25rem] text-center leading-none">
+        <div className="absolute top-1 right-1 z-20 min-w-[1.25rem] rounded bg-black/60 px-1 py-0.5 text-center font-mono text-[10px] leading-none text-white">
           {index + 1}
         </div>
 
@@ -239,7 +239,7 @@ function ReviewFigureAndroid({
           ) : (
             <div
               className={cn(
-                "w-full aspect-[9/19] bg-neutral-100 dark:bg-neutral-800 rounded-lg border-2 transition-all duration-150",
+                "aspect-[9/19] w-full rounded-lg border-2 bg-neutral-100 transition-all duration-150 dark:bg-neutral-800",
                 placeholderBorderClass,
               )}
             />
@@ -247,7 +247,7 @@ function ReviewFigureAndroid({
 
           {isDrag && (
             <svg
-              className="absolute inset-0 z-10 w-full h-full pointer-events-none overflow-visible"
+              className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
               width="100%"
               height="100%"
             >
@@ -289,7 +289,7 @@ function ReviewFigureAndroid({
             <TooltipTrigger asChild>
               {gesture ? (
                 <div
-                  className="cursor-pointer aspect-square w-[12%] absolute z-20 rounded-full bg-yellow-300 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-85"
+                  className="absolute z-20 flex aspect-square w-[12%] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-yellow-300 opacity-85"
                   style={{
                     left: `${(gesture.x ?? 0) * 100}%`,
                     top: `${(gesture.y ?? 0) * 100}%`,
@@ -312,7 +312,7 @@ function ReviewFigureAndroid({
             <Tooltip key={redaction.id}>
               <TooltipTrigger asChild>
                 <div
-                  className="absolute z-15 bg-black border-1 border-yellow-500 cursor-pointer hover:shadow-yellow-500/50 hover:shadow-lg"
+                  className="absolute z-15 cursor-pointer border-1 border-yellow-500 bg-black hover:shadow-lg hover:shadow-yellow-500/50"
                   style={{
                     left: `${redaction.x * 100}%`,
                     top: `${redaction.y * 100}%`,
@@ -332,9 +332,9 @@ function ReviewFigureAndroid({
       {/* Label — always visible */}
       <p
         className={cn(
-          "text-xs text-center leading-snug pt-1.5 pb-0.5 px-1 truncate transition-colors duration-150",
+          "truncate px-1 pt-1.5 pb-0.5 text-center text-xs leading-snug transition-colors duration-150",
           isActive
-            ? "text-neutral-900 dark:text-neutral-400 font-medium"
+            ? "font-medium text-neutral-900 dark:text-neutral-400"
             : "text-neutral-600 dark:text-neutral-600",
         )}
       >
@@ -395,7 +395,7 @@ const ImageWithVH = ({
     <div className="relative w-full">
       <Image
         className={cn(
-          "relative z-0 w-full h-auto rounded-lg object-contain border-2 transition-all duration-150",
+          "relative z-0 h-auto w-full rounded-lg border-2 object-contain transition-all duration-150",
           borderClass,
         )}
         src={screen.src}
@@ -408,7 +408,7 @@ const ImageWithVH = ({
         <svg
           viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
           preserveAspectRatio="xMinYMin meet"
-          className="pointer-events-none top-0 left-0 absolute w-full h-full"
+          className="pointer-events-none absolute top-0 left-0 h-full w-full"
         >
           {boxes.map((box: any, index: number) => (
             <rect

@@ -8,9 +8,9 @@ import RecordTrace from "./components/record-trace";
 
 export default function Page() {
   return (
-    <main className="relative flex flex-col grow min-h-dvh items-center justify-between">
-      <section className="relative flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) p-4 md:p-8 gap-8 md:gap-16">
-        <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
+    <main className="relative flex min-h-dvh grow flex-col items-center justify-between">
+      <section className="relative flex w-full max-w-(--breakpoint-xl) flex-col gap-8 p-4 md:flex-row md:gap-16 md:p-8">
+        <article className="prose w-full leading-snug prose-neutral dark:prose-invert">
           <GettingStarted />
         </article>
       </section>
@@ -33,15 +33,15 @@ export default function Page() {
           <RecordTrace />
         </TabsContent>
         <TabsContent value="setup-instructions">
-          <section className="relative flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) p-4 md:p-8 gap-8 md:gap-16">
-            <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
+          <section className="relative flex w-full max-w-(--breakpoint-xl) flex-col gap-8 p-4 md:flex-row md:gap-16 md:p-8">
+            <article className="prose w-full leading-snug prose-neutral dark:prose-invert">
               <SetUpInstructions />
             </article>
           </section>
         </TabsContent>
         <TabsContent value="deploy-instance">
-          <section className="relative flex flex-col md:flex-row w-full max-w-(--breakpoint-xl) p-4 md:p-8 gap-8 md:gap-16">
-            <article className="w-full prose prose-neutral dark:prose-invert leading-snug">
+          <section className="relative flex w-full max-w-(--breakpoint-xl) flex-col gap-8 p-4 md:flex-row md:gap-16 md:p-8">
+            <article className="prose w-full leading-snug prose-neutral dark:prose-invert">
               <DeployInstance />
             </article>
           </section>

@@ -68,9 +68,9 @@ export function SaveTracePanel({
   }, [getValues, hasLoadedProfilePreference, os, setValue]);
 
   return (
-    <div className="flex flex-col w-full grow justify-start">
+    <div className="flex w-full grow flex-col justify-start">
       {os === "ios" && (
-        <div className="flex flex-row gap-2 mb-5">
+        <div className="mb-5 flex flex-row gap-2">
           <VersionSelect
             label="iPhone Version"
             formKey="iPhoneVersion"
@@ -206,7 +206,7 @@ function DescriptionField({ taskDescription }: { taskDescription: string }) {
           </p>
           <button
             type="button"
-            className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-neutral-200 transition-colors dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+            className="inline-flex items-center rounded-md border border-neutral-300 bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-900 transition-colors hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
             onClick={() => {
               setValue("description", taskDescription);
               setDescriptionLen(taskDescription.length);
@@ -217,14 +217,14 @@ function DescriptionField({ taskDescription }: { taskDescription: string }) {
         </div>
       ) : null}
       {descriptionTextAreaRef.current && (
-        <div className="w-full flex flex-col">
+        <div className="flex w-full flex-col">
           <Progress
             className="w-full"
             value={
               (descriptionLen / descriptionTextAreaRef.current.maxLength) * 100
             }
           />
-          <div className="text-sm flex justify-end text-muted-foreground z-10">
+          <div className="z-10 flex justify-end text-sm text-muted-foreground">
             {`${descriptionLen}/${descriptionTextAreaRef.current.maxLength}`}
           </div>
         </div>

@@ -33,10 +33,10 @@ const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
     platform: { type: "string", short: "p", default: "ios" },
-    source:   { type: "string", short: "s", default: "both" },
-    format:   { type: "string", short: "f", default: "rich" },
-    out:      { type: "string" },
-    help:     { type: "boolean", short: "h" },
+    source: { type: "string", short: "s", default: "both" },
+    format: { type: "string", short: "f", default: "rich" },
+    out: { type: "string" },
+    help: { type: "boolean", short: "h" },
   },
   allowPositionals: false,
 });
@@ -72,7 +72,8 @@ const shouldIncludeTraces = source === "trace" || source === "both";
 
 const outputPath = path.resolve(
   process.cwd(),
-  values.out ?? path.join(__dirname, `${platform}-apps-with-${source}-${format}.json`),
+  values.out ??
+    path.join(__dirname, `${platform}-apps-with-${source}-${format}.json`),
 );
 
 function getOrCreateAppEntry(appsById, app) {
@@ -208,7 +209,10 @@ async function main() {
     const firstName = first.metadata?.name ?? "";
     const secondName = second.metadata?.name ?? "";
 
-    return firstName.localeCompare(secondName) || first.packageName.localeCompare(second.packageName);
+    return (
+      firstName.localeCompare(secondName) ||
+      first.packageName.localeCompare(second.packageName)
+    );
   });
 
   const payloadApps = format === "lookup" ? apps.map(toLookupEntry) : apps;

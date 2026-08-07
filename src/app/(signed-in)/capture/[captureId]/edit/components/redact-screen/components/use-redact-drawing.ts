@@ -52,14 +52,7 @@ export function useRedactDrawing({
         });
       }
     },
-    [
-      offsetX,
-      offsetY,
-      displayWidth,
-      displayHeight,
-      mode,
-      getRelativePointer,
-    ],
+    [offsetX, offsetY, displayWidth, displayHeight, mode, getRelativePointer],
   );
 
   const handleStageMouseMove = useCallback(

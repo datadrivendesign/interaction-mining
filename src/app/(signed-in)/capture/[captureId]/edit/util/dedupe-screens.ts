@@ -11,9 +11,7 @@
  * @param screens - Screens as loaded from a draft or capture metadata file.
  * @returns The same screens in order, minus later entries repeating an id.
  */
-export function dedupeScreensById<T extends { id: string }>(
-  screens: T[],
-): T[] {
+export function dedupeScreensById<T extends { id: string }>(screens: T[]): T[] {
   const seenIds = new Set<string>();
   return screens.filter((screen) => {
     if (seenIds.has(screen.id)) {

@@ -7,7 +7,7 @@ export * from "./s3/server";
 export const s3 = new S3Client({
   region: process.env._AWS_REGION!,
   forcePathStyle: process.env.USE_MINIO_STORE === "true" ? true : false,
-  // conditional: only define endpoint if using minio store, otherwise ignore 
+  // conditional: only define endpoint if using minio store, otherwise ignore
   ...(process.env.USE_MINIO_STORE === "true" && {
     endpoint: process.env.MINIO_ENDPOINT,
   }),

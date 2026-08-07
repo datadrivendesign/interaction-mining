@@ -58,7 +58,7 @@ export function FocusViewIOS({
   return (
     <>
       <div
-        className="relative z-20 flex min-h-0 min-w-0 justify-center w-full h-full overflow-visible"
+        className="relative z-20 flex h-full min-h-0 w-full min-w-0 justify-center overflow-visible"
         data-gesture-safe-area
       >
         <RepairScreenCanvasIOS

@@ -6,10 +6,10 @@ import { AdminNavBar } from "../components/admin-nav-bar";
 
 export default async function UsersPanelPage() {
   return (
-    <div className="flex flex-col w-full h-full items-center justify-center">
-      <div className="space-y-4 w-full max-w-5xl">
+    <div className="flex h-full w-full flex-col items-center justify-center">
+      <div className="w-full max-w-5xl space-y-4">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold tracking-tight text-start">
+          <h1 className="text-start text-3xl font-bold tracking-tight">
             Manage Users
           </h1>
           {/* Action buttons for navigation */}

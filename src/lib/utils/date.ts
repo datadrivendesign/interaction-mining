@@ -7,7 +7,7 @@ interface PrettyTimeOptions {
 
 export function prettyTime(
   time: string | number | Date | DateTime,
-  options?: PrettyTimeOptions
+  options?: PrettyTimeOptions,
 ) {
   // get list of timezones
   let dt, timeInt;

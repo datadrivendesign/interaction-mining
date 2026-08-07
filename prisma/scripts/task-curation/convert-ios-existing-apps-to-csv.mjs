@@ -23,10 +23,10 @@ const __dirname = path.dirname(__filename);
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
-    apps:       { type: "string" },
+    apps: { type: "string" },
     candidates: { type: "string" },
-    out:        { type: "string" },
-    help:       { type: "boolean", short: "h" },
+    out: { type: "string" },
+    help: { type: "boolean", short: "h" },
   },
   allowPositionals: false,
 });
@@ -80,7 +80,9 @@ function normalizeApps(parsedJson) {
     return parsedJson.apps;
   }
 
-  throw new Error("Input JSON must be an array or an object with an apps array.");
+  throw new Error(
+    "Input JSON must be an array or an object with an apps array.",
+  );
 }
 
 function normalizeCandidateTaskApps(parsedJson) {
@@ -92,7 +94,9 @@ function normalizeCandidateTaskApps(parsedJson) {
     return parsedJson.records;
   }
 
-  throw new Error("CandidateTaskApp JSON must be an array or an object with a records array.");
+  throw new Error(
+    "CandidateTaskApp JSON must be an array or an object with a records array.",
+  );
 }
 
 function csvEscape(value) {
@@ -165,31 +169,44 @@ async function main() {
   ]);
 
   const existingApps = normalizeApps(JSON.parse(existingAppsInput));
-  const candidateTaskApps = normalizeCandidateTaskApps(JSON.parse(candidateTaskAppsInput));
-  const takenCandidateApps = candidateTaskApps.filter((record) => record.isTaken === true);
+  const candidateTaskApps = normalizeCandidateTaskApps(
+    JSON.parse(candidateTaskAppsInput),
+  );
+  const takenCandidateApps = candidateTaskApps.filter(
+    (record) => record.isTaken === true,
+  );
 
   const rows = mergeRows([
     ...existingApps.map((app) => toRow(app, "has_capture_or_trace")),
-    ...takenCandidateApps.map((record) => toRow(record.app ?? { id: record.appId }, "candidate_task_taken")),
-  ])
-    .sort((first, second) => {
-      return (
-        first.appName.localeCompare(second.appName) ||
-        first.packageName.localeCompare(second.packageName)
-      );
-    });
+    ...takenCandidateApps.map((record) =>
+      toRow(record.app ?? { id: record.appId }, "candidate_task_taken"),
+    ),
+  ]).sort((first, second) => {
+    return (
+      first.appName.localeCompare(second.appName) ||
+      first.packageName.localeCompare(second.packageName)
+    );
+  });
 
   const csv = [
     columns.join(","),
-    ...rows.map((row) => columns.map((column) => csvEscape(row[column])).join(",")),
+    ...rows.map((row) =>
+      columns.map((column) => csvEscape(row[column])).join(","),
+    ),
   ].join("\n");
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${csv}\n`, "utf8");
 
-  console.log(`Read ${existingApps.length} existing capture/trace apps from ${inputPath}`);
-  console.log(`Read ${candidateTaskApps.length} CandidateTaskApp records from ${candidateTaskAppsPath}`);
-  console.log(`Included ${takenCandidateApps.length} CandidateTaskApp records where isTaken=true`);
+  console.log(
+    `Read ${existingApps.length} existing capture/trace apps from ${inputPath}`,
+  );
+  console.log(
+    `Read ${candidateTaskApps.length} CandidateTaskApp records from ${candidateTaskAppsPath}`,
+  );
+  console.log(
+    `Included ${takenCandidateApps.length} CandidateTaskApp records where isTaken=true`,
+  );
   console.log(`Wrote ${rows.length} CSV rows to ${outputPath}`);
 }
 

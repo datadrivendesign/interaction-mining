@@ -115,7 +115,7 @@ export function AdminPagination({
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
-            className={cn(currentPage === 1 && "opacity-50 cursor-default")}
+            className={cn(currentPage === 1 && "cursor-default opacity-50")}
             onClick={onPreviousPage}
           />
         </PaginationItem>
@@ -130,7 +130,7 @@ export function AdminPagination({
             {showJumpToPageInput ? (
               <PaginationItem>
                 <Input
-                  className="w-20 h-8 text-center"
+                  className="h-8 w-20 text-center"
                   type="number"
                   min="1"
                   max={totalPages}
@@ -149,7 +149,7 @@ export function AdminPagination({
                     setShowJumpToPageInput(true);
                     setJumpToPageValue(currentPage.toString());
                   }}
-                  className="cursor-pointer hover:bg-muted/50 rounded"
+                  className="hover:bg-muted/50 cursor-pointer rounded"
                 />
               </PaginationItem>
             )}
@@ -177,7 +177,7 @@ export function AdminPagination({
                 {showJumpToEndInput ? (
                   <PaginationItem>
                     <Input
-                      className="w-20 h-8 text-center"
+                      className="h-8 w-20 text-center"
                       type="number"
                       min="1"
                       max={totalPages}
@@ -196,7 +196,7 @@ export function AdminPagination({
                         setShowJumpToEndInput(true);
                         setJumpToEndValue(currentPage.toString());
                       }}
-                      className="cursor-pointer hover:bg-muted/50 rounded"
+                      className="hover:bg-muted/50 cursor-pointer rounded"
                     />
                   </PaginationItem>
                 )}
@@ -214,7 +214,7 @@ export function AdminPagination({
         <PaginationItem>
           <PaginationNext
             className={cn(
-              currentPage === totalPages && "opacity-50 cursor-default"
+              currentPage === totalPages && "cursor-default opacity-50",
             )}
             onClick={onNextPage}
           />

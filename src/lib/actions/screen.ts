@@ -84,7 +84,7 @@ export async function createScreen(data: Screen): Promise<Screen | null> {
 
 export async function updateScreen(
   id: string,
-  data: Partial<Screen>
+  data: Partial<Screen>,
 ): Promise<ActionPayload<Screen>> {
   let screen: Screen | null = {} as Screen;
 
@@ -151,7 +151,7 @@ export async function handleAndroidScreenUpload(data: {
         file,
         `uploads/${data.captureId}`,
         `${data.id}.json`,
-        "application/json"
+        "application/json",
       ),
     ]);
 
@@ -213,7 +213,7 @@ export async function handleAndroidMetadataUpload(data: {
       (screen) => ({
         id: screen.id,
         timestamp: Date.parse(screen.timestamp),
-      })
+      }),
     );
     const draftGesturesMetadata: { [key: string]: ScreenGesture } = {};
     const draftRedactionsMetadata: { [key: string]: Redaction[] } = {};
@@ -250,7 +250,7 @@ export async function handleAndroidMetadataUpload(data: {
         file,
         `uploads/${data.captureId}`,
         fileName,
-        "application/json"
+        "application/json",
       ),
     ]);
 

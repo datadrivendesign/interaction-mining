@@ -172,7 +172,7 @@ export default function RepairScreenCanvasIOS({
           onDragEnd={handleDragEnd}
           modifiers={[restrictToParentElement]}
         >
-          <div className="flex min-h-0 min-w-0 items-center justify-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
+          <div className="flex h-full min-h-0 w-full min-w-0 items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
             <div
               className={frameContainerClass}
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
@@ -186,7 +186,7 @@ export default function RepairScreenCanvasIOS({
                   !gesture.y &&
                   !isLastScreen ? (
                     <motion.div
-                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                      className="pointer-events-none absolute z-50 origin-left rounded-md bg-neutral-200 px-2 py-1 shadow-md dark:bg-neutral-800"
                       initial={{
                         x: 8 + tooltip!.x,
                         y: 8 + tooltip!.y,
@@ -213,7 +213,7 @@ export default function RepairScreenCanvasIOS({
                   <DraggableMarker position={markerPixelPosition} />
                 ) : null}
                 {isLastScreen ? (
-                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                  <div className="pointer-events-none absolute top-3 left-1/2 z-50 -translate-x-1/2">
                     <div className="rounded-md bg-emerald-600/70 px-3 py-1.5 text-xs font-semibold text-white/95 shadow-sm">
                       Goal screen reached. No gesture required.
                     </div>
@@ -228,7 +228,7 @@ export default function RepairScreenCanvasIOS({
                     isLastScreen ? "cursor-default" : "cursor-crosshair",
                     "rounded-lg select-none",
                     imageOrientation === "landscape"
-                      ? "h-auto w-auto max-h-full max-w-full object-contain"
+                      ? "h-auto max-h-full w-auto max-w-full object-contain"
                       : "h-full w-auto max-w-full",
                   )}
                   width={0}

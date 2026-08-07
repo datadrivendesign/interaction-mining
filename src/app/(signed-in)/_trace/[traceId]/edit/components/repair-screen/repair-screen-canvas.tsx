@@ -273,9 +273,9 @@ export default function RepairScreenCanvas({
           onDragEnd={handleDragEnd}
           modifiers={[restrictToParentElement]}
         >
-          <div className="flex justify-center items-center w-full h-full bg-neutral-50 dark:bg-neutral-950 p-4">
+          <div className="flex h-full w-full items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
             <div
-              className="relative w-auto h-full"
+              className="relative h-full w-auto"
               style={{ "--marker-radius": "1rem" } as React.CSSProperties}
             >
               <DroppableArea>
@@ -283,7 +283,7 @@ export default function RepairScreenCanvas({
                   {/* Only show floating tooltip when no marker is placed  */}
                   {tooltip!.x && tooltip!.y && !gesture.x && !gesture.y ? (
                     <motion.div
-                      className="absolute z-50 px-2 py-1 bg-neutral-200 dark:bg-neutral-800 rounded-md shadow-md pointer-events-none origin-left"
+                      className="pointer-events-none absolute z-50 origin-left rounded-md bg-neutral-200 px-2 py-1 shadow-md dark:bg-neutral-800"
                       initial={{
                         x: 8 + tooltip!.x,
                         y: 8 + tooltip!.y,
@@ -314,7 +314,7 @@ export default function RepairScreenCanvas({
                   src={screen.src}
                   alt="gallery"
                   draggable={false}
-                  className="w-auto h-full rounded-lg cursor-crosshair"
+                  className="h-full w-auto cursor-crosshair rounded-lg"
                   width={0}
                   height={0}
                   sizes="100vw"
@@ -358,7 +358,7 @@ export default function RepairScreenCanvas({
 function DroppableArea({ children }: { children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id: "screenshot" });
   return (
-    <div ref={setNodeRef} className="relative w-full h-full">
+    <div ref={setNodeRef} className="relative h-full w-full">
       {children}
     </div>
   );
@@ -391,7 +391,7 @@ function DraggableMarker({
           }px, 0)`,
         }}
         className={clsx(
-          "absolute z-50 flex justify-center items-center bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-colors duration-150 ease-in-out",
+          "absolute z-50 flex items-center justify-center rounded-full bg-yellow-400/75 shadow-md transition-colors duration-150 ease-in-out hover:bg-yellow-400/100",
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
         {...listeners}
@@ -435,12 +435,12 @@ function FocusedElementTab({
   focusedBox: FocusedBox;
 }) {
   return (
-    <Card className="absolute right-0 top-0 mr-5 mt-5 w-auto h-auto">
+    <Card className="absolute top-0 right-0 mt-5 mr-5 h-auto w-auto">
       <CardHeader>
         <CardTitle>Gesture Interaction Element</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-1 mb-5">
+        <div className="mb-5 space-y-1">
           <Switch
             checked={showRedaction}
             onCheckedChange={(checked) => {
@@ -451,11 +451,11 @@ function FocusedElementTab({
         </div>
         {showRedaction ? (
           <>
-            <div className="space-y-1 flex flex-row mb-5">
-              <div className="w-15 flex flex-col justify-center items-center">
+            <div className="mb-5 flex flex-row space-y-1">
+              <div className="flex w-15 flex-col items-center justify-center">
                 <Label
                   htmlFor="x0"
-                  className="text-sm font-bold leading-none mb-1"
+                  className="mb-1 text-sm leading-none font-bold"
                 >
                   x0
                 </Label>
@@ -466,10 +466,10 @@ function FocusedElementTab({
                   value={focusedBox.x ?? -1}
                 />
               </div>
-              <div className="w-15 flex flex-col justify-center items-center mr-3">
+              <div className="mr-3 flex w-15 flex-col items-center justify-center">
                 <Label
                   htmlFor="y0"
-                  className="text-sm font-bold leading-none mb-1"
+                  className="mb-1 text-sm leading-none font-bold"
                 >
                   y0
                 </Label>
@@ -480,10 +480,10 @@ function FocusedElementTab({
                   value={focusedBox.y ?? -1}
                 />
               </div>
-              <div className="w-15 flex flex-col justify-center items-center">
+              <div className="flex w-15 flex-col items-center justify-center">
                 <Label
                   htmlFor="x1"
-                  className="text-sm font-bold leading-none mb-1"
+                  className="mb-1 text-sm leading-none font-bold"
                 >
                   x1
                 </Label>
@@ -494,10 +494,10 @@ function FocusedElementTab({
                   value={(focusedBox.x ?? -1) + (focusedBox.width ?? -1)}
                 />
               </div>
-              <div className="w-15 flex flex-col justify-center items-center">
+              <div className="flex w-15 flex-col items-center justify-center">
                 <Label
                   htmlFor="y1"
-                  className="text-sm font-bold leading-none mb-1"
+                  className="mb-1 text-sm leading-none font-bold"
                 >
                   y1
                 </Label>
@@ -509,10 +509,10 @@ function FocusedElementTab({
                 />
               </div>
             </div>
-            <div className="space-y-1 mb-5">
+            <div className="mb-5 space-y-1">
               <Label
                 htmlFor="elemId"
-                className="text-base font-bold leading-none"
+                className="text-base leading-none font-bold"
               >
                 Element Id
               </Label>
@@ -525,7 +525,7 @@ function FocusedElementTab({
             </div>
             <div className="space-y-1">
               <Label
-                className="text-base font-bold leading-none"
+                className="text-base leading-none font-bold"
                 htmlFor="elemClass"
               >
                 Element Class
@@ -613,9 +613,9 @@ function GestureSelection() {
                       <PopoverTrigger asChild>
                         <Button
                           variant={null}
-                          className="relative w-full h-full"
+                          className="relative h-full w-full"
                         >
-                          <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4" />
+                          <ChevronRight className="absolute top-1/2 right-0 h-4 w-4 -translate-y-1/2" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent
@@ -661,9 +661,9 @@ function GestureSelection() {
           </CommandList>
         </Command>
       </PopoverContent>
-      <div className="flex flex-col bg-white dark:bg-black mt-1 rounded-sm">
+      <div className="mt-1 flex flex-col rounded-sm bg-white dark:bg-black">
         <Textarea
-          className="text-sm w-full h-full opacity-100"
+          className="h-full w-full text-sm opacity-100"
           placeholder="How did you interact with this element?"
           value={gesture.description ? gesture.description : ""}
           onChange={(e) =>
@@ -723,7 +723,7 @@ function BoundingBoxOverlay({
           ref={svgRef}
           viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
           preserveAspectRatio="xMinYMin meet"
-          className="pointer-events-none top-0 left-0 absolute cursor-crosshair"
+          className="pointer-events-none absolute top-0 left-0 cursor-crosshair"
         >
           {boxes.map((box: any, index: number) => (
             <BoundingBox

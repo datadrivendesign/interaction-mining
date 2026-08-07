@@ -6,16 +6,16 @@ export default async function Explore() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="animate-spin w-8 h-8" />
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       }
     >
       <GalleryRoot>
-        <main className="relative flex flex-col grow items-center">
-          <section className="relative flex flex-col w-full max-w-(--breakpoint-2xl)">
-            <div className="sticky top-16 z-30 flex flex-col md:flex-row p-4 lg:p-6 gap-x-4 lg:gap-x-6 items-start md:justify-between md:items-center bg-background border-b border-muted-background">
-              <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight mb-2 md:mb-0 whitespace-nowrap">
+        <main className="relative flex grow flex-col items-center">
+          <section className="relative flex w-full max-w-(--breakpoint-2xl) flex-col">
+            <div className="sticky top-16 z-30 flex flex-col items-start gap-x-4 border-b border-muted-background bg-background p-4 md:flex-row md:items-center md:justify-between lg:gap-x-6 lg:p-6">
+              <h1 className="mb-2 text-3xl font-extrabold tracking-tight whitespace-nowrap md:mb-0 lg:text-4xl">
                 Explore Dataset
               </h1>
               <GallerySearch />

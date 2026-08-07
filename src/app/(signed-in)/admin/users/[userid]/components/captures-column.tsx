@@ -75,8 +75,7 @@ export function CapturesColumn({ userId }: { userId: string }) {
   // handle fetching filter options from server
   useEffect(() => {
     const status = (searchParams.get("status") ?? undefined) as
-      | CaptureStatus
-      | undefined;
+      CaptureStatus | undefined;
     const fetchFilterOptions = async () => {
       const filterOptionsRes = await getFilterOptionsForUserCaptures({
         userId: userId,
@@ -92,7 +91,7 @@ export function CapturesColumn({ userId }: { userId: string }) {
       } else {
         console.error(
           "Failed to fetch filter options:",
-          filterOptionsRes.message
+          filterOptionsRes.message,
         );
       }
     };
@@ -105,8 +104,7 @@ export function CapturesColumn({ userId }: { userId: string }) {
       ? searchParams.get("apps")?.split(",")
       : [];
     const status = (searchParams.get("status") ?? undefined) as
-      | CaptureStatus
-      | undefined;
+      CaptureStatus | undefined;
 
     const fetchCaptures = async () => {
       setLoading(true);
@@ -145,7 +143,7 @@ export function CapturesColumn({ userId }: { userId: string }) {
       if (!capturesCountRes.ok) {
         console.error(
           "Failed to fetch captures count:",
-          capturesCountRes.message
+          capturesCountRes.message,
         );
       }
       if (!appsCountRes.ok) {
@@ -164,20 +162,19 @@ export function CapturesColumn({ userId }: { userId: string }) {
       ? searchParams.get("apps")?.split(",")
       : [];
     const status = (searchParams.get("status") ?? undefined) as
-      | CaptureStatus
-      | undefined;
+      CaptureStatus | undefined;
 
     router.push(
-      constructUserCapturesURL(userId, page, appIds || [], status || "")
+      constructUserCapturesURL(userId, page, appIds || [], status || ""),
     );
   };
 
   return (
     <div className="py-3 md:col-span-3">
-      <div className="flex flex-col w-full h-full items-center justify-center">
-        <div className="space-y-4 w-full max-w-5xl">
+      <div className="flex h-full w-full flex-col items-center justify-center">
+        <div className="w-full max-w-5xl space-y-4">
           <div className="mb-4">
-            <h1 className="text-3xl font-bold tracking-tight text-start">
+            <h1 className="text-start text-3xl font-bold tracking-tight">
               Monitor User Activity
             </h1>
 
@@ -193,21 +190,21 @@ export function CapturesColumn({ userId }: { userId: string }) {
             {/* Filter UI and logic */}
             <FilterCapture userId={userId} page={page} appsList={appsList} />
             <div className="flex flex-row items-center gap-5">
-              <p className="text-start mt-1 text-md font-bold tracking-tight">
+              <p className="text-md mt-1 text-start font-bold tracking-tight">
                 Captures Fetched{" "}
                 <span className="text-muted-foreground">({capturesCount})</span>
               </p>
-              <p className="text-start mt-1 text-md font-bold tracking-tight">
+              <p className="text-md mt-1 text-start font-bold tracking-tight">
                 Apps Fetched{" "}
                 <span className="text-muted-foreground">({appsCount})</span>
               </p>
             </div>
             <Separator className="my-2" />
             {/* User Captures List */}
-            <div className="rounded-xl bg-muted/10">
+            <div className="bg-muted/10 rounded-xl">
               {loading ? (
-                <div className="flex justify-center items-center h-full">
-                  <Loader2 className="w-10 h-10 animate-spin" />
+                <div className="flex h-full items-center justify-center">
+                  <Loader2 className="h-10 w-10 animate-spin" />
                 </div>
               ) : captures.length === 0 ? (
                 <EmptyCaptures />

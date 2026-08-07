@@ -114,7 +114,8 @@ async function main() {
     };
 
     if (cta.isTaken && shouldBeTaken) buckets.consistentTaken.push(rec);
-    else if (!cta.isTaken && !shouldBeTaken) buckets.consistentAvailable.push(rec);
+    else if (!cta.isTaken && !shouldBeTaken)
+      buckets.consistentAvailable.push(rec);
     else if (!cta.isTaken && shouldBeTaken) buckets.underMarked.push(rec);
     else buckets.overMarked.push(rec);
   }
@@ -123,10 +124,18 @@ async function main() {
   const total = ctas.length;
   console.log(`\nCandidateTaskApp audit — ${total} apps`);
   console.log(`  rule: taken ⇔ (capture count > 0) OR (trace count > 0)\n`);
-  console.log(`  ✓ consistent (taken, has evidence)     : ${buckets.consistentTaken.length}`);
-  console.log(`  ✓ consistent (available, no evidence)  : ${buckets.consistentAvailable.length}`);
-  console.log(`  ⚠ UNDER-marked (false → should be true): ${buckets.underMarked.length}`);
-  console.log(`  ⚠ OVER-marked  (true, no evidence)     : ${buckets.overMarked.length}`);
+  console.log(
+    `  ✓ consistent (taken, has evidence)     : ${buckets.consistentTaken.length}`,
+  );
+  console.log(
+    `  ✓ consistent (available, no evidence)  : ${buckets.consistentAvailable.length}`,
+  );
+  console.log(
+    `  ⚠ UNDER-marked (false → should be true): ${buckets.underMarked.length}`,
+  );
+  console.log(
+    `  ⚠ OVER-marked  (true, no evidence)     : ${buckets.overMarked.length}`,
+  );
 
   const preview = (label, list) => {
     if (!list.length) return;
@@ -134,13 +143,18 @@ async function main() {
     for (const r of list.slice(0, 15)) {
       const ev = `captures=${r.captureCount}${
         Object.keys(r.captureStatuses).length
-          ? ` [${Object.entries(r.captureStatuses).map(([s, n]) => `${s}:${n}`).join(", ")}]`
+          ? ` [${Object.entries(r.captureStatuses)
+              .map(([s, n]) => `${s}:${n}`)
+              .join(", ")}]`
           : ""
       }, traces=${r.traceCount}`;
       console.log(`  • ${r.appName} (${r.appId})  ${ev}`);
     }
   };
-  preview("UNDER-marked — would be flipped to isTaken=true", buckets.underMarked);
+  preview(
+    "UNDER-marked — would be flipped to isTaken=true",
+    buckets.underMarked,
+  );
   preview(
     releaseOverMarked
       ? "OVER-marked — would be flipped to isTaken=false"
@@ -171,7 +185,9 @@ async function main() {
     const releaseHint = buckets.overMarked.length
       ? " Add --release-over-marked to also flip over-marked apps to isTaken=false."
       : "";
-    console.log(`\nDry run — no changes written. Re-run with --apply to flip ${buckets.underMarked.length} under-marked apps to isTaken=true.${releaseHint}`);
+    console.log(
+      `\nDry run — no changes written. Re-run with --apply to flip ${buckets.underMarked.length} under-marked apps to isTaken=true.${releaseHint}`,
+    );
     return;
   }
 
@@ -195,11 +211,17 @@ async function main() {
     overMarkedUpdated = result.count;
   }
 
-  console.log(`\n--apply: flipped ${underMarkedUpdated} under-marked apps to isTaken=true.`);
+  console.log(
+    `\n--apply: flipped ${underMarkedUpdated} under-marked apps to isTaken=true.`,
+  );
   if (releaseOverMarked) {
-    console.log(`--apply --release-over-marked: flipped ${overMarkedUpdated} over-marked apps to isTaken=false.`);
+    console.log(
+      `--apply --release-over-marked: flipped ${overMarkedUpdated} over-marked apps to isTaken=false.`,
+    );
   } else {
-    console.log(`Over-marked apps left unchanged: ${buckets.overMarked.length}. Re-run with --apply --release-over-marked to release them.`);
+    console.log(
+      `Over-marked apps left unchanged: ${buckets.overMarked.length}. Re-run with --apply --release-over-marked to release them.`,
+    );
   }
 }
 

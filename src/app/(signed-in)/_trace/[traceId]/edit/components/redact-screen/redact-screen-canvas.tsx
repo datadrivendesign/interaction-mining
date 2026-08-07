@@ -23,7 +23,7 @@ export const RedactCanvasContext = createContext<{
     newRedaction: Redaction,
     options?: {
       select?: boolean;
-    }
+    },
   ) => void;
   updateRedaction: (id: string, updatedRedaction: Partial<Redaction>) => void;
 }>({
@@ -74,7 +74,7 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
     newRedaction: Redaction,
     option?: {
       select?: boolean;
-    }
+    },
   ) => {
     const newRedactions = [...redaction, newRedaction];
     setValue("redactions", {
@@ -99,7 +99,7 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
         [screen.id]: newRedactions,
       });
     },
-    [redactions, setValue, screen.id]
+    [redactions, setValue, screen.id],
   );
 
   useHotkeys("v", () => setMode("select"));
@@ -129,7 +129,7 @@ export default function RedactScreenCanvas({ screen }: { screen: Screen }) {
         updateRedaction,
       }}
     >
-      <div className="relative flex items-center w-full h-full bg-neutral-50 dark:bg-neutral-950">
+      <div className="relative flex h-full w-full items-center bg-neutral-50 dark:bg-neutral-950">
         <Toolbar mode={mode} setMode={setMode} />
         <Layers redactions={redaction} deleteRedaction={deleteRedaction} />
         <CanvasComponent

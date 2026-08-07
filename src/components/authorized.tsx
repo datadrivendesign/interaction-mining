@@ -22,7 +22,7 @@ export async function AuthorizedRoute({
   resourceUserId?: string;
 }) {
   const ownershipEnforcedRoles = new Set(
-    allowedRoles ?? [Role.USER, Role.ADMIN]
+    allowedRoles ?? [Role.USER, Role.ADMIN],
   );
   let session = await auth();
 
@@ -45,7 +45,7 @@ export async function AuthorizedRoute({
 
 export async function NotAuthorized() {
   return (
-    <div className="flex w-dvw h-[calc(100dvh-65px)] justify-center items-start md:items-center p-8 md:p-16">
+    <div className="flex h-[calc(100dvh-65px)] w-dvw items-start justify-center p-8 md:items-center md:p-16">
       <Card className="w-full max-w-screen-sm">
         <CardHeader>
           <CardTitle>Authorization Error</CardTitle>

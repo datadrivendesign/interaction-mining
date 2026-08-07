@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 
 export default function useMeasure<T extends HTMLElement>(
-  providedRef?: React.RefObject<T>
+  providedRef?: React.RefObject<T>,
 ) {
   const innerRef = useRef<T>(null);
   const ref = providedRef ?? innerRef;

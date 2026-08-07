@@ -64,7 +64,7 @@ export default function BoundingBoxOverlay({
             ref={svgRef}
             viewBox={`${rootBounds.x} ${rootBounds.y} ${rootBounds.width} ${rootBounds.height}`}
             preserveAspectRatio="xMinYMin meet"
-            className="pointer-events-none top-0 left-0 absolute"
+            className="pointer-events-none absolute top-0 left-0"
           >
             {boxes.map((box: any, index: number) => (
               <BoundingBox

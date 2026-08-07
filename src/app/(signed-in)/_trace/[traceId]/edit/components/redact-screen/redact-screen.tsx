@@ -46,34 +46,31 @@ export default function RedactScreen() {
   useHotkeys("left", (e) => {
     e.preventDefault();
     handlePrevious();
-  })
+  });
 
   useHotkeys("right", (e) => {
     e.preventDefault();
     handleNext();
-  })
+  });
 
   useHotkeys("tab", (e) => {
     e.preventDefault();
     handleTab();
-  })
+  });
 
   return (
-    <div className="w-full h-full">
+    <div className="h-full w-full">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel defaultSize={75}>
-            {focusViewIndex > -1 ? (
-              <FocusView
-                key={focusViewIndex}
-                screen={screens[focusViewIndex]}
-              />
-            ) : (
-              <div className="flex justify-center items-center w-full h-full">
-                <span className="text-3xl lg:text-4xl text-muted-foreground font-semibold">
-                  Select a screen from the filmstrip.
-                </span>
-              </div>
-            )}
+          {focusViewIndex > -1 ? (
+            <FocusView key={focusViewIndex} screen={screens[focusViewIndex]} />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-3xl font-semibold text-muted-foreground lg:text-4xl">
+                Select a screen from the filmstrip.
+              </span>
+            </div>
+          )}
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={25} minSize={25} maxSize={50}>
@@ -92,7 +89,7 @@ export default function RedactScreen() {
 function FocusView({ screen }: { screen: Screen }) {
   return (
     <>
-      <div className="flex justify-center w-full h-full overflow-hidden border border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex h-full w-full justify-center overflow-hidden border border-t border-neutral-200 dark:border-neutral-800">
         <RedactScreenCanvas screen={screen} />
       </div>
     </>
@@ -111,7 +108,7 @@ function Filmstrip({
   setFocusViewIndex: (index: number) => void;
 }) {
   return (
-    <ul className="flex h-full px-2 pt-2 pb-4 gap-1 overflow-x-auto">
+    <ul className="flex h-full gap-1 overflow-x-auto px-2 pt-2 pb-4">
       {screens?.map((screen: Screen, index: number) => (
         <FilmstripItem
           key={screen.id}
@@ -194,30 +191,30 @@ function FilmstripItem({
 
   return (
     <li
-      className="cursor-pointer min-w-fit h-full relative"
+      className="relative h-full min-w-fit cursor-pointer"
       data-index={index}
       {...props}
     >
       <div
         ref={containerRef}
-        className="relative h-full rounded-sm overflow-clip transition-all duration-200 ease-in-out select-none"
+        className="relative h-full overflow-clip rounded-sm transition-all duration-200 ease-in-out select-none"
       >
         {(isSelected || hasError) && (
           <div
             className={cn(
-              "absolute z-10 flex w-full h-full justify-center items-center rounded-sm",
+              "absolute z-10 flex h-full w-full items-center justify-center rounded-sm",
               isSelected
-                ? "ring-2 ring-inset ring-yellow-500"
+                ? "ring-2 ring-yellow-500 ring-inset"
                 : hasError
-                ? "ring-2 ring-inset ring-red-500"
-                : ""
+                  ? "ring-2 ring-red-500 ring-inset"
+                  : "",
             )}
           >
             {hasError && (
               <CircleAlert
                 className={cn(
                   "size-6",
-                  isSelected ? "text-yellow-500" : "text-red-500"
+                  isSelected ? "text-yellow-500" : "text-red-500",
                 )}
               />
             )}

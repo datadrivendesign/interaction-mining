@@ -23,7 +23,7 @@ export default function SheetComponent({
         <Button
           variant="outline"
           size="sm"
-          className="flex justify-center items-center aspect-square rounded-full"
+          className="flex aspect-square items-center justify-center rounded-full"
         >
           ?
         </Button>
@@ -32,8 +32,8 @@ export default function SheetComponent({
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col grow">
-          <article className="prose prose-neutral dark:prose-invert leading-snug">
+        <div className="flex grow flex-col">
+          <article className="prose leading-snug prose-neutral dark:prose-invert">
             {children}
           </article>
         </div>

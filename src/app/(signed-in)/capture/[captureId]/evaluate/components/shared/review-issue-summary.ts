@@ -1,15 +1,14 @@
 import { ReviewFeedbackState } from "../../utils/review-feedback";
 
 export function getReviewIssueSummary(feedbackState: ReviewFeedbackState) {
-  const totalScreenIssues = Object.values(feedbackState.commentsByScreen).reduce(
-    (count, comments) => count + comments.length,
-    0,
-  );
+  const totalScreenIssues = Object.values(
+    feedbackState.commentsByScreen,
+  ).reduce((count, comments) => count + comments.length, 0);
   const flowIssueCount = feedbackState.flowComments.length;
   const totalIssues = totalScreenIssues + flowIssueCount;
-  const screensWithIssues = Object.values(feedbackState.commentsByScreen).filter(
-    (comments) => comments.length > 0,
-  ).length;
+  const screensWithIssues = Object.values(
+    feedbackState.commentsByScreen,
+  ).filter((comments) => comments.length > 0).length;
 
   return totalIssues === 0
     ? "No issues flagged"

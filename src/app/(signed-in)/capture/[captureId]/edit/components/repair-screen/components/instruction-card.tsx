@@ -30,7 +30,7 @@ const shortcutChips = [
   {
     key: "delete",
     shortcut: (
-      <span className="flex items-center justify-center rounded-sm border border-border bg-background px-1.5 py-0.5 text-muted-foreground shadow-xs">
+      <span className="border-border flex items-center justify-center rounded-sm border bg-background px-1.5 py-0.5 text-muted-foreground shadow-xs">
         <Delete className="size-4" />
       </span>
     ),
@@ -83,7 +83,7 @@ function ShortcutSection({
       >
         <div
           className={cn(
-            "text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground",
+            "text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase",
             isCompact && "text-[9px]",
           )}
         >
@@ -95,7 +95,7 @@ function ShortcutSection({
           <div
             key={item.key}
             className={cn(
-              "flex min-w-0 items-center gap-2 text-[11px] font-medium leading-none text-muted-foreground",
+              "flex min-w-0 items-center gap-2 text-[11px] leading-none font-medium text-muted-foreground",
               isCompact && "gap-1.5 text-[10px]",
             )}
           >
@@ -156,7 +156,7 @@ export const InstructionCardIOS = ({
             >
               <p
                 className={cn(
-                  "text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground text-neutral-600 dark:text-neutral-400",
+                  "text-[11px] font-bold tracking-[0.08em] text-muted-foreground text-neutral-600 uppercase dark:text-neutral-400",
                   isCompact && "text-[10px]",
                 )}
               >
@@ -164,7 +164,7 @@ export const InstructionCardIOS = ({
               </p>
               <p
                 className={cn(
-                  "mt-1 whitespace-pre-wrap text-xs font-medium leading-snug text-neutral-900 dark:text-neutral-100",
+                  "mt-1 text-xs leading-snug font-medium whitespace-pre-wrap text-neutral-900 dark:text-neutral-100",
                   isCompact && "mt-0.5 text-[11px] leading-[1.3]",
                 )}
               >
@@ -215,7 +215,7 @@ export const InstructionCardAndroid = ({
             >
               <p
                 className={cn(
-                  "text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground text-neutral-600",
+                  "text-[10px] font-bold tracking-[0.08em] text-muted-foreground text-neutral-600 uppercase",
                   isCompact && "text-[9px]",
                 )}
               >
@@ -223,7 +223,7 @@ export const InstructionCardAndroid = ({
               </p>
               <p
                 className={cn(
-                  "mt-1 whitespace-pre-wrap text-xs font-medium leading-snug text-neutral-900 dark:text-neutral-100",
+                  "mt-1 text-xs leading-snug font-medium whitespace-pre-wrap text-neutral-900 dark:text-neutral-100",
                   isCompact && "mt-0.5 text-[11px] leading-[1.3]",
                 )}
               >

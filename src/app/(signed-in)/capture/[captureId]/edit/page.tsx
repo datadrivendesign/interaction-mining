@@ -901,12 +901,12 @@ export default function Page() {
       <FormProvider {...methods}>
         <ScreenBlobRegistryProvider>
           <main
-            className="relative flex flex-col w-dvw h-[calc(100dvh-64px)] bg-white dark:bg-black overflow-hidden"
+            className="relative flex h-[calc(100dvh-64px)] w-dvw flex-col overflow-hidden bg-white dark:bg-black"
             style={{ "--nav-height": `${height}px` } as React.CSSProperties}
           >
             {!isTraceLoading ? (
               <>
-                <div className="relative flex flex-col w-full h-[calc(100%-var(--nav-height))]">
+                <div className="relative flex h-[calc(100%-var(--nav-height))] w-full flex-col">
                   <div className="flex min-h-0 min-w-0 flex-1">
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                       {hasAnyFeedback &&
@@ -941,7 +941,7 @@ export default function Page() {
                             }
                           />
                         )}
-                      <div className="flex w-full min-h-0 min-w-0 flex-1 flex-col items-center">
+                      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col items-center">
                         {editorRender()}
                       </div>
                     </div>
@@ -979,9 +979,9 @@ export default function Page() {
                 </div>
                 <nav
                   ref={navRef}
-                  className="sticky bottom-0 flex grow-0 shrink justify-between w-full h-auto px-6 py-4 bg-white dark:bg-black backdrop-blur-sm border-t border-neutral-200 dark:border-neutral-800"
+                  className="sticky bottom-0 flex h-auto w-full shrink grow-0 justify-between border-t border-neutral-200 bg-white px-6 py-4 backdrop-blur-sm dark:border-neutral-800 dark:bg-black"
                 >
-                  <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2">
                     <h1 className="inline-flex items-center text-lg font-semibold text-neutral-950 dark:text-neutral-50">
                       <span className="inline-flex items-center text-muted-foreground">
                         New Trace <ChevronRight className="size-6" />{" "}
@@ -1012,7 +1012,7 @@ export default function Page() {
                       Back to Upload
                     </Button>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Button
                       className="mr-8 hover:cursor-pointer"
                       variant="outline"
@@ -1021,7 +1021,7 @@ export default function Page() {
                     >
                       {isAutosavingRef.current ? (
                         <>
-                          <Loader2 className="size-4 animate-spin mr-2" />
+                          <Loader2 className="mr-2 size-4 animate-spin" />
                           Autosaving...
                         </>
                       ) : (
@@ -1029,7 +1029,7 @@ export default function Page() {
                       )}
                     </Button>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Button
                       className="hover:cursor-pointer"
                       variant="outline"
@@ -1062,9 +1062,9 @@ export default function Page() {
                 </nav>
               </>
             ) : (
-              <div className="flex flex-col grow justify-center items-center w-full h-full">
-                <Loader2 className="text-muted-foreground size-8 animate-spin" />
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+              <div className="flex h-full w-full grow flex-col items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                <h1 className="text-xl font-bold tracking-tight md:text-2xl">
                   Loading capture...
                 </h1>
               </div>

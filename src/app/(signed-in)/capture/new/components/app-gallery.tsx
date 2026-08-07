@@ -20,7 +20,7 @@ function GridPlaceholders({ prefix }: { prefix: string }) {
       {Array.from({ length: PLACEHOLDER_COUNT }).map((_, i) => (
         <div
           key={`placeholder-${prefix}-${i}`}
-          className="invisible pointer-events-none"
+          className="pointer-events-none invisible"
         >
           <div className="flex flex-col items-center">
             <div className="w-40 rounded-xl" />
@@ -56,10 +56,10 @@ export default function AppGallery({
 
   return (
     <>
-      <div className="flex items-center justify-between w-full mt-3">
+      <div className="mt-3 flex w-full items-center justify-between">
         <InputRoot className="w-[100%]">
           <InputIcon>
-            <Search size={20} className="text-muted-foreground  " />
+            <Search size={20} className="text-muted-foreground" />
           </InputIcon>
           <Input
             placeholder="Search for apps"
@@ -68,19 +68,19 @@ export default function AppGallery({
           />
         </InputRoot>
       </div>
-      <div className="grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-2 dark:bg-neutral-800 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 dark:bg-neutral-800">
         {loading ? (
           <>
             <GridPlaceholders prefix="loading" />
-            <div className="col-span-full flex flex-row gap-2 justify-center items-center text-center text-muted-foreground">
-              <Loader2 className="animate-spin w-8 h-8" />
+            <div className="col-span-full flex flex-row items-center justify-center gap-2 text-center text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin" />
               <span className="text-lg font-medium">Loading apps...</span>
             </div>
           </>
         ) : searchApps.length === 0 ? (
           <>
             <GridPlaceholders prefix="empty" />
-            <div className="col-span-full flex justify-center items-center text-center text-muted-foreground">
+            <div className="col-span-full flex items-center justify-center text-center text-muted-foreground">
               <span className="text-lg font-medium">No apps to show.</span>
             </div>
           </>
@@ -94,9 +94,9 @@ export default function AppGallery({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div
-                        className={`relative flex min-h-20 cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition focus-within:ring-2 focus-within:ring-primary hover:border-primary/40 hover:bg-neutral-200 dark:hover:bg-neutral-700 ${
+                        className={`focus-within:ring-primary hover:border-primary/40 relative flex min-h-20 cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition focus-within:ring-2 hover:bg-neutral-200 dark:hover:bg-neutral-700 ${
                           isSelected
-                            ? "border-primary bg-primary/10 ring-2 ring-primary/40"
+                            ? "border-primary bg-primary/10 ring-primary/40 ring-2"
                             : "border-transparent"
                         }`}
                         onClick={() =>
@@ -107,7 +107,7 @@ export default function AppGallery({
                         }
                       >
                         {isSelected ? (
-                          <div className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <div className="bg-primary text-primary-foreground absolute top-1 right-1 flex size-5 items-center justify-center rounded-full">
                             <Check className="size-3" />
                           </div>
                         ) : null}
@@ -120,7 +120,7 @@ export default function AppGallery({
                           height={40}
                           sizes="100vw"
                         />
-                        <Label className="line-clamp-2 min-w-0 flex-1 break-words text-sm leading-tight">
+                        <Label className="line-clamp-2 min-w-0 flex-1 text-sm leading-tight break-words">
                           {searchApp.metadata.name}
                         </Label>
                       </div>

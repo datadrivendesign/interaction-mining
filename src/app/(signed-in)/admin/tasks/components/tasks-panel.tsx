@@ -63,7 +63,7 @@ export function TasksPanel() {
       } else {
         console.error(
           "Failed to fetch filter options:",
-          filterOptionsRes.message
+          filterOptionsRes.message,
         );
       }
     };
@@ -120,7 +120,7 @@ export function TasksPanel() {
       if (!reviewCapturesCountRes.ok) {
         console.error(
           "Failed to fetch review captures count:",
-          reviewCapturesCountRes.message
+          reviewCapturesCountRes.message,
         );
       }
       setLoading(false);
@@ -130,7 +130,7 @@ export function TasksPanel() {
 
   // filter out captures with no user or email
   const validCaptures = captures.filter(
-    (capture) => capture.user?.name !== null && capture.user?.email !== null
+    (capture) => capture.user?.name !== null && capture.user?.email !== null,
   );
 
   // pagination inputs for pagination component
@@ -141,8 +141,8 @@ export function TasksPanel() {
       constructTaskPanelURL(
         page,
         usersFiltered.map((user) => user.value),
-        appsFiltered.map((app) => app.value)
-      )
+        appsFiltered.map((app) => app.value),
+      ),
     );
   };
 
@@ -154,8 +154,8 @@ export function TasksPanel() {
       constructTaskPanelURL(
         page,
         usersFiltered.map((user) => user.value),
-        newAppsFiltered.map((app) => app.value)
-      )
+        newAppsFiltered.map((app) => app.value),
+      ),
     );
   };
   const handleUserFilterSelect = (option: ComboboxOption) => {
@@ -165,35 +165,35 @@ export function TasksPanel() {
       constructTaskPanelURL(
         page,
         newUsersFiltered.map((user) => user.value),
-        appsFiltered.map((app) => app.value)
-      )
+        appsFiltered.map((app) => app.value),
+      ),
     );
   };
 
   const handleAppFilterRemove = (option: ComboboxOption) => {
     const newAppsFiltered = appsFiltered.filter(
-      (app) => app.value !== option.value
+      (app) => app.value !== option.value,
     );
     setAppsFiltered(newAppsFiltered);
     router.push(
       constructTaskPanelURL(
         1,
         usersFiltered.map((user) => user.value),
-        newAppsFiltered.map((app) => app.value)
-      )
+        newAppsFiltered.map((app) => app.value),
+      ),
     );
   };
   const handleUserFilterRemove = (option: ComboboxOption) => {
     const newUsersFiltered = usersFiltered.filter(
-      (user) => user.value !== option.value
+      (user) => user.value !== option.value,
     );
     setUsersFiltered(newUsersFiltered);
     router.push(
       constructTaskPanelURL(
         1,
         newUsersFiltered.map((user) => user.value),
-        appsFiltered.map((app) => app.value)
-      )
+        appsFiltered.map((app) => app.value),
+      ),
     );
   };
   const handleClearFilters = () => {
@@ -208,7 +208,7 @@ export function TasksPanel() {
       capture.user?.id &&
       capture.user?.name &&
       usersFiltered.every(
-        (user: ComboboxOption) => user.value !== capture?.user?.id
+        (user: ComboboxOption) => user.value !== capture?.user?.id,
       )
     ) {
       handleUserFilterSelect({
@@ -223,7 +223,7 @@ export function TasksPanel() {
       capture.app?.id &&
       capture.app?.metadata.name &&
       appsFiltered.every(
-        (app: ComboboxOption) => app.value !== capture?.app?.id
+        (app: ComboboxOption) => app.value !== capture?.app?.id,
       )
     ) {
       handleAppFilterSelect({
@@ -248,16 +248,16 @@ export function TasksPanel() {
           handleClearFilters={handleClearFilters}
         />
       </div>
-      <p className="text-start mt-1 text-md font-bold tracking-tight">
+      <p className="text-md mt-1 text-start font-bold tracking-tight">
         Pending Task Submissions{" "}
         <span className="text-muted-foreground">({reviewCapturesCount})</span>
       </p>
       <Separator className="my-2" />
       {/* Capture Table */}
-      <div className="rounded-xl bg-muted/10">
+      <div className="bg-muted/10 rounded-xl">
         {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <Loader2 className="w-10 h-10 animate-spin" />
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin" />
           </div>
         ) : (
           <TasksTable

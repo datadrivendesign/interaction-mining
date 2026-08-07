@@ -1,6 +1,10 @@
 # Generated, and enormous. Reformatting it guarantees conflicts on every install.
 package-lock.json
 
+# Virtualenv: third-party vendored code, including Playwright's bundled Node
+# driver. 400 files of somebody else's JavaScript.
+.venv/
+
 # Build output
 .next/
 out/
@@ -18,3 +22,5 @@ plans/
 # deliberately, matching the existing eslint ignore.
 *.md
 **/*.md
+*.mdx
+**/*.mdx

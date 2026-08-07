@@ -10,7 +10,7 @@ interface TraceFetcherOptions {
 export async function traceFetcher([_, traceId, options]: [
   string,
   string,
-  TraceFetcherOptions
+  TraceFetcherOptions,
 ]) {
   const includes = options.includes || {};
   let res = await getTrace(traceId, { includes });
@@ -26,7 +26,7 @@ export async function traceFetcher([_, traceId, options]: [
 export function useTrace(traceId: string, options: TraceFetcherOptions = {}) {
   const { data, error, isLoading } = useSWR(
     ["trace", traceId, options],
-    traceFetcher
+    traceFetcher,
   );
 
   return {

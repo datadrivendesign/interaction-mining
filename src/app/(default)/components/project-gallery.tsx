@@ -65,7 +65,7 @@ export default function ProjectGallery() {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="relative flex w-full snap-x snap-mandatory gap-6 lg:gap-8 overflow-x-auto pb-6 lg:pb-8 overscroll-x-none"
+      className="relative flex w-full snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-none pb-6 lg:gap-8 lg:pb-8"
     >
       {/* Left “spacer” so first card can snap fully into view */}
       <div className="shrink-0 snap-start scroll-mx-6 lg:scroll-mx-8">
@@ -85,9 +85,9 @@ export default function ProjectGallery() {
           isSelected={index === selectedIndex}
           isTouch={isTouch}
         >
-          <figure className="flex justify-center items-center w-full h-full p-4">
+          <figure className="flex h-full w-full items-center justify-center p-4">
             {!work.image && (
-              <div className="absolute z-20 top-4 left-4 flex flex-col p-6">
+              <div className="absolute top-4 left-4 z-20 flex flex-col p-6">
                 <span className="font-semibold">{work.title}</span>
                 <span className="text-sm">Teaser WIP</span>
               </div>
@@ -98,7 +98,7 @@ export default function ProjectGallery() {
                 "/blank_ruled_grid_light.png"
               }
               alt="Teaser"
-              className="relative z-10 block dark:hidden w-full h-auto object-contain rounded-xl border border-neutral-200 dark:border-neutral-800"
+              className="relative z-10 block h-auto w-full rounded-xl border border-neutral-200 object-contain dark:hidden dark:border-neutral-800"
               width={0}
               height={0}
               sizes="100vw"
@@ -108,7 +108,7 @@ export default function ProjectGallery() {
                 (work.image && work.image.dark) || "/blank_ruled_grid_dark.png"
               }
               alt={`${work.title} Teaser`}
-              className="relative z-10 hidden dark:block w-full h-auto object-contain rounded-xl border border-neutral-200 dark:border-neutral-800"
+              className="relative z-10 hidden h-auto w-full rounded-xl border border-neutral-200 object-contain dark:block dark:border-neutral-800"
               width={0}
               height={0}
               sizes="100vw"
@@ -117,7 +117,7 @@ export default function ProjectGallery() {
         </ProjectCard>
       ))}
 
-      <div className="shrink-0 snap-start w-[calc(50%-3rem)] lg:w-[calc(75%-4rem)]"></div>
+      <div className="w-[calc(50%-3rem)] shrink-0 snap-start lg:w-[calc(75%-4rem)]"></div>
     </div>
   );
 }

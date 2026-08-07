@@ -78,10 +78,7 @@ export function RepairScreenIOS({
     () => onResetPreviewFramesRef.current(),
     [],
   );
-  const onLivePhotoStart = useCallback(
-    () => onLivePhotoStartRef.current(),
-    [],
-  );
+  const onLivePhotoStart = useCallback(() => onLivePhotoStartRef.current(), []);
 
   const { syncFocusToTimestamp } = useIosScreenFocusSync({
     screens,
@@ -278,7 +275,7 @@ export function RepairScreenIOS({
   );
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className="flex h-full w-full flex-col">
       <ResizablePanelGroup direction="vertical">
         <ResizablePanel
           defaultSize={67}
@@ -291,7 +288,7 @@ export function RepairScreenIOS({
               defaultSize={33}
               minSize={33}
               maxSize={50}
-              className="flex flex-col justify-center items-center h-full min-h-0 p-4 md:p-6 bg-neutral-50 dark:bg-neutral-950 box-border"
+              className="box-border flex h-full min-h-0 flex-col items-center justify-center bg-neutral-50 p-4 md:p-6 dark:bg-neutral-950"
             >
               <RepairVideoPanelIOS
                 videoRef={videoRef}
@@ -309,7 +306,7 @@ export function RepairScreenIOS({
               defaultSize={67}
               minSize={50}
               maxSize={67}
-              className="relative z-20 min-h-0 h-full overflow-visible"
+              className="relative z-20 h-full min-h-0 overflow-visible"
             >
               <RepairFocusPanelIOS
                 taskDescription={taskDescription}
@@ -329,7 +326,7 @@ export function RepairScreenIOS({
           maxSize={50}
           className="relative z-10"
         >
-          <div className="flex flex-col h-full">
+          <div className="flex h-full flex-col">
             <Filmstrip
               screens={screens}
               gestures={gestures}

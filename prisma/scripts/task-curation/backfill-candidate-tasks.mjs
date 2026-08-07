@@ -63,7 +63,10 @@ Options:
 const curatedPath = path.resolve(
   process.cwd(),
   values.curated ??
-    path.join(repoRoot, "scripts/curation-pipeline/candidate-task-apps-export-curated.json"),
+    path.join(
+      repoRoot,
+      "scripts/curation-pipeline/candidate-task-apps-export-curated.json",
+    ),
 );
 const outputPath = path.resolve(
   process.cwd(),
@@ -75,7 +78,11 @@ function objectIdToString(value) {
   if (value && typeof value === "object" && typeof value.$oid === "string") {
     return value.$oid;
   }
-  if (value && typeof value === "object" && typeof value.toHexString === "function") {
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof value.toHexString === "function"
+  ) {
     return value.toHexString();
   }
   return null;
@@ -95,7 +102,9 @@ async function loadCuratedAppIds() {
   const raw = JSON.parse(await readFile(curatedPath, "utf8"));
   const entries = Array.isArray(raw) ? raw : raw.records;
   if (!Array.isArray(entries)) {
-    throw new Error("Curated JSON must be an array or an object with a records array.");
+    throw new Error(
+      "Curated JSON must be an array or an object with a records array.",
+    );
   }
   return new Set(
     entries
@@ -106,7 +115,9 @@ async function loadCuratedAppIds() {
 
 async function main() {
   const curatedAppIds = await loadCuratedAppIds();
-  console.log(`Loaded ${curatedAppIds.size} curated appIds from ${curatedPath}.`);
+  console.log(
+    `Loaded ${curatedAppIds.size} curated appIds from ${curatedPath}.`,
+  );
 
   const rows = await prisma.candidateTaskApp.findRaw({
     options: {
@@ -140,7 +151,9 @@ async function main() {
       continue;
     }
 
-    const legacyTasks = Array.isArray(row.candidateTasks) ? row.candidateTasks : [];
+    const legacyTasks = Array.isArray(row.candidateTasks)
+      ? row.candidateTasks
+      : [];
     const tasks = toBackfilledTasks(legacyTasks);
     if (tasks.length === 0) {
       plan.emptyLegacyTasks.push({ id, appId });
@@ -183,7 +196,9 @@ async function main() {
   console.log(`\nFull report -> ${outputPath}`);
 
   if (!values.apply) {
-    console.log(`\nDry run - no changes written. Re-run with --apply to backfill ${plan.willBackfill.length} apps.`);
+    console.log(
+      `\nDry run - no changes written. Re-run with --apply to backfill ${plan.willBackfill.length} apps.`,
+    );
     return;
   }
 
@@ -203,7 +218,8 @@ async function main() {
       ],
     });
     done += 1;
-    if (done % 200 === 0) console.log(`  updated ${done}/${plan.willBackfill.length}`);
+    if (done % 200 === 0)
+      console.log(`  updated ${done}/${plan.willBackfill.length}`);
   }
 
   console.log(`\n--apply: backfilled ${done} apps.`);

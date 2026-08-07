@@ -40,14 +40,14 @@ export default function DatasetGallery() {
       limit: 48,
       page: 1,
     }),
-    [search, platform]
+    [search, platform],
   );
 
   const { apps, loading } = useAppSearch(params);
 
   return (
     <>
-      <div className="flex items-center justify-between w-full gap-2 lg:gap-4 mb-4">
+      <div className="mb-4 flex w-full items-center justify-between gap-2 lg:gap-4">
         <InputRoot className="w-full">
           <InputIcon>
             <Search size={20} className="text-muted-foreground" />
@@ -62,7 +62,7 @@ export default function DatasetGallery() {
           defaultValue={Platform.ANDROID}
           onValueChange={(value) => setPlatform(value)}
         >
-          <SelectTrigger className="w-full max-w-32 h-full!">
+          <SelectTrigger className="h-full! w-full max-w-32">
             <SelectValue placeholder="Select a platform" />
           </SelectTrigger>
           <SelectContent>
@@ -86,21 +86,21 @@ export default function DatasetGallery() {
         </Link>
       </div>
       {loading || apps.length === 0 ? (
-        <div className="flex justify-center items-center w-full h-full">
+        <div className="flex h-full w-full items-center justify-center">
           <span className="text-lg font-medium text-muted-foreground">
             No apps to show.
           </span>
         </div>
       ) : (
-        <div className="grid grid-cols-8 sm:grid-cols-12 lg:grid-cols-16 w-full gap-2">
+        <div className="grid w-full grid-cols-8 gap-2 sm:grid-cols-12 lg:grid-cols-16">
           {apps.map((app) => (
             <Link
               href={`/app/${app.id}`}
               key={app.id}
-              className="group col-span-1 aspect-square overflow-hidden rounded-t-xl lg:rounded-t-lg *:group-hover:-translate-y-5 *:transition-transform *:duration-300 *:ease-in-out"
+              className="group col-span-1 aspect-square overflow-hidden rounded-t-xl *:transition-transform *:duration-300 *:ease-in-out *:group-hover:-translate-y-5 lg:rounded-t-lg"
             >
               <Image
-                className="object-cover w-full h-full rounded-xl lg:rounded-lg mb-1"
+                className="mb-1 h-full w-full rounded-xl object-cover lg:rounded-lg"
                 src={app.metadata.icon}
                 alt={app.metadata.name}
                 width={0}

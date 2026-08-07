@@ -84,9 +84,7 @@ export function useRedactSelectionOverlay({
       } else if (selectedNodes.length > 1) {
         setOverlay((prev) => prev.filter((o) => o.type !== "annotation"));
       } else {
-        console.warn(
-          `No nodes found for selected redaction ids: ${selectors}`,
-        );
+        console.warn(`No nodes found for selected redaction ids: ${selectors}`);
       }
     } else {
       transformer.nodes([]);

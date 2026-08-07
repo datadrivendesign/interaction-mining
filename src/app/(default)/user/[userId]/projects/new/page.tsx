@@ -1,3 +1,3 @@
-export default function NewProject () {
-    return <></>
+export default function NewProject() {
+  return <></>;
 }

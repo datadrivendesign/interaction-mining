@@ -42,7 +42,7 @@ export async function handleSave(data: TraceFormData, trace: Trace) {
           id: string;
           gesture: ScreenGesture;
           redactions: ScreenRedaction[];
-        }
+        },
       ) => {
         const redactionWithoutId = screen.redactions.map((redaction) => {
           // @ts-ignore
@@ -58,8 +58,8 @@ export async function handleSave(data: TraceFormData, trace: Trace) {
         console.log("Update screen response", res);
 
         return res;
-      }
-    )
+      },
+    ),
   );
 
   // Check if all updates were successful
@@ -82,7 +82,7 @@ export async function handleSave(data: TraceFormData, trace: Trace) {
 
 export async function exportRedactedImage(
   redactions: Redaction[],
-  image_src: string
+  image_src: string,
 ) {
   const image = new Image();
 

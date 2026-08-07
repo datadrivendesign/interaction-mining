@@ -273,7 +273,7 @@ export function GestureMenu({
   return (
     <>
       {isWaitingForDragEndPoint ? (
-        <div className="pointer-events-none absolute left-1/2 top-3 z-50 -translate-x-1/2">
+        <div className="pointer-events-none absolute top-3 left-1/2 z-50 -translate-x-1/2">
           <div className="inline-flex items-center rounded-md border border-black/20 bg-black/85 px-2 py-1 text-xs font-semibold tracking-wide text-white shadow-sm dark:border-white/25 dark:bg-white/90 dark:text-black">
             Click end point
           </div>
@@ -333,7 +333,7 @@ export function GestureMenu({
 export function DroppableArea({ children }: { children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id: "screenshot" });
   return (
-    <div ref={setNodeRef} className="relative w-full h-full" data-droppable>
+    <div ref={setNodeRef} className="relative h-full w-full" data-droppable>
       {children}
     </div>
   );
@@ -482,14 +482,14 @@ export function DraggableMarker({
           }px, 0)`,
         }}
         className={clsx(
-          "absolute z-50 flex justify-center items-center bg-yellow-400/75 hover:bg-yellow-400/100 rounded-full shadow-md transition-colors duration-150 ease-in-out",
+          "absolute z-50 flex items-center justify-center rounded-full bg-yellow-400/75 shadow-md transition-colors duration-150 ease-in-out hover:bg-yellow-400/100",
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
         {...listeners}
         {...attributes}
       >
         {selectedIcon ? (
-          <span className="inline-flex items-center justify-center w-full h-full">
+          <span className="inline-flex h-full w-full items-center justify-center">
             {selectedIcon}
           </span>
         ) : (

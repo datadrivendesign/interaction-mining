@@ -16,12 +16,12 @@ export default function Toolbar({
 }) {
   return (
     <TooltipProvider>
-      <aside className="absolute z-10 left-4 flex flex-col justify-center items-center bg-neutral-100 dark:bg-neutral-900 p-1 rounded-lg shadow-lg">
+      <aside className="absolute left-4 z-10 flex flex-col items-center justify-center rounded-lg bg-neutral-100 p-1 shadow-lg dark:bg-neutral-900">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={() => setMode("select")}
-              className={`p-2 rounded ${
+              className={`rounded p-2 ${
                 mode === "select"
                   ? "bg-blue-500 text-white"
                   : "text-muted-foreground"
@@ -31,11 +31,9 @@ export default function Toolbar({
             </button>
           </TooltipTrigger>
           <TooltipContent asChild side="right" sideOffset={10}>
-            <div className="flex w-full justify-between items-center gap-2 text-sm">
+            <div className="flex w-full items-center justify-between gap-2 text-sm">
               <span>Selection Tool</span>
-              <kbd className="text-muted-foreground rounded-sm">
-                V
-              </kbd>
+              <kbd className="rounded-sm text-muted-foreground">V</kbd>
             </div>
           </TooltipContent>
         </Tooltip>
@@ -43,7 +41,7 @@ export default function Toolbar({
           <TooltipTrigger asChild>
             <button
               onClick={() => setMode("pencil")}
-              className={`p-2 rounded ${
+              className={`rounded p-2 ${
                 mode === "pencil"
                   ? "bg-blue-500 text-white"
                   : "text-muted-foreground"
@@ -53,11 +51,9 @@ export default function Toolbar({
             </button>
           </TooltipTrigger>
           <TooltipContent asChild side="right" sideOffset={10}>
-            <div className="flex w-full justify-between items-center gap-2 text-sm">
+            <div className="flex w-full items-center justify-between gap-2 text-sm">
               <span>Pencil Tool</span>
-              <kbd className="text-muted-foreground rounded-sm">
-                P
-              </kbd>
+              <kbd className="rounded-sm text-muted-foreground">P</kbd>
             </div>
           </TooltipContent>
         </Tooltip>
@@ -65,7 +61,7 @@ export default function Toolbar({
           <TooltipTrigger asChild>
             <button
               onClick={() => setMode("eraser")}
-              className={`p-2 rounded ${
+              className={`rounded p-2 ${
                 mode === "eraser"
                   ? "bg-blue-500 text-white"
                   : "text-muted-foreground"
@@ -75,11 +71,9 @@ export default function Toolbar({
             </button>
           </TooltipTrigger>
           <TooltipContent asChild side="right" sideOffset={10}>
-            <div className="flex w-full justify-between items-center gap-2 text-sm">
+            <div className="flex w-full items-center justify-between gap-2 text-sm">
               <span>Eraser Tool</span>
-              <kbd className="text-muted-foreground rounded-sm">
-                E
-              </kbd>
+              <kbd className="rounded-sm text-muted-foreground">E</kbd>
             </div>
           </TooltipContent>
         </Tooltip>

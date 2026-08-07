@@ -67,9 +67,9 @@ export function useIosVideoBootstrap({
   const [videoDuration, setVideoDuration] = useState(0);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [thumbnails, setThumbnails] = useState<PreviewThumbnail[]>([]);
-  const [previewThumbnails, setPreviewThumbnails] = useState<PreviewThumbnail[]>(
-    [],
-  );
+  const [previewThumbnails, setPreviewThumbnails] = useState<
+    PreviewThumbnail[]
+  >([]);
 
   // Thumbnail URLs are owned solely by this component (the FrameTimeline) and
   // can be safely revoked when we unmount. Extracted screen blob URLs are
@@ -161,7 +161,10 @@ export function useIosVideoBootstrap({
             preferOffscreenCanvas: true,
           },
         );
-        recordPhase("timelineThumbnails", performance.now() - timelineThumbsStartedAt);
+        recordPhase(
+          "timelineThumbnails",
+          performance.now() - timelineThumbsStartedAt,
+        );
         thumbnailObjectUrlsRef.current = thumbs
           .map((thumb) => thumb.src)
           .filter((src) => src.startsWith("blob:"));

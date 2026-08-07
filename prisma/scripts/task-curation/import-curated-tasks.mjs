@@ -74,7 +74,11 @@ function objectIdToString(value) {
   if (value && typeof value === "object" && typeof value.$oid === "string") {
     return value.$oid;
   }
-  if (value && typeof value === "object" && typeof value.toHexString === "function") {
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof value.toHexString === "function"
+  ) {
     return value.toHexString();
   }
   return null;
@@ -83,13 +87,15 @@ function objectIdToString(value) {
 function tasksFromEntry(entry) {
   return (entry.selected ?? [])
     .map((selected) => {
-      const description = typeof selected === "string" ? selected : selected?.task;
+      const description =
+        typeof selected === "string" ? selected : selected?.task;
       if (typeof description !== "string" || description.trim().length === 0) {
         return null;
       }
       return {
         description: description.trim(),
-        generated: typeof selected === "object" ? selected.generated === true : false,
+        generated:
+          typeof selected === "object" ? selected.generated === true : false,
         status: "open",
       };
     })
@@ -112,7 +118,11 @@ function normalizeExistingTask(task) {
   if (typeof task === "string") {
     return { description: task.trim(), generated: false, status: "open" };
   }
-  if (!task || typeof task !== "object" || typeof task.description !== "string") {
+  if (
+    !task ||
+    typeof task !== "object" ||
+    typeof task.description !== "string"
+  ) {
     return null;
   }
   return {
@@ -140,7 +150,9 @@ function preserveCurrentStatuses(currentTasks, importedTasks) {
   );
   return importedTasks.map((task) => ({
     ...task,
-    status: byKey.get(`${task.description}\u0000${task.generated ? "1" : "0"}`) ?? "open",
+    status:
+      byKey.get(`${task.description}\u0000${task.generated ? "1" : "0"}`) ??
+      "open",
   }));
 }
 
@@ -148,7 +160,9 @@ async function main() {
   const raw = JSON.parse(await readFile(inputPath, "utf8"));
   const entries = Array.isArray(raw) ? raw : raw.records;
   if (!Array.isArray(entries)) {
-    throw new Error("Input must be a JSON array (or an object with a records array).");
+    throw new Error(
+      "Input must be a JSON array (or an object with a records array).",
+    );
   }
   console.log(`Loaded ${entries.length} curated entries from ${inputPath}.`);
 
@@ -177,7 +191,13 @@ async function main() {
       .filter(Boolean),
   );
 
-  const plan = { willUpdate: [], unchanged: [], unmatched: [], empty: [], invalidId: [] };
+  const plan = {
+    willUpdate: [],
+    unchanged: [],
+    unmatched: [],
+    empty: [],
+    invalidId: [],
+  };
 
   for (const entry of entries) {
     const appId = entry.appId ?? entry.id;
@@ -215,19 +235,24 @@ async function main() {
   console.log(`\nImport plan — ${entries.length} entries`);
   console.log(`  will update      : ${plan.willUpdate.length}`);
   console.log(`  already current  : ${plan.unchanged.length}`);
-  console.log(`  unmatched appId  : ${plan.unmatched.length}  (no CandidateTaskApp)`);
+  console.log(
+    `  unmatched appId  : ${plan.unmatched.length}  (no CandidateTaskApp)`,
+  );
   console.log(`  empty selected   : ${plan.empty.length}  (skipped)`);
   console.log(`  invalid appId    : ${plan.invalidId.length}  (skipped)`);
 
   if (plan.willUpdate.length) {
     console.log(`\nWill update (showing up to 15):`);
     for (const u of plan.willUpdate.slice(0, 15)) {
-      console.log(`  • ${u.appName} (${u.appId})  ${u.fromCount} → ${u.toCount} tasks`);
+      console.log(
+        `  • ${u.appName} (${u.appId})  ${u.fromCount} → ${u.toCount} tasks`,
+      );
     }
   }
   if (plan.unmatched.length) {
     console.log(`\nUnmatched appIds (showing up to 10):`);
-    for (const u of plan.unmatched.slice(0, 10)) console.log(`  • ${u.appName} (${u.appId})`);
+    for (const u of plan.unmatched.slice(0, 10))
+      console.log(`  • ${u.appName} (${u.appId})`);
   }
 
   const report = {
@@ -252,7 +277,9 @@ async function main() {
 
   // ── Apply ───────────────────────────────────────────────────────────────────
   if (!values.apply) {
-    console.log(`\nDry run — no changes written. Re-run with --apply to update ${plan.willUpdate.length} apps.`);
+    console.log(
+      `\nDry run — no changes written. Re-run with --apply to update ${plan.willUpdate.length} apps.`,
+    );
     return;
   }
   if (plan.willUpdate.length === 0) {
@@ -267,7 +294,8 @@ async function main() {
       data: { tasks: u.tasks }, // isTaken intentionally omitted
     });
     done += 1;
-    if (done % 200 === 0) console.log(`  …updated ${done}/${plan.willUpdate.length}`);
+    if (done % 200 === 0)
+      console.log(`  …updated ${done}/${plan.willUpdate.length}`);
   }
   console.log(`\n--apply: updated tasks for ${done} apps (isTaken untouched).`);
 }

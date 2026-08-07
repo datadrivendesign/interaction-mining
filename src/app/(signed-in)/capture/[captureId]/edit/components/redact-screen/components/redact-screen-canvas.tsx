@@ -39,7 +39,7 @@ export const RedactCanvasContext = createContext<{
   selectRedaction: (id: string | null, addToList: boolean) => void;
   createRedactions: (
     newRedactions: Redaction[],
-    options?: { select?: boolean }
+    options?: { select?: boolean },
   ) => void;
   updateRedaction: (id: string, updatedRedaction: Partial<Redaction>) => void;
 }>({
@@ -73,7 +73,7 @@ export default function RedactScreenCanvas({
   const redactions = useMemo(() => watchRedactions || {}, [watchRedactions]);
   const redactionsOnScreen: Redaction[] = useMemo(
     () => redactions[screen.id] || [],
-    [redactions, screen.id]
+    [redactions, screen.id],
   );
 
   const [selected, setSelected] = useState<Redaction[]>([]);
@@ -112,7 +112,7 @@ export default function RedactScreenCanvas({
     newRedactions: Redaction[],
     option?: {
       select?: boolean;
-    }
+    },
   ) => {
     const updatedRedactions = [...redactionsOnScreen, ...newRedactions];
     setValue("redactions", {
@@ -136,7 +136,7 @@ export default function RedactScreenCanvas({
         [screen.id]: newRedactions,
       });
     },
-    [redactionsOnScreen, redactions, setValue, screen.id]
+    [redactionsOnScreen, redactions, setValue, screen.id],
   );
 
   useHotkeys("v", () => setMode("select"));
