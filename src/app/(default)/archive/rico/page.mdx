@@ -54,8 +54,7 @@ Data-driven models help mobile app designers understand best practices and trend
   <div className="flex flex-col grow col-span-2">
     <Card className="h-full">
       <CardContent className="text-base grow">
-        Biplab Deka, Zifeng Huang, Chad Franzen, Joshua Hibschman, Daniel Afergan, Yang Li, Jeffrey Nichols and Ranjitha Kumar. 2017. <span className="font-bold">Rico: A Mobile App Dataset for Building Data-Driven Design Applications</span>. In Proceedings of the 30th <span className="italic">Annual Symposium on User Interface Software and Technology (UIST &rsquo;17)</span>. 
-
+        Biplab Deka, Zifeng Huang, Chad Franzen, Joshua Hibschman, Daniel Afergan, Yang Li, Jeffrey Nichols and Ranjitha Kumar. 2017. <span className="font-bold">Rico: A Mobile App Dataset for Building Data-Driven Design Applications</span>. In Proceedings of the 30th <span className="italic">Annual Symposium on User Interface Software and Technology (UIST&nbsp;2017)</span>. 
         <a href="/archive/rico/rico.txt" className="underline">
           Bibtex
         </a>
@@ -84,8 +83,7 @@ Data-driven models help mobile app designers understand best practices and trend
   <div className="flex flex-col grow col-span-2">
     <Card className="h-full">
       <CardContent className="text-base grow">
-        Biplab Deka, Zifeng Huang, Chad Franzen, Joshua Hibschman, Daniel Afergan, Yang Li, Jeffrey Nichols and Ranjitha Kumar. 2017. <span className="font-bold">Rico: A Mobile App Dataset for Building Data-Driven Design Applications</span>. In Proceedings of the 30th <span className="italic">Annual Symposium on User Interface Software and Technology (UIST &rsquo;17)</span>. 
-
+        Thomas F. Liu, Mark Craft, Jason Situ, Ersin Yumer, Radomir Mech, Ranjitha Kumar. 2018. <span className="font-bold">Learning Design Semantics for Mobile Apps</span>. In Proceedings of the 31st <span className="italic">Annual Symposium on User Interface Software and Technology (UIST&nbsp;2018)</span>. 
         <a href="/archive/rico/semantic.txt" className="underline">
           Bibtex
         </a>
@@ -110,7 +108,7 @@ We mined over 9.3k free Android apps from 27 categories to create the Rico datas
 />
 
 ### Data Collection
-<Image src="/archive/rico/figure2.png" alt="RICO data collection" className="not-prose float-right w-1/2 ml-8 mb-4 rounded" width={0} height={0} sizes="100vw rounded" /> Rico was built by mining Android apps at runtime via human-powered and programmatic exploration. Like its predecessor [ERICA](http://www.interactionmining.org/erica.html), Rico&rsquo;s app mining infrastructure requires no access to — or modification of — an app&rsquo;s source code. Apps are downloaded from the Google Play Store and served to crowd workers through a web interface. When crowd workers use an app, the system records a user interaction trace that captures the UIs visited and the interactions performed on them. Then, an automated agent replays the trace to warm up a new copy of the app and continues the exploration programmatically, leveraging a content-agnostic similarity heuristic to efficiently discover new UI states. By combining crowdsourcing and automation, Rico can achieve higher coverage over an app&rsquo;s UI states than either crawling strategy alone. In total, 13 workers recruited on UpWork spent 2,450 hours using apps on the platform over five months, producing 10,811 user interaction traces. After collecting a user trace for an app, we ran the automated crawler on the app for one hour. 
+<Image src="/archive/rico/figure2.png" alt="RICO data collection" className="not-prose float-right w-1/2 ml-8 mb-4 rounded" width={0} height={0} sizes="100vw rounded" /> Rico was built by mining Android apps at runtime via human-powered and programmatic exploration. Like its predecessor [ERICA](/archive/erica), Rico&rsquo;s app mining infrastructure requires no access to — or modification of — an app&rsquo;s source code. Apps are downloaded from the Google Play Store and served to crowd workers through a web interface. When crowd workers use an app, the system records a user interaction trace that captures the UIs visited and the interactions performed on them. Then, an automated agent replays the trace to warm up a new copy of the app and continues the exploration programmatically, leveraging a content-agnostic similarity heuristic to efficiently discover new UI states. By combining crowdsourcing and automation, Rico can achieve higher coverage over an app&rsquo;s UI states than either crawling strategy alone. In total, 13 workers recruited on UpWork spent 2,450 hours using apps on the platform over five months, producing 10,811 user interaction traces. After collecting a user trace for an app, we ran the automated crawler on the app for one hour. 
 
 ### Design Representation
 <Image src="/archive/rico/figure3.png" alt="RICO design representation" className="not-prose float-right w-1/2 ml-8 mb-4 rounded" width={0} height={0} sizes="100vw" /> For each app, Rico exposes Google Play Store metadata, a set of user interaction traces, and a list of all the unique UIs discovered. The Play Store metadata includes an app&rsquo;s category, average rating, number of ratings, and number of downloads. Each user trace is composed of a sequence of UIs and user interactions that connect them. Each UI comprises a screenshot, an augmented Android view hierarchy, a set of explored user interactions, a set of animations capturing transition effects in response to user interaction, and a learned vector representation of the UI&rsquo;s layout. View hierarchies capture all of the elements comprising a UI, their properties, and relationships between them. For each element, Rico exposes its **visual** properties such as screen position, dimensionality, and visibility, **textual** properties such as class name, id, and displayed text, **structural** properties such as a list of its children in the hierarchy, and **interactive** properties such as the ways a user can interact with it. Additionally, we annotate elements with any Android superclasses that they are derived from (e.g., TextView), which can help third-party applications reason about element types. 
@@ -133,12 +131,12 @@ The Rico dataset is large enough to support deep learning applications. We train
   </CardHeader>
   <CardContent>
     1. [UI Screenshots and View Hierarchies (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/unique_uis.tar.gz)
-    1. [UI Metadata (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_details.csv)
-    1. [UI Layout Vectors (8 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_layout_vectors.zip)
-    1. [Interaction Traces (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/traces.tar.gz)
-    1. [Animations (214 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/animations.tar.gz)
-    1. [Play Store Metadata (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/app_details.csv)
-    1. [UI Screenshots and Hierarchies with Semantic Annotations (150 MB)](https://storage.cloud.google.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/semantic_annotations.zip)
+    2. [UI Metadata (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_details.csv)
+    3. [UI Layout Vectors (8 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/ui_layout_vectors.zip)
+    4. [Interaction Traces (6 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/traces.tar.gz)
+    5. [Animations (214 GB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/animations.tar.gz)
+    6. [Play Store Metadata (2 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/app_details.csv)
+    7. [UI Screenshots and Hierarchies with Semantic Annotations (150 MB)](https://storage.googleapis.com/crowdstf-rico-uiuc-4540/rico_dataset_v0.1/semantic_annotations.zip)
   </CardContent>
   <CardFooter className="not-prose">
     <Link className="underline" href="/archive/rico/copyright.txt" target="_blank" rel="noopener noreferrer">
