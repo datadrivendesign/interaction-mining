@@ -21,7 +21,10 @@ export async function runJob(job, opts) {
   const readFileFn = opts.readFileFn ?? readFile;
   const maxSteps = opts.maxSteps ?? 12;
   const maxMs = opts.maxMs ?? 600000;
-  const traceDir = path.join(opts.traceRoot, `crawl-${job.crawlRequestId}`);
+  const traceDir = path.join(
+    opts.traceRoot,
+    `crawl-${job.crawlRequestId}-${Date.now()}`,
+  );
 
   const args = [
     opts.dccCliPath,
@@ -47,7 +50,11 @@ export async function runJob(job, opts) {
     if (typeof result.status !== "string") {
       return { status: "error", error: "result.json missing status", traceDir };
     }
-    return { status: result.status, traceDir };
+    return {
+      status: result.status,
+      ...(typeof result.error === "string" ? { error: result.error } : {}),
+      traceDir,
+    };
   } catch (err) {
     return {
       status: "error",

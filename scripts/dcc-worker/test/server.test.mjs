@@ -59,6 +59,40 @@ test("POST /dispatch rejects a non-http(s) targetInput", async () => {
   });
 });
 
+test("POST /dispatch rejects a Play Store targetInput", async () => {
+  const enqueued = [];
+  await withServer({ authToken: "secret", enqueue: (job) => enqueued.push(job) }, async (base) => {
+    const res = await fetch(`${base}/dispatch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer secret" },
+      body: JSON.stringify({
+        crawlRequestId: "1",
+        targetInput: "https://play.google.com/store/apps/details?id=com.whatsapp",
+        description: "x",
+      }),
+    });
+    assert.equal(res.status, 400);
+    assert.equal(enqueued.length, 0);
+  });
+});
+
+test("POST /dispatch rejects a loopback/private targetInput", async () => {
+  const enqueued = [];
+  await withServer({ authToken: "secret", enqueue: (job) => enqueued.push(job) }, async (base) => {
+    const res = await fetch(`${base}/dispatch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer secret" },
+      body: JSON.stringify({
+        crawlRequestId: "1",
+        targetInput: "http://127.0.0.1:11434",
+        description: "x",
+      }),
+    });
+    assert.equal(res.status, 400);
+    assert.equal(enqueued.length, 0);
+  });
+});
+
 test("unknown routes return 404", async () => {
   await withServer({ authToken: "secret", enqueue: () => {} }, async (base) => {
     const res = await fetch(`${base}/nope`);

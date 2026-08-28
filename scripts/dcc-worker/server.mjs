@@ -1,6 +1,57 @@
 import { createServer } from "node:http";
 
 /**
+ * Rejects literal loopback/private IPs and well-known internal hostnames.
+ *
+ * NOTE: this is a literal string check only — it does not resolve DNS, so a
+ * hostname that *resolves* to a private address at request time (DNS
+ * rebinding) is not caught here. Closing that gap would require a
+ * resolve-then-check approach; out of scope for now.
+ *
+ * @param {string} hostname
+ * @returns {boolean}
+ */
+export function isPrivateOrLoopbackHost(hostname) {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
+    return true;
+  }
+  return (
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) ||
+    /^169\.254\./.test(host)
+  );
+}
+
+/**
+ * Validates that targetInput is an http(s) URL that isn't a Play Store
+ * listing (V1 handles URL targets only) and isn't targeting private/internal
+ * address space.
+ * @param {string} targetInput
+ * @returns {boolean}
+ */
+function isDispatchableTarget(targetInput) {
+  let url;
+  try {
+    url = new URL(targetInput);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  if (url.hostname.toLowerCase() === "play.google.com") {
+    return false;
+  }
+  if (isPrivateOrLoopbackHost(url.hostname)) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * @param {{
  *   authToken: string,
  *   enqueue: (job: {crawlRequestId: string, targetInput: string, description: string}) => void,
@@ -40,7 +91,7 @@ export function createDccWorkerServer(deps) {
         typeof crawlRequestId === "string" &&
         crawlRequestId.length > 0 &&
         typeof targetInput === "string" &&
-        /^https?:\/\//.test(targetInput) &&
+        isDispatchableTarget(targetInput) &&
         typeof description === "string" &&
         description.length > 0;
 

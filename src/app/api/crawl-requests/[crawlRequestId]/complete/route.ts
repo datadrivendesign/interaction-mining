@@ -18,7 +18,8 @@ export async function POST(
   { params }: { params: Promise<{ crawlRequestId: string }> },
 ) {
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.DCC_AUTH_TOKEN}`) {
+  const authToken = process.env.DCC_AUTH_TOKEN;
+  if (!authToken || authHeader !== `Bearer ${authToken}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -61,6 +62,18 @@ export async function POST(
         },
       });
       return NextResponse.json({ message: "Recorded (no ingestion)" });
+    }
+
+    if (dccStatus !== "success") {
+      await prisma.crawlRequest.update({
+        where: { id: crawlRequestId },
+        data: {
+          status: "FAILED",
+          error: dccError ?? `dcc run ended with status: ${dccStatus}`,
+          traceDir,
+        },
+      });
+      return NextResponse.json({ message: "Recorded (crawl failed)" });
     }
 
     const task = await prisma.task.create({

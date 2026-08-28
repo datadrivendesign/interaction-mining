@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { runJob } from "../job-runner.mjs";
 
+const TRACE_DIR_RE = (crawlRequestId) =>
+  new RegExp(`^/traces/crawl-${crawlRequestId}-\\d+$`);
+
 function fakeSpawn(exitImmediately = true) {
   const calls = [];
   const spawnFn = (...args) => {
@@ -20,7 +23,7 @@ function fakeSpawn(exitImmediately = true) {
 test("runJob spawns dcc with the expected args and returns the parsed result", async () => {
   const spawnFn = fakeSpawn();
   const readFileFn = async (path) => {
-    assert.match(path, /crawl-req-1[\\/]result\.json$/);
+    assert.match(path, /crawl-req-1-\d+[\\/]result\.json$/);
     return JSON.stringify({ status: "success" });
   };
 
@@ -29,7 +32,8 @@ test("runJob spawns dcc with the expected args and returns the parsed result", a
     { dccCliPath: "/dcc/cli/dist/cli.js", traceRoot: "/traces", spawnFn, readFileFn },
   );
 
-  assert.deepEqual(result, { status: "success", traceDir: "/traces/crawl-req-1" });
+  assert.equal(result.status, "success");
+  assert.match(result.traceDir, TRACE_DIR_RE("req-1"));
   assert.equal(spawnFn.calls.length, 1);
   const [cmd, args] = spawnFn.calls[0];
   assert.equal(cmd, "node");
@@ -40,7 +44,7 @@ test("runJob spawns dcc with the expected args and returns the parsed result", a
     "--url", "https://example.com",
     "--goal", "find pricing",
     "--brain", "qwen",
-    "--trace-dir", "/traces/crawl-req-1",
+    "--trace-dir", result.traceDir,
     "--max-steps", "12",
     "--max-ms", "600000",
   ]);
@@ -59,7 +63,7 @@ test("runJob returns status error when result.json is missing", async () => {
 
   assert.equal(result.status, "error");
   assert.match(result.error, /failed to read result\.json/);
-  assert.equal(result.traceDir, "/traces/crawl-req-2");
+  assert.match(result.traceDir, TRACE_DIR_RE("req-2"));
 });
 
 test("runJob returns status error when result.json has no status field", async () => {
@@ -73,4 +77,32 @@ test("runJob returns status error when result.json has no status field", async (
 
   assert.equal(result.status, "error");
   assert.match(result.error, /missing status/);
+});
+
+test("runJob forwards dcc's error field from result.json when present", async () => {
+  const spawnFn = fakeSpawn();
+  const readFileFn = async () =>
+    JSON.stringify({ status: "error", error: "site blocked automated access" });
+
+  const result = await runJob(
+    { crawlRequestId: "req-4", targetInput: "https://example.com", description: "..." },
+    { dccCliPath: "/dcc/cli/dist/cli.js", traceRoot: "/traces", spawnFn, readFileFn },
+  );
+
+  assert.equal(result.status, "error");
+  assert.equal(result.error, "site blocked automated access");
+  assert.match(result.traceDir, TRACE_DIR_RE("req-4"));
+});
+
+test("runJob omits error field when result.json doesn't include one", async () => {
+  const spawnFn = fakeSpawn();
+  const readFileFn = async () => JSON.stringify({ status: "success" });
+
+  const result = await runJob(
+    { crawlRequestId: "req-5", targetInput: "https://example.com", description: "..." },
+    { dccCliPath: "/dcc/cli/dist/cli.js", traceRoot: "/traces", spawnFn, readFileFn },
+  );
+
+  assert.equal(result.status, "success");
+  assert.equal("error" in result, false);
 });

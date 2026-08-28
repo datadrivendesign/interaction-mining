@@ -139,6 +139,13 @@ export async function dispatchCrawlRequestToDCC(
     return;
   }
 
+  if (crawlRequest.targetType !== "URL") {
+    console.info(
+      `dcc dispatch skipped for crawl request ${crawlRequestId}: targetType ${crawlRequest.targetType} is not yet supported (URL only in v1); leaving queued.`,
+    );
+    return;
+  }
+
   try {
     const response = await fetch(dispatchUrl, {
       method: "POST",
@@ -155,6 +162,7 @@ export async function dispatchCrawlRequestToDCC(
           ? { appId: crawlRequest.appId, os: crawlRequest.app.os }
           : {}),
       }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
