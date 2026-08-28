@@ -142,7 +142,10 @@ export async function dispatchCrawlRequestToDCC(
   try {
     const response = await fetch(dispatchUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.DCC_AUTH_TOKEN}`,
+      },
       body: JSON.stringify({
         crawlRequestId: crawlRequest.id,
         targetType: crawlRequest.targetType,
@@ -166,7 +169,10 @@ export async function dispatchCrawlRequestToDCC(
     console.error(`Failed to dispatch crawl request ${crawlRequestId}:`, error);
     await prisma.crawlRequest.update({
       where: { id: crawlRequestId },
-      data: { error: error instanceof Error ? error.message : String(error) },
+      data: {
+        status: "FAILED",
+        error: error instanceof Error ? error.message : String(error),
+      },
     });
   }
 }
