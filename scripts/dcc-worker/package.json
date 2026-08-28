@@ -8,6 +8,6 @@
   },
   "scripts": {
     "start": "node index.mjs",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.mjs"
   }
 }
