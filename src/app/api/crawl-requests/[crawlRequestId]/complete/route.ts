@@ -1,18 +1,39 @@
 // app/api/crawl-requests/[crawlRequestId]/complete/route.ts
 //
-// Placeholder endpoint for dcc to call once a crawl finishes. dcc's real
-// identity/auth scheme isn't decided yet, so this route is unauthenticated —
-// harden this before it's load-bearing.
+// Called by dcc-worker once a crawl finishes. Authenticated with a shared
+// bearer token (DCC_AUTH_TOKEN, set on both this app and dcc-worker).
 import { NextRequest, NextResponse } from "next/server";
 import { CaptureStatus } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+
+const CompleteCrawlRequestInputSchema = z.object({
+  status: z.enum(["success", "infeasible", "needs_help", "budget_exhausted", "error"]),
+  error: z.string().optional(),
+  traceDir: z.string().min(1),
+});
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ crawlRequestId: string }> },
 ) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.DCC_AUTH_TOKEN}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { crawlRequestId } = await params;
+
+    const body = await request.json();
+    const parsed = CompleteCrawlRequestInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid completion payload" },
+        { status: 400 },
+      );
+    }
+    const { status: dccStatus, error: dccError, traceDir } = parsed.data;
 
     const crawlRequest = await prisma.crawlRequest.findUnique({
       where: { id: crawlRequestId },
@@ -31,8 +52,12 @@ export async function POST(
       await prisma.crawlRequest.update({
         where: { id: crawlRequestId },
         data: {
-          status: "COMPLETED",
-          error: "URL-target ingestion not yet implemented.",
+          status: dccStatus === "success" ? "COMPLETED" : "FAILED",
+          error:
+            dccStatus === "success"
+              ? null
+              : (dccError ?? `dcc run ended with status: ${dccStatus}`),
+          traceDir,
         },
       });
       return NextResponse.json({ message: "Recorded (no ingestion)" });
@@ -59,7 +84,7 @@ export async function POST(
 
     await prisma.crawlRequest.update({
       where: { id: crawlRequestId },
-      data: { status: "COMPLETED", captureId: capture.id },
+      data: { status: "COMPLETED", captureId: capture.id, traceDir },
     });
 
     return NextResponse.json({ message: "Capture created", captureId: capture.id });
