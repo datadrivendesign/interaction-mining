@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Clock, Send, AlertCircle, CheckCircle } from "lucide-react";
+import { Clock, Send, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
 import type { CrawlRequestStatus } from "@prisma/client";
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { CrawlRequest } from "@/lib/actions";
 
 const crawlStatusConfig: Record<
@@ -44,31 +45,33 @@ export function CrawlRequestList({
             const Icon = config.icon;
             const label = crawlRequest.app?.metadata.name ?? crawlRequest.targetInput;
             return (
-              <div
+              <Link
                 key={crawlRequest.id}
-                className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 py-2"
+                href={`/crawl-requests/${crawlRequest.id}`}
+                className="group flex items-center justify-between gap-3 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 py-2.5 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer"
               >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{label}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium group-hover:text-primary transition-colors">
+                    {label}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {crawlRequest.description}
                   </div>
                 </div>
-                {crawlRequest.status === "COMPLETED" &&
-                crawlRequest.captureId ? (
-                  <Link href={`/capture/${crawlRequest.captureId}/edit`}>
-                    <Badge variant="secondary" className={config.textColor}>
-                      <Icon className="size-3" />
-                      {config.label}
-                    </Badge>
-                  </Link>
-                ) : (
-                  <Badge variant="secondary" className={config.textColor}>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      config.textColor,
+                      "gap-1 flex items-center font-normal",
+                    )}
+                  >
                     <Icon className="size-3" />
                     {config.label}
                   </Badge>
-                )}
-              </div>
+                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                </div>
+              </Link>
             );
           })}
         </div>
@@ -76,3 +79,4 @@ export function CrawlRequestList({
     </Card>
   );
 }
+

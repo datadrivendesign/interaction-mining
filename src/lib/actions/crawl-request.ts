@@ -1,9 +1,14 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import fs from "node:fs";
+import path from "node:path";
+import { Prisma, Role } from "@prisma/client";
+import { isValidObjectId } from "mongoose";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Platform } from "@/lib/utils";
+import { s3 } from "@/lib/aws";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth/auth";
 import { checkIfAppExists, saveApp } from "./app";
@@ -12,6 +17,47 @@ import { getAndroidApp } from "./store-scraper";
 export type CrawlRequest = Prisma.CrawlRequestGetPayload<{
   include: { app: true; capture: true };
 }>;
+
+export interface CrawlStepAction {
+  type: string;
+  text?: string;
+  target?: {
+    by?: string;
+    index?: number;
+    selector?: string;
+    point?: [number, number];
+    [key: string]: unknown;
+  };
+  direction?: string;
+  deltaX?: number;
+  deltaY?: number;
+  status?: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
+export interface CrawlStep {
+  step: number;
+  reason?: string;
+  reflection?: string;
+  action: CrawlStepAction;
+  latencyMs?: number;
+  capturedAt?: string;
+  screenshotUrl?: string | null;
+}
+
+export interface CrawlTraceData {
+  status: string;
+  steps: CrawlStep[];
+  findings?: string[];
+  apps?: Array<{ locator: string }>;
+  error?: string | null;
+}
+
+export interface CrawlTraceResult {
+  crawlRequest: CrawlRequest;
+  trace: CrawlTraceData | null;
+}
 
 const CreateCrawlRequestInputSchema = z.object({
   targetInput: z.string().trim().min(1).max(2048),
@@ -221,3 +267,260 @@ export async function getCrawlRequestsForUser(
     };
   }
 }
+
+/**
+ * Attempts to locate a screenshot on disk for a given step index.
+ */
+async function findStepScreenshot(
+  traceDir: string,
+  stepIndex: number,
+): Promise<string | null> {
+  const paddedIndex = String(stepIndex).padStart(4, "0");
+  const unpaddedIndex = String(stepIndex);
+
+  const candidatePaths = [
+    path.join(traceDir, "steps", paddedIndex, "screenshot.png"),
+    path.join(traceDir, "steps", unpaddedIndex, "screenshot.png"),
+    path.join(traceDir, "steps", `step-${stepIndex}.png`),
+    path.join(traceDir, "steps", `step-${paddedIndex}.png`),
+    path.join(traceDir, `step-${stepIndex}.png`),
+    path.join(traceDir, `step-${paddedIndex}.png`),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      try {
+        const buffer = await fs.promises.readFile(candidate);
+        return `data:image/png;base64,${buffer.toString("base64")}`;
+      } catch (err) {
+        console.warn(`Failed to read screenshot at ${candidate}:`, err);
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves the trace directory on the local filesystem if it exists.
+ */
+async function findLocalTraceDir(
+  crawlRequestId: string,
+  recordedTraceDir?: string | null,
+): Promise<string | null> {
+  if (recordedTraceDir) {
+    if (fs.existsSync(recordedTraceDir)) {
+      return recordedTraceDir;
+    }
+    const baseName = path.basename(recordedTraceDir);
+    const homeDir = process.env.HOME || "";
+    const fromHome = path.join(homeDir, ".dcc", "traces", baseName);
+    if (fs.existsSync(fromHome)) {
+      return fromHome;
+    }
+    const fromCwd = path.join(process.cwd(), recordedTraceDir);
+    if (fs.existsSync(fromCwd)) {
+      return fromCwd;
+    }
+  }
+
+  // Check ~/.dcc/traces for crawl-${crawlRequestId}*
+  const homeDir = process.env.HOME || "";
+  const dccTracesDir = path.join(homeDir, ".dcc", "traces");
+  if (fs.existsSync(dccTracesDir)) {
+    try {
+      const entries = await fs.promises.readdir(dccTracesDir, { withFileTypes: true });
+      const matches = entries
+        .filter((entry) => entry.isDirectory() && entry.name.startsWith(`crawl-${crawlRequestId}`))
+        .map((entry) => path.join(dccTracesDir, entry.name));
+
+      if (matches.length > 0) {
+        matches.sort((a, b) => {
+          const statA = fs.statSync(a);
+          const statB = fs.statSync(b);
+          return statB.mtimeMs - statA.mtimeMs;
+        });
+        return matches[0];
+      }
+    } catch (err) {
+      console.warn("Failed to search ~/.dcc/traces:", err);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Attempts to load crawl trace data from S3/MinIO.
+ */
+async function loadTraceFromS3(
+  crawlRequestId: string,
+): Promise<CrawlTraceData | null> {
+  const bucket = process.env._AWS_UPLOAD_BUCKET;
+  if (!bucket) return null;
+
+  try {
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: `traces/crawls/${crawlRequestId}/result.json`,
+    });
+    const response = await s3.send(command);
+    const text = await response.Body?.transformToString();
+    if (!text) return null;
+
+    const data = JSON.parse(text);
+    const steps: CrawlStep[] = (data.steps || []).map((step: CrawlStep) => {
+      let screenshotUrl = step.screenshotUrl || null;
+      if (!screenshotUrl) {
+        const stepKey = `traces/crawls/${crawlRequestId}/steps/${step.step}.png`;
+        if (process.env.USE_MINIO_STORE === "true") {
+          screenshotUrl = `${process.env.MINIO_ENDPOINT}/${bucket}/${stepKey}`;
+        } else if (process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL) {
+          screenshotUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${stepKey}`;
+        }
+      }
+      return {
+        ...step,
+        screenshotUrl,
+      };
+    });
+
+    return {
+      status: data.status || "unknown",
+      error: data.error || null,
+      findings: data.findings || [],
+      apps: data.apps || [],
+      steps,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Loads crawl trace data from a local directory containing result.json and steps.
+ */
+async function loadTraceFromDisk(
+  traceDir: string,
+): Promise<CrawlTraceData | null> {
+  const resultPath = path.join(traceDir, "result.json");
+  if (!fs.existsSync(resultPath)) return null;
+
+  try {
+    const raw = await fs.promises.readFile(resultPath, "utf-8");
+    const data = JSON.parse(raw);
+
+    const steps: CrawlStep[] = await Promise.all(
+      (data.steps || []).map(async (step: Record<string, unknown>, idx: number) => {
+        const stepNum = typeof step.step === "number" ? step.step : idx;
+        let screenshotUrl: string | null = null;
+
+        if (typeof step.screenshotBase64 === "string" && step.screenshotBase64) {
+          screenshotUrl = `data:image/png;base64,${step.screenshotBase64}`;
+        } else if (typeof step.screenshotUrl === "string" && step.screenshotUrl) {
+          screenshotUrl = step.screenshotUrl;
+        } else {
+          screenshotUrl = await findStepScreenshot(traceDir, stepNum);
+        }
+
+        return {
+          step: stepNum,
+          reason: typeof step.reason === "string" ? step.reason : undefined,
+          reflection: typeof step.reflection === "string" ? step.reflection : undefined,
+          action: (step.action as CrawlStepAction) || { type: "unknown" },
+          latencyMs: typeof step.latencyMs === "number" ? step.latencyMs : undefined,
+          capturedAt: typeof step.capturedAt === "string" ? step.capturedAt : undefined,
+          screenshotUrl,
+        };
+      }),
+    );
+
+    return {
+      status: typeof data.status === "string" ? data.status : "unknown",
+      error: typeof data.error === "string" ? data.error : null,
+      findings: Array.isArray(data.findings) ? data.findings : [],
+      apps: Array.isArray(data.apps) ? data.apps : [],
+      steps,
+    };
+  } catch (err) {
+    console.error("Failed to parse trace result from disk:", err);
+    return null;
+  }
+}
+
+/**
+ * Fetches a crawl request and its associated trace run details.
+ * @param crawlRequestId Id of the crawl request to inspect.
+ */
+export async function getCrawlTrace(
+  crawlRequestId: string,
+): Promise<ActionPayload<CrawlTraceResult>> {
+  if (!isValidObjectId(crawlRequestId)) {
+    return { ok: false, message: "Invalid crawl request ID.", data: null };
+  }
+
+  const session = await requireAuth();
+  if (!session || !session.user || !session.user.id) {
+    return { ok: false, message: "User not authenticated.", data: null };
+  }
+
+  try {
+    const crawlRequest = await prisma.crawlRequest.findUnique({
+      where: { id: crawlRequestId },
+      include: { app: true, capture: true },
+    });
+
+    if (!crawlRequest) {
+      return { ok: false, message: "Crawl request not found.", data: null };
+    }
+
+    if (
+      crawlRequest.userId !== session.user.id &&
+      session.user.role !== Role.ADMIN
+    ) {
+      return { ok: false, message: "Unauthorized.", data: null };
+    }
+
+    // Try S3 first
+    let trace = await loadTraceFromS3(crawlRequestId);
+
+    // If not in S3, check local filesystem
+    if (!trace) {
+      const localDir = await findLocalTraceDir(crawlRequestId, crawlRequest.traceDir);
+      if (localDir) {
+        trace = await loadTraceFromDisk(localDir);
+      }
+    }
+
+    // Fallback if no trace file exists yet
+    if (!trace) {
+      trace = {
+        status: crawlRequest.status.toLowerCase(),
+        error:
+          crawlRequest.error ??
+          (crawlRequest.status === "FAILED"
+            ? "Crawl failed before recording steps."
+            : null),
+        steps: [],
+        findings: [],
+      };
+    }
+
+    return {
+      ok: true,
+      message: "Crawl trace retrieved.",
+      data: {
+        crawlRequest,
+        trace,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching crawl trace:", error);
+    return {
+      ok: false,
+      message: "Failed to fetch crawl trace.",
+      data: null,
+    };
+  }
+}
+

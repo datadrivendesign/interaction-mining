@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import path from "node:path";
 import { runJob } from "../job-runner.mjs";
 
 const TRACE_DIR_RE = (crawlRequestId) =>
@@ -105,4 +106,67 @@ test("runJob omits error field when result.json doesn't include one", async () =
 
   assert.equal(result.status, "success");
   assert.equal("error" in result, false);
+  assert.deepEqual(result.result, { status: "success" });
 });
+
+test("runJob loads screenshot.png as base64 into step.screenshotBase64 and returns result", async () => {
+  const spawnFn = fakeSpawn();
+  const fakePng0 = Buffer.from("fake-png-0");
+  const fakePng1 = Buffer.from("fake-png-1");
+
+  const readFileFn = async (filePath) => {
+    if (filePath.endsWith("result.json")) {
+      return JSON.stringify({
+        status: "success",
+        steps: [
+          { step: 0, reason: "step 0" },
+          { step: 1, reason: "step 1" },
+        ],
+        findings: ["item 1"],
+      });
+    }
+    if (filePath.endsWith(path.join("0000", "screenshot.png"))) {
+      return fakePng0;
+    }
+    if (filePath.endsWith(path.join("0001", "screenshot.png"))) {
+      return fakePng1;
+    }
+    throw new Error("ENOENT: not found");
+  };
+
+  const result = await runJob(
+    { crawlRequestId: "req-6", targetInput: "https://example.com", description: "goal" },
+    { dccCliPath: "/dcc/cli/dist/cli.js", traceRoot: "/traces", spawnFn, readFileFn },
+  );
+
+  assert.equal(result.status, "success");
+  assert.ok(result.result);
+  assert.equal(result.result.steps.length, 2);
+  assert.equal(result.result.steps[0].screenshotBase64, fakePng0.toString("base64"));
+  assert.equal(result.result.steps[1].screenshotBase64, fakePng1.toString("base64"));
+  assert.deepEqual(result.result.findings, ["item 1"]);
+});
+
+test("runJob leaves step.screenshotBase64 undefined when screenshot.png is absent", async () => {
+  const spawnFn = fakeSpawn();
+  const readFileFn = async (filePath) => {
+    if (filePath.endsWith("result.json")) {
+      return JSON.stringify({
+        status: "success",
+        steps: [{ step: 0, reason: "step 0" }],
+      });
+    }
+    throw new Error("ENOENT: not found");
+  };
+
+  const result = await runJob(
+    { crawlRequestId: "req-7", targetInput: "https://example.com", description: "goal" },
+    { dccCliPath: "/dcc/cli/dist/cli.js", traceRoot: "/traces", spawnFn, readFileFn },
+  );
+
+  assert.equal(result.status, "success");
+  assert.ok(result.result);
+  assert.equal(result.result.steps.length, 1);
+  assert.equal(result.result.steps[0].screenshotBase64, undefined);
+});
+

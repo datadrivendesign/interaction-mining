@@ -50,10 +50,40 @@ export async function runJob(job, opts) {
     if (typeof result.status !== "string") {
       return { status: "error", error: "result.json missing status", traceDir };
     }
+
+    if (Array.isArray(result.steps)) {
+      for (let i = 0; i < result.steps.length; i++) {
+        const step = result.steps[i];
+        if (!step || typeof step !== "object") continue;
+        const stepNum = typeof step.step === "number" ? step.step : i;
+        const candidatePaths = [
+          path.join(traceDir, "steps", String(stepNum).padStart(4, "0"), "screenshot.png"),
+          path.join(traceDir, "steps", String(stepNum), "screenshot.png"),
+          path.join(traceDir, "steps", String(i).padStart(4, "0"), "screenshot.png"),
+          path.join(traceDir, "steps", `${stepNum}.png`),
+        ];
+
+        for (const candidatePath of candidatePaths) {
+          try {
+            const data = await readFileFn(candidatePath);
+            step.screenshotBase64 = Buffer.isBuffer(data)
+              ? data.toString("base64")
+              : typeof data === "string"
+              ? Buffer.from(data).toString("base64")
+              : Buffer.from(String(data)).toString("base64");
+            break;
+          } catch {
+            // try next candidate
+          }
+        }
+      }
+    }
+
     return {
       status: result.status,
       ...(typeof result.error === "string" ? { error: result.error } : {}),
       traceDir,
+      result,
     };
   } catch (err) {
     return {
