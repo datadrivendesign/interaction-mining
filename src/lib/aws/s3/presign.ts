@@ -3,7 +3,7 @@ import "server-only";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { s3 } from "..";
+import { s3, s3Accelerated, uploadAccelerationEnabled } from "..";
 
 /**
  * How long a presigned upload URL stays valid. S3 evaluates expiry when the
@@ -31,11 +31,16 @@ export const UPLOAD_URL_EXPIRY_SECONDS = 3600;
  *   unconstrained — the server-side Android path does, because it is trusted,
  *   writes only under `uploads/` (never publicly served), and its runtime does
  *   not set these headers as predictably as a browser.
+ * @param accelerate Sign against the S3 Transfer Acceleration endpoint. Only
+ *   browser uploads pass this: server-side callers already run in-region, where
+ *   acceleration is pure cost. Ignored unless `UPLOAD_ACCELERATE` is on, and
+ *   never applied to MinIO.
  */
 export async function presignPutObject(
   key: string,
   contentType: string,
   contentLength?: number,
+  accelerate = false,
 ): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: process.env._AWS_UPLOAD_BUCKET!,
@@ -44,7 +49,9 @@ export async function presignPutObject(
     ...(contentLength !== undefined && { ContentLength: contentLength }),
   });
 
-  return getSignedUrl(s3, command, {
+  const client = accelerate && uploadAccelerationEnabled ? s3Accelerated : s3;
+
+  return getSignedUrl(client, command, {
     expiresIn: UPLOAD_URL_EXPIRY_SECONDS,
     ...(contentLength !== undefined && {
       signableHeaders: new Set(["content-length", "content-type"]),

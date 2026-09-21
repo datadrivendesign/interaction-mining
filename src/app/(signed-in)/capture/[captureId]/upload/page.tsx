@@ -33,6 +33,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { handleUploadFile } from "./util";
+import type { UploadState } from "@/lib/aws/s3/put-with-retry";
+import { Progress } from "@/components/ui/progress";
 import DeleteUploadDialog from "./components/delete-upload-dialog";
 import { useCapture } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +44,58 @@ import {
   getSWRConfig,
   handleDeleteFile,
 } from "../util";
+
+const LARGE_FILE_BYTES = 90 * 1024 * 1024;
+
+const formatMb = (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`;
+
+/**
+ * Renders what the upload is currently doing.
+ *
+ * Without this, a slow transfer and a dead one look identical, which is what
+ * drove workers to refresh and retry rather than wait.
+ */
+function UploadProgress({ state }: { state: UploadState }) {
+  if (state.phase === "uploading") {
+    const pct =
+      state.total > 0 ? Math.round((state.loaded / state.total) * 100) : 0;
+    return (
+      <div className="w-full space-y-1">
+        <Progress value={pct} />
+        <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+          Uploading {formatMb(state.loaded)} of {formatMb(state.total)} ({pct}%)
+          {state.attempt > 1 ? ` — attempt ${state.attempt}` : ""}
+        </p>
+      </div>
+    );
+  }
+
+  if (state.phase === "retrying") {
+    return (
+      <p className="w-full text-center text-sm text-amber-600 dark:text-amber-500">
+        {state.reason} Retrying in {Math.ceil(state.delayMs / 1000)}s…
+      </p>
+    );
+  }
+
+  if (state.phase === "signing") {
+    return (
+      <p className="w-full text-center text-sm text-neutral-500 dark:text-neutral-400">
+        Preparing upload…
+      </p>
+    );
+  }
+
+  if (state.phase === "failed") {
+    return (
+      <p className="w-full text-center text-sm text-red-500 dark:text-red-400">
+        {state.message}
+      </p>
+    );
+  }
+
+  return null;
+}
 
 export default function Page() {
   const params = useParams();
@@ -86,12 +140,26 @@ export default function Page() {
    * @param formData - The form data (containing file to upload)
    * @returns The result of the file upload
    */
+  const [uploadState, setUploadState] = useState<UploadState>({
+    phase: "idle",
+  });
+  const abortRef = useRef<AbortController | null>(null);
+
   const handleSubmit = useCallback(
     async (_: any, formData: FormData) => {
-      return await handleUploadFile(captureId, formData).then((res) => {
-        setFile(null);
-        return res;
-      });
+      const controller = new AbortController();
+      abortRef.current = controller;
+      try {
+        return await handleUploadFile(captureId, formData, {
+          signal: controller.signal,
+          onState: setUploadState,
+        }).then((res) => {
+          setFile(null);
+          return res;
+        });
+      } finally {
+        abortRef.current = null;
+      }
     },
     [captureId],
   );
@@ -367,13 +435,28 @@ export default function Page() {
               </span>
             </div>
           )}
+          {pending && <UploadProgress state={uploadState} />}
+          {!pending && file && file.size > LARGE_FILE_BYTES && (
+            <p className="w-full text-center text-sm text-amber-600 dark:text-amber-500">
+              This recording is {formatMb(file.size)} and may take a while. Keep
+              this page open and your screen on while it uploads.
+            </p>
+          )}
           <div
             className={cn(
               "flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-dashed border-neutral-200 p-4 text-neutral-500 transition-colors duration-150 ease-in-out hover:border-neutral-500 hover:text-neutral-700 md:p-6 dark:border-neutral-800 dark:text-neutral-400 dark:hover:border-neutral-400 hover:dark:text-neutral-200",
               file ? "border border-solid" : "border-2 border-dashed",
             )}
-            onClick={() => fileInputRef.current?.click()}
-            onDrop={handleDrop}
+            onClick={() => {
+              if (!pending) fileInputRef.current?.click();
+            }}
+            onDrop={(event) => {
+              if (pending) {
+                event.preventDefault();
+                return;
+              }
+              handleDrop(event);
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -413,15 +496,28 @@ export default function Page() {
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
+              disabled={pending}
             />
-            <Button
-              type="submit"
-              className="w-full sm:w-auto"
-              disabled={pending || !file}
-            >
-              {pending && <Loader2 className="size-4 animate-spin" />}
-              Upload
-            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button
+                type="submit"
+                className="w-full sm:w-auto"
+                disabled={pending || !file}
+              >
+                {pending && <Loader2 className="size-4 animate-spin" />}
+                Upload
+              </Button>
+              {pending && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => abortRef.current?.abort()}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
           </form>
           <div className="mt-4 self-center justify-self-center text-center font-semibold">
             <article className="text-sm leading-snug">

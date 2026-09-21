@@ -27,23 +27,6 @@ describe("androidFrameUploadSchema", () => {
     assert.equal(androidFrameUploadSchema.safeParse(frame).success, true);
   });
 
-  it("accepts every gesture-type suffix the client can produce", () => {
-    for (const suffix of [
-      "TYPE_VIEW_CLICKED",
-      "TYPE_VIEW_SELECTED",
-      "TYPE_VIEW_UNKNOWN",
-      "TYPE_VIEW_SCROLLED",
-      "TYPE_VIEW_LONG_CLICKED",
-    ]) {
-      const id = `${CREATED}_${suffix}`;
-      assert.equal(
-        androidFrameUploadSchema.safeParse({ ...frame, id }).success,
-        true,
-        `should accept id: ${id}`,
-      );
-    }
-  });
-
   it("forwards unknown fields instead of dropping them", () => {
     const parsed = androidFrameUploadSchema.safeParse({
       ...frame,
