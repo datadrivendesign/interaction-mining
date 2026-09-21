@@ -5,6 +5,14 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
 
+// Next declares `*.module.css` but not plain `*.css`, so a side-effect import
+// like `import "./globals.css"` has no declaration to resolve to. `tsc` ignores
+// that by default, but an editor (or CI) running with TypeScript 5.6+'s
+// `noUncheckedSideEffectImports` reports "Cannot find module or type
+// declarations for side-effect import". Plain stylesheets are only ever
+// imported for their side effect, so a shorthand ambient module is enough.
+declare module "*.css";
+
 interface WheelEvent {
   readonly webkitDirectionInvertedFromDevice: boolean;
 }
