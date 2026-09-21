@@ -1,11 +1,9 @@
 "use client";
 
 import { ListedFiles } from "@/lib/actions";
-import {
-  generatePresignedUploadURL,
-  generateSignedCloudFrontURL,
-} from "./server";
+import { createUploadUrl, generateSignedCloudFrontURL } from "./server";
 import { ActionPayload } from "@/lib/actions/types";
+import type { UploadPurpose } from "./upload-purpose";
 
 // Check if signed Cloudfront URL is expired with expiry url param
 // Will return true if within 5 minutes of expiry
@@ -27,22 +25,32 @@ export function isCloudfrontUrlExpired(url: string): boolean {
   }
 }
 
+/**
+ * Uploads a file straight to S3 with a presigned URL.
+ *
+ * The caller names a purpose and the capture or trace the file belongs to; the
+ * server builds the object key, so no prefix crosses the boundary. The content
+ * type and size are read off the `File` rather than passed in, because the
+ * declared size is bound into the signature and any mismatch is rejected by S3.
+ */
 export async function uploadToS3(
   file: File,
-  prefix: string,
-  key: string,
-  contentType: string,
+  purpose: UploadPurpose,
+  resourceId: string,
+  fileName: string,
 ): Promise<ActionPayload<ListedFiles>> {
-  const generatePresignedUpload = await generatePresignedUploadURL(
-    prefix,
-    key,
-    contentType,
-  );
+  const generatePresignedUpload = await createUploadUrl({
+    purpose,
+    resourceId,
+    fileName,
+    contentType: file.type,
+    size: file.size,
+  });
 
   if (!generatePresignedUpload.ok) {
     return {
       ok: false,
-      message: "Failed to generate presigned URL",
+      message: generatePresignedUpload.message,
       data: null,
     };
   }
@@ -52,7 +60,7 @@ export async function uploadToS3(
   const res = await fetch(uploadData.uploadUrl, {
     method: "PUT",
     body: file,
-    headers: { "Content-Type": contentType },
+    headers: { "Content-Type": file.type },
   });
 
   if (!res.ok) {
@@ -67,10 +75,10 @@ export async function uploadToS3(
   // use signed cloudfront url to grab file url
   let fileUrl = "";
   if (process.env.USE_MINIO_STORE === "true") {
-    fileUrl = `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${prefix}/${uploadData.fileName}`;
+    fileUrl = `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${uploadData.fileKey}`;
   } else {
-    const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${prefix}/${uploadData.fileName}`;
-    if (prefix.includes("traces/")) {
+    const cloudfrontUrl = `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${uploadData.fileKey}`;
+    if (uploadData.fileKey.startsWith("traces/")) {
       // traces are available publicly
       fileUrl = cloudfrontUrl;
     } else {

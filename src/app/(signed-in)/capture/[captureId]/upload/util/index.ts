@@ -3,6 +3,7 @@ import { ListedFiles } from "@/lib/actions";
 import { mutate } from "swr";
 import { toast } from "sonner";
 import { uploadToS3 } from "@/lib/aws";
+import { UploadPurpose } from "@/lib/aws/s3/upload-purpose";
 import { extname } from "path";
 import { CaptureSWROperations } from "../../util";
 
@@ -32,12 +33,11 @@ export async function handleUploadFile(captureId: string, formData: FormData) {
   }
 
   try {
-    const prefix = `uploads/${captureId}`;
     const res = await uploadToS3(
       file,
-      prefix,
+      UploadPurpose.CAPTURE_VIDEO,
+      captureId,
       Date.now().toString() + extname(file.name),
-      file.type,
     );
 
     if (!res.ok) {
