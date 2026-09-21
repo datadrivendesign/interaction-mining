@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { GA_PATH_REDACTION_SCRIPT } from "@/lib/analytics/normalize-path";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -47,6 +48,24 @@ export default function RootLayout({
   return (
     <SessionProvider>
       <html lang="en">
+        <head>
+          {/*
+            Must run before <GoogleAnalytics> initialises: that component emits
+            a bare gtag('config', id), which immediately sends a page_view using
+            the raw URL. Seeding the same dataLayer queue with a redacted
+            page_location first keeps record ids from reaching Google.
+
+            A plain inline script in <head> rather than next/script: it executes
+            during parse, and GoogleAnalytics's own scripts default to
+            afterInteractive, so ordering is guaranteed. `beforeInteractive`
+            renders a real tag in place, which React rejects outside <head>.
+          */}
+          {process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID && (
+            <script
+              dangerouslySetInnerHTML={{ __html: GA_PATH_REDACTION_SCRIPT }}
+            />
+          )}
+        </head>
         <body
           className={cn(
             inter.variable,
