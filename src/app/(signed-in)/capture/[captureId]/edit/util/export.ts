@@ -6,6 +6,7 @@ import plimit from "p-limit";
 
 import { createTrace, ListedFiles, updateTrace } from "@/lib/actions";
 import { uploadToS3 } from "@/lib/aws/s3/client";
+import { UploadPurpose } from "@/lib/aws/s3/upload-purpose";
 
 import {
   FrameData,
@@ -105,12 +106,16 @@ export async function handleDraftSave(
     draftTraceData.iOSVersion = data.iOSVersion;
   }
   // upload draft trace data to s3
-  const prefix = `uploads/${capture.id}/drafts`;
   const fileName = `draft-${Date.now()}.json`;
   const file = new File([JSON.stringify(draftTraceData)], fileName, {
     type: "application/json",
   });
-  const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+  const uploadRes = await uploadToS3(
+    file,
+    UploadPurpose.CAPTURE_DRAFT,
+    capture.id,
+    fileName,
+  );
   if (!uploadRes.ok) {
     return {
       ok: false,
@@ -223,9 +228,13 @@ export async function handleTraceSave(
             type: "image/png",
           });
 
-          const prefix = `traces/${initTrace.id}/screens`;
           const fileName = `${screen.id}.png`;
-          const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+          const uploadRes = await uploadToS3(
+            file,
+            UploadPurpose.TRACE_SCREEN,
+            initTrace.id,
+            fileName,
+          );
           if (!uploadRes.ok) {
             toast.error("Failed to upload redacted image.");
             return {
@@ -242,9 +251,13 @@ export async function handleTraceSave(
           const file = new File([blob], `${screen.id}.png`, {
             type: "image/png",
           });
-          const prefix = `traces/${initTrace.id}/screens`;
           const fileName = `${screen.id}.png`;
-          const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+          const uploadRes = await uploadToS3(
+            file,
+            UploadPurpose.TRACE_SCREEN,
+            initTrace.id,
+            fileName,
+          );
           if (!uploadRes || !uploadRes.ok) {
             toast.error("Failed to upload screen image.");
             return {
@@ -330,9 +343,13 @@ export async function handleTraceSave(
           const file = new File([blob], `${screen.id}.json`, {
             type: "application/json",
           });
-          const prefix = `traces/${initTrace.id}/vhs`;
           const fileName = `${screen.id}.json`;
-          const uploadRes = await uploadToS3(file, prefix, fileName, file.type);
+          const uploadRes = await uploadToS3(
+            file,
+            UploadPurpose.TRACE_VH,
+            initTrace.id,
+            fileName,
+          );
           if (!uploadRes.ok) {
             toast.error("Failed to upload view hierarchies.");
             return {

@@ -1,55 +1,112 @@
 "use server";
 
 import {
-  PutObjectCommand,
   ListObjectsV2Command,
   DeleteObjectCommand,
   CopyObjectCommand,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getSignedUrl as getSignedCloudfrontUrl } from "@aws-sdk/cloudfront-signer";
+import { Role } from "@prisma/client";
 import { s3 } from "..";
 import { ActionPayload } from "@/lib/actions/types";
 import { ListedFiles } from "@/lib/actions";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { presignPutObject } from "./presign";
+import {
+  UPLOAD_PURPOSE_CONFIG,
+  buildUploadKey,
+  uploadUrlRequestSchema,
+  type UploadUrlRequest,
+} from "./upload-purpose";
 
 /**
- * Generates a presigned URL for uploading a file to S3.
- * @param prefix The prefix for the S3 object key.
- * @param key The S3 object key.
- * @returns The presigned URL for uploading the file.
+ * Resolves the owning user id for an upload request.
+ *
+ * `Capture.userId` is the worker who recorded a video; `Trace.userId` is the
+ * annotator who processed it. They are distinct people, so each purpose has
+ * exactly one authoritative owner — there is no fallback between them.
+ *
+ * @returns the owner's user id, or `null` when the record does not exist.
  */
-export async function generatePresignedUploadURL(
-  prefix: string,
-  fileName: string,
-  contentType: string,
-): Promise<
+async function resolveOwnerId(
+  request: UploadUrlRequest,
+): Promise<string | null> {
+  if (UPLOAD_PURPOSE_CONFIG[request.purpose].owner === "capture") {
+    const capture = await prisma.capture.findUnique({
+      where: { id: request.resourceId },
+      select: { userId: true },
+    });
+    return capture?.userId ?? null;
+  }
+
+  const trace = await prisma.trace.findUnique({
+    where: { id: request.resourceId },
+    select: { userId: true },
+  });
+  return trace?.userId ?? null;
+}
+
+/**
+ * Issues a presigned upload URL for the signed-in owner of a capture or trace.
+ *
+ * Replaces the former `generatePresignedUploadURL`, which accepted an arbitrary
+ * prefix from the browser with no authentication — any caller could obtain a
+ * write URL for any key in the bucket. Here the client supplies only a purpose,
+ * a resource id and a file name; the key is built server-side, the session is
+ * required, ownership is checked, and the declared size is bound into the
+ * signature so S3 rejects a mismatched upload.
+ *
+ * This gates writes only. Public read access to `traces/` via unsigned
+ * CloudFront URLs is unchanged — see `listFromS3`.
+ */
+export async function createUploadUrl(input: unknown): Promise<
   ActionPayload<{
     uploadUrl: string;
     fileKey: string;
     fileName: string;
-    filePrefix: string;
   }>
 > {
-  const command = new PutObjectCommand({
-    Bucket: process.env._AWS_UPLOAD_BUCKET!,
-    Key: `${prefix}/${fileName}`,
-    ContentType: contentType,
-  });
+  const parsed = uploadUrlRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid upload request.",
+      data: null,
+    };
+  }
+  const request = parsed.data;
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, message: "Unauthorized", data: null };
+  }
+
+  const ownerId = await resolveOwnerId(request);
+  // A missing record and a foreign record are reported identically, so this
+  // cannot be used to probe which ids exist.
+  if (
+    !ownerId ||
+    (ownerId !== session.user.id && session.user.role !== Role.ADMIN)
+  ) {
+    return { ok: false, message: "Not found.", data: null };
+  }
+
+  const fileKey = buildUploadKey(request);
 
   try {
-    const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    const uploadUrl = await presignPutObject(
+      fileKey,
+      request.contentType,
+      request.size,
+    );
     return {
       ok: true,
       message: "Pre-signed upload URL generated.",
-      data: {
-        uploadUrl: url,
-        fileKey: `${prefix}/${fileName}`,
-        fileName: fileName,
-        filePrefix: prefix,
-      },
+      data: { uploadUrl, fileKey, fileName: request.fileName },
     };
   } catch (err) {
+    // Never surface S3 or signing detail to the caller.
     console.error("Error generating presigned URL", err);
     return {
       ok: false,
@@ -212,13 +269,17 @@ export async function uploadAndroidAPIDataToS3(
   key: string,
   contentType: string,
 ): Promise<ActionPayload<any>> {
-  const generatePresignedUpload = await generatePresignedUploadURL(
-    prefix,
-    key,
-    contentType,
-  );
-
-  if (!generatePresignedUpload.ok) {
+  // Trusted server-side caller: it goes straight to the internal presigner
+  // rather than through `createUploadUrl`, because the Android API has no
+  // browser session to authenticate against. Its inputs are validated at the
+  // route boundary instead. Size is deliberately left unbound here so this
+  // path's behaviour is unchanged.
+  const fileKey = `${prefix}/${key}`;
+  let uploadUrl: string;
+  try {
+    uploadUrl = await presignPutObject(fileKey, contentType);
+  } catch (err) {
+    console.error("Error generating presigned URL", err);
     return {
       ok: false,
       message: "Failed to generate presigned URL",
@@ -226,7 +287,12 @@ export async function uploadAndroidAPIDataToS3(
     };
   }
 
-  const uploadData = generatePresignedUpload.data;
+  const uploadData = {
+    uploadUrl,
+    fileKey,
+    fileName: key,
+    filePrefix: prefix,
+  };
 
   const res = await fetch(uploadData.uploadUrl, {
     method: "PUT",
