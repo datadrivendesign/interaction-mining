@@ -95,10 +95,13 @@ export async function createUploadUrl(input: unknown): Promise<
   const fileKey = buildUploadKey(request);
 
   try {
+    // Browser uploads are the ones that may come from a distant network, so
+    // this is the only caller that opts into acceleration.
     const uploadUrl = await presignPutObject(
       fileKey,
       request.contentType,
       request.size,
+      true,
     );
     return {
       ok: true,

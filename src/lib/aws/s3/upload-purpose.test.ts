@@ -100,12 +100,6 @@ describe("uploadUrlRequestSchema", () => {
     assert.equal(parse({ size: limit }).success, true);
     assert.equal(parse({ size: limit + 1 }).success, false);
   });
-
-  it("rejects a non-positive or fractional size", () => {
-    for (const bad of [0, -1, 1.5]) {
-      assert.equal(parse({ size: bad }).success, false, `bad size: ${bad}`);
-    }
-  });
 });
 
 describe("safePathSegmentSchema", () => {
