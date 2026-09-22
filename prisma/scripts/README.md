@@ -35,8 +35,23 @@ prisma/scripts/
 | Script | Purpose |
 |--------|---------|
 | `explore-capture-stats.mjs` | Aggregate and per-status counts (captures, traces, screens, apps) and approval-rate metrics per user. Supports `basic-stats` and `approval-metrics` operations. |
+| `upload-baseline.mjs` | Upload reliability baseline from S3 (no database). `put-latency` parses S3 server access logs for PUT duration normalized by object size; `duplicate-uploads` finds byte-identical videos re-uploaded to the same capture. Supports `all` and `--json`. |
 
 User IDs to exclude are loaded from `data/known-user-ids.json` (gitignored). If that file is absent the script falls back to an empty exclusion list.
+
+`upload-baseline.mjs` reads AWS credentials from the standard credential chain rather than `.env.local`, and takes bucket names from flags or the environment — nothing account-specific is defaulted in source:
+
+```bash
+AWS_PROFILE=<profile> UPLOAD_BUCKET=<bucket> \
+  node prisma/scripts/analytics/upload-baseline.mjs duplicate-uploads
+
+AWS_PROFILE=<profile> UPLOAD_BUCKET=<bucket> ACCESS_LOG_BUCKET=<log-bucket> \
+  node prisma/scripts/analytics/upload-baseline.mjs put-latency --days 7
+```
+
+`UPLOAD_BUCKET` falls back to `_AWS_UPLOAD_BUCKET` and the region to `_AWS_REGION`, so an existing AWS environment mostly works as-is. `--bucket`, `--log-bucket`, `--region` and `--profile` override.
+
+The script issues only `ListObjectsV2` and `GetObject`. Access logs carry a remote IP but no requester identity, so it reports population-level statistics and never geolocates; pass `--cohort-file` with volunteered IP prefixes to compare a consented cohort. Background in `plans/bugs/long-haul-upload-reliability.md`.
 
 ---
 
