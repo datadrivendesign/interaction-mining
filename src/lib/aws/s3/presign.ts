@@ -1,9 +1,45 @@
 import "server-only";
 
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { s3, s3Accelerated, uploadAccelerationEnabled } from "..";
+import { s3 } from "..";
+
+/**
+ * Whether presigned browser uploads should target S3 Transfer Acceleration.
+ *
+ * Deliberately read per call rather than once at module scope. Module
+ * initialisation and request handling do not reliably see the same environment
+ * on a serverless host, and a load-time read here silently evaluated to `false`
+ * in deployment while working locally. Every other variable in this file —
+ * `_AWS_UPLOAD_BUCKET` below — is already read at request time; this now
+ * matches.
+ *
+ * Off by default, so standard signing is the instant rollback: flipping the
+ * variable reverts every new upload without a deploy. Never enabled against
+ * MinIO, whose path-style custom endpoint is incompatible with the
+ * virtual-hosted accelerate endpoint.
+ */
+function uploadAccelerationEnabled(): boolean {
+  return (
+    process.env.UPLOAD_ACCELERATE === "true" &&
+    process.env.USE_MINIO_STORE !== "true"
+  );
+}
+
+/**
+ * Signing client for the accelerate endpoint, used only for browser uploads
+ * from distant networks. Server-side writes stay on the standard client: they
+ * run in-region, where acceleration adds cost and no benefit.
+ */
+const s3Accelerated = new S3Client({
+  region: process.env._AWS_REGION!,
+  useAccelerateEndpoint: true,
+  credentials: {
+    accessKeyId: process.env._AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env._AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 /**
  * How long a presigned upload URL stays valid. S3 evaluates expiry when the
@@ -49,7 +85,7 @@ export async function presignPutObject(
     ...(contentLength !== undefined && { ContentLength: contentLength }),
   });
 
-  const client = accelerate && uploadAccelerationEnabled ? s3Accelerated : s3;
+  const client = accelerate && uploadAccelerationEnabled() ? s3Accelerated : s3;
 
   return getSignedUrl(client, command, {
     expiresIn: UPLOAD_URL_EXPIRY_SECONDS,
