@@ -8,12 +8,14 @@ import { s3 } from "..";
 /**
  * Whether presigned browser uploads should target S3 Transfer Acceleration.
  *
- * Deliberately read per call rather than once at module scope. Module
- * initialisation and request handling do not reliably see the same environment
- * on a serverless host, and a load-time read here silently evaluated to `false`
- * in deployment while working locally. Every other variable in this file —
- * `_AWS_UPLOAD_BUCKET` below — is already read at request time; this now
- * matches.
+ * Read per call, matching how every other variable in this file is read.
+ *
+ * The `_AWS_` prefix is load-bearing, not decorative: `amplify.yml` copies only
+ * variables matching a fixed set of patterns into `.env.production` at build
+ * time, and `_AWS` is one of them. A name outside those patterns never reaches
+ * the deployed runtime at all, which is silent — the flag simply reads as
+ * undefined and acceleration stays off. Renaming this must keep the prefix, or
+ * add a matching line to the build spec.
  *
  * Off by default, so standard signing is the instant rollback: flipping the
  * variable reverts every new upload without a deploy. Never enabled against
@@ -22,7 +24,7 @@ import { s3 } from "..";
  */
 function uploadAccelerationEnabled(): boolean {
   return (
-    process.env.UPLOAD_ACCELERATE === "true" &&
+    process.env._AWS_UPLOAD_ACCELERATE === "true" &&
     process.env.USE_MINIO_STORE !== "true"
   );
 }
@@ -69,7 +71,7 @@ export const UPLOAD_URL_EXPIRY_SECONDS = 3600;
  *   not set these headers as predictably as a browser.
  * @param accelerate Sign against the S3 Transfer Acceleration endpoint. Only
  *   browser uploads pass this: server-side callers already run in-region, where
- *   acceleration is pure cost. Ignored unless `UPLOAD_ACCELERATE` is on, and
+ *   acceleration is pure cost. Ignored unless `_AWS_UPLOAD_ACCELERATE` is on, and
  *   never applied to MinIO.
  */
 export async function presignPutObject(
