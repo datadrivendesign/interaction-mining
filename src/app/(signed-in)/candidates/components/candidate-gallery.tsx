@@ -21,6 +21,7 @@ import {
   Check,
   ClipboardCopy,
   Copy,
+  ExternalLink,
   Eye,
   EyeOff,
   ListChecks,
@@ -308,6 +309,21 @@ const CandidateTaskDrawer = ({
                     Copy all
                   </Button>
                 </WithTooltip>
+
+                {candidateTaskApp.app.metadata.url ? (
+                  <WithTooltip label="Open the App Store listing to confirm this is the right app">
+                    <Button asChild type="button" size="sm" variant="outline">
+                      <Link
+                        href={candidateTaskApp.app.metadata.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="size-4" />
+                        App Store
+                      </Link>
+                    </Button>
+                  </WithTooltip>
+                ) : null}
                 {selectedTaskIndexesList.length > 0 ? (
                   <WithTooltip label="Create captures for selected tasks in a new tab">
                     <Button asChild type="button" size="sm">
