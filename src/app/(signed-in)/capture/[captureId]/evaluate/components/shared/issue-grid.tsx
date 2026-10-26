@@ -14,10 +14,12 @@ import {
 } from "./trace-issues";
 
 const CATEGORY_ORDER: TraceIssueCategory[] = [
-  "gesture_annotation",
-  "description_quality",
+  "recording",
   "missing_screens",
-  "task_recording",
+  "screen_timing",
+  "gesture",
+  "description",
+  "redaction",
 ];
 
 function matchesIssueSearch(issue: TraceIssue, query: string) {
