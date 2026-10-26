@@ -1,8 +1,10 @@
 export type TraceIssueCategory =
-  | "gesture_annotation"
-  | "description_quality"
+  | "recording"
   | "missing_screens"
-  | "task_recording";
+  | "screen_timing"
+  | "gesture"
+  | "description"
+  | "redaction";
 
 export type TraceIssueDestination = "annotation" | "redaction" | "summarize";
 export type TraceIssueScope = "screen" | "flow";
@@ -22,124 +24,66 @@ export interface TraceIssue {
   shortcutKey?: number;
 }
 
+// Groups mirror the six review checklist steps, in review order.
 export const TRACE_ISSUE_CATEGORIES: Record<
   TraceIssueCategory,
   TraceIssueCategoryMeta
 > = {
-  gesture_annotation: {
-    label: "Gesture Placement / Type",
-    description:
-      "Fix gesture position, type, or capture timing around the action.",
-  },
-  description_quality: {
-    label: "Description Quality",
-    description:
-      "Clarify what the worker is doing and remove weak or incorrect commentary.",
+  recording: {
+    label: "1. Recording",
+    description: "The video must show the assigned task from start to finish.",
   },
   missing_screens: {
-    label: "Screen Capture / Privacy",
-    description:
-      "Add missing states, wait for stable content, and catch privacy redaction issues.",
+    label: "2. Missing screens",
+    description: "Every tap, swipe, and typing action needs its own screen.",
   },
-  task_recording: {
-    label: "Flow Realism / Recording",
+  screen_timing: {
+    label: "3. Screen timing",
     description:
-      "Adjust the overall task or recording so it looks realistic and distinct.",
+      "Each screen is captured just before the action, fully loaded, not animating.",
+  },
+  gesture: {
+    label: "4. Gesture",
+    description: "Right gesture type, placed on the element that was touched.",
+  },
+  description: {
+    label: "5. Description",
+    description:
+      "Two parts: the screen element, then the goal. Readable, specific, no typos.",
+  },
+  redaction: {
+    label: "6. Redaction",
+    description:
+      "Private information covered with small boxes, one box per item.",
   },
 };
 
 export const TRACE_ISSUES: TraceIssue[] = [
-  // Gesture Annotation Errors
+  // 1. Recording
   {
-    id: "misplaced_gesture",
-    label: "Misplaced a gesture",
-    chipLabel: "Misplaced gesture",
-    category: "gesture_annotation",
-    annotation: "Screen #: Gesture is not placed in the correct area.",
+    id: "wrong_recording",
+    label:
+      "Wrong recording uploaded, or the recording does not complete the task",
+    chipLabel: "Wrong recording / task not done",
+    category: "recording",
+    annotation:
+      "The recording does not match the assigned task, or it does not finish the task. Please record the task again and upload the new video.",
+    destination: "annotation",
+    scope: "flow",
+  },
+
+  // 2. Missing screens
+  {
+    id: "missing_intermediate_screen",
+    label: "A screen is missing between two captured screens",
+    chipLabel: "Missing screen",
+    category: "missing_screens",
+    annotation:
+      "Screen #: A screen is missing here. Please add the screen where you [WHICH_ACTION], between this screen and the next one.",
     destination: "annotation",
     scope: "screen",
     shortcutKey: 1,
   },
-  {
-    id: "wrong_swipe_direction",
-    label: "Wrong swiping direction",
-    chipLabel: "Wrong swipe direction",
-    category: "gesture_annotation",
-    annotation:
-      "Screen #: Fix swipe direction, it should be where your finger is moving, not how the screen moves.",
-    destination: "annotation",
-    scope: "screen",
-    shortcutKey: 2,
-  },
-  {
-    id: "typing_gesture_wrong_placement",
-    label: "Not placing typing gesture on text box",
-    chipLabel: "Typing not on text box",
-    category: "gesture_annotation",
-    annotation:
-      "Screen #: Typing action should be placed on the focused input box not on the keyboard",
-    destination: "annotation",
-    scope: "screen",
-    shortcutKey: 3,
-  },
-  {
-    id: "screen_captured_after_gesture",
-    label: "Captured screen AFTER gesture was done, not before",
-    chipLabel: "Screen captured after action",
-    category: "gesture_annotation",
-    annotation:
-      "Screen #: Please capture the screen before you did [gesture], not after",
-    destination: "annotation",
-    scope: "screen",
-    shortcutKey: 4,
-  },
-  {
-    id: "swipe_instead_of_tap",
-    label:
-      'Selected "swipe" to open a tab from menu when it seems to have been a tap',
-    chipLabel: "Swipe should be tap",
-    category: "gesture_annotation",
-    annotation:
-      "Screen #: This gesture looks like a tap, not a swipe. Please change it to a tap.",
-    destination: "annotation",
-    scope: "screen",
-  },
-
-  // Annotation Description Quality Issues
-  {
-    id: "not_enough_description",
-    label: "Not enough description in annotation",
-    chipLabel: "Too little description",
-    category: "description_quality",
-    annotation:
-      "Screen #: Please describe what you are doing and why, not just the gesture.",
-    destination: "annotation",
-    scope: "screen",
-    shortcutKey: 5,
-  },
-  {
-    id: "typos_in_annotation",
-    label: "Typos in the gesture annotation description",
-    chipLabel: "Typos in annotation",
-    category: "description_quality",
-    annotation: "Screen #: Fix misspelling of [word]",
-    destination: "annotation",
-    scope: "screen",
-    shortcutKey: 6,
-  },
-  {
-    id: "task_description_commentary",
-    label:
-      "Wrote task description as commentary about task rather than describing.",
-    chipLabel: "Task description is commentary",
-    category: "description_quality",
-    annotation:
-      "Describe what you are doing on screen, not a comment about the task itself.",
-    destination: "summarize",
-    scope: "flow",
-  },
-
-  // Missing Screens / Redaction Issues
   {
     id: "missing_tap_on_textbox_screen",
     label:
@@ -150,49 +94,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Please include screen tapping text box to open up keyboard before typing",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 7,
-  },
-  {
-    id: "captured_before_loading",
-    label:
-      "Captured screen before content finished loading or in animation (if full screen is in screen recording)",
-    chipLabel: "Captured before loading",
-    category: "missing_screens",
-    annotation:
-      "Screen #: Please capture screen after the app has finished loading content or animation",
-    destination: "annotation",
-    scope: "screen",
-    shortcutKey: 8,
-  },
-  {
-    id: "forgot_redact_private_info",
-    label: "Forgot to redact private information: email, address, map location",
-    chipLabel: "Missing private-info redaction",
-    category: "missing_screens",
-    annotation: "Screen #: You forgot to redact [ITEM], please cover it.",
-    destination: "redaction",
-    scope: "screen",
-    shortcutKey: 9,
-  },
-  {
-    id: "missing_intermediate_screen",
-    label: "Skipped an important intermediate screen between captured states",
-    chipLabel: "Missing intermediate screen",
-    category: "missing_screens",
-    annotation:
-      "Screen #: Please capture the missing intermediate screen between this state and the next one.",
-    destination: "annotation",
-    scope: "screen",
-  },
-  {
-    id: "forgot_initial_screen",
-    label: "Forgot initial screen in screenshot but had it on screen recording",
-    chipLabel: "Missing initial screen",
-    category: "missing_screens",
-    annotation:
-      "Screen 1: Please include screen opening up app from home screen",
-    destination: "annotation",
-    scope: "screen",
+    shortcutKey: 2,
   },
   {
     id: "missing_keyboard_submit",
@@ -205,26 +107,148 @@ export const TRACE_ISSUES: TraceIssue[] = [
     scope: "screen",
   },
 
-  // Task Recording Issues
+  // 3. Screen timing
   {
-    id: "identical_flows",
-    label: "Two or more task recordings have almost identical flows",
-    chipLabel: "Task flows too similar",
-    category: "task_recording",
+    id: "screen_captured_after_gesture",
+    label: "Captured screen AFTER gesture was done, not before",
+    chipLabel: "Screen captured after action",
+    category: "screen_timing",
     annotation:
-      'This task flow is too similar to some other tasks in this app. Please change the task recording to something both different and realistic to what a user would do in this app, such as: "[INSERT_TASK_HERE]"',
+      "Screen #: Please capture the screen before you did [gesture], not after",
     destination: "annotation",
-    scope: "flow",
+    scope: "screen",
+    shortcutKey: 3,
   },
   {
-    id: "unrealistic_flow",
-    label: "Task flow does not reflect typical user behavior",
-    chipLabel: "Unrealistic task flow",
-    category: "task_recording",
+    id: "captured_before_loading",
+    label:
+      "Captured screen before content finished loading or in animation (if full screen is in screen recording)",
+    chipLabel: "Captured before loading",
+    category: "screen_timing",
     annotation:
-      'This task flow is not very realistic to what a user would normally do in an app. Please change the task recording to something both different and realistic to what a user would do in this app, such as: "[INSERT_TASK_HERE]"',
+      "Screen #: Please capture screen after the app has finished loading content or animation",
     destination: "annotation",
+    scope: "screen",
+    shortcutKey: 4,
+  },
+
+  // 4. Gesture
+  {
+    id: "misplaced_gesture",
+    label: "Misplaced a gesture",
+    chipLabel: "Misplaced gesture",
+    category: "gesture",
+    annotation: "Screen #: Gesture is not placed in the correct area.",
+    destination: "annotation",
+    scope: "screen",
+    shortcutKey: 5,
+  },
+  {
+    id: "wrong_swipe_direction",
+    label: "Wrong swiping direction",
+    chipLabel: "Wrong swipe direction",
+    category: "gesture",
+    annotation:
+      "Screen #: Fix swipe direction, it should be where your finger is moving, not how the screen moves.",
+    destination: "annotation",
+    scope: "screen",
+    shortcutKey: 6,
+  },
+  {
+    id: "typing_gesture_wrong_placement",
+    label: "Not placing typing gesture on text box",
+    chipLabel: "Typing not on text box",
+    category: "gesture",
+    annotation:
+      "Screen #: Typing action should be placed on the focused input box not on the keyboard",
+    destination: "annotation",
+    scope: "screen",
+    shortcutKey: 7,
+  },
+  {
+    id: "wrong_gesture_type",
+    label: "Wrong gesture type selected (tap, swipe, type, long press)",
+    chipLabel: "Wrong gesture type",
+    category: "gesture",
+    annotation:
+      "Screen #: The gesture type is wrong. This looks like a [CORRECT_GESTURE], not a [WRONG_GESTURE]. Please change the gesture type.",
+    destination: "annotation",
+    scope: "screen",
+  },
+
+  // 5. Description
+  {
+    id: "not_enough_description",
+    label: "Not enough description in annotation",
+    chipLabel: "Too little description",
+    category: "description",
+    annotation:
+      "Screen #: Please write the description in two parts. First part: the screen element you used (for example: button, list item, tab, icon, text box). Second part: what you wanted to do (for example: open the settings page).",
+    destination: "annotation",
+    scope: "screen",
+  },
+  {
+    id: "wrong_element_type",
+    label: "Screen element type is missing, wrong, or not specific",
+    chipLabel: "Wrong element type",
+    category: "description",
+    annotation:
+      "Screen #: Fix the screen element type in the first part of the description. This element is a [CORRECT_TYPE], not a [WRONG_TYPE]. Common types: button, list item, tab, icon, text box, toggle.",
+    destination: "annotation",
+    scope: "screen",
+    shortcutKey: 8,
+  },
+  {
+    id: "vague_action_goal",
+    label: "Action goal is missing, wrong, or not specific",
+    chipLabel: "Vague action goal",
+    category: "description",
+    annotation:
+      'Screen #: The second part of the description must say what you wanted to do, in a specific way. For example: "find the article about football playoffs", not "tap the item".',
+    destination: "annotation",
+    scope: "screen",
+  },
+  {
+    id: "typos_in_annotation",
+    label: "Typos in the gesture annotation description",
+    chipLabel: "Typos in annotation",
+    category: "description",
+    annotation: "Screen #: Fix misspelling of [word]",
+    destination: "annotation",
+    scope: "screen",
+  },
+  {
+    id: "task_description_commentary",
+    label:
+      "Wrote task description as commentary about task rather than describing.",
+    chipLabel: "Task description is commentary",
+    category: "description",
+    annotation:
+      "Describe what you are doing on screen, not a comment about the task itself.",
+    destination: "summarize",
     scope: "flow",
+  },
+
+  // 6. Redaction
+  {
+    id: "forgot_redact_private_info",
+    label: "Forgot to redact private information: email, address, map location",
+    chipLabel: "Missing private-info redaction",
+    category: "redaction",
+    annotation: "Screen #: You forgot to redact [ITEM], please cover it.",
+    destination: "redaction",
+    scope: "screen",
+    shortcutKey: 9,
+  },
+  {
+    id: "redaction_too_large",
+    label: "Redaction box is too large or covers several private items",
+    chipLabel: "Redaction too large / split",
+    category: "redaction",
+    annotation:
+      "Screen #: Make the black box smaller so it only covers the private information. Use one box for each private item. Do not cover other text or icons.",
+    destination: "redaction",
+    scope: "screen",
   },
 ];
 
