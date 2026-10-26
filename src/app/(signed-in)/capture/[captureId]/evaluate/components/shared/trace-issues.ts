@@ -82,6 +82,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: A screen is missing here. Please add the screen where you [WHICH_ACTION], between this screen and the next one.",
     destination: "annotation",
     scope: "screen",
+    shortcutKey: 1,
   },
   {
     id: "missing_tap_on_textbox_screen",
@@ -93,7 +94,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Please include screen tapping text box to open up keyboard before typing",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 7,
+    shortcutKey: 2,
   },
   {
     id: "missing_keyboard_submit",
@@ -116,7 +117,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Please capture the screen before you did [gesture], not after",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 4,
+    shortcutKey: 3,
   },
   {
     id: "captured_before_loading",
@@ -128,7 +129,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Please capture screen after the app has finished loading content or animation",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 8,
+    shortcutKey: 4,
   },
 
   // 4. Gesture
@@ -140,7 +141,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation: "Screen #: Gesture is not placed in the correct area.",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 1,
+    shortcutKey: 5,
   },
   {
     id: "wrong_swipe_direction",
@@ -151,7 +152,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Fix swipe direction, it should be where your finger is moving, not how the screen moves.",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 2,
+    shortcutKey: 6,
   },
   {
     id: "typing_gesture_wrong_placement",
@@ -162,7 +163,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Typing action should be placed on the focused input box not on the keyboard",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 3,
+    shortcutKey: 7,
   },
   {
     id: "wrong_gesture_type",
@@ -185,7 +186,6 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Please write the description in two parts. First part: the screen element you used (for example: button, list item, tab, icon, text box). Second part: what you wanted to do (for example: open the settings page).",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 5,
   },
   {
     id: "wrong_element_type",
@@ -196,6 +196,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
       "Screen #: Fix the screen element type in the first part of the description. This element is a [CORRECT_TYPE], not a [WRONG_TYPE]. Common types: button, list item, tab, icon, text box, toggle.",
     destination: "annotation",
     scope: "screen",
+    shortcutKey: 8,
   },
   {
     id: "vague_action_goal",
@@ -215,7 +216,6 @@ export const TRACE_ISSUES: TraceIssue[] = [
     annotation: "Screen #: Fix misspelling of [word]",
     destination: "annotation",
     scope: "screen",
-    shortcutKey: 6,
   },
   {
     id: "task_description_commentary",
