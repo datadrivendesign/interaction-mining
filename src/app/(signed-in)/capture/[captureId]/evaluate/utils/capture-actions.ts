@@ -1,7 +1,7 @@
 "use server";
 
 import { Capture, CaptureStatus, ReviewVerdict, Role } from "@prisma/client";
-import { updateCapture } from "@/lib/actions";
+import { updateCaptureRecord } from "@/lib/actions/capture-internal";
 import { ActionPayload } from "@/lib/actions/types";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -103,15 +103,13 @@ export async function denyCapture(
   }
   // handle update logic
   try {
-    const updateRes = await updateCapture(capture.id, {
+    // Throws on failure; the catch below reports it.
+    await updateCaptureRecord(capture.id, {
       status: CaptureStatus.PROCESSING,
       annotateFeedback,
       redactFeedback,
       summarizeFeedback,
     });
-    if (!updateRes.ok) {
-      throw new Error(updateRes.message ?? "Failed to update capture");
-    }
     // After the status write, so a failed denial never logs a rejection.
     await recordCaptureReview({
       captureId: capture.id,
@@ -163,12 +161,10 @@ export async function approveCapture(
   }
 
   try {
-    const updateRes = await updateCapture(capture.id, {
+    // Throws on failure; the catch below reports it.
+    await updateCaptureRecord(capture.id, {
       status: CaptureStatus.APPROVED,
     });
-    if (!updateRes.ok) {
-      throw new Error(updateRes.message ?? "Failed to update capture");
-    }
     await recordCaptureReview({
       captureId: capture.id,
       reviewerId: session.user.id,

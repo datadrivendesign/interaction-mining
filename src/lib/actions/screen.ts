@@ -5,7 +5,7 @@ import { Prisma, Screen, ScreenGesture } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { ActionPayload } from "./types";
 import { S3Client } from "@aws-sdk/client-s3";
-import { uploadAndroidAPIDataToS3 } from "../aws";
+import { uploadAndroidAPIDataToS3 } from "../aws/s3/server-internal";
 import {
   DraftFrameData,
   DraftTraceFormData,

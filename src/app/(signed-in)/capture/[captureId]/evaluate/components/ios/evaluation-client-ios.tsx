@@ -16,7 +16,7 @@ import { useCapture } from "@/lib/hooks/capture";
 import { ReviewVideoPanelIOS } from "./review-video-panel-ios";
 import { ReviewGalleryIOS } from "./review-gallery-ios";
 import { getDraftFiles } from "../../../edit/util";
-import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
+import { getSignedCaptureFileUrl } from "@/lib/actions";
 import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
 import { VerdictBar } from "../shared/verdict-bar";
 import {
@@ -174,7 +174,8 @@ export function EvaluationClientIOS({ isAdmin }: { isAdmin: boolean }) {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
-      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+      const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
+        captureId,
         latestDraftFile.fileKey,
       );
       if (!signedLatestDraftFileRes.ok) {

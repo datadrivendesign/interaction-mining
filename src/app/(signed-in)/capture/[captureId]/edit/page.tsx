@@ -47,9 +47,12 @@ import {
   getDraftFiles,
   handleDraftSave,
 } from "./util";
-import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
+import {
+  getSignedCaptureFileUrl,
+  revalidateCaptureCaches,
+  updateCapture,
+} from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
-import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
 import {
   ChecklistLayoutMode,
   FeedbackChecklist,
@@ -286,7 +289,8 @@ export default function Page() {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
-      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+      const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
+        captureId,
         latestDraftFile.fileKey,
       );
       if (!signedLatestDraftFileRes.ok) {
