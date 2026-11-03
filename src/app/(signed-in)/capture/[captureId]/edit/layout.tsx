@@ -1,25 +1,9 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Capture, getCapture, getCaptureFiles } from "@/lib/actions";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { getCapture, getCaptureFiles } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { auth } from "@/lib/auth/auth";
 import { isReviewer } from "@/lib/auth/roles";
-
-enum ErrorType {
-  NO_CAPTURE = "NO_CAPTURE",
-  NOT_INITIATED = "NOT_INITIATED",
-  IN_REVIEW = "IN_REVIEW",
-  WAITING_FINAL = "WAITING_FINAL",
-  NO_FILES = "NO_FILES",
-  APPROVED = "APPROVED",
-}
+import { CaptureGateError } from "../components/status-gate";
 
 export default async function Layout({
   params,
@@ -44,18 +28,18 @@ export default async function Layout({
 
   if (!captureRes?.ok || !capture) {
     return (
-      <Error
+      <CaptureGateError
         captureId={captureId}
         capture={capture}
-        errorType={ErrorType.NO_CAPTURE}
+        reason="NO_CAPTURE"
       />
     );
   } else if (capture?.status === CaptureStatus.CREATED) {
     return (
-      <Error
+      <CaptureGateError
         captureId={captureId}
         capture={capture}
-        errorType={ErrorType.NOT_INITIATED}
+        reason="NOT_INITIATED"
       />
     );
   } else if (
@@ -65,27 +49,27 @@ export default async function Layout({
     // The owner has handed the pen to the reviewer. Reviewers and admins may
     // still open the editor to fix the capture in place.
     return (
-      <Error
+      <CaptureGateError
         captureId={captureId}
         capture={capture}
-        errorType={ErrorType.IN_REVIEW}
+        reason="IN_REVIEW"
       />
     );
   } else if (capture?.status === CaptureStatus.REVIEWED) {
     // Nobody holds the pen while the final check is pending.
     return (
-      <Error
+      <CaptureGateError
         captureId={captureId}
         capture={capture}
-        errorType={ErrorType.WAITING_FINAL}
+        reason="WAITING_FINAL"
       />
     );
   } else if (capture?.status === CaptureStatus.APPROVED && capture.appId) {
     return (
-      <Error
+      <CaptureGateError
         captureId={captureId}
         capture={capture}
-        errorType={ErrorType.APPROVED}
+        reason="APPROVED"
       />
     );
   }
@@ -99,10 +83,10 @@ export default async function Layout({
     if (res.data.length === 0) {
       return (
         <>
-          <Error
+          <CaptureGateError
             captureId={captureId}
             capture={capture}
-            errorType={ErrorType.NO_FILES}
+            reason="NO_FILES"
           />
         </>
       );
@@ -112,84 +96,4 @@ export default async function Layout({
   });
 
   return render;
-}
-
-function Error({
-  captureId,
-  capture,
-  errorType,
-}: {
-  captureId: string;
-  capture: Capture | null;
-  errorType: ErrorType;
-}) {
-  const getError = (type: ErrorType) => {
-    switch (type) {
-      case ErrorType.NO_FILES:
-        return {
-          title: "Waiting for files...",
-          message:
-            "The capture you are looking for does not have any uploaded files. Please upload files to proceed.",
-          linkText: "Return to upload",
-          linkUrl: `/capture/${captureId}/upload`,
-        };
-      case ErrorType.NOT_INITIATED:
-        return {
-          title: "Intiate the capture",
-          message:
-            "The capture you are looking for has not been initiated yet or uploaded files. Please upload files and intialize the capture.",
-          linkText: "Return to upload",
-          linkUrl: `/capture/${captureId}/upload`,
-        };
-      case ErrorType.NO_CAPTURE:
-        return {
-          title: "Capture not found",
-          message: `Failed to fetch capture. Please try again later.`,
-          linkText: "Return to upload",
-          linkUrl: `/capture/${captureId}/upload`,
-        };
-      case ErrorType.IN_REVIEW:
-        return {
-          title: "Capture in review",
-          message:
-            "This capture is currently in review. If this status looks wrong (for example, it was recently sent back), refresh this page and try again.",
-          linkText: "Return to review",
-          linkUrl: `/capture/${captureId}/evaluate`,
-        };
-      case ErrorType.WAITING_FINAL:
-        return {
-          title: "Waiting for final check",
-          message:
-            "A reviewer has approved this capture. It is now waiting for the final check. You cannot change it until that check is done.",
-          linkText: "Return to dashboard",
-          linkUrl: `/dashboard`,
-        };
-      case ErrorType.APPROVED:
-        return {
-          title: "Capture already approved",
-          message:
-            "This capture has already been approved. You can view the completed trace.",
-          linkText: "View trace",
-          linkUrl: `/app/${capture!.appId}/trace/${capture!.traceId}`,
-        };
-    }
-  };
-  const error = getError(errorType);
-
-  return (
-    <div className="flex min-h-[calc(100dvh-64px)] w-dvw items-start justify-center p-8 md:items-center md:p-16">
-      <Card className="w-full max-w-screen-sm">
-        <CardHeader>
-          <CardTitle>{error.title}</CardTitle>
-          <CardDescription>{error.message}</CardDescription>
-          <Link href={error.linkUrl}>
-            <span className="inline-flex items-center underline">
-              <ArrowLeft className="mr-1 inline-block h-4 w-4" />
-              {error.linkText}
-            </span>
-          </Link>
-        </CardHeader>
-      </Card>
-    </div>
-  );
 }
