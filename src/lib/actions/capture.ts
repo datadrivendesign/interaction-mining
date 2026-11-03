@@ -1,7 +1,7 @@
 "use server";
 
 import { unstable_cache, revalidateTag } from "next/cache";
-import { CaptureStatus, Prisma, Role, ScreenGesture } from "@prisma/client";
+import { CaptureStatus, Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +17,7 @@ import {
   getCaptureForAccess,
   updateCaptureRecord,
 } from "./capture-internal";
+import { isAdmin } from "@/lib/auth/roles";
 
 export type ListedFiles = {
   fileKey: string;
@@ -359,10 +360,10 @@ export async function updateCapture(
       return { ok: false, message: "Capture not found.", data: null };
     }
 
-    const isAdmin = session.user.role === Role.ADMIN;
+    const admin = isAdmin(session);
     if (
       parsed.data.status !== undefined &&
-      !isAdmin &&
+      !admin &&
       !OWNER_EDITABLE_STATUSES.includes(capture.status)
     ) {
       return {
@@ -512,7 +513,7 @@ export async function deleteCaptureFile(
       return { ok: false, message: "Capture not found.", data: null };
     }
     if (
-      session.user.role !== Role.ADMIN &&
+      !isAdmin(session) &&
       !OWNER_EDITABLE_STATUSES.includes(capture.status)
     ) {
       return {

@@ -55,6 +55,7 @@ export async function generateMetadata({
 enum ErrorType {
   NO_CAPTURE = "NO_CAPTURE",
   IN_REVIEW = "IN_REVIEW",
+  WAITING_FINAL = "WAITING_FINAL",
   APPROVED = "APPROVED",
 }
 
@@ -83,6 +84,14 @@ export default async function Layout({
         captureId={captureId}
         capture={capture}
         errorType={ErrorType.IN_REVIEW}
+      />
+    );
+  } else if (capture?.status === CaptureStatus.REVIEWED) {
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.WAITING_FINAL}
       />
     );
   } else if (capture?.status === CaptureStatus.APPROVED && capture?.appId) {
@@ -122,6 +131,14 @@ function Error({
             "This capture is currently in review. If this status looks wrong (for example, it was recently sent back), refresh this page and try again.",
           linkText: "Return to review",
           linkUrl: `/capture/${captureId}/evaluate`,
+        };
+      case ErrorType.WAITING_FINAL:
+        return {
+          title: "Waiting for final check",
+          message:
+            "A reviewer has approved this capture. It is now waiting for the final check. You cannot change it until that check is done.",
+          linkText: "Return to dashboard",
+          linkUrl: `/dashboard`,
         };
       case ErrorType.APPROVED:
         return {

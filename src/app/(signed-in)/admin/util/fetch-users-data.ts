@@ -6,6 +6,7 @@ import { Role } from "@prisma/client";
 import { ManageableUser } from "./types";
 import { isValidObjectId } from "mongoose";
 import { requireAuth } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/roles";
 
 interface GetUsersForAdminParams {
   limit: number;
@@ -56,7 +57,7 @@ export const getUsersForAdmin = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view users.",
@@ -107,7 +108,7 @@ export const getUsersCount = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view users count.",
@@ -137,7 +138,7 @@ export const getFilterOptionsForUsers = async (): Promise<
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view filter options.",

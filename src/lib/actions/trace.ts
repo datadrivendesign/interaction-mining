@@ -1,9 +1,10 @@
 "use server";
-import { Prisma, Role, Trace as TracePrimitive } from "@prisma/client";
+import { Prisma, Trace as TracePrimitive } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth/auth";
+import { isAdmin } from "@/lib/auth/roles";
 
 export type Trace = Prisma.TraceGetPayload<{
   include: {
@@ -269,7 +270,7 @@ export async function createTrace(
     };
   }
 
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "User is not authorized.",
@@ -333,7 +334,7 @@ export async function updateTrace(
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return { ok: false, message: "User is not authorized.", data: null };
   }
   // parameter validations

@@ -1,6 +1,5 @@
 "use server";
 
-import { Role } from "@prisma/client";
 import { ActionPayload } from "@/lib/actions/types";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +10,7 @@ import {
   uploadUrlRequestSchema,
   type UploadUrlRequest,
 } from "./upload-purpose";
+import { isAdmin } from "@/lib/auth/roles";
 
 // Only these two live here now. The raw list/copy/delete/sign primitives moved
 // to `server-internal.ts` (server-only) because every export of a
@@ -85,7 +85,7 @@ export async function createUploadUrl(input: unknown): Promise<
 
   if (
     UPLOAD_PURPOSE_CONFIG[request.purpose].owner === "trace" &&
-    session.user.role !== Role.ADMIN
+    !isAdmin(session)
   ) {
     return { ok: false, message: "Not found.", data: null };
   }
@@ -93,10 +93,7 @@ export async function createUploadUrl(input: unknown): Promise<
   const ownerId = await resolveOwnerId(request);
   // A missing record and a foreign record are reported identically, so this
   // cannot be used to probe which ids exist.
-  if (
-    !ownerId ||
-    (ownerId !== session.user.id && session.user.role !== Role.ADMIN)
-  ) {
+  if (!ownerId || (ownerId !== session.user.id && !isAdmin(session))) {
     return { ok: false, message: "Not found.", data: null };
   }
 

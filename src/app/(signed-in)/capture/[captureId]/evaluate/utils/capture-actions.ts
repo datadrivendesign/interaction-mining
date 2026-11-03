@@ -1,6 +1,6 @@
 "use server";
 
-import { Capture, CaptureStatus, ReviewVerdict, Role } from "@prisma/client";
+import { Capture, CaptureStatus, ReviewVerdict } from "@prisma/client";
 import { updateCaptureRecord } from "@/lib/actions/capture-internal";
 import { ActionPayload } from "@/lib/actions/types";
 import { auth } from "@/lib/auth";
@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { REVIEWING_CAPTURE_ORDER_BY } from "@/app/(signed-in)/admin/util";
 import { ReviewVerdictSummary } from "./review-verdict-summary";
+import { isAdmin } from "@/lib/auth/roles";
 
 /**
  * Appends a row to the review log.
@@ -68,7 +69,7 @@ export async function validateApprovePermissions(): Promise<
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can approve captures",
@@ -94,7 +95,7 @@ export async function denyCapture(
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can approve captures",
@@ -152,7 +153,7 @@ export async function approveCapture(
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can approve captures",
@@ -203,7 +204,7 @@ export async function getNextReviewingCaptureId(
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can review captures",

@@ -15,6 +15,7 @@ import { useState } from "react";
 const RoleOptions = [
   { value: "", label: "All" },
   { value: Role.ADMIN, label: "Admin" },
+  { value: Role.REVIEWER, label: "Reviewer" },
   { value: Role.USER, label: "User" },
 ];
 

@@ -2,10 +2,11 @@
 
 import { ActionPayload } from "@/lib/actions/types";
 import { prisma } from "@/lib/prisma";
-import { CaptureStatus, Role } from "@prisma/client";
+import { CaptureStatus } from "@prisma/client";
 import { CaptureAdminView } from "./types";
 import { isValidObjectId } from "mongoose";
 import { requireAuth } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/roles";
 
 interface GetUserCapturesParams {
   limit: number;
@@ -64,7 +65,7 @@ export const getUserCaptures = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view user captures.",
@@ -128,7 +129,7 @@ export const getUserCapturesCount = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view user captures count.",
@@ -174,7 +175,7 @@ export const getUserAppsCount = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view user apps count.",
@@ -229,7 +230,7 @@ export const getFilterOptionsForUserCaptures = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can view filter options.",

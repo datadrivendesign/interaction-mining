@@ -1,8 +1,9 @@
 import "server-only";
 
-import { Capture, CaptureStatus, Prisma, Role } from "@prisma/client";
+import { Capture, CaptureStatus, Prisma } from "@prisma/client";
 import type { Session } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
 
 /**
  * Server-only capture helpers. Nothing here is a server action: `capture.ts`
@@ -17,11 +18,26 @@ export const OWNER_EDITABLE_STATUSES: readonly CaptureStatus[] = [
 ];
 
 /**
- * Loads a capture if the session may act on it: the owner, or an ADMIN.
- * Returns `null` both when the capture does not exist and when access is
- * denied, so callers cannot probe which ids exist.
- *
- * Phase 1 adds REVIEWER-while-REVIEWING here, and only here.
+ * Statuses in which a REVIEWER may open a capture they do not own: while it is
+ * in first-pass review, and read-only while it waits for the final check.
+ */
+export const REVIEWER_OPEN_STATUSES: readonly CaptureStatus[] = [
+  CaptureStatus.REVIEWING,
+  CaptureStatus.REVIEWED,
+];
+
+export function reviewerMayOpen(
+  session: Session | null | undefined,
+  status: CaptureStatus,
+): boolean {
+  return isReviewer(session) && REVIEWER_OPEN_STATUSES.includes(status);
+}
+
+/**
+ * Loads a capture if the session may act on it: the owner, an ADMIN, or a
+ * REVIEWER while the capture is REVIEWING / REVIEWED. Returns `null` both when
+ * the capture does not exist and when access is denied, so callers cannot
+ * probe which ids exist. This is the one place that rule lives.
  */
 export async function getCaptureForAccess(
   captureId: string,
@@ -34,10 +50,10 @@ export async function getCaptureForAccess(
   if (!capture) {
     return null;
   }
-  if (session.user.role === Role.ADMIN) {
+  if (isAdmin(session) || capture.userId === session.user.id) {
     return capture;
   }
-  return capture.userId === session.user.id ? capture : null;
+  return reviewerMayOpen(session, capture.status) ? capture : null;
 }
 
 /**

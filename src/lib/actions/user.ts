@@ -2,9 +2,10 @@
 
 import { requireAuth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ActionPayload } from "./types";
+import { isAdmin } from "@/lib/auth/roles";
 
 export type User = Prisma.UserGetPayload<{}>;
 
@@ -17,7 +18,7 @@ export async function getUser(
     // Name and email are PII: only the user themselves or an ADMIN may read
     // a user record. (The admin user page relied on its layout alone before.)
     const session = await requireAuth();
-    if (session.user.role !== Role.ADMIN && session.user.id !== userId) {
+    if (!isAdmin(session) && session.user.id !== userId) {
       return { ok: false, message: "User not found", data: null };
     }
 
@@ -55,7 +56,7 @@ export async function updateUser(userId: string, data: Prisma.UserUpdateInput) {
     // `data` can carry `role`, so this is ADMIN only. Server code that needs
     // to touch the signed-in user's own record writes with Prisma directly.
     const session = await requireAuth();
-    if (session.user.role !== Role.ADMIN) {
+    if (!isAdmin(session)) {
       return null;
     }
 

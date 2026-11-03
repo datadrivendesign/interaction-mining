@@ -9,11 +9,14 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { CaptureStatus } from "@prisma/client";
+import { auth } from "@/lib/auth/auth";
+import { isReviewer } from "@/lib/auth/roles";
 
 enum ErrorType {
   NO_CAPTURE = "NO_CAPTURE",
   NOT_INITIATED = "NOT_INITIATED",
   IN_REVIEW = "IN_REVIEW",
+  WAITING_FINAL = "WAITING_FINAL",
   NO_FILES = "NO_FILES",
   APPROVED = "APPROVED",
 }
@@ -26,6 +29,7 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const { captureId } = await params;
+  const session = await auth();
 
   // Add retry logic to handle cache staleness
   let captureRes = await getCapture({ id: captureId });
@@ -54,12 +58,26 @@ export default async function Layout({
         errorType={ErrorType.NOT_INITIATED}
       />
     );
-  } else if (capture?.status === CaptureStatus.REVIEWING) {
+  } else if (
+    capture?.status === CaptureStatus.REVIEWING &&
+    !isReviewer(session)
+  ) {
+    // The owner has handed the pen to the reviewer. Reviewers and admins may
+    // still open the editor to fix the capture in place.
     return (
       <Error
         captureId={captureId}
         capture={capture}
         errorType={ErrorType.IN_REVIEW}
+      />
+    );
+  } else if (capture?.status === CaptureStatus.REVIEWED) {
+    // Nobody holds the pen while the final check is pending.
+    return (
+      <Error
+        captureId={captureId}
+        capture={capture}
+        errorType={ErrorType.WAITING_FINAL}
       />
     );
   } else if (capture?.status === CaptureStatus.APPROVED && capture.appId) {
@@ -137,6 +155,14 @@ function Error({
             "This capture is currently in review. If this status looks wrong (for example, it was recently sent back), refresh this page and try again.",
           linkText: "Return to review",
           linkUrl: `/capture/${captureId}/evaluate`,
+        };
+      case ErrorType.WAITING_FINAL:
+        return {
+          title: "Waiting for final check",
+          message:
+            "A reviewer has approved this capture. It is now waiting for the final check. You cannot change it until that check is done.",
+          linkText: "Return to dashboard",
+          linkUrl: `/dashboard`,
         };
       case ErrorType.APPROVED:
         return {

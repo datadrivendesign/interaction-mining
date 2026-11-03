@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { auth } from "../auth";
 import { ActionPayload } from "./types";
+import { isAdmin } from "@/lib/auth/roles";
 
 export async function updateUserRole(
   userId: string,
@@ -18,7 +19,7 @@ export async function updateUserRole(
       data: null,
     };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Unauthorized: Only admins can update user roles",
