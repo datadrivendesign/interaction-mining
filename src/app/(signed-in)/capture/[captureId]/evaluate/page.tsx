@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { CaptureStatus, Role } from "@prisma/client";
+import { CaptureStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth/roles";
 import { getCapture } from "@/lib/actions";
+import { reviewerMayOpen } from "@/lib/actions/capture-internal";
 import { NotAuthorized } from "@/components/authorized";
 import { Platform } from "@/lib/utils";
 import { EvaluationClientIOS } from "./components/ios/evaluation-client-ios";
@@ -21,11 +23,15 @@ export default async function Page({
   if (!session?.user) {
     redirect(`/sign-in?callbackUrl=/capture/${captureId}/evaluate`);
   }
-  const isAdmin = session.user.role === Role.ADMIN;
-  // check if captureId matches the user
+  const admin = isAdmin(session);
+  // owner, admin, or a reviewer while the capture is in review
   const capture = await getCapture({ id: captureId, includes: { app: true } });
-  const isOwner = capture.data?.userId === session.user.id;
-  if ((!isOwner && !isAdmin) || !capture.data) {
+  if (!capture.data) {
+    return <NotAuthorized />;
+  }
+  const isOwner = capture.data.userId === session.user.id;
+  const reviewerAllowed = reviewerMayOpen(session, capture.data.status);
+  if (!isOwner && !admin && !reviewerAllowed) {
     return <NotAuthorized />;
   }
 
@@ -39,8 +45,8 @@ export default async function Page({
 
   const platform = capture.data.app.os;
   if (platform === Platform.IOS) {
-    return <EvaluationClientIOS isAdmin={isAdmin} />;
+    return <EvaluationClientIOS isAdmin={admin} />;
   } else {
-    return <EvaluationClientAndroid isAdmin={isAdmin} />;
+    return <EvaluationClientAndroid isAdmin={admin} />;
   }
 }

@@ -19,7 +19,7 @@ export function InfoColumn({ user }: { user: User }) {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">{user.name ?? "Unnamed User"}</h1>
         <p className="text-lg text-muted-foreground">{user.email}</p>
-        <Badge variant={user.role === Role.ADMIN ? "default" : "secondary"}>
+        <Badge variant={user.role === Role.USER ? "secondary" : "default"}>
           {user.role}
         </Badge>
       </div>

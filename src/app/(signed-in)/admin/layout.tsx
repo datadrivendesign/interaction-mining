@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth";
-import { Role } from "@prisma/client";
+import { isReviewer } from "@/lib/auth/roles";
 import { NotAuthorized } from "@/components/authorized";
 
 export default async function Layout({
@@ -13,7 +13,9 @@ export default async function Layout({
   if (!session?.user) {
     redirect(`/sign-in?callbackUrl=/`);
   }
-  if (session!.user!.role !== Role.ADMIN) {
+  // REVIEWER and ADMIN share the review queue; admin/users has its own
+  // ADMIN-only layout because it exposes worker names and emails.
+  if (!isReviewer(session)) {
     return <NotAuthorized />;
   }
 

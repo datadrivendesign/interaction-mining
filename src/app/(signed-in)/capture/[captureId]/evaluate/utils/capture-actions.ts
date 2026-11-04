@@ -1,13 +1,14 @@
 "use server";
 
-import { Capture, CaptureStatus, ReviewVerdict, Role } from "@prisma/client";
-import { updateCapture } from "@/lib/actions";
+import { Capture, CaptureStatus, ReviewVerdict } from "@prisma/client";
+import { updateCaptureRecord } from "@/lib/actions/capture-internal";
 import { ActionPayload } from "@/lib/actions/types";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { REVIEWING_CAPTURE_ORDER_BY } from "@/app/(signed-in)/admin/util";
 import { ReviewVerdictSummary } from "./review-verdict-summary";
+import { isAdmin } from "@/lib/auth/roles";
 
 /**
  * Appends a row to the review log.
@@ -68,7 +69,7 @@ export async function validateApprovePermissions(): Promise<
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can approve captures",
@@ -94,7 +95,7 @@ export async function denyCapture(
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can approve captures",
@@ -103,15 +104,13 @@ export async function denyCapture(
   }
   // handle update logic
   try {
-    const updateRes = await updateCapture(capture.id, {
+    // Throws on failure; the catch below reports it.
+    await updateCaptureRecord(capture.id, {
       status: CaptureStatus.PROCESSING,
       annotateFeedback,
       redactFeedback,
       summarizeFeedback,
     });
-    if (!updateRes.ok) {
-      throw new Error(updateRes.message ?? "Failed to update capture");
-    }
     // After the status write, so a failed denial never logs a rejection.
     await recordCaptureReview({
       captureId: capture.id,
@@ -154,7 +153,7 @@ export async function approveCapture(
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can approve captures",
@@ -163,12 +162,10 @@ export async function approveCapture(
   }
 
   try {
-    const updateRes = await updateCapture(capture.id, {
+    // Throws on failure; the catch below reports it.
+    await updateCaptureRecord(capture.id, {
       status: CaptureStatus.APPROVED,
     });
-    if (!updateRes.ok) {
-      throw new Error(updateRes.message ?? "Failed to update capture");
-    }
     await recordCaptureReview({
       captureId: capture.id,
       reviewerId: session.user.id,
@@ -207,7 +204,7 @@ export async function getNextReviewingCaptureId(
   if (!session?.user) {
     return { ok: false, message: "Unauthorized", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isAdmin(session)) {
     return {
       ok: false,
       message: "Only admins can review captures",

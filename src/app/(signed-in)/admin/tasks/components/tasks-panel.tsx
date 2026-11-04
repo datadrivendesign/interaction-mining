@@ -128,11 +128,6 @@ export function TasksPanel() {
     fetchReviewCaptures();
   }, [page, itemsPerPage, searchParams]);
 
-  // filter out captures with no user or email
-  const validCaptures = captures.filter(
-    (capture) => capture.user?.name !== null && capture.user?.email !== null,
-  );
-
   // pagination inputs for pagination component
   const totalPages = Math.ceil(reviewCapturesCount / itemsPerPage);
   // handle page change
@@ -261,7 +256,7 @@ export function TasksPanel() {
           </div>
         ) : (
           <TasksTable
-            captures={validCaptures}
+            captures={captures}
             handleTableUserClick={handleTableUserClick}
             handleTableAppClick={handleTableAppClick}
           />

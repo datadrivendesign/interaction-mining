@@ -1,11 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { App, Prisma, Role } from "@prisma/client";
+import { App, Prisma } from "@prisma/client";
 import { isObjectIdOrHexString } from "mongoose";
 import { Platform } from "@/lib/utils";
 import { auth } from "@/lib/auth";
 import { isProduction } from "@/lib/utils/env";
+import { isAdmin } from "@/lib/auth/roles";
 
 export type AppItemList = {
   id: string;
@@ -74,10 +75,10 @@ export async function getApps({
   if (isRequestingIOS && !allowIOS) {
     const session = await auth();
     const isProd = isProduction();
-    const isAdmin = session?.user?.role === Role.ADMIN;
+    const admin = isAdmin(session);
 
     // If iOS requested in prod by non-admins without allowIOS, force Android
-    if (isProd && !isAdmin) {
+    if (isProd && !admin) {
       osFilter = Platform.ANDROID;
     }
   }
@@ -134,10 +135,10 @@ export async function getAppsCount({
   if (isRequestingIOS && !allowIOS) {
     const session = await auth();
     const isProd = isProduction();
-    const isAdmin = session?.user?.role === Role.ADMIN;
+    const admin = isAdmin(session);
 
     // If iOS requested in prod by non-admins without allowIOS, force Android
-    if (isProd && !isAdmin) {
+    if (isProd && !admin) {
       osFilter = Platform.ANDROID;
     }
   }
@@ -190,10 +191,10 @@ export async function getAppsTraceCount({
   if (isRequestingIOS && !allowIOS) {
     const session = await auth();
     const isProd = isProduction();
-    const isAdmin = session?.user?.role === Role.ADMIN;
+    const admin = isAdmin(session);
 
     // If iOS requested in prod by non-admins without allowIOS, force Android
-    if (isProd && !isAdmin) {
+    if (isProd && !admin) {
       osFilter = Platform.ANDROID;
     }
   }

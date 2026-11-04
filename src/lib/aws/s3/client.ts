@@ -1,7 +1,8 @@
 "use client";
 
 import { ListedFiles } from "@/lib/actions";
-import { createUploadUrl, generateSignedCloudFrontURL } from "./server";
+import { createUploadUrl } from "./server";
+import { getSignedCaptureFileUrl } from "@/lib/actions/capture";
 import { ActionPayload } from "@/lib/actions/types";
 import type { UploadPurpose } from "./upload-purpose";
 import {
@@ -51,7 +52,10 @@ export type UploadResult = ListedFiles & { previewUnavailable: boolean };
  * that call can fail on its own — an expired session, a key misconfiguration,
  * a dropped packet — entirely independently of whether the bytes are stored.
  */
-async function resolveFileUrl(fileKey: string): Promise<string | null> {
+async function resolveFileUrl(
+  resourceId: string,
+  fileKey: string,
+): Promise<string | null> {
   if (process.env.USE_MINIO_STORE === "true") {
     return `${process.env.MINIO_ENDPOINT}/${process.env._AWS_UPLOAD_BUCKET}/${fileKey}`;
   }
@@ -61,7 +65,9 @@ async function resolveFileUrl(fileKey: string): Promise<string | null> {
     return `${process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL}/${fileKey}`;
   }
 
-  const signedUrlRes = await generateSignedCloudFrontURL(fileKey);
+  // Capture uploads: the signing action checks that the caller may see this
+  // capture and that the key sits under its prefix.
+  const signedUrlRes = await getSignedCaptureFileUrl(resourceId, fileKey);
   return signedUrlRes.ok ? signedUrlRes.data.signedUrl : null;
 }
 
@@ -142,7 +148,7 @@ export async function uploadToS3(
 
   // Past this point the object is in S3. Nothing below may re-send it or
   // report failure.
-  const fileUrl = await resolveFileUrl(fileKey);
+  const fileUrl = await resolveFileUrl(resourceId, fileKey);
   const degraded = fileUrl === null;
 
   reportUploadEvent("upload_finished", {

@@ -12,7 +12,7 @@ import {
   useEffect,
 } from "react";
 import Image from "next/image";
-import { App, Prisma, Role } from "@prisma/client";
+import { App, Prisma } from "@prisma/client";
 import { Loader2, Search } from "lucide-react";
 
 import { Input, InputIcon, InputRoot } from "@/components/ui/input-icon";
@@ -34,6 +34,7 @@ import { isProduction } from "@/lib/utils/env";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminPagination } from "@/components/ui/admin-pagination";
 import { Badge } from "@/components/ui/badge";
+import { isAdmin } from "@/lib/auth/roles";
 
 const GalleryContext = createContext<{
   apps: App[];
@@ -78,8 +79,8 @@ export function GalleryRoot({ children }: { children: React.ReactNode }) {
 
   const isProd = isProduction();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === Role.ADMIN;
-  const isIOSDisabled = isProd && !isAdmin;
+  const admin = isAdmin(session);
+  const isIOSDisabled = isProd && !admin;
   const queryPlatform = isIOSDisabled
     ? Platform.ANDROID
     : searchParams.get("platform") || Platform.ANDROID;
@@ -156,8 +157,8 @@ export function GallerySearch() {
   // FIXME: disable UI selection of iOS in prod for now, still in testing
   const { data: session } = useSession();
   const isProd = isProduction();
-  const isAdmin = session?.user?.role === Role.ADMIN;
-  const isIOSDisabled = isProd && !isAdmin;
+  const admin = isAdmin(session);
+  const isIOSDisabled = isProd && !admin;
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

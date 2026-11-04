@@ -2,7 +2,8 @@
 
 import { ActionPayload } from "@/lib/actions/types";
 import { prisma } from "@/lib/prisma";
-import { CaptureStatus, Prisma, Role } from "@prisma/client";
+import { CaptureStatus, Prisma } from "@prisma/client";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
 import { CaptureAdminView, REVIEWING_CAPTURE_ORDER_BY } from "./types";
 import { isValidObjectId } from "mongoose";
 import { requireAuth } from "@/lib/auth";
@@ -54,10 +55,10 @@ export const getReviewingCaptures = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isReviewer(session)) {
     return {
       ok: false,
-      message: "Unauthorized: Only admins can view reviewing captures.",
+      message: "Unauthorized: Only reviewers can view reviewing captures.",
       data: null,
     };
   }
@@ -88,7 +89,17 @@ export const getReviewingCaptures = async ({
     return { ok: false, message: "No captures found.", data: null };
   }
 
-  return { ok: true, message: "Captures found.", data: captures };
+  // Reviewers see the queue but not who recorded each capture.
+  const visible = isAdmin(session)
+    ? captures
+    : captures.map((capture) => ({
+        ...capture,
+        user: capture.user
+          ? { id: capture.user.id, name: null, email: null }
+          : null,
+      }));
+
+  return { ok: true, message: "Captures found.", data: visible };
 };
 
 /**
@@ -116,10 +127,10 @@ export const getReviewCapturesCount = async ({
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isReviewer(session)) {
     return {
       ok: false,
-      message: "Unauthorized: Only admins can view review captures count.",
+      message: "Unauthorized: Only reviewers can view review captures count.",
       data: null,
     };
   }
@@ -161,13 +172,15 @@ export const getFilterOptionsForTasks = async (): Promise<
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
-  if (session.user.role !== Role.ADMIN) {
+  if (!isReviewer(session)) {
     return {
       ok: false,
-      message: "Unauthorized: Only admins can view filter options.",
+      message: "Unauthorized: Only reviewers can view filter options.",
       data: null,
     };
   }
+  // The worker list (names, emails) is for admins; reviewers filter by app.
+  const includeUsers = isAdmin(session);
 
   // get unique user IDs from reviewing captures
   let userIds = await prisma.capture.findMany({
@@ -193,10 +206,12 @@ export const getFilterOptionsForTasks = async (): Promise<
 
   // fetch full user and app data
   const [users, apps] = await Promise.all([
-    prisma.user.findMany({
-      where: { id: { in: userIds.map((u) => u.userId as string) } },
-      select: { id: true, name: true, email: true },
-    }),
+    includeUsers
+      ? prisma.user.findMany({
+          where: { id: { in: userIds.map((u) => u.userId as string) } },
+          select: { id: true, name: true, email: true },
+        })
+      : Promise.resolve([]),
     prisma.app.findMany({
       where: { id: { in: appIds.map((a) => a.appId) } },
       select: {

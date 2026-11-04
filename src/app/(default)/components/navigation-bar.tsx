@@ -11,8 +11,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Role } from "@prisma/client";
 import LogoSm from "@/public/logo_sm.svg";
+import { isReviewer } from "@/lib/auth/roles";
 
 export default function NavigationBar() {
   return (
@@ -78,7 +78,7 @@ function SessionContent() {
             <Link href={`/dashboard`}>Dashboard</Link>
           </DropdownMenuItem>
 
-          {session.user?.role === Role.ADMIN && (
+          {isReviewer(session) && (
             <DropdownMenuItem asChild>
               <Link href={`/admin/tasks`}>Admin Dashboard</Link>
             </DropdownMenuItem>

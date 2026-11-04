@@ -8,21 +8,31 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { Role } from "@prisma/client";
+import { CaptureStatus, Role } from "@prisma/client";
+import { isAdmin } from "@/lib/auth/roles";
+import { reviewerMayOpen } from "@/lib/actions/capture-internal";
 
+/**
+ * Gates a capture page: the owner, an ADMIN, or a REVIEWER while the capture is
+ * in a reviewable status (`captureStatus` must be passed for that rule to
+ * apply). Unknown roles are rejected before the owner check, so every role in
+ * the enum must be listed in the default below.
+ */
 export async function AuthorizedRoute({
   children,
   allowedRoles,
   callbackUrl,
   resourceUserId,
+  captureStatus,
 }: {
   children: Readonly<React.ReactNode>;
   allowedRoles?: string[];
   callbackUrl?: string;
   resourceUserId?: string;
+  captureStatus?: CaptureStatus;
 }) {
   const ownershipEnforcedRoles = new Set(
-    allowedRoles ?? [Role.USER, Role.ADMIN],
+    allowedRoles ?? [Role.USER, Role.REVIEWER, Role.ADMIN],
   );
   let session = await auth();
 
@@ -36,8 +46,9 @@ export async function AuthorizedRoute({
   }
 
   const isOwner = resourceUserId! && session.user.id === resourceUserId;
-  const isAdmin = session.user.role === Role.ADMIN;
-  if (isOwner || isAdmin) {
+  const reviewerAllowed =
+    captureStatus !== undefined && reviewerMayOpen(session, captureStatus);
+  if (isOwner || isAdmin(session) || reviewerAllowed) {
     return <>{children}</>;
   }
   return <NotAuthorized />;

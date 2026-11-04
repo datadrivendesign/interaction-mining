@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isValidObjectId } from "mongoose";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth/auth";
+import { isAdmin } from "@/lib/auth/roles";
 
 export type Trace = Prisma.TraceGetPayload<{
   include: {
@@ -269,6 +270,14 @@ export async function createTrace(
     };
   }
 
+  if (!isAdmin(session)) {
+    return {
+      ok: false,
+      message: "User is not authorized.",
+      data: null,
+    };
+  }
+
   try {
     trace = await prisma.trace.create({
       data: {
@@ -318,6 +327,16 @@ export async function updateTrace(
   { includes }: { includes?: Prisma.TraceInclude } = {},
 ): Promise<ActionPayload<TracePrimitive>> {
   let trace = {} as TracePrimitive;
+
+  // Previously unauthenticated: any caller could rewrite any trace. Only the
+  // admin approve path and the legacy trace editor update traces.
+  const session = await requireAuth();
+  if (!session) {
+    return { ok: false, message: "User not authenticated.", data: null };
+  }
+  if (!isAdmin(session)) {
+    return { ok: false, message: "User is not authorized.", data: null };
+  }
   // parameter validations
   if (!id || !isValidObjectId(id)) {
     return { ok: false, message: "Invalid traceId provided.", data: null };

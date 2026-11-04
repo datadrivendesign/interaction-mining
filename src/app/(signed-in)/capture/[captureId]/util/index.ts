@@ -1,5 +1,4 @@
-import { ListedFiles } from "@/lib/actions";
-import { deleteFromS3, listFromS3 } from "@/lib/aws";
+import { deleteCaptureFile, getCaptureFiles, ListedFiles } from "@/lib/actions";
 
 import { toast } from "sonner";
 import { mutate, SWRConfiguration } from "swr";
@@ -16,7 +15,7 @@ export enum CaptureSWROperations {
  * @param fileKey - The key of the file to delete
  */
 export async function handleDeleteFile(captureId: string, fileKey: string) {
-  let res = await deleteFromS3(fileKey);
+  let res = await deleteCaptureFile(captureId, fileKey);
 
   if (res.ok) {
     toast.success("File deleted");
@@ -53,7 +52,7 @@ export async function handleDeleteFile(captureId: string, fileKey: string) {
 export async function fileFetcher([_, captureId]: [string, string]): Promise<
   ListedFiles[]
 > {
-  let res = await listFromS3(`uploads/${captureId}`, true);
+  let res = await getCaptureFiles(captureId);
 
   if (res.ok) {
     return res.data;
