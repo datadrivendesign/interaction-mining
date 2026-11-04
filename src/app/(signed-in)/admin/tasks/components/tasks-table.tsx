@@ -54,18 +54,24 @@ export function TasksTable({
               </Button>
             </TableCell>
             <TableCell>
-              <Link
-                href={`/admin/users/${capture.user?.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button
-                  variant="link"
-                  className="cursor-pointer p-2 hover:bg-transparent"
+              {capture.user?.email ? (
+                <Link
+                  href={`/admin/users/${capture.user.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  {capture.user?.email ?? "Unknown"}
-                </Button>
-              </Link>
+                  <Button
+                    variant="link"
+                    className="cursor-pointer p-2 hover:bg-transparent"
+                  >
+                    {capture.user.email}
+                  </Button>
+                </Link>
+              ) : (
+                <span className="p-2 text-sm text-muted-foreground">
+                  Unknown
+                </span>
+              )}
             </TableCell>
             <TableCell>
               <Button

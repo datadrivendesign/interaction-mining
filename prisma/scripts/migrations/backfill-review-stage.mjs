@@ -50,7 +50,7 @@ try {
           q: filter,
           u: {
             $set: {
-              stage: "REVIEWER",
+              stage: "FINAL",
               self_review: false,
               overturned: false,
               fixed_kinds: [],
