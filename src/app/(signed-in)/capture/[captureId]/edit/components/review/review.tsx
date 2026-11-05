@@ -20,7 +20,10 @@ export default function Review({
   const taskDescription = capture?.task?.description ?? "";
   // In review, the viewer is a reviewer, not the worker who recorded it.
   // Their own device preference must never fill in the worker's device.
-  const prefillFromProfile = capture?.status !== CaptureStatus.REVIEWING;
+  // Staff editing someone else's capture must not write their own device.
+  const prefillFromProfile =
+    capture?.status !== CaptureStatus.REVIEWING &&
+    capture?.status !== CaptureStatus.REVIEWED;
 
   return (
     <div className="flex h-full w-full">

@@ -17,6 +17,7 @@ import {
   objectIdSchema,
 } from "@/lib/aws/s3/upload-purpose";
 import {
+  FINAL_EDIT_KIND,
   getLatestDraftVersion,
   markReviewerApprovalOverturned,
   recordCaptureReview,
@@ -133,8 +134,13 @@ export async function approveCapture(
   try {
     const capture = await prisma.capture.findUnique({
       where: { id: id.data },
-      select: { userId: true, status: true },
+      select: { userId: true, status: true, stagedDraftVersion: true },
     });
+    // At the final check, a newer draft than the reviewer approved means the
+    // admin edited it before publishing. Read before the status moves.
+    const editedAtFinal =
+      capture?.status === CaptureStatus.REVIEWED &&
+      (await getLatestDraftVersion(id.data)) !== capture.stagedDraftVersion;
     const moved =
       capture &&
       ADMIN_APPROVABLE.includes(capture.status) &&
@@ -151,6 +157,7 @@ export async function approveCapture(
       stage: ReviewStage.FINAL,
       selfReview: capture.userId === session.user.id,
       summary: parsedSummary.data,
+      fixedKinds: editedAtFinal ? [FINAL_EDIT_KIND] : [],
     });
     return { ok: true, message: "Capture approved.", data: null };
   } catch (err) {

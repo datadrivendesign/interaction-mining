@@ -45,7 +45,7 @@ export function VerdictBar({
   onApprove: () => void;
   onDeny: () => void;
   onSkip: () => void;
-  /** Edit page link; shown while the capture is REVIEWING, draft or not. */
+  /** Edit page link; shown in every verdict mode, draft or not. */
   editHref?: string;
   additionalShortcuts?: { label: string; keys: string }[];
 }) {

@@ -44,11 +44,13 @@ export function taskListPathFor(mode: VerdictMode, isAdmin: boolean): string {
 }
 
 /**
- * Whether the viewer may open the edit page: REVIEWING only (REVIEWED is
- * read-only). No draft is fine; the edit page starts from the recording.
+ * Whether the viewer may open the edit page: a reviewer or admin on a
+ * REVIEWING capture, or the admin at the final check (the edit is recorded on
+ * the FINAL review row). No draft is fine; the edit page starts from the
+ * recording.
  */
 export function canEditInMode(mode: VerdictMode): boolean {
-  return mode === "review" || mode === "direct";
+  return mode !== "none";
 }
 
 /** The queue Skip and "next capture" walk for a mode. */
