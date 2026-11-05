@@ -3,7 +3,9 @@
 import { ComboboxOption } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
 import { AdminPagination } from "@/components/ui/admin-pagination";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
+import { CaptureStatus } from "@prisma/client";
 import { CaptureAdminView } from "@/lib/actions";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,11 +18,19 @@ import {
 import { FilterTask } from "./filter-task";
 import { TasksTable } from "./tasks-table";
 
+type TaskStage = typeof CaptureStatus.REVIEWING | typeof CaptureStatus.REVIEWED;
+
+const STAGE_TABS: { value: TaskStage; label: string }[] = [
+  { value: CaptureStatus.REVIEWED, label: "Final check" },
+  { value: CaptureStatus.REVIEWING, label: "Waiting for reviewer" },
+];
+
 /**
  * TasksPanel is the main panel for the tasks page
+ * @param isAdmin Admins get the stage tabs; reviewers only see REVIEWING.
  * @returns TasksPanel component
  */
-export function TasksPanel() {
+export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
   // constants
   const itemsPerPage = 10;
 
@@ -30,6 +40,11 @@ export function TasksPanel() {
   const page = searchParams.get("page")
     ? parseInt(searchParams.get("page") || "1")
     : 1;
+  // The admin's queue opens on the final check; reviewers have one queue.
+  const stage: TaskStage =
+    isAdmin && searchParams.get("stage") !== CaptureStatus.REVIEWING
+      ? CaptureStatus.REVIEWED
+      : CaptureStatus.REVIEWING;
 
   // handle loading state
   const [loading, setLoading] = useState(false);
@@ -100,10 +115,12 @@ export function TasksPanel() {
           page: page,
           userIds,
           appIds,
+          stage,
         }),
         getReviewCapturesCount({
           userIds,
           appIds,
+          stage,
         }),
       ]);
 
@@ -126,7 +143,7 @@ export function TasksPanel() {
       setLoading(false);
     };
     fetchReviewCaptures();
-  }, [page, itemsPerPage, searchParams]);
+  }, [page, itemsPerPage, searchParams, stage]);
 
   // pagination inputs for pagination component
   const totalPages = Math.ceil(reviewCapturesCount / itemsPerPage);
@@ -137,6 +154,7 @@ export function TasksPanel() {
         page,
         usersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -150,6 +168,7 @@ export function TasksPanel() {
         page,
         usersFiltered.map((user) => user.value),
         newAppsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -161,6 +180,7 @@ export function TasksPanel() {
         page,
         newUsersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -175,6 +195,7 @@ export function TasksPanel() {
         1,
         usersFiltered.map((user) => user.value),
         newAppsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -188,13 +209,29 @@ export function TasksPanel() {
         1,
         newUsersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
   const handleClearFilters = () => {
     setAppsFiltered([]);
     setUsersFiltered([]);
-    router.push(constructTaskPanelURL(1, [], []));
+    router.push(constructTaskPanelURL(1, [], [], stage));
+  };
+
+  // Switching queues keeps the filters and goes back to page 1.
+  const handleStageChange = (value: string) => {
+    if (value !== CaptureStatus.REVIEWING && value !== CaptureStatus.REVIEWED) {
+      return;
+    }
+    router.push(
+      constructTaskPanelURL(
+        1,
+        usersFiltered.map((user) => user.value),
+        appsFiltered.map((app) => app.value),
+        value,
+      ),
+    );
   };
 
   // handle logic for users and apps shown in table
@@ -243,6 +280,17 @@ export function TasksPanel() {
           handleClearFilters={handleClearFilters}
         />
       </div>
+      {isAdmin && (
+        <Tabs value={stage} onValueChange={handleStageChange}>
+          <TabsList aria-label="Review queue">
+            {STAGE_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} disabled={loading}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
       <p className="text-md mt-1 text-start font-bold tracking-tight">
         Pending Task Submissions{" "}
         <span className="text-muted-foreground">({reviewCapturesCount})</span>

@@ -19,7 +19,7 @@ export default async function TasksPanelPage() {
             showUsersLink={isAdmin(session)}
           />
         </div>
-        <TasksPanel />
+        <TasksPanel isAdmin={isAdmin(session)} />
       </div>
     </div>
   );
