@@ -12,6 +12,7 @@ import { ArrowLeft, Pause, Play } from "lucide-react";
 export function ReviewVideoPanelIOS({
   traceData,
   isAdmin,
+  listHref,
   videoRef,
   activeScreenId,
   commentsByScreen,
@@ -30,6 +31,8 @@ export function ReviewVideoPanelIOS({
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
+  /** Task list for this viewer's role. */
+  listHref: string;
   videoRef: React.RefObject<HTMLVideoElement>;
   activeScreenId: string | null;
   commentsByScreen: Record<string, ScreenComment[]>;
@@ -75,7 +78,7 @@ export function ReviewVideoPanelIOS({
             className="ml-auto text-[10px] font-semibold tracking-widest text-neutral-300 uppercase transition-colors hover:text-neutral-100 dark:text-neutral-700 dark:hover:text-neutral-800"
           >
             <ArrowLeft className="h-2 w-2" />
-            <Link href="/admin/tasks">Back to list</Link>
+            <Link href={listHref}>Back to list</Link>
           </Button>
         )}
       </div>

@@ -27,7 +27,7 @@ import {
 import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
-import { getVerdictMode } from "../shared/verdict-mode";
+import { getVerdictMode, taskListPathFor } from "../shared/verdict-mode";
 import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
@@ -131,6 +131,7 @@ export function EvaluationClientIOS({
   });
   // Staff reading a capture (reviewer or admin), as opposed to its owner.
   const isStaffView = verdictMode !== "none" || isAdmin;
+  const listPath = taskListPathFor(verdictMode, isAdmin);
 
   const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
@@ -139,6 +140,7 @@ export function EvaluationClientIOS({
       draftVersion,
       feedbackState,
       mode: verdictMode,
+      listPath,
     });
 
   const {
@@ -281,6 +283,7 @@ export function EvaluationClientIOS({
               <ReviewVideoPanelIOS
                 traceData={traceData}
                 isAdmin={isStaffView}
+                listHref={listPath}
                 videoRef={videoRef}
                 activeScreenId={activeScreenId}
                 commentsByScreen={feedbackState.commentsByScreen}
@@ -409,6 +412,7 @@ export function EvaluationClientIOS({
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
+          editHref={`/capture/${captureId}/edit`}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },

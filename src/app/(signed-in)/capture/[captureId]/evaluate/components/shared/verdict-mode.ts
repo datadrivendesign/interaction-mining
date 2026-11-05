@@ -33,6 +33,16 @@ export function getVerdictMode({
   return "none";
 }
 
+/**
+ * The task list a viewer goes back to. Reviewers have `/review/tasks`; the
+ * admin returns to the `/admin/tasks` tab matching the capture's stage.
+ */
+export function taskListPathFor(mode: VerdictMode, isAdmin: boolean): string {
+  if (mode === "final") return "/admin/tasks?stage=REVIEWED";
+  if (mode === "direct") return "/admin/tasks?stage=REVIEWING";
+  return isAdmin ? "/admin/tasks" : "/review/tasks";
+}
+
 /** The queue Skip and "next capture" walk for a mode. */
 export function queueStatusFor(mode: VerdictMode): CaptureStatus {
   return mode === "final" ? CaptureStatus.REVIEWED : CaptureStatus.REVIEWING;

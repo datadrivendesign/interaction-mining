@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import LogoSm from "@/public/logo_sm.svg";
-import { isReviewer } from "@/lib/auth/roles";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
 
 export default function NavigationBar() {
   return (
@@ -78,10 +78,16 @@ function SessionContent() {
             <Link href={`/dashboard`}>Dashboard</Link>
           </DropdownMenuItem>
 
-          {isReviewer(session) && (
+          {isAdmin(session) ? (
             <DropdownMenuItem asChild>
               <Link href={`/admin/tasks`}>Admin Dashboard</Link>
             </DropdownMenuItem>
+          ) : (
+            isReviewer(session) && (
+              <DropdownMenuItem asChild>
+                <Link href={`/review/tasks`}>Review Queue</Link>
+              </DropdownMenuItem>
+            )
           )}
 
           <DropdownMenuSeparator />

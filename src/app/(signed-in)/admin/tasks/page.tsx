@@ -19,7 +19,7 @@ export default async function TasksPanelPage() {
             showUsersLink={isAdmin(session)}
           />
         </div>
-        <TasksPanel isAdmin={isAdmin(session)} />
+        <TasksPanel isAdmin basePath="/admin/tasks" />
       </div>
     </div>
   );

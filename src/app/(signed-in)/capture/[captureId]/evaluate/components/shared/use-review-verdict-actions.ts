@@ -35,6 +35,7 @@ export function useReviewVerdictActions({
   draftVersion,
   feedbackState,
   mode,
+  listPath,
 }: {
   capture?: Capture | null;
   traceData?: TraceFormData;
@@ -42,6 +43,8 @@ export function useReviewVerdictActions({
   draftVersion: string | null;
   feedbackState: ReviewFeedbackState;
   mode: VerdictMode;
+  /** Where to go when the queue is empty or the next capture can't load. */
+  listPath: string;
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,7 +70,7 @@ export function useReviewVerdictActions({
       emptyQueueMessage = "Review queue complete.",
     ) => {
       if (!capture) {
-        router.push("/admin/tasks");
+        router.push(listPath);
         return;
       }
 
@@ -78,7 +81,7 @@ export function useReviewVerdictActions({
       if (!nextCaptureRes.ok) {
         console.error("Failed to fetch next capture:", nextCaptureRes.message);
         toast.success(`${successMessage} Returning to task list.`);
-        router.push("/admin/tasks");
+        router.push(listPath);
         return;
       }
 
@@ -89,9 +92,9 @@ export function useReviewVerdictActions({
       }
 
       toast.success(`${successMessage} ${emptyQueueMessage}`);
-      router.push("/admin/tasks");
+      router.push(listPath);
     },
-    [capture, queueStatus, router],
+    [capture, listPath, queueStatus, router],
   );
 
   // Approvals carry no issues: an approval means nothing was left to send

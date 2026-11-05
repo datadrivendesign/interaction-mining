@@ -9,9 +9,12 @@ import { ArrowLeft } from "lucide-react";
 export function ReviewContextPanelAndroid({
   traceData,
   isAdmin,
+  listHref,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
+  /** Task list for this viewer's role. */
+  listHref: string;
 }) {
   return (
     <aside className="flex h-full min-h-0 w-full flex-col">
@@ -32,7 +35,7 @@ export function ReviewContextPanelAndroid({
             className="ml-auto text-[10px] font-semibold tracking-widest text-neutral-300 uppercase transition-colors hover:text-neutral-100 dark:text-neutral-700 dark:hover:text-neutral-800"
           >
             <ArrowLeft className="h-2 w-2" />
-            <Link href="/admin/tasks">Back to list</Link>
+            <Link href={listHref}>Back to list</Link>
           </Button>
         )}
       </div>
