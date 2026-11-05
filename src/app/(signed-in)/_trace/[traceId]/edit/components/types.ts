@@ -42,6 +42,8 @@ export const ScreenSchema = z
         }),
       ),
       vh: z.string(),
+      // Recording position (see schema); null on older screens.
+      timestamp: z.number().nullable(),
       traceId: z.string(),
     }),
   )

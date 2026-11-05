@@ -320,7 +320,12 @@ export async function handleTraceSave(
     return { ok: false, message: uploadRes.message, data: null };
   }
 
-  const screens = data.screens.map((screen) => {
+  // Created in recording order too, so the old `created`/ObjectId fallback
+  // agrees with `timestamp`.
+  const orderedScreens = [...data.screens].sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+  const screens = orderedScreens.map((screen) => {
     const files = uploadRes.data.get(screen.id)!;
     const gesture = data.gestures[screen.id] ?? {
       type: null,
@@ -333,6 +338,7 @@ export async function handleTraceSave(
     return {
       src: files.src,
       vh: files.vh,
+      timestamp: screen.timestamp,
       created: new Date(),
       gesture,
       redactions: (data.redactions[screen.id] ?? []).map(

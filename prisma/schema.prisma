@@ -127,6 +127,11 @@ model Screen {
   redactions ScreenRedaction[]
   src        String
   vh         String
+  /// Where the screen sits in its recording, copied from the draft: seconds
+  /// into the video for iOS, Unix epoch milliseconds for Android. Screens are
+  /// ordered by it within a trace. Null on screens published before 2026-11,
+  /// which fall back to `created` and then the ObjectId counter.
+  timestamp  Float?
   traceId    String            @map("trace") @db.ObjectId
   trace      Trace             @relation(fields: [traceId], references: [id])
 
