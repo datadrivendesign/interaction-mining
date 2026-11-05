@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ExternalLink, ListFilter } from "lucide-react";
 import { ReviewStage } from "@prisma/client";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 import Link from "next/link";
@@ -42,7 +43,8 @@ export function TasksTable({
   handleTableUserClick: (capture: TaskRow) => void;
   handleTableAppClick: (capture: TaskRow) => void;
 }) {
-  const head = "text-muted-foreground";
+  const head =
+    "text-xs font-semibold tracking-wide text-muted-foreground uppercase";
   return (
     <Table>
       <TableHeader>
@@ -66,6 +68,9 @@ export function TasksTable({
           <TableHead className={head}>
             <span className="sr-only">Notes</span>
           </TableHead>
+          <TableHead className={head}>
+            <span className="sr-only">Open</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
 
@@ -73,14 +78,12 @@ export function TasksTable({
         {captures.map((capture) => (
           <TableRow key={capture.id} className="hover:bg-muted/10 border-0">
             {showWorker && (
-              <TableCell className="font-medium">
-                <Button
-                  variant="outline"
-                  className="hover cursor-pointer p-2"
+              <TableCell>
+                <FilterLink
+                  label={capture.user?.name ?? "Unknown"}
+                  title="Filter by this worker"
                   onClick={() => handleTableUserClick(capture)}
-                >
-                  {capture.user?.name ?? "Unknown"}
-                </Button>
+                />
               </TableCell>
             )}
             {showWorker && (
@@ -90,53 +93,38 @@ export function TasksTable({
                     href={`/admin/users/${capture.user.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                    title="Open this worker's captures"
                   >
-                    <Button
-                      variant="link"
-                      className="cursor-pointer p-2 hover:bg-transparent"
-                    >
-                      {capture.user.email}
-                    </Button>
+                    {capture.user.email}
                   </Link>
                 ) : (
-                  <span className="p-2 text-sm text-muted-foreground">
-                    Unknown
-                  </span>
+                  <span className="text-sm text-muted-foreground">Unknown</span>
                 )}
               </TableCell>
             )}
             <TableCell>
-              <Button
-                variant="outline"
-                className="hover cursor-pointer p-2"
+              <FilterLink
+                label={capture.app.metadata.name}
+                title="Filter by this app"
                 onClick={() => handleTableAppClick(capture)}
-              >
-                {capture.app.metadata.name}
-              </Button>
+              />
             </TableCell>
             <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
               {formatCaptureTimestampFromObjectId(capture.id) ?? "Unknown"}
             </TableCell>
-            <TableCell>
-              {stage === "SENT_BACK" ? (
-                // The worker holds it; the evaluate page opens again once
-                // they finish.
-                <span className="text-sm">{capture.task.description}</span>
-              ) : (
-                <Link
-                  href={`/capture/${capture.id}/evaluate`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button className="hover cursor-pointer p-2">
-                    {capture.task.description}
-                  </Button>
-                </Link>
-              )}
+            <TableCell className="min-w-48 whitespace-normal">
+              {/* Long tasks clamp to two lines; hover shows all of it. */}
+              <span
+                className="line-clamp-2 max-w-md text-sm font-semibold text-foreground"
+                title={capture.task.description}
+              >
+                {capture.task.description}
+              </span>
             </TableCell>
             {stage === "SENT_BACK" ? (
               <>
-                <TableCell className="text-sm tabular-nums">
+                <TableCell className="text-sm font-medium tabular-nums">
                   {capture.review.timesSentBack}
                 </TableCell>
                 <TableCell className="text-sm whitespace-nowrap">
@@ -150,7 +138,7 @@ export function TasksTable({
                 </TableCell>
               </>
             ) : (
-              <TableCell className="text-sm tabular-nums">
+              <TableCell className="text-sm font-medium tabular-nums">
                 {capture.review.attempt}
               </TableCell>
             )}
@@ -172,9 +160,51 @@ export function TasksTable({
                 )}
               </div>
             </TableCell>
+            <TableCell className="text-right">
+              {/* Sent back captures are with the worker; the evaluate page
+                  opens again once they finish. */}
+              {stage !== "SENT_BACK" && (
+                <Button size="sm" asChild>
+                  <Link
+                    href={`/capture/${capture.id}/evaluate`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open
+                    <ExternalLink className="size-3.5" aria-hidden />
+                  </Link>
+                </Button>
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+/** A table value that adds a filter when clicked. */
+function FilterLink({
+  label,
+  title,
+  onClick,
+}: {
+  label: string;
+  title: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="focus-visible:ring-ring inline-flex max-w-48 cursor-pointer items-center gap-1 rounded-sm text-left text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <span className="truncate">{label}</span>
+      <ListFilter
+        className="size-3 shrink-0 text-muted-foreground"
+        aria-hidden
+      />
+    </button>
   );
 }
