@@ -482,6 +482,13 @@ export default function Page() {
       ...nextOverrides,
     }));
 
+    // Only the owner may write feedback through `updateCapture`. A reviewer
+    // fixing a capture in review sees the upgraded text locally; the stored
+    // text is upgraded the next time the owner opens it.
+    if (capture.status === CaptureStatus.REVIEWING) {
+      return;
+    }
+
     void updateCapture(captureId, nextOverrides).then(async (result) => {
       if (result.ok) {
         await revalidateCaptureCaches();
@@ -789,6 +796,15 @@ export default function Page() {
         if (!saveRes.ok) {
           throw new Error(saveRes.message || "Failed to save draft");
         }
+        // A reviewer fixing a capture in review: the capture stays in
+        // review, and the fixed draft is what they approve on the review
+        // page. Only the owner submits (Finish → REVIEWING).
+        if (capture?.status === CaptureStatus.REVIEWING) {
+          await revalidateCaptureCaches();
+          toast.success("Fixes saved. Back to review.");
+          router.push(`/capture/${captureId}/evaluate`);
+          return;
+        }
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
         });
@@ -1053,7 +1069,11 @@ export default function Page() {
                         {isSubmitting && (
                           <Loader2 className="size-4 animate-spin" />
                         )}
-                        {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
+                        {stepIndex < TraceSteps.Review
+                          ? "Next"
+                          : capture?.status === CaptureStatus.REVIEWING
+                            ? "Save and return to review"
+                            : "Finish"}
                       </Button>
                       {activeStepReadiness.isBlockingNavigation &&
                       activeStepReadiness.reason ? (

@@ -6,41 +6,66 @@ import { prisma } from "@/lib/prisma";
 import { presignPutObject } from "./presign";
 import {
   UPLOAD_PURPOSE_CONFIG,
+  UploadPurpose,
   buildUploadKey,
   uploadUrlRequestSchema,
   type UploadUrlRequest,
 } from "./upload-purpose";
-import { isAdmin } from "@/lib/auth/roles";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
+import { OWNER_EDITABLE_STATUSES } from "@/lib/actions/capture-internal";
+import { CaptureStatus } from "@prisma/client";
+import type { Session } from "next-auth";
 
-// Only these two live here now. The raw list/copy/delete/sign primitives moved
+// Only `createUploadUrl` (and its private check) lives here now. The raw list/copy/delete/sign primitives moved
 // to `server-internal.ts` (server-only) because every export of a
 // `"use server"` module is a public endpoint.
 
 /**
- * Resolves the owning user id for an upload request.
+ * Decides whether the session may write a file for this request.
  *
- * `Capture.userId` is the worker who recorded a video; `Trace.userId` is the
- * annotator who processed it. They are distinct people, so each purpose has
- * exactly one authoritative owner — there is no fallback between them.
+ * Who may write follows who holds the pen (see `capture-internal.ts`):
+ * - Video: the capture's owner, or an admin (unchanged).
+ * - Draft: the owner while the capture is theirs to edit, a reviewer while it
+ *   is in review, an admin always. Without the status check an owner could
+ *   save a new draft after a reviewer approved, changing what is published.
+ * - Trace files: admins only. `traces/` is public and a trace belongs to the
+ *   worker, who must not be able to overwrite their own published screens.
  *
- * @returns the owner's user id, or `null` when the record does not exist.
+ * A missing record and a forbidden one both return false, so callers report
+ * them identically and the endpoint cannot be used to probe which ids exist.
  */
-async function resolveOwnerId(
+async function mayUpload(
   request: UploadUrlRequest,
-): Promise<string | null> {
-  if (UPLOAD_PURPOSE_CONFIG[request.purpose].owner === "capture") {
-    const capture = await prisma.capture.findUnique({
+  session: Session,
+): Promise<boolean> {
+  if (UPLOAD_PURPOSE_CONFIG[request.purpose].owner === "trace") {
+    if (!isAdmin(session)) return false;
+    const trace = await prisma.trace.findUnique({
       where: { id: request.resourceId },
-      select: { userId: true },
+      select: { id: true },
     });
-    return capture?.userId ?? null;
+    return trace !== null;
   }
 
-  const trace = await prisma.trace.findUnique({
+  const capture = await prisma.capture.findUnique({
     where: { id: request.resourceId },
-    select: { userId: true },
+    select: { userId: true, status: true },
   });
-  return trace?.userId ?? null;
+  if (!capture) return false;
+
+  const inReview = capture.status === CaptureStatus.REVIEWING;
+
+  if (isAdmin(session)) return true;
+
+  const isOwner = capture.userId === session.user.id;
+  if (request.purpose === UploadPurpose.CAPTURE_DRAFT) {
+    return (
+      (isOwner && OWNER_EDITABLE_STATUSES.includes(capture.status)) ||
+      (inReview && isReviewer(session))
+    );
+  }
+
+  return isOwner;
 }
 
 /**
@@ -83,17 +108,7 @@ export async function createUploadUrl(input: unknown): Promise<
     return { ok: false, message: "Unauthorized", data: null };
   }
 
-  if (
-    UPLOAD_PURPOSE_CONFIG[request.purpose].owner === "trace" &&
-    !isAdmin(session)
-  ) {
-    return { ok: false, message: "Not found.", data: null };
-  }
-
-  const ownerId = await resolveOwnerId(request);
-  // A missing record and a foreign record are reported identically, so this
-  // cannot be used to probe which ids exist.
-  if (!ownerId || (ownerId !== session.user.id && !isAdmin(session))) {
+  if (!(await mayUpload(request, session))) {
     return { ok: false, message: "Not found.", data: null };
   }
 

@@ -8,29 +8,64 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { VerdictMode } from "./verdict-mode";
+import { SaveProgress } from "./use-review-verdict-actions";
+
+const DENY_LABEL: Record<Exclude<VerdictMode, "none">, string> = {
+  review: "Send back",
+  direct: "Deny",
+  final: "Deny",
+};
+
+const APPROVE_HINT: Record<Exclude<VerdictMode, "none">, string> = {
+  review: "Approve sends it to final check",
+  direct: "Approve publishes the trace",
+  final: "Approve publishes the trace",
+};
 
 export function VerdictBar({
+  mode,
+  hasDraft,
   issueSummary,
   isSubmitting,
+  saveProgress,
   onApprove,
   onDeny,
   onSkip,
   additionalShortcuts = [],
 }: {
+  mode: Exclude<VerdictMode, "none">;
+  /** False when the worker never saved a draft: nothing to approve. */
+  hasDraft: boolean;
   issueSummary: string;
   isSubmitting: boolean;
+  saveProgress: SaveProgress | null;
   onApprove: () => void;
   onDeny: () => void;
   onSkip: () => void;
   additionalShortcuts?: { label: string; keys: string }[];
 }) {
+  const canApprove = hasDraft;
+  const denyLabel = DENY_LABEL[mode];
+
+  let status = issueSummary;
+  if (saveProgress) {
+    status = `Saving screens ${saveProgress.done} of ${saveProgress.total}. Keep this page open.`;
+  } else if (!canApprove) {
+    status = "No draft saved. Send back to worker.";
+  }
+
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
-      <p className="min-w-0 flex-1 truncate text-xs text-neutral-600 dark:text-neutral-300">
-        {issueSummary}
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-neutral-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-950">
+      <p
+        className="min-w-0 flex-1 basis-48 truncate text-xs text-neutral-600 dark:text-neutral-300"
+        aria-live="polite"
+        title={canApprove ? APPROVE_HINT[mode] : undefined}
+      >
+        {status}
       </p>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"
           variant="outline"
@@ -43,24 +78,26 @@ export function VerdictBar({
             Ctrl+Shift+S
           </span>
         </Button>
-        <Button
-          size="sm"
-          className="min-w-0 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:text-white! dark:hover:bg-green-800!"
-          onClick={onApprove}
-          disabled={isSubmitting}
-        >
-          <span>Approve</span>
-          <span className="text-[10px] font-normal text-green-100">
-            Ctrl+Shift+A
-          </span>
-        </Button>
+        {canApprove && (
+          <Button
+            size="sm"
+            className="min-w-0 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:text-white! dark:hover:bg-green-800!"
+            onClick={onApprove}
+            disabled={isSubmitting}
+          >
+            <span>Approve</span>
+            <span className="text-[10px] font-normal text-green-100">
+              Ctrl+Shift+A
+            </span>
+          </Button>
+        )}
         <Button
           size="sm"
           className="min-w-0 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:text-white! dark:hover:bg-red-800!"
           onClick={onDeny}
           disabled={isSubmitting}
         >
-          <span>Deny</span>
+          <span>{denyLabel}</span>
           <span className="text-[10px] font-normal text-red-100">
             Ctrl+Shift+D
           </span>
@@ -87,12 +124,14 @@ export function VerdictBar({
               </p>
             </div>
             <div className="space-y-1 text-xs text-neutral-700 dark:text-neutral-300">
+              {canApprove && (
+                <div className="flex items-center justify-between gap-3">
+                  <span>Approve capture</span>
+                  <Kbd className="text-[10px]">Ctrl+Shift+A</Kbd>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3">
-                <span>Approve capture</span>
-                <Kbd className="text-[10px]">Ctrl+Shift+A</Kbd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span>Deny capture</span>
+                <span>{denyLabel} capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+D</Kbd>
               </div>
               <div className="flex items-center justify-between gap-3">

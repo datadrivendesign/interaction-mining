@@ -278,11 +278,28 @@ export async function createTrace(
     };
   }
 
+  // A trace built from a capture belongs to the worker who recorded it, not
+  // the admin who approved it
+  let ownerId: string | null = session.user.id ?? null;
+  if (data.captureId) {
+    if (!isValidObjectId(data.captureId)) {
+      return { ok: false, message: "Invalid captureId.", data: null };
+    }
+    const capture = await prisma.capture.findUnique({
+      where: { id: data.captureId },
+      select: { userId: true },
+    });
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+    ownerId = capture.userId;
+  }
+
   try {
     trace = await prisma.trace.create({
       data: {
         ...data,
-        user: { connect: { id: session.user.id } },
+        ...(ownerId ? { user: { connect: { id: ownerId } } } : {}),
       },
       include: {
         app: includes?.app || false,

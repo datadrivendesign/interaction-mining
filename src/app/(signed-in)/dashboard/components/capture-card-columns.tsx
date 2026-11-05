@@ -17,7 +17,7 @@ import {
   getCapturesPaginated,
   revalidateCaptureCaches,
 } from "@/lib/actions";
-import { statusConfig } from "./config";
+import { COLUMN_QUERY_STATUSES, statusConfig } from "./config";
 import { CaptureCard } from "./capture-card";
 
 type DashboardCapture = Prisma.CaptureGetPayload<{
@@ -69,7 +69,7 @@ export function CaptureColumn({
                 <CaptureCard
                   key={capture.id}
                   capture={capture}
-                  status={status as CaptureStatus}
+                  status={capture.status}
                   onDelete={onDelete}
                   isDeleting={deletingIds.has(capture.id)}
                 />
@@ -154,7 +154,7 @@ export function CaptureCardColumns({
     }));
     const res = await getCapturesPaginated({
       userId,
-      status,
+      status: COLUMN_QUERY_STATUSES[status],
       cursor: column.nextCursor,
       limit: 10,
       includes: { app: true, task: true },

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { CaptureStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isAdmin } from "@/lib/auth/roles";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
 import { getCapture } from "@/lib/actions";
 import { reviewerMayOpen } from "@/lib/actions/capture-internal";
 import { NotAuthorized } from "@/components/authorized";
@@ -45,8 +45,15 @@ export default async function Page({
 
   const platform = capture.data.app.os;
   if (platform === Platform.IOS) {
-    return <EvaluationClientIOS isAdmin={admin} />;
+    return (
+      <EvaluationClientIOS isAdmin={admin} isReviewer={isReviewer(session)} />
+    );
   } else {
-    return <EvaluationClientAndroid isAdmin={admin} />;
+    return (
+      <EvaluationClientAndroid
+        isAdmin={admin}
+        isReviewer={isReviewer(session)}
+      />
+    );
   }
 }

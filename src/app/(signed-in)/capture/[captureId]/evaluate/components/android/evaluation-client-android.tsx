@@ -32,12 +32,23 @@ import {
 import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
+import { getVerdictMode } from "../shared/verdict-mode";
+import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 
-export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
+export function EvaluationClientAndroid({
+  isAdmin,
+  isReviewer,
+}: {
+  isAdmin: boolean;
+  isReviewer: boolean;
+}) {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
+  // Draft the page loaded (`draft-<ms>`); a reviewer approves exactly this one.
+  const [draftVersion, setDraftVersion] = useState<string | null>(null);
+  const [hasNoDraft, setHasNoDraft] = useState(false);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
@@ -110,12 +121,21 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
-  const { isSubmitting, handleApprove, handleDeny, handleSkip } =
+  const verdictMode = getVerdictMode({
+    isAdmin,
+    isReviewer,
+    status: capture?.status,
+  });
+  // Staff reading a capture (reviewer or admin), as opposed to its owner.
+  const isStaffView = verdictMode !== "none" || isAdmin;
+
+  const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
       capture,
       traceData,
+      draftVersion,
       feedbackState,
-      isAdmin,
+      mode: verdictMode,
     });
 
   useEffect(() => {
@@ -174,7 +194,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         return;
       }
       if (files.data.length === 0) {
-        console.error("No draft files found");
+        setHasNoDraft(true);
         return;
       }
       const regexFileVersionRule = /draft-(\d+)\.json$/;
@@ -188,6 +208,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
+      setDraftVersion(draftVersionFromKey(latestDraftFile.fileKey));
       const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
         captureId,
         latestDraftFile.fileKey,
@@ -300,7 +321,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             {traceData && capture && (
               <ReviewContextPanelAndroid
                 traceData={traceData}
-                isAdmin={isAdmin}
+                isAdmin={isStaffView}
               />
             )}
           </ResizablePanel>
@@ -373,10 +394,13 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
-      {isAdmin && capture && traceData && (
+      {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
+          mode={verdictMode}
+          hasDraft={!!traceData && !!draftVersion}
           issueSummary={issueSummary}
           isSubmitting={isSubmitting}
+          saveProgress={saveProgress}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}

@@ -258,3 +258,29 @@ export async function generateSignedCloudFrontURL(
     };
   }
 }
+
+const bucket = () => process.env._AWS_UPLOAD_BUCKET!;
+
+/**
+ * Lists every key under a prefix, following continuation tokens. No URLs are
+ * signed; use this when only the keys matter (the draft version check).
+ * Throws on S3 errors.
+ */
+export async function listKeys(prefix: string): Promise<string[]> {
+  const keys: string[] = [];
+  let token: string | undefined;
+  do {
+    const res = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: bucket(),
+        Prefix: prefix,
+        ContinuationToken: token,
+      }),
+    );
+    for (const item of res.Contents ?? []) {
+      if (item.Key) keys.push(item.Key);
+    }
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return keys;
+}
