@@ -2,35 +2,136 @@
 
 import { ActionPayload } from "@/lib/actions/types";
 import { prisma } from "@/lib/prisma";
-import { CaptureStatus, Prisma } from "@prisma/client";
+import {
+  CaptureStatus,
+  Prisma,
+  ReviewStage,
+  ReviewVerdict,
+} from "@prisma/client";
 import { isAdmin, isReviewer } from "@/lib/auth/roles";
-import { CaptureAdminView, REVIEWING_CAPTURE_ORDER_BY } from "./types";
+import {
+  REVIEWING_CAPTURE_ORDER_BY,
+  TASK_STAGES,
+  TaskReviewInfo,
+  TaskRow,
+  TaskStage,
+} from "./types";
 import { isValidObjectId } from "mongoose";
 import type { Session } from "next-auth";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 
-/**
- * The two review queues. Reviewers only see REVIEWING; the admin also has
- * REVIEWED (waiting for the final check).
+/*
+ * Review queues. Reviewers (and admins) list REVIEWING at /review/tasks; the
+ * admin's /admin/tasks adds REVIEWED (final check) and SENT_BACK (PROCESSING
+ * captures that have a rejection, i.e. waiting on the worker).
  */
-const taskStageSchema = z
-  .enum([CaptureStatus.REVIEWING, CaptureStatus.REVIEWED])
-  .default(CaptureStatus.REVIEWING);
+const taskStageSchema = z.enum(TASK_STAGES).default("REVIEWING");
 
-/** The status to list, or null when the stage is invalid or not allowed. */
-function queueStatusFor(
-  session: Session,
-  stage: unknown,
-): CaptureStatus | null {
+/** The stage to list, or null when it is invalid or not allowed. */
+function allowedStage(session: Session, stage: unknown): TaskStage | null {
   const parsed = taskStageSchema.safeParse(stage);
   if (!parsed.success) {
     return null;
   }
-  if (parsed.data === CaptureStatus.REVIEWED && !isAdmin(session)) {
+  if (parsed.data !== "REVIEWING" && !isAdmin(session)) {
     return null;
   }
   return parsed.data;
+}
+
+/**
+ * Capture filter for a stage. SENT_BACK starts from the review log (one
+ * group per rejected capture) and then keeps the ones still with the worker,
+ * instead of scanning every PROCESSING capture.
+ */
+async function stageWhere(stage: TaskStage): Promise<Prisma.CaptureWhereInput> {
+  if (stage !== "SENT_BACK") {
+    return { status: stage };
+  }
+  const rejected = await prisma.captureReview.groupBy({
+    by: ["captureId"],
+    where: { verdict: ReviewVerdict.REJECTED },
+  });
+  return {
+    status: CaptureStatus.PROCESSING,
+    id: { in: rejected.map((row) => row.captureId) },
+  };
+}
+
+function filterWhere(
+  userIds?: string[],
+  appIds?: string[],
+): Prisma.CaptureWhereInput {
+  return {
+    ...(userIds && userIds.length > 0 ? { userId: { in: userIds } } : {}),
+    ...(appIds && appIds.length > 0 ? { appId: { in: appIds } } : {}),
+  };
+}
+
+function validateFilters(userIds?: string[], appIds?: string[]) {
+  if (userIds && userIds.some((id) => !isValidObjectId(id))) {
+    return "Invalid user IDs provided.";
+  }
+  if (appIds && appIds.some((id) => !isValidObjectId(id))) {
+    return "Invalid app IDs provided.";
+  }
+  return null;
+}
+
+/**
+ * Review-log facts for one page of captures, from a single query over the
+ * page's ids. `lastBy` is the reviewer behind the row this stage cares about
+ * (REVIEWED: the reviewer who approved; SENT_BACK: who sent it back).
+ */
+async function reviewInfoFor(
+  captureIds: string[],
+  stage: TaskStage,
+  includeNames: boolean,
+): Promise<Map<string, TaskReviewInfo>> {
+  const rows =
+    captureIds.length === 0
+      ? []
+      : await prisma.captureReview.findMany({
+          where: { captureId: { in: captureIds } },
+          orderBy: { createdAt: "asc" },
+          select: {
+            captureId: true,
+            verdict: true,
+            stage: true,
+            selfReview: true,
+            reviewer: { select: { name: true, email: true } },
+          },
+        });
+
+  const info = new Map<string, TaskReviewInfo>();
+  for (const id of captureIds) {
+    const mine = rows.filter((row) => row.captureId === id);
+    const timesSentBack = mine.filter(
+      (row) => row.verdict === ReviewVerdict.REJECTED,
+    ).length;
+    const relevant =
+      stage === "REVIEWED"
+        ? mine.findLast(
+            (row) =>
+              row.verdict === ReviewVerdict.APPROVED &&
+              row.stage === ReviewStage.REVIEWER,
+          )
+        : stage === "SENT_BACK"
+          ? mine.findLast((row) => row.verdict === ReviewVerdict.REJECTED)
+          : undefined;
+    info.set(id, {
+      attempt: timesSentBack + 1,
+      timesSentBack,
+      lastBy:
+        relevant && includeNames
+          ? (relevant.reviewer?.name ?? relevant.reviewer?.email ?? "Unknown")
+          : null,
+      lastStage: relevant?.stage ?? null,
+      selfReviewed: relevant?.selfReview ?? false,
+    });
+  }
+  return info;
 }
 
 interface GetReviewingCapturesParams {
@@ -38,18 +139,18 @@ interface GetReviewingCapturesParams {
   page: number;
   userIds?: string[];
   appIds?: string[];
-  /** REVIEWING (default) or REVIEWED; REVIEWED is admin only. */
-  stage?: CaptureStatus;
+  /** REVIEWING (default); REVIEWED and SENT_BACK are admin only. */
+  stage?: TaskStage;
 }
 
 /**
- * Gets the captures in review for the admin panel with pagination capability.
+ * Gets one page of a review queue.
  * @param limit - The number of captures to return per page.
  * @param page - The page number to return. Must be greater than 0.
  * @param userIds - The user IDs to filter by (optional).
  * @param appIds - The app IDs to filter by (optional).
- * @param stage - REVIEWING (default) or REVIEWED (admin only).
- * @returns ActionPayload<CaptureAdminView[]>
+ * @param stage - REVIEWING (default), REVIEWED or SENT_BACK (admin only).
+ * @returns ActionPayload<TaskRow[]>
  */
 export const getReviewingCaptures = async ({
   limit,
@@ -57,30 +158,27 @@ export const getReviewingCaptures = async ({
   userIds,
   appIds,
   stage,
-}: GetReviewingCapturesParams): Promise<ActionPayload<CaptureAdminView[]>> => {
-  // parameter validations
-  if (page <= 0) {
+}: GetReviewingCapturesParams): Promise<ActionPayload<TaskRow[]>> => {
+  if (!Number.isInteger(page) || page <= 0) {
     return {
       ok: false,
       message: "Page number must be greater than 0.",
       data: null,
     };
   }
-
-  if (limit <= 0) {
-    return { ok: false, message: "Limit must be greater than 0.", data: null };
+  if (!Number.isInteger(limit) || limit <= 0 || limit > 100) {
+    return {
+      ok: false,
+      message: "Limit must be between 1 and 100.",
+      data: null,
+    };
+  }
+  const filterError = validateFilters(userIds, appIds);
+  if (filterError) {
+    return { ok: false, message: filterError, data: null };
   }
 
-  if (userIds && userIds.some((id) => !isValidObjectId(id))) {
-    return { ok: false, message: "Invalid user IDs provided.", data: null };
-  }
-
-  if (appIds && appIds.some((id) => !isValidObjectId(id))) {
-    return { ok: false, message: "Invalid app IDs provided.", data: null };
-  }
-  // check if user is authenticated and admin
   const session = await requireAuth();
-
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
@@ -91,54 +189,57 @@ export const getReviewingCaptures = async ({
       data: null,
     };
   }
-  const status = queueStatusFor(session, stage);
-  if (!status) {
+  const queue = allowedStage(session, stage);
+  if (!queue) {
     return { ok: false, message: "Invalid review stage.", data: null };
   }
-  // get reviewing captures
-  const captures = await prisma.capture.findMany({
-    where: {
-      status,
-      ...(userIds && userIds.length > 0 ? { userId: { in: userIds } } : {}),
-      ...(appIds && appIds.length > 0 ? { appId: { in: appIds } } : {}),
-    },
-    include: {
-      task: true,
-      app: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+
+  try {
+    const captures = await prisma.capture.findMany({
+      where: {
+        ...(await stageWhere(queue)),
+        ...filterWhere(userIds, appIds),
       },
-    },
-    orderBy: REVIEWING_CAPTURE_ORDER_BY,
-    take: limit,
-    skip: (page - 1) * limit,
-  });
-  // return payloads
-  if (!captures) {
-    return { ok: false, message: "No captures found.", data: null };
+      include: {
+        task: true,
+        app: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: REVIEWING_CAPTURE_ORDER_BY,
+      take: limit,
+      skip: (page - 1) * limit,
+    });
+
+    const admin = isAdmin(session);
+    const reviews = await reviewInfoFor(
+      captures.map((capture) => capture.id),
+      queue,
+      admin,
+    );
+
+    const rows: TaskRow[] = captures.map((capture) => ({
+      ...capture,
+      // Reviewers see the queue but not who recorded each capture.
+      user:
+        admin || !capture.user
+          ? capture.user
+          : { id: capture.user.id, name: null, email: null },
+      review: reviews.get(capture.id)!,
+      isOwn: capture.userId === session.user.id,
+    }));
+
+    return { ok: true, message: "Captures found.", data: rows };
+  } catch (err) {
+    console.error("Failed to fetch review queue:", err);
+    return { ok: false, message: "Failed to fetch captures.", data: null };
   }
-
-  // Reviewers see the queue but not who recorded each capture.
-  const visible = isAdmin(session)
-    ? captures
-    : captures.map((capture) => ({
-        ...capture,
-        user: capture.user
-          ? { id: capture.user.id, name: null, email: null }
-          : null,
-      }));
-
-  return { ok: true, message: "Captures found.", data: visible };
 };
 
 /**
- * Gets the total number of captures in need of review
+ * Gets the number of captures in a review queue.
  * @param userIds - The user IDs to filter by (optional).
  * @param appIds - The app IDs to filter by (optional).
+ * @param stage - REVIEWING (default), REVIEWED or SENT_BACK (admin only).
  * @returns ActionPayload<number>
  */
 export const getReviewCapturesCount = async ({
@@ -148,15 +249,10 @@ export const getReviewCapturesCount = async ({
 }: Omit<GetReviewingCapturesParams, "limit" | "page">): Promise<
   ActionPayload<number>
 > => {
-  // parameter validations
-  if (userIds && userIds.some((id) => !isValidObjectId(id))) {
-    return { ok: false, message: "Invalid user IDs provided.", data: null };
+  const filterError = validateFilters(userIds, appIds);
+  if (filterError) {
+    return { ok: false, message: filterError, data: null };
   }
-
-  if (appIds && appIds.some((id) => !isValidObjectId(id))) {
-    return { ok: false, message: "Invalid app IDs provided.", data: null };
-  }
-  // check if user is authenticated and admin
   const session = await requireAuth();
   if (!session) {
     return { ok: false, message: "User not authenticated.", data: null };
@@ -168,20 +264,23 @@ export const getReviewCapturesCount = async ({
       data: null,
     };
   }
-  const status = queueStatusFor(session, stage);
-  if (!status) {
+  const queue = allowedStage(session, stage);
+  if (!queue) {
     return { ok: false, message: "Invalid review stage.", data: null };
   }
-  // get review captures count
-  const count = await prisma.capture.count({
-    where: {
-      status,
-      ...(userIds && userIds.length > 0 ? { userId: { in: userIds } } : {}),
-      ...(appIds && appIds.length > 0 ? { appId: { in: appIds } } : {}),
-    },
-  });
 
-  return { ok: true, message: "Review captures count found.", data: count };
+  try {
+    const count = await prisma.capture.count({
+      where: {
+        ...(await stageWhere(queue)),
+        ...filterWhere(userIds, appIds),
+      },
+    });
+    return { ok: true, message: "Review captures count found.", data: count };
+  } catch (err) {
+    console.error("Failed to count review queue:", err);
+    return { ok: false, message: "Failed to count captures.", data: null };
+  }
 };
 
 interface GetAdminAppParams {
@@ -202,7 +301,9 @@ interface GetAdminUserParams {
  * Gets the filter dropdown options for the admin panel (apps and users). Should only grab apps and users present in review captures.
  * @returns ActionPayload<{ apps: GetAdminAppParams[]; users: GetAdminUserParams[] }>
  */
-export const getFilterOptionsForTasks = async (): Promise<
+export const getFilterOptionsForTasks = async (
+  stage?: TaskStage,
+): Promise<
   ActionPayload<{ apps: GetAdminAppParams[]; users: GetAdminUserParams[] }>
 > => {
   // check if user is authenticated and admin
@@ -219,14 +320,16 @@ export const getFilterOptionsForTasks = async (): Promise<
   }
   // The worker list (names, emails) is for admins; reviewers filter by app.
   const includeUsers = isAdmin(session);
-  // Options cover every queue this user can open.
-  const statuses: CaptureStatus[] = isAdmin(session)
-    ? [CaptureStatus.REVIEWING, CaptureStatus.REVIEWED]
-    : [CaptureStatus.REVIEWING];
+  const queue = allowedStage(session, stage);
+  if (!queue) {
+    return { ok: false, message: "Invalid review stage.", data: null };
+  }
+  // Options cover the queue being viewed.
+  const where = await stageWhere(queue);
 
   // get unique user IDs from reviewing captures
   let userIds = await prisma.capture.findMany({
-    where: { status: { in: statuses } },
+    where,
     select: { userId: true },
     distinct: ["userId"],
   });
@@ -237,7 +340,7 @@ export const getFilterOptionsForTasks = async (): Promise<
 
   // get unique app IDs from reviewing captures
   let appIds = await prisma.capture.findMany({
-    where: { status: { in: statuses } },
+    where,
     select: { appId: true },
     distinct: ["appId"],
   });

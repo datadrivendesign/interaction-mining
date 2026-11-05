@@ -1,6 +1,7 @@
 "use client";
 
-import { CircleHelp } from "lucide-react";
+import Link from "next/link";
+import { CircleHelp, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Kbd from "@/components/ui/kbd";
 import {
@@ -8,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { VerdictMode } from "./verdict-mode";
+import { canEditInMode, VerdictMode } from "./verdict-mode";
 import { SaveProgress } from "./use-review-verdict-actions";
 
 const DENY_LABEL: Record<Exclude<VerdictMode, "none">, string> = {
@@ -32,6 +33,7 @@ export function VerdictBar({
   onApprove,
   onDeny,
   onSkip,
+  editHref,
   additionalShortcuts = [],
 }: {
   mode: Exclude<VerdictMode, "none">;
@@ -43,16 +45,23 @@ export function VerdictBar({
   onApprove: () => void;
   onDeny: () => void;
   onSkip: () => void;
+  /** Edit page link; shown in every verdict mode, draft or not. */
+  editHref?: string;
   additionalShortcuts?: { label: string; keys: string }[];
 }) {
   const canApprove = hasDraft;
+  // With no draft the edit page starts from the recording, so a reviewer can
+  // still build the trace instead of sending it back.
+  const canEdit = canEditInMode(mode) && !!editHref;
   const denyLabel = DENY_LABEL[mode];
 
   let status = issueSummary;
   if (saveProgress) {
     status = `Saving screens ${saveProgress.done} of ${saveProgress.total}. Keep this page open.`;
   } else if (!canApprove) {
-    status = "No draft saved. Send back to worker.";
+    status = canEdit
+      ? "No draft saved. Edit it yourself or send it back to the worker."
+      : "No draft saved. Send back to worker.";
   }
 
   return (
@@ -66,6 +75,32 @@ export function VerdictBar({
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
+        {canEdit &&
+          (isSubmitting ? (
+            <Button size="sm" variant="outline" className="min-w-0" disabled>
+              <Pencil className="size-3.5" aria-hidden />
+              <span>Edit</span>
+              <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">
+                Ctrl+Shift+E
+              </span>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="min-w-0"
+              asChild
+              title="Fix it yourself on the edit page. Comments you have not sent are not kept."
+            >
+              <Link href={editHref}>
+                <Pencil className="size-3.5" aria-hidden />
+                <span>Edit</span>
+                <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">
+                  Ctrl+Shift+E
+                </span>
+              </Link>
+            </Button>
+          ))}
         <Button
           size="sm"
           variant="outline"
@@ -134,6 +169,12 @@ export function VerdictBar({
                 <span>{denyLabel} capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+D</Kbd>
               </div>
+              {canEdit && (
+                <div className="flex items-center justify-between gap-3">
+                  <span>Edit capture</span>
+                  <Kbd className="text-[10px]">Ctrl+Shift+E</Kbd>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3">
                 <span>Skip capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+S</Kbd>

@@ -181,6 +181,13 @@ function describeIncompleteScreens(entries: IncompleteScreen[]): string {
     .join(", ")}. The filmstrip rings them in yellow.`;
 }
 
+/** Statuses where staff edit in place and the status does not change. */
+function isStaffEditStatus(status: CaptureStatus): boolean {
+  return (
+    status === CaptureStatus.REVIEWING || status === CaptureStatus.REVIEWED
+  );
+}
+
 export default function Page() {
   const CHECKLIST_LAYOUT_STORAGE_KEY = "edit-feedback-checklist-layout";
   const params = useParams();
@@ -482,10 +489,10 @@ export default function Page() {
       ...nextOverrides,
     }));
 
-    // Only the owner may write feedback through `updateCapture`. A reviewer
-    // fixing a capture in review sees the upgraded text locally; the stored
-    // text is upgraded the next time the owner opens it.
-    if (capture.status === CaptureStatus.REVIEWING) {
+    // Only the owner may write feedback through `updateCapture`. Staff fixing
+    // a capture in review see the upgraded text locally; the stored text is
+    // upgraded the next time the owner opens it.
+    if (isStaffEditStatus(capture.status)) {
       return;
     }
 
@@ -796,10 +803,11 @@ export default function Page() {
         if (!saveRes.ok) {
           throw new Error(saveRes.message || "Failed to save draft");
         }
-        // A reviewer fixing a capture in review: the capture stays in
-        // review, and the fixed draft is what they approve on the review
-        // page. Only the owner submits (Finish → REVIEWING).
-        if (capture?.status === CaptureStatus.REVIEWING) {
+        // Staff fixing a capture in review (REVIEWING) or at the final check
+        // (REVIEWED): the status stays, and the fixed draft is what they
+        // approve on the review page. Only the owner submits (Finish →
+        // REVIEWING).
+        if (capture && isStaffEditStatus(capture.status)) {
           await revalidateCaptureCaches();
           toast.success("Fixes saved. Back to review.");
           router.push(`/capture/${captureId}/evaluate`);
@@ -1073,7 +1081,9 @@ export default function Page() {
                           ? "Next"
                           : capture?.status === CaptureStatus.REVIEWING
                             ? "Save and return to review"
-                            : "Finish"}
+                            : capture?.status === CaptureStatus.REVIEWED
+                              ? "Save and return to final check"
+                              : "Finish"}
                       </Button>
                       {activeStepReadiness.isBlockingNavigation &&
                       activeStepReadiness.reason ? (

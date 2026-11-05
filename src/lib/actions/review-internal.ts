@@ -49,6 +49,13 @@ export const reviewMetricsSchema = z
 export type ReviewMetrics = z.infer<typeof reviewMetricsSchema>;
 
 /**
+ * `fixedKinds` value on a FINAL approval when the admin changed the draft at
+ * the final check, i.e. published something other than what the reviewer
+ * approved. Phase 4 adds per-kind values from fix-in-place.
+ */
+export const FINAL_EDIT_KIND = "final-edit";
+
+/**
  * Appends a row to the review log.
  *
  * Best-effort: a verdict that reached the database must not be reported as
@@ -66,6 +73,7 @@ export async function recordCaptureReview({
   selfReview = false,
   summary,
   metrics,
+  fixedKinds = [],
 }: {
   captureId: string;
   reviewerId?: string;
@@ -74,6 +82,7 @@ export async function recordCaptureReview({
   selfReview?: boolean;
   summary?: ReviewSummary;
   metrics?: ReviewMetrics;
+  fixedKinds?: string[];
 }): Promise<void> {
   try {
     const priorRejections = await prisma.captureReview.count({
@@ -88,9 +97,9 @@ export async function recordCaptureReview({
         stage,
         selfReview,
         attempt: priorRejections + 1,
-        // Filled by fix-in-place (Phase 4). Fixes made through the edit page
-        // cannot yet be told apart from the worker's own drafts.
-        fixedKinds: [],
+        // FINAL_EDIT_KIND for an admin edit at the final check; per-kind
+        // values come with fix-in-place (Phase 4).
+        fixedKinds,
         reviewDurationMs: metrics?.reviewDurationMs,
         issueIds: summary?.issueIds ?? [],
         issueCategories: summary?.issueCategories ?? [],

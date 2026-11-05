@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getCapture, getCaptureFiles } from "@/lib/actions";
 import { CaptureStatus } from "@prisma/client";
 import { auth } from "@/lib/auth/auth";
-import { isReviewer } from "@/lib/auth/roles";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
 import { CaptureGateError } from "../components/status-gate";
 
 export default async function Layout({
@@ -55,8 +55,8 @@ export default async function Layout({
         reason="IN_REVIEW"
       />
     );
-  } else if (capture?.status === CaptureStatus.REVIEWED) {
-    // Nobody holds the pen while the final check is pending.
+  } else if (capture?.status === CaptureStatus.REVIEWED && !isAdmin(session)) {
+    // Only the admin holds the pen at the final check.
     return (
       <CaptureGateError
         captureId={captureId}

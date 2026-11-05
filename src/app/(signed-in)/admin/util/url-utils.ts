@@ -1,4 +1,5 @@
 import { CaptureStatus, Role } from "@prisma/client";
+import type { TaskStage } from "./types";
 
 /**
  * Constructs URL for user captures panel with filters
@@ -49,18 +50,20 @@ export const constructUserPanelURL = (
 };
 
 /**
- * Constructs URL for tasks panel with filters
+ * Constructs URL for a review queue page with filters
+ * @param basePath `/admin/tasks` or `/review/tasks`
  * @param page page number to grab tasks from
  * @param users Mongo user ObjectIDs to filter tasks with
  * @param apps Mongo app ObjectIDs to filter tasks with
- * @param stage Review queue (REVIEWING or REVIEWED); omitted uses the default
+ * @param stage Review queue; omitted uses the page's default
  * @returns URL string for tasks panel with filters
  */
 export const constructTaskPanelURL = (
+  basePath: "/admin/tasks" | "/review/tasks",
   page: number,
   users: string[],
   apps: string[],
-  stage?: CaptureStatus,
+  stage?: TaskStage,
 ) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", page.toString());
@@ -73,5 +76,5 @@ export const constructTaskPanelURL = (
   if (stage) {
     queryParams.set("stage", stage);
   }
-  return `/admin/tasks?${queryParams.toString()}`;
+  return `${basePath}?${queryParams.toString()}`;
 };

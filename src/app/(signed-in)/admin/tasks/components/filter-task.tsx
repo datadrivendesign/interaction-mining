@@ -42,7 +42,11 @@ export function FilterTask({
   handleAppFilterRemove,
   handleUserFilterRemove,
   handleClearFilters,
-}: FilterTaskParams) {
+  showUserFilter = true,
+}: FilterTaskParams & {
+  /** Worker filter is admin only; reviewers filter by app. */
+  showUserFilter?: boolean;
+}) {
   const nonFilteredApps = appsList.filter(
     (app) => !appsFiltered.some((chosenApp) => chosenApp.value === app.value),
   );
@@ -63,15 +67,17 @@ export function FilterTask({
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-base font-bold whitespace-nowrap text-foreground">
-            Filter Users:
-          </label>
-          <Combobox
-            options={nonFilteredUsers}
-            selectCallback={handleUserFilterSelect}
-          />
-        </div>
+        {showUserFilter && (
+          <div className="flex items-center gap-2">
+            <label className="text-base font-bold whitespace-nowrap text-foreground">
+              Filter Users:
+            </label>
+            <Combobox
+              options={nonFilteredUsers}
+              selectCallback={handleUserFilterSelect}
+            />
+          </div>
+        )}
 
         <div className="flex items-center justify-end self-end">
           <Button variant="destructive" size="sm" onClick={handleClearFilters}>

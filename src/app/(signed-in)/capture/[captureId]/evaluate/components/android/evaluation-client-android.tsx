@@ -32,7 +32,7 @@ import {
 import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
-import { getVerdictMode } from "../shared/verdict-mode";
+import { getVerdictMode, taskListPathFor } from "../shared/verdict-mode";
 import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
@@ -129,6 +129,8 @@ export function EvaluationClientAndroid({
   });
   // Staff reading a capture (reviewer or admin), as opposed to its owner.
   const isStaffView = verdictMode !== "none" || isAdmin;
+  const listPath = taskListPathFor(verdictMode, isAdmin);
+  const editHref = `/capture/${captureId}/edit`;
 
   const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
@@ -137,6 +139,8 @@ export function EvaluationClientAndroid({
       draftVersion,
       feedbackState,
       mode: verdictMode,
+      listPath,
+      editHref,
     });
 
   useEffect(() => {
@@ -323,6 +327,7 @@ export function EvaluationClientAndroid({
               <ReviewContextPanelAndroid
                 traceData={traceData}
                 isAdmin={isStaffView}
+                listHref={listPath}
               />
             )}
           </ResizablePanel>
@@ -412,6 +417,7 @@ export function EvaluationClientAndroid({
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
+          editHref={editHref}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },

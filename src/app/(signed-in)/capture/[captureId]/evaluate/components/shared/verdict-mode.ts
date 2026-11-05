@@ -33,6 +33,26 @@ export function getVerdictMode({
   return "none";
 }
 
+/**
+ * The task list a viewer goes back to. Reviewers have `/review/tasks`; the
+ * admin returns to the `/admin/tasks` tab matching the capture's stage.
+ */
+export function taskListPathFor(mode: VerdictMode, isAdmin: boolean): string {
+  if (mode === "final") return "/admin/tasks?stage=REVIEWED";
+  if (mode === "direct") return "/admin/tasks?stage=REVIEWING";
+  return isAdmin ? "/admin/tasks" : "/review/tasks";
+}
+
+/**
+ * Whether the viewer may open the edit page: a reviewer or admin on a
+ * REVIEWING capture, or the admin at the final check (the edit is recorded on
+ * the FINAL review row). No draft is fine; the edit page starts from the
+ * recording.
+ */
+export function canEditInMode(mode: VerdictMode): boolean {
+  return mode !== "none";
+}
+
 /** The queue Skip and "next capture" walk for a mode. */
 export function queueStatusFor(mode: VerdictMode): CaptureStatus {
   return mode === "final" ? CaptureStatus.REVIEWED : CaptureStatus.REVIEWING;

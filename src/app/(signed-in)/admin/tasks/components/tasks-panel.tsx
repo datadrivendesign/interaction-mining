@@ -5,8 +5,6 @@ import { Separator } from "@/components/ui/separator";
 import { AdminPagination } from "@/components/ui/admin-pagination";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-import { CaptureStatus } from "@prisma/client";
-import { CaptureAdminView } from "@/lib/actions";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -14,23 +12,36 @@ import {
   getFilterOptionsForTasks,
   getReviewCapturesCount,
   getReviewingCaptures,
+  TaskRow,
+  TaskStage,
 } from "../../util";
 import { FilterTask } from "./filter-task";
 import { TasksTable } from "./tasks-table";
 
-type TaskStage = typeof CaptureStatus.REVIEWING | typeof CaptureStatus.REVIEWED;
-
 const STAGE_TABS: { value: TaskStage; label: string }[] = [
-  { value: CaptureStatus.REVIEWED, label: "Final check" },
-  { value: CaptureStatus.REVIEWING, label: "Waiting for reviewer" },
+  { value: "REVIEWED", label: "Final check" },
+  { value: "REVIEWING", label: "Waiting for reviewer" },
+  { value: "SENT_BACK", label: "Sent back" },
 ];
 
+function isTaskStage(value: string | null): value is TaskStage {
+  return STAGE_TABS.some((tab) => tab.value === value);
+}
+
 /**
- * TasksPanel is the main panel for the tasks page
+ * TasksPanel is the queue for /admin/tasks (admin, with stage tabs) and
+ * /review/tasks (reviewers, REVIEWING only).
  * @param isAdmin Admins get the stage tabs; reviewers only see REVIEWING.
+ * @param basePath The page this panel is on, for filter and page links.
  * @returns TasksPanel component
  */
-export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
+export function TasksPanel({
+  isAdmin,
+  basePath,
+}: {
+  isAdmin: boolean;
+  basePath: "/admin/tasks" | "/review/tasks";
+}) {
   // constants
   const itemsPerPage = 10;
 
@@ -41,16 +52,18 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
     ? parseInt(searchParams.get("page") || "1")
     : 1;
   // The admin's queue opens on the final check; reviewers have one queue.
-  const stage: TaskStage =
-    isAdmin && searchParams.get("stage") !== CaptureStatus.REVIEWING
-      ? CaptureStatus.REVIEWED
-      : CaptureStatus.REVIEWING;
+  const stageParam = searchParams.get("stage");
+  const stage: TaskStage = !isAdmin
+    ? "REVIEWING"
+    : isTaskStage(stageParam)
+      ? stageParam
+      : "REVIEWED";
 
   // handle loading state
   const [loading, setLoading] = useState(false);
 
   // retrieve data from server
-  const [captures, setCaptures] = useState<CaptureAdminView[]>([]);
+  const [captures, setCaptures] = useState<TaskRow[]>([]);
   const [reviewCapturesCount, setReviewCapturesCount] = useState(0);
   const [appsList, setAppsList] = useState<ComboboxOption[]>([]);
   const [usersList, setUsersList] = useState<ComboboxOption[]>([]);
@@ -61,7 +74,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
   // handle fetching filter options from server
   useEffect(() => {
     const fetchFilterOptions = async () => {
-      const filterOptionsRes = await getFilterOptionsForTasks();
+      const filterOptionsRes = await getFilterOptionsForTasks(stage);
       if (filterOptionsRes.ok) {
         const appsData = filterOptionsRes.data?.apps ?? [];
         const usersData = filterOptionsRes.data?.users ?? [];
@@ -83,7 +96,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
       }
     };
     fetchFilterOptions();
-  }, []);
+  }, [stage]);
 
   // handle updating filtered objects from url parameters
   useEffect(() => {
@@ -151,6 +164,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
   const handlePageChange = (page: number) => {
     router.push(
       constructTaskPanelURL(
+        basePath,
         page,
         usersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
@@ -165,6 +179,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
     setAppsFiltered(newAppsFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         page,
         usersFiltered.map((user) => user.value),
         newAppsFiltered.map((app) => app.value),
@@ -177,6 +192,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
     setUsersFiltered(newUsersFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         page,
         newUsersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
@@ -192,6 +208,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
     setAppsFiltered(newAppsFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         1,
         usersFiltered.map((user) => user.value),
         newAppsFiltered.map((app) => app.value),
@@ -206,6 +223,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
     setUsersFiltered(newUsersFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         1,
         newUsersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
@@ -216,16 +234,17 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
   const handleClearFilters = () => {
     setAppsFiltered([]);
     setUsersFiltered([]);
-    router.push(constructTaskPanelURL(1, [], [], stage));
+    router.push(constructTaskPanelURL(basePath, 1, [], [], stage));
   };
 
   // Switching queues keeps the filters and goes back to page 1.
   const handleStageChange = (value: string) => {
-    if (value !== CaptureStatus.REVIEWING && value !== CaptureStatus.REVIEWED) {
+    if (!isTaskStage(value)) {
       return;
     }
     router.push(
       constructTaskPanelURL(
+        basePath,
         1,
         usersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
@@ -235,7 +254,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
   };
 
   // handle logic for users and apps shown in table
-  const handleTableUserClick = (capture: CaptureAdminView) => {
+  const handleTableUserClick = (capture: TaskRow) => {
     if (
       capture.user?.id &&
       capture.user?.name &&
@@ -250,7 +269,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
     }
   };
 
-  const handleTableAppClick = (capture: CaptureAdminView) => {
+  const handleTableAppClick = (capture: TaskRow) => {
     if (
       capture.app?.id &&
       capture.app?.metadata.name &&
@@ -278,6 +297,7 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
           handleAppFilterRemove={handleAppFilterRemove}
           handleUserFilterRemove={handleUserFilterRemove}
           handleClearFilters={handleClearFilters}
+          showUserFilter={isAdmin}
         />
       </div>
       {isAdmin && (
@@ -305,6 +325,8 @@ export function TasksPanel({ isAdmin }: { isAdmin: boolean }) {
         ) : (
           <TasksTable
             captures={captures}
+            stage={stage}
+            showWorker={isAdmin}
             handleTableUserClick={handleTableUserClick}
             handleTableAppClick={handleTableAppClick}
           />
