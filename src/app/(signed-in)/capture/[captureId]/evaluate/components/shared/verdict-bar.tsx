@@ -1,6 +1,7 @@
 "use client";
 
-import { CircleHelp } from "lucide-react";
+import Link from "next/link";
+import { CircleHelp, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Kbd from "@/components/ui/kbd";
 import {
@@ -32,6 +33,7 @@ export function VerdictBar({
   onApprove,
   onDeny,
   onSkip,
+  editHref,
   additionalShortcuts = [],
 }: {
   mode: Exclude<VerdictMode, "none">;
@@ -43,9 +45,14 @@ export function VerdictBar({
   onApprove: () => void;
   onDeny: () => void;
   onSkip: () => void;
+  /** Edit page link; shown while the capture is REVIEWING (not final). */
+  editHref?: string;
   additionalShortcuts?: { label: string; keys: string }[];
 }) {
   const canApprove = hasDraft;
+  // REVIEWED is read-only; the edit page starts from the draft, so no draft
+  // means nothing to fix.
+  const canEdit = mode !== "final" && hasDraft && !!editHref;
   const denyLabel = DENY_LABEL[mode];
 
   let status = issueSummary;
@@ -66,6 +73,26 @@ export function VerdictBar({
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
+        {canEdit &&
+          (isSubmitting ? (
+            <Button size="sm" variant="outline" className="min-w-0" disabled>
+              <Pencil className="size-3.5" aria-hidden />
+              <span>Edit</span>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="min-w-0"
+              asChild
+              title="Fix it yourself on the edit page. Comments you have not sent are not kept."
+            >
+              <Link href={editHref}>
+                <Pencil className="size-3.5" aria-hidden />
+                <span>Edit</span>
+              </Link>
+            </Button>
+          ))}
         <Button
           size="sm"
           variant="outline"
