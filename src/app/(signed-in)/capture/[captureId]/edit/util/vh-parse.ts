@@ -49,7 +49,7 @@ export function redactVH(
 
       const iou = computeIoU(redactionRect, nodeRect);
       if (iou > 0.1) {
-        if ("content-desc" in node && node["content=desc"] !== "none") {
+        if ("content-desc" in node && node["content-desc"] !== "none") {
           node["content-desc"] = `REDACTED: ${r.annotation}`;
         }
         if ("text_field" in node) {
