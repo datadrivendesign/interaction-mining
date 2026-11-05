@@ -130,6 +130,7 @@ export function EvaluationClientAndroid({
   // Staff reading a capture (reviewer or admin), as opposed to its owner.
   const isStaffView = verdictMode !== "none" || isAdmin;
   const listPath = taskListPathFor(verdictMode, isAdmin);
+  const editHref = `/capture/${captureId}/edit`;
 
   const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
@@ -139,6 +140,7 @@ export function EvaluationClientAndroid({
       feedbackState,
       mode: verdictMode,
       listPath,
+      editHref,
     });
 
   useEffect(() => {
@@ -415,7 +417,7 @@ export function EvaluationClientAndroid({
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
-          editHref={`/capture/${captureId}/edit`}
+          editHref={editHref}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
