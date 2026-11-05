@@ -20,9 +20,12 @@ import { getMyPreferredDeviceVersions } from "@/lib/actions";
 export function SaveTracePanel({
   os,
   taskDescription,
+  prefillFromProfile = true,
 }: {
   os: string;
   taskDescription: string;
+  /** Fill empty device fields from the viewer's own profile (owner only). */
+  prefillFromProfile?: boolean;
 }) {
   const { getValues, setValue } = useFormContext<TraceFormData>();
   const [hasLoadedProfilePreference, setHasLoadedProfilePreference] =
@@ -31,7 +34,7 @@ export function SaveTracePanel({
   useEffect(() => {
     let isCancelled = false;
     const maybePrefillDeviceVersions = async () => {
-      if (os !== "ios" || hasLoadedProfilePreference) {
+      if (os !== "ios" || !prefillFromProfile || hasLoadedProfilePreference) {
         return;
       }
       const existingIPhoneVersion = (getValues("iPhoneVersion") ?? "").trim();
@@ -65,7 +68,7 @@ export function SaveTracePanel({
     return () => {
       isCancelled = true;
     };
-  }, [getValues, hasLoadedProfilePreference, os, setValue]);
+  }, [getValues, hasLoadedProfilePreference, os, prefillFromProfile, setValue]);
 
   return (
     <div className="flex w-full grow flex-col justify-start">
