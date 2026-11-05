@@ -33,6 +33,7 @@ import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { getVerdictMode } from "../shared/verdict-mode";
+import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 
@@ -394,6 +395,7 @@ export function EvaluationClientAndroid({
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
+      <PublishProgressDialog progress={saveProgress} />
       {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
           mode={verdictMode}

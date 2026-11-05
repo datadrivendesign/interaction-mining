@@ -28,6 +28,7 @@ import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { getVerdictMode } from "../shared/verdict-mode";
+import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
@@ -388,6 +389,7 @@ export function EvaluationClientIOS({
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
+      <PublishProgressDialog progress={saveProgress} />
       {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
           mode={verdictMode}
