@@ -1,6 +1,18 @@
 import { Prisma, Screen } from "@prisma/client";
 
+/**
+ * Screen order within a trace: by recording `timestamp` when both screens have
+ * one (published from 2026-11), else by `created` and then the ObjectId
+ * counter, which matched creation order for older traces.
+ */
 export const compareScreensChronological = (a: Screen, b: Screen) => {
+  if (
+    a.timestamp !== null &&
+    b.timestamp !== null &&
+    a.timestamp !== b.timestamp
+  ) {
+    return a.timestamp - b.timestamp;
+  }
   const ta = new Date(a.created).getTime();
   const tb = new Date(b.created).getTime();
   if (ta !== tb) return ta - tb;
