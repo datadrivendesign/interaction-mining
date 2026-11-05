@@ -342,9 +342,11 @@ export function EvaluationClientAndroid({
             >
               {/* Gallery — left/center */}
               <ResizablePanel
-                defaultSize={70}
+                id="review-gallery"
+                order={1}
+                defaultSize={isStaffView ? 70 : 100}
                 minSize={50}
-                maxSize={85}
+                maxSize={isStaffView ? 85 : 100}
                 className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950"
               >
                 {traceData && (
@@ -366,31 +368,35 @@ export function EvaluationClientAndroid({
                 )}
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
-
-              {/* Screen Comments Panel — right */}
-              <ResizablePanel
-                defaultSize={30}
-                minSize={20}
-                maxSize={45}
-                className="min-h-0 overflow-hidden"
-              >
-                {traceData && (
-                  <ScreenCommentsPanel
-                    screens={traceData.screens}
-                    activeScreenId={activeScreenId}
-                    feedbackState={feedbackState}
-                    onFeedbackStateChange={setFeedbackState}
-                    hotkeyAction={screenCommentsHotkeyAction}
-                    onJumpToScreen={setActiveScreenId}
-                    externalSelectedScreenIds={gallerySelectedScreenIds}
-                    onExternalSelectedScreenIdsChange={
-                      setGallerySelectedScreenIds
-                    }
-                    onComposerScreenModeChange={setIsComposerInScreenMode}
-                  />
-                )}
-              </ResizablePanel>
+              {/* Screen Comments Panel — right. Staff only: the owner
+                  reads feedback on the edit page, not here. */}
+              {isStaffView && <ResizableHandle withHandle />}
+              {isStaffView && (
+                <ResizablePanel
+                  id="review-comments"
+                  order={2}
+                  defaultSize={30}
+                  minSize={20}
+                  maxSize={45}
+                  className="min-h-0 overflow-hidden"
+                >
+                  {traceData && (
+                    <ScreenCommentsPanel
+                      screens={traceData.screens}
+                      activeScreenId={activeScreenId}
+                      feedbackState={feedbackState}
+                      onFeedbackStateChange={setFeedbackState}
+                      hotkeyAction={screenCommentsHotkeyAction}
+                      onJumpToScreen={setActiveScreenId}
+                      externalSelectedScreenIds={gallerySelectedScreenIds}
+                      onExternalSelectedScreenIdsChange={
+                        setGallerySelectedScreenIds
+                      }
+                      onComposerScreenModeChange={setIsComposerInScreenMode}
+                    />
+                  )}
+                </ResizablePanel>
+              )}
             </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
