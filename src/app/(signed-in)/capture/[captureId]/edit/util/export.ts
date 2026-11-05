@@ -80,11 +80,167 @@ export async function handleDraftSave(
   };
 }
 
+/** One screen rendered for publishing: final PNG, and its VH if the capture has them. */
+export type RenderedScreen = {
+  screenId: string;
+  png: File;
+  vh: File | null;
+};
+
+/** Where a rendered screen's files ended up. */
+type UploadedScreen = { src: string; vh: string };
+
+type ScreenUploader = (
+  rendered: RenderedScreen,
+) => Promise<ActionPayload<UploadedScreen>>;
+
+/**
+ * Renders one screen for publishing: the frame with redactions burned in,
+ * and its view hierarchy with redacted nodes blanked.
+ *
+ * VH rule (unchanged from the original export): if the capture has any VHs,
+ * every screen must have one. iOS seeds an empty object per screen, so every
+ * iOS screen gets an empty VH file; Android carries the real hierarchy.
+ */
+async function renderScreen(
+  data: TraceFormData,
+  screen: FrameData,
+): Promise<ActionPayload<RenderedScreen>> {
+  const fail = (message: string) => ({
+    ok: false as const,
+    message,
+    data: null,
+  });
+
+  const res = await fetch(screen.src);
+  if (!res.ok) {
+    return fail("Failed to fetch screen image.");
+  }
+
+  let png: File;
+  const redactions = data.redactions[screen.id] ?? [];
+  if (redactions.length > 0) {
+    const dataURL = await exportRedactedImage(redactions, screen.src);
+    if (!dataURL) {
+      return fail("Failed to export redacted image.");
+    }
+    const byteString = atob(dataURL.split(",")[1]);
+    const bytes = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+      bytes[i] = byteString.charCodeAt(i);
+    }
+    png = new File([bytes], `${screen.id}.png`, { type: "image/png" });
+  } else {
+    const blob = await res.blob();
+    png = new File([blob], `${screen.id}.png`, { type: "image/png" });
+  }
+
+  let vhFile: File | null = null;
+  const vhs = data.vhs;
+  if (vhs && Object.keys(vhs).length > 0) {
+    const source = vhs[screen.id];
+    if (!source) {
+      return fail("Failed to find view hierarchies.");
+    }
+    // Redact a copy: a failed Approve can be retried, and redacting the form
+    // state in place would redact it twice and lose the original.
+    const vh = structuredClone(source);
+    if (redactions.length > 0) {
+      let imgWidth = 0;
+      let imgHeight = 0;
+      if (vh.bounds_in_screen) {
+        const [left, top, right, bottom] = vh.bounds_in_screen
+          .split(" ")
+          .map(Number);
+        imgWidth = right - left;
+        imgHeight = bottom - top;
+      } else {
+        const image = new Image();
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error("Failed to load image"));
+          image.src = screen.src;
+        });
+        imgWidth = image.width;
+        imgHeight = image.height;
+      }
+      redactVH(vh, redactions, imgWidth, imgHeight);
+    }
+    vhFile = new File([JSON.stringify(vh, null, 2)], `${screen.id}.json`, {
+      type: "application/json",
+    });
+  }
+
+  return {
+    ok: true,
+    message: "Screen rendered.",
+    data: { screenId: screen.id, png, vh: vhFile },
+  };
+}
+
+/**
+ * Renders and uploads every screen, three at a time, rendering each just
+ * before its upload so large traces never hold every PNG in memory at once.
+ * Uploads retry on their own (`uploadToS3`). Stops reporting at the first
+ * failure and returns it.
+ *
+ * @returns screen id → uploaded locations, in no particular order.
+ */
+async function renderAndUpload(
+  data: TraceFormData,
+  upload: ScreenUploader,
+  onProgress?: (done: number, total: number) => void,
+): Promise<ActionPayload<Map<string, UploadedScreen>>> {
+  const limit = plimit(3);
+  const total = data.screens.length;
+  let done = 0;
+  let failure: string | null = null;
+  const uploaded = new Map<string, UploadedScreen>();
+  onProgress?.(0, total);
+
+  await Promise.all(
+    data.screens.map((screen) =>
+      limit(async () => {
+        if (failure) return;
+        try {
+          const rendered = await renderScreen(data, screen);
+          if (!rendered.ok) {
+            failure ??= rendered.message;
+            return;
+          }
+          const res = await upload(rendered.data);
+          if (!res.ok) {
+            failure ??= res.message;
+            return;
+          }
+          uploaded.set(screen.id, res.data);
+          done += 1;
+          onProgress?.(done, total);
+        } catch (err) {
+          failure ??= err instanceof Error ? err.message : "Rendering failed.";
+        }
+      }),
+    ),
+  );
+
+  if (failure) {
+    return { ok: false, message: failure, data: null };
+  }
+  return { ok: true, message: "Screens uploaded.", data: uploaded };
+}
+
+/**
+ * Admin approval: renders every screen from the loaded draft and builds the
+ * public trace from the browser. Used for the final check on REVIEWED
+ * captures and for approving REVIEWING captures directly. As before, the
+ * trace row is created first (uploads need its id); a failed upload leaves
+ * that row without screens.
+ */
 export async function handleTraceSave(
   data: TraceFormData,
   capture: Capture,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<ActionPayload<Trace>> {
-  // create a new trace without screens
   const traceInput: Prisma.TraceCreateWithoutUserInput = {
     name: "New Trace",
     description: data.description,
@@ -116,9 +272,56 @@ export async function handleTraceSave(
       data: null,
     };
   }
-  const initTrace = traceRes.data;
-  // Transpose gestures on to screens
-  let screens = data.screens.map((screen: FrameData) => {
+  const traceId = traceRes.data.id;
+
+  const uploadRes = await renderAndUpload(
+    data,
+    async ({ screenId, png, vh }) => {
+      const pngRes = await uploadToS3(
+        png,
+        UploadPurpose.TRACE_SCREEN,
+        traceId,
+        `${screenId}.png`,
+      );
+      if (!pngRes.ok) {
+        return {
+          ok: false,
+          message: "Failed to upload screen image.",
+          data: null,
+        };
+      }
+      let vhUrl = "";
+      if (vh) {
+        const vhRes = await uploadToS3(
+          vh,
+          UploadPurpose.TRACE_VH,
+          traceId,
+          `${screenId}.json`,
+        );
+        if (!vhRes.ok) {
+          return {
+            ok: false,
+            message: "Failed to upload view hierarchies.",
+            data: null,
+          };
+        }
+        vhUrl = vhRes.data.fileUrl;
+      }
+      return {
+        ok: true,
+        message: "Uploaded.",
+        data: { src: pngRes.data.fileUrl, vh: vhUrl },
+      };
+    },
+    onProgress,
+  );
+  if (!uploadRes.ok) {
+    toast.error(uploadRes.message);
+    return { ok: false, message: uploadRes.message, data: null };
+  }
+
+  const screens = data.screens.map((screen) => {
+    const files = uploadRes.data.get(screen.id)!;
     const gesture = data.gestures[screen.id] ?? {
       type: null,
       x: null,
@@ -127,214 +330,21 @@ export async function handleTraceSave(
       scrollDeltaY: null,
       description: null,
     };
-    const redactions = data.redactions[screen.id] ?? [];
     return {
-      id: screen.id,
-      src: screen.src,
-      vh: "",
+      src: files.src,
+      vh: files.vh,
       created: new Date(),
       gesture,
-      redactions: redactions,
-    };
-  });
-  // upload screens to s3
-  const limit = plimit(3);
-  const uploadScreenResponse = await Promise.all(
-    screens.map((screen: any) =>
-      limit(async () => {
-        // Upload original image
-        const res = await fetch(screen.src);
-        if (!res.ok) {
-          toast.error("Failed to fetch screen image.");
-          return {
-            ok: false,
-            message: "Failed to fetch screen image.",
-          };
-        }
-        if (
-          data.redactions[screen.id] &&
-          data.redactions[screen.id].length > 0
-        ) {
-          // Process redacted image
-          const dataURL = await exportRedactedImage(
-            data.redactions[screen.id],
-            screen.src,
-          );
-          if (!dataURL) {
-            toast.error("Failed to export redacted image.");
-            return {
-              ok: false,
-              message: "Failed to export redacted image.",
-            };
-          }
-          // Create a new file from the data URL
-          const byteString = atob(dataURL.split(",")[1]);
-          const ab = new ArrayBuffer(byteString.length);
-          const ia = new Uint8Array(ab);
-          for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i);
-          }
-          const file = new File([ab], `${screen.id}.png`, {
-            type: "image/png",
-          });
-
-          const fileName = `${screen.id}.png`;
-          const uploadRes = await uploadToS3(
-            file,
-            UploadPurpose.TRACE_SCREEN,
-            initTrace.id,
-            fileName,
-          );
-          if (!uploadRes.ok) {
-            toast.error("Failed to upload redacted image.");
-            return {
-              ok: false,
-              message: "Failed to upload redacted image.",
-            };
-          }
-          // Set screen src to redacted S3 URL
-          screens.find((s: any) => s.id === screen.id)!.src =
-            uploadRes.data.fileUrl;
-          return uploadRes;
-        } else {
-          const blob = await res.blob();
-          const file = new File([blob], `${screen.id}.png`, {
-            type: "image/png",
-          });
-          const fileName = `${screen.id}.png`;
-          const uploadRes = await uploadToS3(
-            file,
-            UploadPurpose.TRACE_SCREEN,
-            initTrace.id,
-            fileName,
-          );
-          if (!uploadRes || !uploadRes.ok) {
-            toast.error("Failed to upload screen image.");
-            return {
-              ok: false,
-              message: "Failed to upload screen image.",
-            };
-          }
-          // Set screen src to original S3 URL
-          screens.find((s: any) => s.id === screen.id)!.src =
-            uploadRes.data.fileUrl;
-          return uploadRes;
-        }
-      }),
-    ),
-  );
-  if (!uploadScreenResponse || uploadScreenResponse.some((res) => !res.ok)) {
-    return {
-      ok: false,
-      message:
-        uploadScreenResponse.find((res) => !res.ok)?.message ??
-        "Failed to upload screen images.",
-      data: null,
-    };
-  }
-  // Cleaning up the screen objects
-  screens = screens.map((screen: any) => {
-    // delete screen id
-    delete screen.id;
-    // delete redaction id
-    if (screen.redactions) {
-      screen.redactions = screen.redactions.map((redaction: any) => {
-        delete redaction.id;
-        return redaction;
-      });
-    }
-    return screen;
-  });
-
-  // check if there are view hierarchies, if so then upload them
-  const vhs = data.vhs;
-  if (vhs && Object.keys(vhs).length > 0) {
-    // upload view hierarchies to s3
-    const vhUploadRes = await Promise.all(
-      data.screens.map((screen: FrameData, index: number) =>
-        limit(async () => {
-          let res;
-          const vh = vhs[screen.id];
-          // Try to determine image dimensions
-          let imgWidth = 0;
-          let imgHeight = 0;
-          if (vh.bounds_in_screen) {
-            const [left, top, right, bottom] = vh.bounds_in_screen
-              .split(" ")
-              .map(Number);
-            imgWidth = right - left;
-            imgHeight = bottom - top;
-          } else {
-            const image = new Image();
-            await new Promise<void>((resolve, reject) => {
-              image.onload = () => resolve();
-              image.onerror = (err) => {
-                console.error("Error loading image:", err);
-                reject(new Error("Failed to load image"));
-              };
-              image.src = screen.src!;
-            });
-            imgWidth = image.width;
-            imgHeight = image.height;
-          }
-
-          const redactions = data.redactions[screen.id];
-          if (redactions) {
-            redactVH(vh, redactions, imgWidth, imgHeight);
-          }
-          if (!vh) {
-            return { ok: false, message: "Failed to find view hierarchies." };
-          }
-
-          // upload view hierarchies to s3
-          const blob = new Blob([JSON.stringify(vh, null, 2)], {
-            type: "application/json",
-          });
-          const file = new File([blob], `${screen.id}.json`, {
-            type: "application/json",
-          });
-          const fileName = `${screen.id}.json`;
-          const uploadRes = await uploadToS3(
-            file,
-            UploadPurpose.TRACE_VH,
-            initTrace.id,
-            fileName,
-          );
-          if (!uploadRes.ok) {
-            toast.error("Failed to upload view hierarchies.");
-            return {
-              ok: false,
-              message: "Failed to upload view hierarchies.",
-            };
-          }
-          screens[index].vh = uploadRes.data.fileUrl;
-          return uploadRes;
-        }),
+      redactions: (data.redactions[screen.id] ?? []).map(
+        ({ id: _id, ...redaction }) => redaction,
       ),
-    );
-    if (!vhUploadRes || vhUploadRes.some((res) => !res!.ok)) {
-      return {
-        ok: false,
-        message:
-          vhUploadRes.find((res) => !res!.ok)?.message ??
-          "Failed to upload screen view hierarchies.",
-        data: null,
-      };
-    }
-  }
-  // update trace with screens and view hierarchies
+    };
+  });
+
   const updateTraceRes = await updateTrace(
-    initTrace.id,
-    {
-      screens: {
-        create: screens,
-      },
-    },
-    {
-      includes: {
-        screens: true,
-      },
-    },
+    traceId,
+    { screens: { create: screens } },
+    { includes: { screens: true } },
   );
   if (!updateTraceRes.ok) {
     return {

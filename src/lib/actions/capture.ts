@@ -227,7 +227,8 @@ export async function getCaptureCounts({
 
 interface GetCapturesPaginatedProps {
   userId: string;
-  status: CaptureStatus;
+  /** One status, or several shown together (In review = REVIEWING + REVIEWED). */
+  status: CaptureStatus | CaptureStatus[];
   cursor?: string;
   limit: number;
   includes: Prisma.CaptureInclude;
@@ -277,7 +278,7 @@ export async function getCapturesPaginated({
     const { task = false, app = false } = includes || {};
     const query: Prisma.CaptureWhereInput = {
       userId,
-      status,
+      status: Array.isArray(status) ? { in: status } : status,
     };
     const captures = await prisma.capture.findMany({
       where: query,

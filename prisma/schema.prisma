@@ -185,9 +185,9 @@ model Capture {
   otp                String
   src                String
   status             CaptureStatus   @default(CREATED)
-  /// Draft version (the `draft-<ms>.json` timestamp) whose rendered screens the
-  /// reviewer staged under uploads/<id>/staged/<version>/ when approving. The
-  /// admin's finalize copies exactly that version and refuses a newer draft.
+  /// Draft version (`draft-<ms>`) the reviewer approved, set on REVIEWING →
+  /// REVIEWED and cleared on send-back or deny. The admin's final Approve
+  /// renders the draft in the browser; this records what the reviewer saw.
   stagedDraftVersion String?         @map("staged_draft_version")
   // Back-relation only. The foreign key lives on CaptureReview, so this adds no
   // stored field to existing capture documents.
@@ -211,9 +211,10 @@ model CaptureReview {
   reviewer         User?         @relation(fields: [reviewerId], references: [id])
   verdict          ReviewVerdict
   /// REVIEWER for a staff reviewer's first pass, FINAL for the admin's check.
-  /// Rows written before 2026-11 should be REVIEWER (backfilled by
-  /// prisma/scripts/migrations/backfill-review-stage.mjs).
-  stage            ReviewStage   @default(REVIEWER)
+  /// Rows written before 2026-11 were the admin's own verdicts, so they are
+  /// FINAL (backfilled by prisma/scripts/migrations/backfill-review-stage.mjs).
+  /// Every write sets this explicitly; the default only covers old documents.
+  stage            ReviewStage   @default(FINAL)
   /// The reviewer owns the capture they reviewed.
   selfReview       Boolean       @default(false) @map("self_review")
   /// A later FINAL verdict disagreed with this REVIEWER verdict.

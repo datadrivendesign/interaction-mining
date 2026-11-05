@@ -23,6 +23,13 @@ export const statusConfig = {
     textColor: "text-purple-500",
     description: "Currently in review",
   },
+  [CaptureStatus.REVIEWED]: {
+    label: "Final check",
+    icon: Eye,
+    color: "bg-purple-500",
+    textColor: "text-purple-500",
+    description: "Waiting for final check",
+  },
   [CaptureStatus.APPROVED]: {
     label: "Approved",
     icon: CheckCircle,
@@ -30,4 +37,17 @@ export const statusConfig = {
     textColor: "text-green-500",
     description: "Completed and approved",
   },
+};
+
+/**
+ * Statuses each column lists. A reviewer's approval moves a capture to
+ * REVIEWED; the worker still sees it under In review until the final check.
+ */
+export const COLUMN_QUERY_STATUSES: Record<
+  "CREATED" | "PROCESSING" | "REVIEWING",
+  CaptureStatus[]
+> = {
+  [CaptureStatus.CREATED]: [CaptureStatus.CREATED],
+  [CaptureStatus.PROCESSING]: [CaptureStatus.PROCESSING],
+  [CaptureStatus.REVIEWING]: [CaptureStatus.REVIEWING, CaptureStatus.REVIEWED],
 };

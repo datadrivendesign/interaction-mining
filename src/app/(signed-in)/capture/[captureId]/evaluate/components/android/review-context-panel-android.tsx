@@ -24,7 +24,7 @@ export function ReviewContextPanelAndroid({
           )}
         />
         <span className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
-          {isAdmin ? "Admin Review" : "Owner Review"}
+          {isAdmin ? "Review" : "Owner Review"}
         </span>
         {isAdmin && (
           <Button

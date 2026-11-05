@@ -6,13 +6,40 @@ import { CaptureStatus, Prisma } from "@prisma/client";
 import { isAdmin, isReviewer } from "@/lib/auth/roles";
 import { CaptureAdminView, REVIEWING_CAPTURE_ORDER_BY } from "./types";
 import { isValidObjectId } from "mongoose";
+import type { Session } from "next-auth";
+import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
+
+/**
+ * The two review queues. Reviewers only see REVIEWING; the admin also has
+ * REVIEWED (waiting for the final check).
+ */
+const taskStageSchema = z
+  .enum([CaptureStatus.REVIEWING, CaptureStatus.REVIEWED])
+  .default(CaptureStatus.REVIEWING);
+
+/** The status to list, or null when the stage is invalid or not allowed. */
+function queueStatusFor(
+  session: Session,
+  stage: unknown,
+): CaptureStatus | null {
+  const parsed = taskStageSchema.safeParse(stage);
+  if (!parsed.success) {
+    return null;
+  }
+  if (parsed.data === CaptureStatus.REVIEWED && !isAdmin(session)) {
+    return null;
+  }
+  return parsed.data;
+}
 
 interface GetReviewingCapturesParams {
   limit: number;
   page: number;
   userIds?: string[];
   appIds?: string[];
+  /** REVIEWING (default) or REVIEWED; REVIEWED is admin only. */
+  stage?: CaptureStatus;
 }
 
 /**
@@ -21,6 +48,7 @@ interface GetReviewingCapturesParams {
  * @param page - The page number to return. Must be greater than 0.
  * @param userIds - The user IDs to filter by (optional).
  * @param appIds - The app IDs to filter by (optional).
+ * @param stage - REVIEWING (default) or REVIEWED (admin only).
  * @returns ActionPayload<CaptureAdminView[]>
  */
 export const getReviewingCaptures = async ({
@@ -28,6 +56,7 @@ export const getReviewingCaptures = async ({
   page,
   userIds,
   appIds,
+  stage,
 }: GetReviewingCapturesParams): Promise<ActionPayload<CaptureAdminView[]>> => {
   // parameter validations
   if (page <= 0) {
@@ -62,10 +91,14 @@ export const getReviewingCaptures = async ({
       data: null,
     };
   }
+  const status = queueStatusFor(session, stage);
+  if (!status) {
+    return { ok: false, message: "Invalid review stage.", data: null };
+  }
   // get reviewing captures
   const captures = await prisma.capture.findMany({
     where: {
-      status: CaptureStatus.REVIEWING,
+      status,
       ...(userIds && userIds.length > 0 ? { userId: { in: userIds } } : {}),
       ...(appIds && appIds.length > 0 ? { appId: { in: appIds } } : {}),
     },
@@ -111,6 +144,7 @@ export const getReviewingCaptures = async ({
 export const getReviewCapturesCount = async ({
   userIds,
   appIds,
+  stage,
 }: Omit<GetReviewingCapturesParams, "limit" | "page">): Promise<
   ActionPayload<number>
 > => {
@@ -134,10 +168,14 @@ export const getReviewCapturesCount = async ({
       data: null,
     };
   }
+  const status = queueStatusFor(session, stage);
+  if (!status) {
+    return { ok: false, message: "Invalid review stage.", data: null };
+  }
   // get review captures count
   const count = await prisma.capture.count({
     where: {
-      status: CaptureStatus.REVIEWING,
+      status,
       ...(userIds && userIds.length > 0 ? { userId: { in: userIds } } : {}),
       ...(appIds && appIds.length > 0 ? { appId: { in: appIds } } : {}),
     },
@@ -181,10 +219,14 @@ export const getFilterOptionsForTasks = async (): Promise<
   }
   // The worker list (names, emails) is for admins; reviewers filter by app.
   const includeUsers = isAdmin(session);
+  // Options cover every queue this user can open.
+  const statuses: CaptureStatus[] = isAdmin(session)
+    ? [CaptureStatus.REVIEWING, CaptureStatus.REVIEWED]
+    : [CaptureStatus.REVIEWING];
 
   // get unique user IDs from reviewing captures
   let userIds = await prisma.capture.findMany({
-    where: { status: CaptureStatus.REVIEWING },
+    where: { status: { in: statuses } },
     select: { userId: true },
     distinct: ["userId"],
   });
@@ -195,7 +237,7 @@ export const getFilterOptionsForTasks = async (): Promise<
 
   // get unique app IDs from reviewing captures
   let appIds = await prisma.capture.findMany({
-    where: { status: CaptureStatus.REVIEWING },
+    where: { status: { in: statuses } },
     select: { appId: true },
     distinct: ["appId"],
   });

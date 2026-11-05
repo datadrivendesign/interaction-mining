@@ -32,12 +32,24 @@ import {
 import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
+import { getVerdictMode } from "../shared/verdict-mode";
+import { PublishProgressDialog } from "../shared/publish-progress-dialog";
+import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
 
-export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
+export function EvaluationClientAndroid({
+  isAdmin,
+  isReviewer,
+}: {
+  isAdmin: boolean;
+  isReviewer: boolean;
+}) {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
+  // Draft the page loaded (`draft-<ms>`); a reviewer approves exactly this one.
+  const [draftVersion, setDraftVersion] = useState<string | null>(null);
+  const [hasNoDraft, setHasNoDraft] = useState(false);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
@@ -110,12 +122,21 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
-  const { isSubmitting, handleApprove, handleDeny, handleSkip } =
+  const verdictMode = getVerdictMode({
+    isAdmin,
+    isReviewer,
+    status: capture?.status,
+  });
+  // Staff reading a capture (reviewer or admin), as opposed to its owner.
+  const isStaffView = verdictMode !== "none" || isAdmin;
+
+  const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
       capture,
       traceData,
+      draftVersion,
       feedbackState,
-      isAdmin,
+      mode: verdictMode,
     });
 
   useEffect(() => {
@@ -174,7 +195,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         return;
       }
       if (files.data.length === 0) {
-        console.error("No draft files found");
+        setHasNoDraft(true);
         return;
       }
       const regexFileVersionRule = /draft-(\d+)\.json$/;
@@ -188,6 +209,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
+      setDraftVersion(draftVersionFromKey(latestDraftFile.fileKey));
       const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
         captureId,
         latestDraftFile.fileKey,
@@ -300,7 +322,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             {traceData && capture && (
               <ReviewContextPanelAndroid
                 traceData={traceData}
-                isAdmin={isAdmin}
+                isAdmin={isStaffView}
               />
             )}
           </ResizablePanel>
@@ -320,9 +342,11 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             >
               {/* Gallery — left/center */}
               <ResizablePanel
-                defaultSize={70}
+                id="review-gallery"
+                order={1}
+                defaultSize={isStaffView ? 70 : 100}
                 minSize={50}
-                maxSize={85}
+                maxSize={isStaffView ? 85 : 100}
                 className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950"
               >
                 {traceData && (
@@ -344,39 +368,47 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                 )}
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
-
-              {/* Screen Comments Panel — right */}
-              <ResizablePanel
-                defaultSize={30}
-                minSize={20}
-                maxSize={45}
-                className="min-h-0 overflow-hidden"
-              >
-                {traceData && (
-                  <ScreenCommentsPanel
-                    screens={traceData.screens}
-                    activeScreenId={activeScreenId}
-                    feedbackState={feedbackState}
-                    onFeedbackStateChange={setFeedbackState}
-                    hotkeyAction={screenCommentsHotkeyAction}
-                    onJumpToScreen={setActiveScreenId}
-                    externalSelectedScreenIds={gallerySelectedScreenIds}
-                    onExternalSelectedScreenIdsChange={
-                      setGallerySelectedScreenIds
-                    }
-                    onComposerScreenModeChange={setIsComposerInScreenMode}
-                  />
-                )}
-              </ResizablePanel>
+              {/* Screen Comments Panel — right. Staff only: the owner
+                  reads feedback on the edit page, not here. */}
+              {isStaffView && <ResizableHandle withHandle />}
+              {isStaffView && (
+                <ResizablePanel
+                  id="review-comments"
+                  order={2}
+                  defaultSize={30}
+                  minSize={20}
+                  maxSize={45}
+                  className="min-h-0 overflow-hidden"
+                >
+                  {traceData && (
+                    <ScreenCommentsPanel
+                      screens={traceData.screens}
+                      activeScreenId={activeScreenId}
+                      feedbackState={feedbackState}
+                      onFeedbackStateChange={setFeedbackState}
+                      hotkeyAction={screenCommentsHotkeyAction}
+                      onJumpToScreen={setActiveScreenId}
+                      externalSelectedScreenIds={gallerySelectedScreenIds}
+                      onExternalSelectedScreenIdsChange={
+                        setGallerySelectedScreenIds
+                      }
+                      onComposerScreenModeChange={setIsComposerInScreenMode}
+                    />
+                  )}
+                </ResizablePanel>
+              )}
             </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
-      {isAdmin && capture && traceData && (
+      <PublishProgressDialog progress={saveProgress} />
+      {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
+          mode={verdictMode}
+          hasDraft={!!traceData && !!draftVersion}
           issueSummary={issueSummary}
           isSubmitting={isSubmitting}
+          saveProgress={saveProgress}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}

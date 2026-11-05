@@ -5,12 +5,16 @@ import {
   UPLOAD_PURPOSE_CONFIG,
   UploadPurpose,
   buildUploadKey,
+  draftVersionFromKey,
+  draftVersionSchema,
+  draftVersionTime,
   safePathSegmentSchema,
   uploadUrlRequestSchema,
 } from "./upload-purpose.ts";
 
 // Synthetic ObjectId — shape only, not a real record.
 const OID = "0123456789abcdef01234567";
+const VERSION = "draft-1761234567890";
 
 const video = {
   purpose: UploadPurpose.CAPTURE_VIDEO,
@@ -173,5 +177,34 @@ describe("buildUploadKey", () => {
         `${purpose} produced ${prefix}`,
       );
     }
+  });
+});
+
+describe("draft versions", () => {
+  it("accepts draft-<digits> only", () => {
+    assert.equal(draftVersionSchema.safeParse(VERSION).success, true);
+    for (const bad of [
+      "draft-",
+      "draft-12.json",
+      "../draft-1",
+      "draft-1/x",
+      "draft-abc",
+      "1761234567890",
+    ]) {
+      assert.equal(
+        draftVersionSchema.safeParse(bad).success,
+        false,
+        `bad version: ${bad}`,
+      );
+    }
+  });
+
+  it("reads the version from a draft key", () => {
+    assert.equal(
+      draftVersionFromKey(`uploads/${OID}/drafts/${VERSION}.json`),
+      VERSION,
+    );
+    assert.equal(draftVersionFromKey(`uploads/${OID}/drafts/notes.json`), null);
+    assert.equal(draftVersionTime(VERSION), 1761234567890);
   });
 });

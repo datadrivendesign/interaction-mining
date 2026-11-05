@@ -53,12 +53,14 @@ export const constructUserPanelURL = (
  * @param page page number to grab tasks from
  * @param users Mongo user ObjectIDs to filter tasks with
  * @param apps Mongo app ObjectIDs to filter tasks with
+ * @param stage Review queue (REVIEWING or REVIEWED); omitted uses the default
  * @returns URL string for tasks panel with filters
  */
 export const constructTaskPanelURL = (
   page: number,
   users: string[],
   apps: string[],
+  stage?: CaptureStatus,
 ) => {
   const queryParams = new URLSearchParams();
   queryParams.set("page", page.toString());
@@ -67,6 +69,9 @@ export const constructTaskPanelURL = (
   }
   if (apps.length > 0) {
     queryParams.set("apps", apps.join(","));
+  }
+  if (stage) {
+    queryParams.set("stage", stage);
   }
   return `/admin/tasks?${queryParams.toString()}`;
 };

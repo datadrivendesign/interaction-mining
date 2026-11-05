@@ -101,6 +101,26 @@ export const safePathSegmentSchema = z
     message: "Must not start with a dot.",
   });
 
+/**
+ * A draft version: the draft file's name without `.json`, e.g.
+ * `draft-1761234567890`. Drafts are named `draft-<Date.now()>.json`, and the
+ * newest timestamp wins everywhere drafts are read.
+ */
+export const draftVersionSchema = z
+  .string()
+  .regex(/^draft-\d{1,16}$/, "Invalid draft version.");
+
+/** `uploads/<id>/drafts/draft-123.json` → `draft-123`, else null. */
+export function draftVersionFromKey(key: string): string | null {
+  const match = key.match(/(?:^|\/)(draft-\d{1,16})\.json$/);
+  return match ? match[1] : null;
+}
+
+/** Numeric timestamp of a draft version, for newest-wins comparisons. */
+export function draftVersionTime(version: string): number {
+  return Number(version.slice("draft-".length));
+}
+
 export const uploadUrlRequestSchema = z
   .object({
     purpose: z.nativeEnum(UploadPurpose),
