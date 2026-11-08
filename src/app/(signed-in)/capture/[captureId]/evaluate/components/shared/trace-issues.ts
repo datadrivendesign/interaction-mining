@@ -76,7 +76,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
   {
     id: "missing_intermediate_screen",
     label: "A screen is missing between two captured screens",
-    chipLabel: "Missing screen",
+    chipLabel: "Gap between screens",
     category: "missing_screens",
     annotation:
       "Screen #: A screen is missing here. Please add the screen where you [WHICH_ACTION], between this screen and the next one.",

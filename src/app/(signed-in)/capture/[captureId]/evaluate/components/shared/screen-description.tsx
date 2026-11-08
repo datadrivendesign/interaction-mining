@@ -9,7 +9,7 @@ import {
   parseGestureTemplateDescription,
 } from "../../../edit/components/repair-screen/util/gesture-description-template";
 
-/** Chip colors per template slot: the target in blue, the goal in teal. */
+/** Chip colors per template slot: what was touched in blue, why in teal. */
 const SLOT_CHIP_CLASS: Record<GestureTemplateSlotKey, string> = {
   target: "bg-blue-600 text-white dark:bg-blue-500",
   goal: "bg-teal-700 text-white dark:bg-teal-600",
@@ -81,8 +81,15 @@ export function ScreenDescription({
 export function ScreenDescriptionLegend() {
   return (
     <span className="flex shrink-0 items-center gap-1 text-[10px]">
-      <span className={cn(CHIP_BASE, SLOT_CHIP_CLASS.target)}>target</span>
-      <span className={cn(CHIP_BASE, SLOT_CHIP_CLASS.goal)}>goal</span>
+      <span className={cn(CHIP_BASE, SLOT_CHIP_CLASS.target)}>
+        what you touched
+      </span>
+      <span
+        className={cn(CHIP_BASE, SLOT_CHIP_CLASS.goal)}
+        title="For a drag: where you dragged it"
+      >
+        why you touched it
+      </span>
     </span>
   );
 }

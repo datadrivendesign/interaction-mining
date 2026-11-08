@@ -765,11 +765,11 @@ export function ScreenCommentsPanel({
     <aside className="flex h-full min-h-0 w-full flex-col border-l border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800">
         <MessageSquare className="size-3 shrink-0 text-red-500 dark:text-red-400" />
-        <span className="flex-1 truncate text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+        <span className="flex-1 truncate text-[11px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           {viewMode === "all" ? "All Issues" : screenLabel}
         </span>
         {panelIssueCount > 0 && (
-          <span className="rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[10px] leading-none text-red-600 dark:bg-red-950 dark:text-red-400">
+          <span className="rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] leading-none text-red-600 dark:bg-red-950 dark:text-red-400">
             {panelIssueCount}
           </span>
         )}
@@ -800,7 +800,7 @@ export function ScreenCommentsPanel({
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex max-h-[48%] min-h-0 flex-none flex-col overflow-y-auto overscroll-contain border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex flex-col gap-2.5 p-3">
-            <p className="text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+            <p className="text-xs leading-snug text-neutral-500 dark:text-neutral-400">
               Add all review feedback here. Click a chip to flag an issue
               immediately, or pick{" "}
               <span className="font-medium text-neutral-700 dark:text-neutral-300">
@@ -874,7 +874,7 @@ export function ScreenCommentsPanel({
         <div className="min-h-0 flex-1 overflow-y-auto">
           {viewMode === "all" ? (
             allIssueEntries.length === 0 ? (
-              <p className="px-3 py-3 text-[10px] text-neutral-400 dark:text-neutral-600">
+              <p className="px-3 py-3 text-[11px] text-neutral-400 dark:text-neutral-600">
                 No review feedback added yet.
               </p>
             ) : (

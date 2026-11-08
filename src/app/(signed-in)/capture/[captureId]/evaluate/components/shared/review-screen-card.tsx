@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { ScreenGesture } from "@prisma/client";
-import { Check } from "lucide-react";
+import { Check, Maximize2 } from "lucide-react";
 import { useMeasure } from "@uidotdev/usehooks";
 import {
   Tooltip,
@@ -19,9 +19,19 @@ import { cn } from "@/lib/utils";
 import { Redaction } from "../../../edit/components/types";
 import { ScreenDescription } from "./screen-description";
 
-/** Card width in the gallery grid; landscape screens take two columns. */
-export const SCREEN_CARD_WIDTH_CLASS = "w-40";
-const LANDSCAPE_CARD_WIDTH_CLASS = "w-80";
+export type ScreenCardSize = "S" | "M" | "L";
+export const SCREEN_CARD_SIZES: readonly ScreenCardSize[] = ["S", "M", "L"];
+export const DEFAULT_SCREEN_CARD_SIZE: ScreenCardSize = "M";
+
+/** Card widths per size; landscape screens are twice as wide. */
+const CARD_WIDTH_CLASS: Record<
+  ScreenCardSize,
+  { portrait: string; landscape: string }
+> = {
+  S: { portrait: "w-40", landscape: "w-80" },
+  M: { portrait: "w-52", landscape: "w-[26rem]" },
+  L: { portrait: "w-72", landscape: "w-[36rem]" },
+};
 
 /** Gesture ring diameter: scales with the screenshot, never below 14 px. */
 const RING_MIN_PX = 14;
@@ -45,8 +55,10 @@ export function ReviewScreenCard({
   isLastScreen,
   issueCount,
   isLandscape = false,
+  size = DEFAULT_SCREEN_CARD_SIZE,
   isFixed = false,
   renderImage,
+  onEnlarge,
   onSelect,
   isSelected = false,
   onSelectedToggle,
@@ -61,40 +73,19 @@ export function ReviewScreenCard({
   isLastScreen: boolean;
   issueCount: number;
   isLandscape?: boolean;
+  size?: ScreenCardSize;
   /** A reviewer fixed this screen while it was open. */
   isFixed?: boolean;
   /** Draws the screenshot with the given border classes. */
   renderImage: (borderClass: string) => ReactNode;
+  /** Opens the screen at full height, for reading text and checking privacy. */
+  onEnlarge?: () => void;
   onSelect: () => void;
   isSelected?: boolean;
   onSelectedToggle?: (checked: boolean) => void;
   /** Extra controls under the description (the Fix button). */
   footer?: ReactNode;
 }) {
-  const [containerRef, { width, height }] = useMeasure();
-  const canvasWidth = width ?? 0;
-  const canvasHeight = height ?? 0;
-  const ringPx = Math.round(
-    Math.min(
-      RING_MAX_PX,
-      Math.max(RING_MIN_PX, canvasWidth * RING_WIDTH_RATIO),
-    ),
-  );
-
-  const isDrag =
-    !!gesture &&
-    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
-    gesture.x !== null &&
-    gesture.y !== null &&
-    gesture.scrollDeltaX !== null &&
-    gesture.scrollDeltaY !== null &&
-    canvasWidth > 0 &&
-    canvasHeight > 0;
-  const startX = isDrag ? gesture.x! * canvasWidth : 0;
-  const startY = isDrag ? gesture.y! * canvasHeight : 0;
-  const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
-  const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
-
   const hasIssues = issueCount > 0;
   const borderClass = isActive
     ? hasIssues
@@ -110,13 +101,13 @@ export function ReviewScreenCard({
       data-screen-id={screenId}
       className={cn(
         "relative flex shrink-0 flex-col gap-1.5",
-        isLandscape ? LANDSCAPE_CARD_WIDTH_CLASS : SCREEN_CARD_WIDTH_CLASS,
+        CARD_WIDTH_CLASS[size][isLandscape ? "landscape" : "portrait"],
       )}
     >
       <div
-        className="relative w-full cursor-pointer"
+        className="group/card relative w-full cursor-pointer"
         onClick={onSelect}
-        ref={containerRef}
+        onDoubleClick={onEnlarge}
       >
         {hasIssues && (
           <div
@@ -135,6 +126,21 @@ export function ReviewScreenCard({
           <div className="absolute bottom-1 left-1 z-20 rounded-full bg-green-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white shadow-sm">
             Fixed
           </div>
+        )}
+
+        {onEnlarge && (
+          <button
+            type="button"
+            aria-label={`Enlarge screen ${index + 1}`}
+            title="Enlarge (or double-click the screen)"
+            className="absolute bottom-1 left-1/2 z-30 flex size-6 -translate-x-1/2 items-center justify-center rounded-full bg-neutral-900/80 text-white opacity-0 shadow-sm transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEnlarge();
+            }}
+          >
+            <Maximize2 className="size-3.5" />
+          </button>
         )}
 
         {onSelectedToggle !== undefined && (
@@ -162,103 +168,20 @@ export function ReviewScreenCard({
           </button>
         )}
 
-        <TooltipProvider delayDuration={100}>
-          {renderImage(borderClass)}
-
-          {isDrag && (
-            <svg
-              className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
-              width="100%"
-              height="100%"
-            >
-              <defs>
-                <marker
-                  id={`dragArrowHead-${screenId}`}
-                  viewBox="0 0 8 8"
-                  markerWidth="5"
-                  markerHeight="5"
-                  refX="7"
-                  refY="4"
-                  orient="auto"
-                  markerUnits="strokeWidth"
-                >
-                  <path d="M0,0 L0,8 L8,4 z" fill="rgba(23,23,23,0.72)" />
-                </marker>
-              </defs>
-              <line
-                x1={startX}
-                y1={startY}
-                x2={endX}
-                y2={endY}
-                stroke="rgba(23,23,23,0.72)"
-                strokeWidth="2"
-                markerEnd={`url(#dragArrowHead-${screenId})`}
-              />
-              <circle
-                cx={endX}
-                cy={endY}
-                r="5"
-                fill="white"
-                stroke="rgba(23,23,23,0.92)"
-                strokeWidth="1.8"
-              />
-            </svg>
-          )}
-
-          {gesture?.type && gesture.x !== null && gesture.y !== null && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-yellow-300 opacity-85 ring-1 ring-yellow-600/60"
-                  style={{
-                    left: `${gesture.x * 100}%`,
-                    top: `${gesture.y * 100}%`,
-                    width: ringPx,
-                    height: ringPx,
-                  }}
-                >
-                  <span
-                    className="flex items-center justify-center"
-                    style={{
-                      transform: `scale(${(ringPx * 0.75) / ICON_NATIVE_PX})`,
-                    }}
-                  >
-                    {findGestureOption(gesture.type)?.icon}
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={5} className="z-50">
-                <p>{gesture.type}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {redactions.map((redaction) => (
-            <Tooltip key={redaction.id}>
-              <TooltipTrigger asChild>
-                <div
-                  className="absolute z-15 cursor-pointer border-1 border-yellow-500 bg-black hover:shadow-lg hover:shadow-yellow-500/50"
-                  style={{
-                    left: `${redaction.x * 100}%`,
-                    top: `${redaction.y * 100}%`,
-                    width: `${redaction.width * 100}%`,
-                    height: `${redaction.height * 100}%`,
-                  }}
-                />
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={10}>
-                <p>{redaction.annotation}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </TooltipProvider>
+        {renderImage(borderClass)}
+        <ScreenOverlays
+          screenId={screenId}
+          gesture={gesture}
+          redactions={redactions}
+        />
       </div>
 
       <ScreenDescription
         gesture={gesture}
         isLastScreen={isLastScreen}
         className={cn(
-          "px-0.5 text-[13px] leading-relaxed break-words",
+          "px-0.5 leading-relaxed break-words",
+          size === "S" ? "text-[13px]" : "text-sm",
           isActive
             ? "text-neutral-950 dark:text-white"
             : "text-neutral-800 dark:text-neutral-200",
@@ -266,5 +189,142 @@ export function ReviewScreenCard({
       />
       {footer}
     </figure>
+  );
+}
+
+/**
+ * The gesture marker, drag arrow, and redaction boxes, drawn over a
+ * screenshot. Place it inside a `relative` box the same size as the image.
+ */
+export function ScreenOverlays({
+  screenId,
+  gesture,
+  redactions,
+  translucentRedactions = false,
+}: {
+  screenId: string;
+  gesture?: ScreenGesture;
+  redactions: Redaction[];
+  /** Shows what is under each box, to check it covers the right thing. */
+  translucentRedactions?: boolean;
+}) {
+  const [containerRef, { width, height }] = useMeasure();
+  const canvasWidth = width ?? 0;
+  const canvasHeight = height ?? 0;
+  const ringPx = Math.round(
+    Math.min(
+      RING_MAX_PX,
+      Math.max(RING_MIN_PX, canvasWidth * RING_WIDTH_RATIO),
+    ),
+  );
+
+  const isDrag =
+    !!gesture &&
+    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
+    gesture.x !== null &&
+    gesture.y !== null &&
+    gesture.scrollDeltaX !== null &&
+    gesture.scrollDeltaY !== null &&
+    canvasWidth > 0 &&
+    canvasHeight > 0;
+  const startX = isDrag ? gesture.x! * canvasWidth : 0;
+  const startY = isDrag ? gesture.y! * canvasHeight : 0;
+  const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
+  const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
+
+  return (
+    <div ref={containerRef} className="pointer-events-none absolute inset-0">
+      <TooltipProvider delayDuration={100}>
+        {isDrag && (
+          <svg
+            className="absolute inset-0 z-10 h-full w-full overflow-visible"
+            width="100%"
+            height="100%"
+          >
+            <defs>
+              <marker
+                id={`dragArrowHead-${screenId}`}
+                viewBox="0 0 8 8"
+                markerWidth="5"
+                markerHeight="5"
+                refX="7"
+                refY="4"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path d="M0,0 L0,8 L8,4 z" fill="rgba(23,23,23,0.72)" />
+              </marker>
+            </defs>
+            <line
+              x1={startX}
+              y1={startY}
+              x2={endX}
+              y2={endY}
+              stroke="rgba(23,23,23,0.72)"
+              strokeWidth="2"
+              markerEnd={`url(#dragArrowHead-${screenId})`}
+            />
+            <circle
+              cx={endX}
+              cy={endY}
+              r="5"
+              fill="white"
+              stroke="rgba(23,23,23,0.92)"
+              strokeWidth="1.8"
+            />
+          </svg>
+        )}
+
+        {gesture?.type && gesture.x !== null && gesture.y !== null && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="pointer-events-auto absolute z-20 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-yellow-300 opacity-85 ring-1 ring-yellow-600/60"
+                style={{
+                  left: `${gesture.x * 100}%`,
+                  top: `${gesture.y * 100}%`,
+                  width: ringPx,
+                  height: ringPx,
+                }}
+              >
+                <span
+                  className="flex items-center justify-center"
+                  style={{
+                    transform: `scale(${(ringPx * 0.75) / ICON_NATIVE_PX})`,
+                  }}
+                >
+                  {findGestureOption(gesture.type)?.icon}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={5} className="z-50">
+              <p>{gesture.type}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {redactions.map((redaction) => (
+          <Tooltip key={redaction.id}>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "pointer-events-auto absolute z-15 cursor-pointer border-1 border-yellow-500 hover:shadow-lg hover:shadow-yellow-500/50",
+                  translucentRedactions ? "bg-black/25" : "bg-black",
+                )}
+                style={{
+                  left: `${redaction.x * 100}%`,
+                  top: `${redaction.y * 100}%`,
+                  width: `${redaction.width * 100}%`,
+                  height: `${redaction.height * 100}%`,
+                }}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={10}>
+              <p>{redaction.annotation}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </TooltipProvider>
+    </div>
   );
 }

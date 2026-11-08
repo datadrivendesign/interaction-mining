@@ -367,9 +367,9 @@ export function EvaluationClientAndroid({
               <ResizablePanel
                 id="review-gallery"
                 order={1}
-                defaultSize={isStaffView ? 70 : 100}
+                defaultSize={isStaffView ? 60 : 100}
                 minSize={50}
-                maxSize={isStaffView ? 85 : 100}
+                maxSize={isStaffView ? 80 : 100}
                 className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950"
               >
                 {traceData && (
@@ -398,9 +398,9 @@ export function EvaluationClientAndroid({
                 <ResizablePanel
                   id="review-comments"
                   order={2}
-                  defaultSize={30}
+                  defaultSize={40}
                   minSize={20}
-                  maxSize={45}
+                  maxSize={50}
                   className="min-h-0 overflow-hidden"
                 >
                   {traceData && (

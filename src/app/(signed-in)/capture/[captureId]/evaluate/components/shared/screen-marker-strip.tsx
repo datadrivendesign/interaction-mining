@@ -14,6 +14,9 @@ function getMarkerPosition(timestamp: number, duration: number) {
   return Math.max(0, Math.min((timestamp / duration) * 100, 100));
 }
 
+/** Markers this close to either end (percent) open their popup inward. */
+const POPUP_EDGE_PERCENT = 25;
+
 export function ScreenMarkerStrip({
   screens,
   activeScreenId,
@@ -134,13 +137,13 @@ export function ScreenMarkerStrip({
 
       <div
         ref={trackRef}
-        className="relative h-12 cursor-ew-resize touch-none select-none"
+        className="relative h-14 cursor-ew-resize touch-none select-none"
         onPointerDown={handleTrackPointerDown}
         onPointerMove={handleTrackPointerMove}
         onPointerUp={handleTrackPointerUp}
         onPointerCancel={handleTrackPointerUp}
       >
-        <div className="absolute inset-x-0 top-3 h-px bg-neutral-200 dark:bg-neutral-700" />
+        <div className="absolute inset-x-0 top-8 h-px bg-neutral-200 dark:bg-neutral-700" />
         {sortedScreens.map((screen, index) => {
           const gap = gapsByScreenId[screen.id];
           if (gap === undefined || index === 0) return null;
@@ -152,16 +155,33 @@ export function ScreenMarkerStrip({
           return (
             <div
               key={`gap-${screen.id}`}
-              className="pointer-events-none absolute top-[10px] h-1.5 rounded-sm border border-dashed border-amber-500 bg-amber-100 dark:bg-amber-950/60"
+              className="pointer-events-none absolute top-[30px] h-1.5 rounded-sm border border-dashed border-amber-500 bg-amber-100 dark:bg-amber-950/60"
               style={{ left: `${start}%`, width: `${end - start}%` }}
-              title={`${Math.round(gap)} s between screens ${index} and ${index + 1}`}
+              title={`${Math.round(gap)} s gap between screens ${index} and ${index + 1}`}
             />
           );
         })}
+        {/* Playhead: a handle and the time above the markers (feedback popups
+            open below them), and a line down through the markers. */}
         <div
-          className="absolute top-0 h-6 w-px bg-neutral-400/80 dark:bg-neutral-500/80"
+          className="pointer-events-none absolute top-2 h-11 w-0.5 -translate-x-1/2 bg-blue-600 dark:bg-blue-400"
           style={{ left: `${playheadPosition}%` }}
         />
+        <div
+          className="absolute top-0 z-10 flex -translate-x-1/2 cursor-grab items-center active:cursor-grabbing"
+          style={{ left: `${playheadPosition}%` }}
+          aria-hidden
+        >
+          <span className="block size-3.5 rounded-full border-2 border-white bg-blue-600 shadow ring-1 ring-blue-600/40 dark:border-neutral-900 dark:bg-blue-400" />
+          <span
+            className={cn(
+              "pointer-events-none absolute top-1/2 -translate-y-1/2 font-mono text-[11px] font-semibold whitespace-nowrap text-blue-700 tabular-nums dark:text-blue-300",
+              playheadPosition > 85 ? "right-5" : "left-5",
+            )}
+          >
+            {currentTime.toFixed(1)} s
+          </span>
+        </div>
 
         {sortedScreens.map((screen, index) => {
           const position = getMarkerPosition(
@@ -188,7 +208,7 @@ export function ScreenMarkerStrip({
             <button
               key={screen.id}
               type="button"
-              className="absolute top-0 -translate-x-1/2 text-center"
+              className="absolute top-5 -translate-x-1/2 text-center"
               style={{ left: `${position}%` }}
               title={`Focus Screen ${index + 1}`}
               aria-label={`Focus Screen ${index + 1} at ${screen.timestamp.toFixed(1)} seconds`}
@@ -204,7 +224,18 @@ export function ScreenMarkerStrip({
               onClick={() => onSelectScreen(screen.id, screen.timestamp)}
             >
               {isPreviewVisible && hasIssues && (
-                <span className="pointer-events-none absolute top-5 left-1/2 z-20 w-44 -translate-x-1/2 rounded-md border border-neutral-200 bg-white/95 px-2 py-1.5 text-left shadow-md select-none dark:border-neutral-700 dark:bg-neutral-950/95">
+                <span
+                  className={cn(
+                    "pointer-events-none absolute top-5 z-20 w-44 rounded-md border border-neutral-200 bg-white/95 px-2 py-1.5 text-left shadow-md select-none dark:border-neutral-700 dark:bg-neutral-950/95",
+                    // Near either end, open toward the middle so the popup
+                    // stays inside the strip instead of past its edge.
+                    position < POPUP_EDGE_PERCENT
+                      ? "-left-1"
+                      : position > 100 - POPUP_EDGE_PERCENT
+                        ? "-right-1"
+                        : "left-1/2 -translate-x-1/2",
+                  )}
+                >
                   <span className="block text-[9px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
                     Screen {index + 1} • {screen.timestamp.toFixed(1)}s
                   </span>

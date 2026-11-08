@@ -102,7 +102,7 @@ export function IssueGrid({
         disabled={isDisabled}
         aria-pressed={isSelected}
         className={cn(
-          "inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-1 text-left text-[11px] leading-tight transition-colors",
+          "inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-left text-[13px] leading-tight transition-colors",
           "disabled:cursor-not-allowed disabled:opacity-50",
           isSelected
             ? "border-red-400 bg-red-100 text-red-700 shadow-sm dark:border-red-700 dark:bg-red-950/50 dark:text-red-200"
@@ -114,7 +114,7 @@ export function IssueGrid({
         {issue.shortcutKey && (
           <span
             className={cn(
-              "inline-flex size-4 items-center justify-center rounded-full text-[10px] font-semibold",
+              "inline-flex size-4 items-center justify-center rounded-full text-[11px] font-semibold",
               isSelected
                 ? "bg-red-700 text-white dark:bg-red-200 dark:text-red-950"
                 : "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900",
@@ -126,7 +126,7 @@ export function IssueGrid({
         <span title={issue.label}>{issue.chipLabel ?? issue.label}</span>
         <span
           className={cn(
-            "inline-flex rounded-full px-1 py-0.5 text-[9px] font-semibold tracking-wide uppercase",
+            "inline-flex rounded-full px-1 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
             issue.scope === "flow"
               ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200"
               : "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200",
@@ -135,12 +135,12 @@ export function IssueGrid({
           {issue.scope === "flow" ? "Flow" : "Screen"}
         </span>
         {isSelected && (
-          <span className="inline-flex rounded-full bg-red-700 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-white uppercase dark:bg-red-200 dark:text-red-950">
+          <span className="inline-flex rounded-full bg-red-700 px-1 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase dark:bg-red-200 dark:text-red-950">
             Add details
           </span>
         )}
         {!compact && isUsed && !isSelected && (
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-900/60 dark:text-emerald-200">
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 uppercase dark:bg-emerald-900/60 dark:text-emerald-200">
             <Check className="size-2.5" />
             Used
           </span>
@@ -164,7 +164,7 @@ export function IssueGrid({
 
         {recentIssues.length > 0 && normalizedQuery.length === 0 && (
           <div className="space-y-1.5">
-            <p className="flex items-center gap-1 text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+            <p className="flex items-center gap-1 text-[11px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
               <Clock3 className="size-3" />
               Recently used
             </p>
@@ -177,14 +177,14 @@ export function IssueGrid({
 
       {checklist && onPassAll && (
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-neutral-600 dark:text-neutral-300">
+          <p className="text-xs text-neutral-600 dark:text-neutral-300">
             Mark each step <span className="font-semibold">Pass</span> or{" "}
             <span className="font-semibold">Issue</span>.
           </p>
           <button
             type="button"
             onClick={onPassAll}
-            className="shrink-0 cursor-pointer rounded-md border border-green-300 bg-green-50 px-2 py-1 text-[11px] font-semibold text-green-800 transition-colors hover:bg-green-100 dark:border-green-800 dark:bg-green-950/40 dark:text-green-200 dark:hover:bg-green-950/70"
+            className="shrink-0 cursor-pointer rounded-md border border-green-300 bg-green-50 px-2 py-1 text-xs font-semibold text-green-800 transition-colors hover:bg-green-100 dark:border-green-800 dark:bg-green-950/40 dark:text-green-200 dark:hover:bg-green-950/70"
             title="Mark every step Pass, except steps marked Issue"
           >
             {CHECKLIST_STEPS.some((step) => checklist[step] === "issue")
@@ -240,14 +240,14 @@ export function IssueGrid({
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] font-semibold tracking-widest text-neutral-600 uppercase dark:text-neutral-300">
+                      <p className="text-xs font-semibold tracking-widest text-neutral-600 uppercase dark:text-neutral-300">
                         {meta.label}
                       </p>
-                      <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                      <span className="rounded-full bg-neutral-200 px-1.5 py-0.5 text-[11px] font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                         {issues.length}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+                    <p className="mt-0.5 text-xs leading-snug text-neutral-500 dark:text-neutral-400">
                       {meta.description}
                     </p>
                   </div>
@@ -265,7 +265,7 @@ export function IssueGrid({
                 <div className="space-y-2 pl-5">
                   {screenIssues.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-[10px] font-medium tracking-wider text-sky-700 uppercase dark:text-sky-300">
+                      <p className="text-[11px] font-medium tracking-wider text-sky-700 uppercase dark:text-sky-300">
                         Screen issues
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -275,7 +275,7 @@ export function IssueGrid({
                   )}
                   {flowIssues.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-[10px] font-medium tracking-wider text-amber-700 uppercase dark:text-amber-300">
+                      <p className="text-[11px] font-medium tracking-wider text-amber-700 uppercase dark:text-amber-300">
                         Flow issues
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -291,21 +291,21 @@ export function IssueGrid({
       )}
 
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
+        <p className="text-[11px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
           Custom
         </p>
         <button
           type="button"
           onClick={onSelectOther}
           className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] leading-tight",
+            "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[13px] leading-tight",
             "border-dashed border-neutral-300 bg-white text-neutral-700 transition-colors",
             "hover:border-red-300 hover:bg-red-50 hover:text-red-700",
             "dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200",
             "dark:hover:border-red-700 dark:hover:bg-red-950/40 dark:hover:text-red-300",
           )}
         >
-          <span className="inline-flex size-4 items-center justify-center rounded-full bg-neutral-200 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-100">
+          <span className="inline-flex size-4 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-100">
             O
           </span>
           <span>Other...</span>
@@ -326,7 +326,7 @@ function ChecklistMarkToggle({
   onMark: (mark: ChecklistMark) => void;
 }) {
   const base =
-    "cursor-pointer px-2 py-1 text-[11px] font-semibold transition-colors";
+    "cursor-pointer px-2 py-1 text-xs font-semibold transition-colors";
   return (
     <div
       role="group"

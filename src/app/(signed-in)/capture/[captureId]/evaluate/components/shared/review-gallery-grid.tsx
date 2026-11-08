@@ -1,8 +1,28 @@
 "use client";
 
-import { Fragment, ReactNode, useEffect, useRef } from "react";
+import { Fragment, ReactNode, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { FrameData } from "../../../edit/components/types";
+import {
+  DEFAULT_SCREEN_CARD_SIZE,
+  SCREEN_CARD_SIZES,
+  ScreenCardSize,
+} from "./review-screen-card";
 import { ScreenDescriptionLegend } from "./screen-description";
+
+const CARD_SIZE_STORAGE_KEY = "review-gallery-card-size";
+
+function readStoredCardSize(): ScreenCardSize {
+  try {
+    const stored = window.localStorage.getItem(CARD_SIZE_STORAGE_KEY);
+    return (
+      SCREEN_CARD_SIZES.find((size) => size === stored) ??
+      DEFAULT_SCREEN_CARD_SIZE
+    );
+  } catch {
+    return DEFAULT_SCREEN_CARD_SIZE;
+  }
+}
 
 /** Seconds between two screens that suggest a missing screen (iOS video). */
 export const GAP_CALLOUT_SECONDS = 6;
@@ -46,8 +66,22 @@ export function ReviewGalleryGrid({
     screen: FrameData,
     index: number,
     cardRef: (node: HTMLElement | null) => void,
+    cardSize: ScreenCardSize,
   ) => ReactNode;
 }) {
+  const [cardSize, setCardSize] = useState<ScreenCardSize>(
+    DEFAULT_SCREEN_CARD_SIZE,
+  );
+  // Read after mount so the server render and first client render match.
+  useEffect(() => setCardSize(readStoredCardSize()), []);
+  const changeCardSize = (size: ScreenCardSize) => {
+    setCardSize(size);
+    try {
+      window.localStorage.setItem(CARD_SIZE_STORAGE_KEY, size);
+    } catch {
+      // Storage blocked: the size still applies for this visit.
+    }
+  };
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -79,6 +113,29 @@ export function ReviewGalleryGrid({
           {captureTimestamp ? ` • Created ${captureTimestamp}` : ""}
         </p>
         <ScreenDescriptionLegend />
+        <div
+          role="group"
+          aria-label="Screen size"
+          className="flex shrink-0 overflow-hidden rounded-md border border-neutral-300 dark:border-neutral-700"
+        >
+          {SCREEN_CARD_SIZES.map((size) => (
+            <button
+              key={size}
+              type="button"
+              aria-pressed={cardSize === size}
+              title={`${size === "S" ? "Small" : size === "M" ? "Medium" : "Large"} screens`}
+              onClick={() => changeCardSize(size)}
+              className={cn(
+                "cursor-pointer px-2 py-0.5 text-[11px] font-semibold transition-colors",
+                cardSize === size
+                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                  : "bg-white text-neutral-600 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800",
+              )}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div
@@ -93,9 +150,14 @@ export function ReviewGalleryGrid({
                 {gap !== undefined && (
                   <GapCallout seconds={gap} afterScreen={index} />
                 )}
-                {renderCard(screen, index, (node) => {
-                  cardRefs.current[screen.id] = node;
-                })}
+                {renderCard(
+                  screen,
+                  index,
+                  (node) => {
+                    cardRefs.current[screen.id] = node;
+                  },
+                  cardSize,
+                )}
               </Fragment>
             );
           })}
@@ -115,8 +177,10 @@ function GapCallout({
   return (
     <div className="flex w-24 shrink-0 items-center self-stretch">
       <div className="w-full rounded-lg border border-dashed border-amber-500 bg-amber-50 px-2 py-2 text-center text-[11px] leading-snug text-amber-800 dark:border-amber-500/70 dark:bg-amber-950/40 dark:text-amber-200">
-        <span className="block text-sm font-bold">{Math.round(seconds)} s</span>
-        between {afterScreen} and {afterScreen + 1}.
+        <span className="block text-sm font-bold">
+          {Math.round(seconds)} s gap
+        </span>
+        between screens {afterScreen} and {afterScreen + 1}.
         <span className="block">Check for a missing screen.</span>
       </div>
     </div>
