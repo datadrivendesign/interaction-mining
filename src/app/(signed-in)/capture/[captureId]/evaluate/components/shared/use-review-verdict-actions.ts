@@ -37,6 +37,8 @@ export function useReviewVerdictActions({
   mode,
   listPath,
   editHref,
+  approveBlockedReason = null,
+  denyBlockedReason = null,
 }: {
   capture?: Capture | null;
   traceData?: TraceFormData;
@@ -48,6 +50,10 @@ export function useReviewVerdictActions({
   listPath: string;
   /** Edit page for this capture; Ctrl+Shift+E opens it in REVIEWING. */
   editHref?: string;
+  /** Checklist gate: why Approve is off now (button and hotkey), or null. */
+  approveBlockedReason?: string | null;
+  /** Checklist gate: why Send back / Deny is off now, or null. */
+  denyBlockedReason?: string | null;
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,6 +126,10 @@ export function useReviewVerdictActions({
     if (!capture || !traceData || isSubmitting || mode === "none") {
       return;
     }
+    if (approveBlockedReason) {
+      toast.error(approveBlockedReason);
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -172,6 +182,7 @@ export function useReviewVerdictActions({
     }
   }, [
     approvalSummary,
+    approveBlockedReason,
     capture,
     draftVersion,
     isSubmitting,
@@ -183,6 +194,10 @@ export function useReviewVerdictActions({
 
   const handleDeny = useCallback(async () => {
     if (!capture || isSubmitting || mode === "none") {
+      return;
+    }
+    if (denyBlockedReason) {
+      toast.error(denyBlockedReason);
       return;
     }
     const screens = traceData?.screens ?? [];
@@ -227,6 +242,7 @@ export function useReviewVerdictActions({
     }
   }, [
     capture,
+    denyBlockedReason,
     feedbackState,
     isSubmitting,
     mode,

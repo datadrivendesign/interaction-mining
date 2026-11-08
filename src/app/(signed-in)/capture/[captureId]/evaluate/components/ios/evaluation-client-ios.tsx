@@ -28,6 +28,11 @@ import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { getVerdictMode, taskListPathFor } from "../shared/verdict-mode";
+import {
+  getChecklistStatus,
+  passUnflaggedSteps,
+  ReviewChecklist,
+} from "../shared/review-checklist";
 import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
@@ -55,6 +60,11 @@ export function EvaluationClientIOS({
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
   );
+  // The reviewer's Pass/Issue mark per step; it gates the verdict.
+  const [checklist, setChecklist] = useState<ReviewChecklist>({});
+  useEffect(() => {
+    setChecklist({});
+  }, [captureId]);
   const [gallerySelectedScreenIds, setGallerySelectedScreenIds] = useState<
     string[]
   >([]);
@@ -134,6 +144,12 @@ export function EvaluationClientIOS({
   const listPath = taskListPathFor(verdictMode, isAdmin);
   const editHref = `/capture/${captureId}/edit`;
 
+  // Only the reviewer's first pass is gated; the admin's paths are not.
+  const checklistStatus =
+    verdictMode === "review"
+      ? getChecklistStatus(checklist, feedbackState)
+      : null;
+
   const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
       capture,
@@ -143,6 +159,8 @@ export function EvaluationClientIOS({
       mode: verdictMode,
       listPath,
       editHref,
+      approveBlockedReason: checklistStatus?.approveBlockedReason ?? null,
+      denyBlockedReason: checklistStatus?.sendBackBlockedReason ?? null,
     });
 
   const {
@@ -154,7 +172,6 @@ export function EvaluationClientIOS({
     handleScreenSelect,
     handleScreenStep,
     handleMarkerStripScrub,
-    handleReplayScreen,
     togglePlayback,
     handleVideoSeeking,
     handleOnVideoLoadedMetadata,
@@ -344,10 +361,6 @@ export function EvaluationClientIOS({
                     commentsByScreen={feedbackState.commentsByScreen}
                     onScreenSelect={handleScreenSelect}
                     captureTimestamp={captureTimestamp}
-                    onReplayScreen={(screenId) =>
-                      void handleReplayScreen(screenId)
-                    }
-                    canReplay={videoDuration > 0}
                     selectedScreenIds={
                       isComposerInScreenMode
                         ? gallerySelectedScreenIds
@@ -395,6 +408,11 @@ export function EvaluationClientIOS({
                         setGallerySelectedScreenIds
                       }
                       onComposerScreenModeChange={setIsComposerInScreenMode}
+                      checklist={checklistStatus ? checklist : undefined}
+                      onChecklistMark={(category, mark) =>
+                        setChecklist((prev) => ({ ...prev, [category]: mark }))
+                      }
+                      onPassAll={() => setChecklist(passUnflaggedSteps)}
                     />
                   )}
                 </ResizablePanel>
@@ -415,6 +433,9 @@ export function EvaluationClientIOS({
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
           editHref={editHref}
+          checklistLabel={checklistStatus?.label}
+          approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
+          denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },

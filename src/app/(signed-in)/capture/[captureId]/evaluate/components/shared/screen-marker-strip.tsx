@@ -23,6 +23,7 @@ export function ScreenMarkerStrip({
   onSelectScreen,
   onScrub,
   headerAccessory,
+  gapsByScreenId = {},
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
@@ -32,6 +33,8 @@ export function ScreenMarkerStrip({
   onSelectScreen: (screenId: string, timestamp: number) => void;
   onScrub: (timestamp: number) => void;
   headerAccessory?: ReactNode;
+  /** Long gaps before a screen (see `findScreenGaps`), drawn as bands. */
+  gapsByScreenId?: Record<string, number>;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const isScrubbingRef = useRef(false);
@@ -138,6 +141,23 @@ export function ScreenMarkerStrip({
         onPointerCancel={handleTrackPointerUp}
       >
         <div className="absolute inset-x-0 top-3 h-px bg-neutral-200 dark:bg-neutral-700" />
+        {sortedScreens.map((screen, index) => {
+          const gap = gapsByScreenId[screen.id];
+          if (gap === undefined || index === 0) return null;
+          const start = getMarkerPosition(
+            sortedScreens[index - 1].timestamp,
+            fallbackDuration,
+          );
+          const end = getMarkerPosition(screen.timestamp, fallbackDuration);
+          return (
+            <div
+              key={`gap-${screen.id}`}
+              className="pointer-events-none absolute top-[10px] h-1.5 rounded-sm border border-dashed border-amber-500 bg-amber-100 dark:bg-amber-950/60"
+              style={{ left: `${start}%`, width: `${end - start}%` }}
+              title={`${Math.round(gap)} s between screens ${index} and ${index + 1}`}
+            />
+          );
+        })}
         <div
           className="absolute top-0 h-6 w-px bg-neutral-400/80 dark:bg-neutral-500/80"
           style={{ left: `${playheadPosition}%` }}

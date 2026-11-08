@@ -33,6 +33,11 @@ import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { getVerdictMode, taskListPathFor } from "../shared/verdict-mode";
+import {
+  getChecklistStatus,
+  passUnflaggedSteps,
+  ReviewChecklist,
+} from "../shared/review-checklist";
 import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
@@ -54,6 +59,11 @@ export function EvaluationClientAndroid({
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
   );
+  // The reviewer's Pass/Issue mark per step; it gates the verdict.
+  const [checklist, setChecklist] = useState<ReviewChecklist>({});
+  useEffect(() => {
+    setChecklist({});
+  }, [captureId]);
   const [gallerySelectedScreenIds, setGallerySelectedScreenIds] = useState<
     string[]
   >([]);
@@ -132,6 +142,12 @@ export function EvaluationClientAndroid({
   const listPath = taskListPathFor(verdictMode, isAdmin);
   const editHref = `/capture/${captureId}/edit`;
 
+  // Only the reviewer's first pass is gated; the admin's paths are not.
+  const checklistStatus =
+    verdictMode === "review"
+      ? getChecklistStatus(checklist, feedbackState)
+      : null;
+
   const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
       capture,
@@ -141,6 +157,8 @@ export function EvaluationClientAndroid({
       mode: verdictMode,
       listPath,
       editHref,
+      approveBlockedReason: checklistStatus?.approveBlockedReason ?? null,
+      denyBlockedReason: checklistStatus?.sendBackBlockedReason ?? null,
     });
 
   useEffect(() => {
@@ -398,6 +416,11 @@ export function EvaluationClientAndroid({
                         setGallerySelectedScreenIds
                       }
                       onComposerScreenModeChange={setIsComposerInScreenMode}
+                      checklist={checklistStatus ? checklist : undefined}
+                      onChecklistMark={(category, mark) =>
+                        setChecklist((prev) => ({ ...prev, [category]: mark }))
+                      }
+                      onPassAll={() => setChecklist(passUnflaggedSteps)}
                     />
                   )}
                 </ResizablePanel>
@@ -418,6 +441,9 @@ export function EvaluationClientAndroid({
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
           editHref={editHref}
+          checklistLabel={checklistStatus?.label}
+          approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
+          denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
           additionalShortcuts={[
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },

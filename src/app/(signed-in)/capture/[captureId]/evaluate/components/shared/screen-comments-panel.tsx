@@ -19,9 +19,11 @@ import {
 import {
   findTraceIssue,
   TraceIssue,
+  TraceIssueCategory,
   TraceIssueDestination,
 } from "./trace-issues";
 import { IssueGrid } from "./issue-grid";
+import { ChecklistMark, ReviewChecklist } from "./review-checklist";
 import { CommentCard } from "./screen-comments/comment-card";
 import { CommentComposer } from "./screen-comments/comment-composer";
 import { CommentSection } from "./screen-comments/comment-section";
@@ -45,6 +47,9 @@ export function ScreenCommentsPanel({
   externalSelectedScreenIds,
   onExternalSelectedScreenIdsChange,
   onComposerScreenModeChange,
+  checklist,
+  onChecklistMark,
+  onPassAll,
 }: {
   screens: FrameData[];
   activeScreenId: string | null;
@@ -55,6 +60,10 @@ export function ScreenCommentsPanel({
   externalSelectedScreenIds?: string[];
   onExternalSelectedScreenIdsChange?: (ids: string[]) => void;
   onComposerScreenModeChange?: (isActive: boolean) => void;
+  /** Reviewer checklist; omit to show the issue chips without Pass/Issue. */
+  checklist?: ReviewChecklist;
+  onChecklistMark?: (category: TraceIssueCategory, mark: ChecklistMark) => void;
+  onPassAll?: () => void;
 }) {
   const [internalFeedbackState, setInternalFeedbackState] =
     useState<ReviewFeedbackState>(EMPTY_REVIEW_FEEDBACK_STATE);
@@ -352,6 +361,10 @@ export function ScreenCommentsPanel({
         return;
       }
 
+      // A chip names its step, so adding one marks that step Issue.
+      const issueCategory = issueId ? findTraceIssue(issueId)?.category : null;
+      if (issueCategory) onChecklistMark?.(issueCategory, "issue");
+
       const nextComment: ReviewComment = {
         id: crypto.randomUUID(),
         text: text.trim(),
@@ -398,7 +411,7 @@ export function ScreenCommentsPanel({
       resetComposer();
       setExpandedCommentId(`${target}:${nextComment.id}`);
     },
-    [activeScreen, resetComposer, setFeedbackState],
+    [activeScreen, onChecklistMark, resetComposer, setFeedbackState],
   );
 
   const removeComment = useCallback(
@@ -850,6 +863,9 @@ export function ScreenCommentsPanel({
                 selectedIssueId={pendingIssue?.id ?? null}
                 usedIssueIds={usedIssueIds}
                 recentIssueIds={recentIssueIds}
+                checklist={checklist}
+                onChecklistMark={onChecklistMark}
+                onPassAll={onPassAll}
               />
             </div>
           </div>

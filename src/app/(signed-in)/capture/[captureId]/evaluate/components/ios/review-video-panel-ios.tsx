@@ -6,6 +6,10 @@ import { TraceFormData } from "../../../edit/components/types";
 import { cn } from "@/lib/utils";
 import { ScreenComment } from "../shared/screen-comments-panel";
 import { ScreenMarkerStrip } from "../shared/screen-marker-strip";
+import {
+  findScreenGaps,
+  GAP_CALLOUT_SECONDS,
+} from "../shared/review-gallery-grid";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pause, Play } from "lucide-react";
 
@@ -134,6 +138,10 @@ export function ReviewVideoPanelIOS({
             duration={videoDuration}
             onSelectScreen={onScreenSelect}
             onScrub={onScrubVideo}
+            gapsByScreenId={findScreenGaps(
+              [...traceData.screens].sort((a, b) => a.timestamp - b.timestamp),
+              GAP_CALLOUT_SECONDS,
+            )}
             headerAccessory={
               <Button
                 type="button"
