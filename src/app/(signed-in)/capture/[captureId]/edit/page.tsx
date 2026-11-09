@@ -54,6 +54,10 @@ import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenBlobRegistryProvider } from "./screen-blob-registry";
 import {
+  emptySelfChecks,
+  SELF_CHECK_COUNT,
+} from "./components/review/components/self-check";
+import {
   collectIncompleteScreens,
   collectUnlabelledRedactions,
   describeIncompleteScreens,
@@ -334,6 +338,15 @@ export default function Page() {
   }, [capture]);
 
   const [stepIndex, setStepIndex] = useState(0);
+  // The worker's self-check before Finish. Page state only, never saved, so
+  // it starts empty on every visit (and after a send-back). Staff editing in
+  // review never see it.
+  const [selfChecks, setSelfChecks] = useState<boolean[]>(emptySelfChecks);
+  const needsSelfCheck = !!capture && !isStaffEditStatus(capture.status);
+  const selfCheckCount = selfChecks.filter(Boolean).length;
+  const isSelfCheckDone = selfCheckCount === SELF_CHECK_COUNT;
+  const isFinishBlockedBySelfCheck =
+    stepIndex === TraceSteps.Review && needsSelfCheck && !isSelfCheckDone;
 
   useEffect(() => {
     if (!capture || draftFetchResult !== DraftFetchResults.SUCCESS) {
@@ -651,6 +664,11 @@ export default function Page() {
         return;
       }
     } else if (stepIndex === TraceSteps.Review) {
+      if (isFinishBlockedBySelfCheck) {
+        toast.error("Tick all six boxes under Check your work first.");
+        setIsSubmitting(false);
+        return;
+      }
       // The same check staff run before Approve, so the two cannot drift
       // apart: unfinished screens and unlabelled boxes, then the schema (the
       // description above all, which is only written at this step). This is
@@ -767,7 +785,22 @@ export default function Page() {
           />
         );
       case 2:
-        return <Review capture={capture} />;
+        return (
+          <Review
+            capture={capture}
+            selfCheck={
+              needsSelfCheck
+                ? {
+                    checks: selfChecks,
+                    onChange: (index, checked) =>
+                      setSelfChecks((prev) =>
+                        prev.map((value, i) => (i === index ? checked : value)),
+                      ),
+                  }
+                : undefined
+            }
+          />
+        );
       default:
         return null;
     }
@@ -943,7 +976,8 @@ export default function Page() {
                         onClick={handleNext}
                         disabled={
                           isSubmitting ||
-                          activeStepReadiness.isBlockingNavigation
+                          activeStepReadiness.isBlockingNavigation ||
+                          isFinishBlockedBySelfCheck
                         }
                       >
                         {isSubmitting && (
@@ -955,7 +989,9 @@ export default function Page() {
                             ? "Save and return to review"
                             : capture?.status === CaptureStatus.REVIEWED
                               ? "Save and return to final check"
-                              : "Finish"}
+                              : isFinishBlockedBySelfCheck
+                                ? `Finish · ${selfCheckCount} of ${SELF_CHECK_COUNT} checked`
+                                : "Finish"}
                       </Button>
                       {activeStepReadiness.isBlockingNavigation &&
                       activeStepReadiness.reason ? (
