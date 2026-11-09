@@ -29,10 +29,14 @@ export enum DraftFetchResults {
 // the three callers (edit page, iOS and Android evaluate clients) are unchanged.
 export { getCaptureDraftFiles as getDraftFiles } from "@/lib/actions/capture";
 
+/**
+ * Saves the trace as a new draft file. Returns the draft and its version
+ * (`draft-<ms>`), which is what a reviewer's Approve pins.
+ */
 export async function handleDraftSave(
   data: TraceFormData,
   capture: Capture,
-): Promise<ActionPayload<DraftTraceFormData>> {
+): Promise<ActionPayload<{ draft: DraftTraceFormData; version: string }>> {
   // grab screen data from trace form data to serialize
   const draftScreenData: DraftFrameData[] = data.screens.map(
     (screen: FrameData) => {
@@ -56,7 +60,8 @@ export async function handleDraftSave(
     draftTraceData.iOSVersion = data.iOSVersion;
   }
   // upload draft trace data to s3
-  const fileName = `draft-${Date.now()}.json`;
+  const version = `draft-${Date.now()}`;
+  const fileName = `${version}.json`;
   const file = new File([JSON.stringify(draftTraceData)], fileName, {
     type: "application/json",
   });
@@ -76,7 +81,7 @@ export async function handleDraftSave(
   return {
     ok: true,
     message: "Draft trace data uploaded successfully.",
-    data: draftTraceData,
+    data: { draft: draftTraceData, version },
   };
 }
 

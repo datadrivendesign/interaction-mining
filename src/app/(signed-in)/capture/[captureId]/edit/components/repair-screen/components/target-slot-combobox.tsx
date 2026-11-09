@@ -38,6 +38,7 @@ export function TargetSlotCombobox({
   onGoalTouched,
   isDestinationInvalid,
   onDestinationTouched,
+  className,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -50,6 +51,8 @@ export function TargetSlotCombobox({
   onGoalTouched?: () => void;
   isDestinationInvalid?: boolean;
   onDestinationTouched?: () => void;
+  /** Extra classes for the input; the error border still wins. */
+  className?: string;
 }) {
   const targetInputId = useId();
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -194,6 +197,7 @@ export function TargetSlotCombobox({
           ref={inputRef}
           className={cn(
             "h-7 max-w-40 min-w-24 rounded border bg-background px-2 text-xs",
+            className,
             showError ? "border-red-500" : "",
           )}
           aria-label={slot.label}

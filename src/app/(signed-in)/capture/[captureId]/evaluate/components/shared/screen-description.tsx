@@ -80,7 +80,7 @@ export function ScreenDescription({
 /** Legend for the chip colors, shown in the gallery header. */
 export function ScreenDescriptionLegend() {
   return (
-    <span className="flex shrink-0 items-center gap-1 text-[10px]">
+    <span className="flex shrink-0 items-center gap-1 text-[11px]">
       <span className={cn(CHIP_BASE, SLOT_CHIP_CLASS.target)}>
         what you touched
       </span>

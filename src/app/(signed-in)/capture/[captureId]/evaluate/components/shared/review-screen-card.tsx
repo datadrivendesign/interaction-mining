@@ -200,13 +200,10 @@ export function ScreenOverlays({
   screenId,
   gesture,
   redactions,
-  translucentRedactions = false,
 }: {
   screenId: string;
   gesture?: ScreenGesture;
   redactions: Redaction[];
-  /** Shows what is under each box, to check it covers the right thing. */
-  translucentRedactions?: boolean;
 }) {
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
@@ -307,10 +304,7 @@ export function ScreenOverlays({
           <Tooltip key={redaction.id}>
             <TooltipTrigger asChild>
               <div
-                className={cn(
-                  "pointer-events-auto absolute z-15 cursor-pointer border-1 border-yellow-500 hover:shadow-lg hover:shadow-yellow-500/50",
-                  translucentRedactions ? "bg-black/25" : "bg-black",
-                )}
+                className="pointer-events-auto absolute z-15 cursor-pointer border-1 border-yellow-500 bg-black hover:shadow-lg hover:shadow-yellow-500/50"
                 style={{
                   left: `${redaction.x * 100}%`,
                   top: `${redaction.y * 100}%`,

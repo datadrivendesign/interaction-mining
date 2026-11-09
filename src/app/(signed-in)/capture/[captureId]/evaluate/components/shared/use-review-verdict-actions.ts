@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
+import { getTraceCompletenessIssues } from "../../../edit/util/trace-validation";
 import { revalidateCaptureCaches } from "@/lib/actions";
 import { TraceFormData } from "../../../edit/components/types";
 import { handleTraceSave } from "../../../edit/util/export";
@@ -128,6 +129,15 @@ export function useReviewVerdictActions({
     }
     if (approveBlockedReason) {
       toast.error(approveBlockedReason);
+      return;
+    }
+    // Staff can fix a trace in place here, which skips the edit page's
+    // Finish checks, so every Approve runs them on what it is approving.
+    const completenessIssues = getTraceCompletenessIssues(traceData);
+    if (completenessIssues.length > 0) {
+      completenessIssues.forEach((message) =>
+        toast.error(`Can't approve yet. ${message}`),
+      );
       return;
     }
 

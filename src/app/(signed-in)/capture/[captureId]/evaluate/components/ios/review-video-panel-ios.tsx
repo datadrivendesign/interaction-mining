@@ -11,7 +11,7 @@ import {
   GAP_CALLOUT_SECONDS,
 } from "../shared/review-gallery-grid";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pause, Play } from "lucide-react";
+import { ArrowLeft, Pause, Play, Plus } from "lucide-react";
 
 export function ReviewVideoPanelIOS({
   traceData,
@@ -32,6 +32,9 @@ export function ReviewVideoPanelIOS({
   isPlaying,
   onTogglePlayback,
   onVideoLayoutOrientationChange,
+  onAddScreen,
+  isAddingScreen = false,
+  summary,
 }: {
   traceData: TraceFormData;
   isAdmin: boolean;
@@ -54,6 +57,11 @@ export function ReviewVideoPanelIOS({
   onVideoLayoutOrientationChange?: (
     orientation: "portrait" | "landscape",
   ) => void;
+  /** Staff only: grab the frame at the playhead as a new screen. */
+  onAddScreen?: () => void;
+  isAddingScreen?: boolean;
+  /** The Interaction Summary block (with Edit for staff). */
+  summary?: React.ReactNode;
 }) {
   const [videoOrientation, setVideoOrientation] = useState<
     "portrait" | "landscape" | null
@@ -90,16 +98,7 @@ export function ReviewVideoPanelIOS({
       {/* Scrollable content: reference only */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-3">
-          {traceData.description && (
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold tracking-widest text-neutral-400 uppercase dark:text-neutral-500">
-                Task
-              </span>
-              <p className="text-[13px] leading-6 font-medium text-neutral-800 dark:text-neutral-100">
-                {traceData.description}
-              </p>
-            </div>
-          )}
+          {summary}
           <div className="flex w-full justify-center overflow-x-auto pb-1">
             <video
               ref={videoRef}
@@ -161,6 +160,22 @@ export function ReviewVideoPanelIOS({
               </Button>
             }
           />
+          {onAddScreen && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full"
+              disabled={videoDuration <= 0 || isAddingScreen}
+              onClick={onAddScreen}
+              title="Pause on the missing step first"
+            >
+              <Plus className="size-4" />
+              {isAddingScreen
+                ? "Getting the frame…"
+                : `Add screen at ${currentTime.toFixed(1)} s`}
+            </Button>
+          )}
         </div>
       </div>
     </aside>

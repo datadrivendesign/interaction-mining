@@ -32,7 +32,7 @@ describe("getChecklistStatus", () => {
     assert.ok(getChecklistStatus(fiveOfSix, noNotes).approveBlockedReason);
   });
 
-  it("needs an Issue step and a note to send back", () => {
+  it("needs a note to send back, with or without an Issue step", () => {
     const flagged: ReviewChecklist = { gesture: "issue" };
     assert.equal(
       getChecklistStatus(flagged, noNotes).sendBackBlockedReason,
@@ -42,8 +42,8 @@ describe("getChecklistStatus", () => {
       getChecklistStatus(flagged, oneNote).sendBackBlockedReason,
       null,
     );
-    // A note alone is not enough: the step must be marked Issue.
-    assert.ok(getChecklistStatus(allPass, oneNote).sendBackBlockedReason);
+    // A custom note belongs to no step, and still allows Send back.
+    assert.equal(getChecklistStatus({}, oneNote).sendBackBlockedReason, null);
   });
 });
 

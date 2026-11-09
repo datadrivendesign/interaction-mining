@@ -219,12 +219,11 @@ export const TRACE_ISSUES: TraceIssue[] = [
   },
   {
     id: "task_description_commentary",
-    label:
-      "Wrote task description as commentary about task rather than describing.",
-    chipLabel: "Task description is commentary",
+    label: "Interaction summary does not summarize what was done.",
+    chipLabel: "Task summary written incorrectly",
     category: "description",
     annotation:
-      "Describe what you are doing on screen, not a comment about the task itself.",
+      'Interaction Summary is not written as a real summary. Example: "Add a lunch event in Calendar."',
     destination: "summarize",
     scope: "flow",
   },

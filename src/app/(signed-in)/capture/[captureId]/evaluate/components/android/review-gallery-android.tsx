@@ -1,11 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { FrameData, TraceFormData } from "../../../edit/components/types";
 import { ScreenComment } from "../shared/screen-comments-panel";
-import { ScreenEnlargeDialog } from "../shared/screen-enlarge-dialog";
 import { ReviewScreenCard } from "../shared/review-screen-card";
 import { ReviewGalleryGrid } from "../shared/review-gallery-grid";
 
@@ -19,6 +18,8 @@ export function ReviewGalleryAndroid({
   onSelectedScreenToggle,
   fixedScreenIds,
   renderCardFooter,
+  banner,
+  onOpenScreen,
 }: {
   traceData: TraceFormData;
   activeScreenId: string | null;
@@ -31,8 +32,11 @@ export function ReviewGalleryAndroid({
   fixedScreenIds?: string[];
   /** Controls under a card's description (the Fix button). */
   renderCardFooter?: (screenId: string, index: number) => ReactNode;
+  /** Shown above the screens (the "Fixes saved" list). */
+  banner?: ReactNode;
+  /** Opens the screen viewer (double-click or the enlarge button). */
+  onOpenScreen?: (screenId: string) => void;
 }) {
-  const [enlargedIndex, setEnlargedIndex] = useState<number | null>(null);
   const sortedScreens = useMemo(
     () => [...traceData.screens].sort((a, b) => a.timestamp - b.timestamp),
     [traceData.screens],
@@ -44,66 +48,53 @@ export function ReviewGalleryAndroid({
   // No gap callouts: Android timestamps are clock times between saved
   // frames, not positions in one video.
   return (
-    <>
-      <ReviewGalleryGrid
-        sortedScreens={sortedScreens}
-        activeScreenId={activeScreenId}
-        screensWithIssues={screensWithIssues}
-        captureTimestamp={captureTimestamp}
-        renderCard={(screen, index, cardRef, cardSize) => (
-          <ReviewScreenCard
-            key={screen.id}
-            cardRef={cardRef}
-            index={index}
-            screenId={screen.id}
-            gesture={traceData.gestures[screen.id]}
-            redactions={traceData.redactions[screen.id] || []}
-            isActive={screen.id === activeScreenId}
-            isLastScreen={index === sortedScreens.length - 1}
-            issueCount={commentsByScreen[screen.id]?.length ?? 0}
-            size={cardSize}
-            onEnlarge={() => setEnlargedIndex(index)}
-            isFixed={fixedScreenIds?.includes(screen.id) ?? false}
-            onSelect={() => onScreenSelect(screen.id)}
-            isSelected={selectedScreenIds?.includes(screen.id) ?? false}
-            onSelectedToggle={
-              onSelectedScreenToggle
-                ? (checked) => onSelectedScreenToggle(screen.id, checked)
-                : undefined
-            }
-            footer={renderCardFooter?.(screen.id, index)}
-            renderImage={(borderClass) =>
-              screen.src.length > 0 ? (
-                <ImageWithVH
-                  screen={screen}
-                  vh={traceData.vhs?.[screen.id]}
-                  borderClass={borderClass}
-                />
-              ) : (
-                <div
-                  className={cn(
-                    "aspect-[9/19] w-full rounded-lg border-2 bg-neutral-100 transition-all duration-150 dark:bg-neutral-800",
-                    borderClass,
-                  )}
-                />
-              )
-            }
-          />
-        )}
-      />
-      <ScreenEnlargeDialog
-        sortedScreens={sortedScreens}
-        openIndex={enlargedIndex}
-        onIndexChange={(nextIndex) => {
-          setEnlargedIndex(nextIndex);
-          const next = sortedScreens[nextIndex];
-          if (next) onScreenSelect(next.id);
-        }}
-        onClose={() => setEnlargedIndex(null)}
-        gestures={traceData.gestures}
-        redactions={traceData.redactions}
-      />
-    </>
+    <ReviewGalleryGrid
+      sortedScreens={sortedScreens}
+      activeScreenId={activeScreenId}
+      screensWithIssues={screensWithIssues}
+      captureTimestamp={captureTimestamp}
+      banner={banner}
+      renderCard={(screen, index, cardRef, cardSize) => (
+        <ReviewScreenCard
+          key={screen.id}
+          cardRef={cardRef}
+          index={index}
+          screenId={screen.id}
+          gesture={traceData.gestures[screen.id]}
+          redactions={traceData.redactions[screen.id] || []}
+          isActive={screen.id === activeScreenId}
+          isLastScreen={index === sortedScreens.length - 1}
+          issueCount={commentsByScreen[screen.id]?.length ?? 0}
+          size={cardSize}
+          onEnlarge={onOpenScreen ? () => onOpenScreen(screen.id) : undefined}
+          isFixed={fixedScreenIds?.includes(screen.id) ?? false}
+          onSelect={() => onScreenSelect(screen.id)}
+          isSelected={selectedScreenIds?.includes(screen.id) ?? false}
+          onSelectedToggle={
+            onSelectedScreenToggle
+              ? (checked) => onSelectedScreenToggle(screen.id, checked)
+              : undefined
+          }
+          footer={renderCardFooter?.(screen.id, index)}
+          renderImage={(borderClass) =>
+            screen.src.length > 0 ? (
+              <ImageWithVH
+                screen={screen}
+                vh={traceData.vhs?.[screen.id]}
+                borderClass={borderClass}
+              />
+            ) : (
+              <div
+                className={cn(
+                  "aspect-[9/19] w-full rounded-lg border-2 bg-neutral-100 transition-all duration-150 dark:bg-neutral-800",
+                  borderClass,
+                )}
+              />
+            )
+          }
+        />
+      )}
+    />
   );
 }
 

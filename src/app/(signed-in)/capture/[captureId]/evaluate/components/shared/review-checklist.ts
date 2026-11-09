@@ -40,7 +40,7 @@ function countNotes(feedbackState: ReviewFeedbackState) {
 
 /**
  * The reviewer's verdict gate. Approve needs all six steps marked Pass. Send
- * back needs a step marked Issue and at least one note for the worker.
+ * back needs at least one note for the worker (an issue or a custom note).
  */
 export function getChecklistStatus(
   checklist: ReviewChecklist,
@@ -52,12 +52,13 @@ export function getChecklistStatus(
   const hasIssueStep = marks.some((mark) => mark === "issue");
   const noteCount = countNotes(feedbackState);
 
+  // The notes are what the worker gets, so any note allows Send back,
+  // including a custom one that belongs to no step.
   let sendBackBlockedReason: string | null = null;
-  if (!hasIssueStep) {
-    sendBackBlockedReason =
-      "To send back, mark a step Issue and add a note for the worker.";
-  } else if (noteCount === 0) {
-    sendBackBlockedReason = "To send back, add a note for the worker.";
+  if (noteCount === 0) {
+    sendBackBlockedReason = hasIssueStep
+      ? "To send back, add a note for the worker."
+      : "To send back, add a note for the worker: pick an issue or write your own.";
   }
 
   return {

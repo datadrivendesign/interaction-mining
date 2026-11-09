@@ -22,12 +22,6 @@ import {
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
-import {
-  SCREEN_ANNOTATION_ISSUE_ACTIONS,
-  ScreenAnnotationIssue,
-  getScreenAnnotationIssue,
-} from "./components/repair-screen/util";
-
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
@@ -42,7 +36,6 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import {
   DraftFetchResults,
-  countUnlabelledRedactions,
   dedupeScreensById,
   getDraftFiles,
   handleDraftSave,
@@ -60,6 +53,12 @@ import {
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenBlobRegistryProvider } from "./screen-blob-registry";
+import {
+  collectIncompleteScreens,
+  collectUnlabelledRedactions,
+  describeIncompleteScreens,
+  describeUnlabelledRedactions,
+} from "./util/trace-validation";
 import {
   parseFeedbackChecklistItems,
   upgradeLegacyFeedbackText,
@@ -81,105 +80,6 @@ const FEEDBACK_STEP_ORDER = [
   TraceSteps.Redact,
   TraceSteps.Review,
 ];
-
-type IncompleteScreen = {
-  screenNumber: number;
-  issue: ScreenAnnotationIssue;
-};
-
-/**
- * Screens whose annotation is unfinished, numbered the way the filmstrip numbers
- * them. The last screen is the goal state and needs no gesture.
- *
- * Scanned per screen rather than parsed with a zod schema. Zod skips a `.refine`
- * when the schema beneath it failed, and the ways an annotation can be
- * incomplete sit at different levels — a missing marker fails field validation,
- * unfilled template slots fail a refine, a screen with no gesture at all fails a
- * different refine — so any field-level failure hid the rest. Both gates share
- * this function so they cannot drift apart or under-report.
- */
-function collectIncompleteScreens(
-  screens: TraceFormData["screens"],
-  gestures: TraceFormData["gestures"],
-): IncompleteScreen[] {
-  return screens
-    .slice(0, -1)
-    .map((screen, index) => ({
-      screenNumber: index + 1,
-      issue: getScreenAnnotationIssue(gestures[screen.id]),
-    }))
-    .filter((entry): entry is IncompleteScreen => entry.issue !== null);
-}
-
-type UnlabelledRedactionScreen = {
-  screenNumber: number;
-  boxCount: number;
-};
-
-/**
- * Screens carrying redaction boxes with no label, numbered the way the filmstrip
- * numbers them.
- *
- * Scanned rather than parsed for the same reason as `collectIncompleteScreens`:
- * `RedactionSchema`'s refine returns on the first unlabelled box and reports one
- * record-level message, so it can say neither which screen nor how many boxes.
- *
- * Slightly stricter than the schema, which only rejects an empty string — a
- * whitespace-only label is no more useful to a reviewer than a blank one.
- */
-function collectUnlabelledRedactions(
-  screens: TraceFormData["screens"],
-  redactions: TraceFormData["redactions"],
-): UnlabelledRedactionScreen[] {
-  return screens
-    .map((screen, index) => ({
-      screenNumber: index + 1,
-      boxCount: countUnlabelledRedactions(redactions[screen.id]),
-    }))
-    .filter((entry) => entry.boxCount > 0);
-}
-
-/** One message naming the screens whose redaction boxes still need labels. */
-function describeUnlabelledRedactions(
-  entries: UnlabelledRedactionScreen[],
-): string {
-  const describe = (entry: UnlabelledRedactionScreen) =>
-    `Screen ${entry.screenNumber}: label ${
-      entry.boxCount === 1
-        ? "the redaction box"
-        : `${entry.boxCount} redaction boxes`
-    }`;
-
-  if (entries.length === 1) {
-    return `${describe(entries[0])}.`;
-  }
-  if (entries.length <= 4) {
-    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
-  }
-  return `${entries.length} screens have unlabelled redaction boxes: ${entries
-    .map((entry) => entry.screenNumber)
-    .join(", ")}.`;
-}
-
-/**
- * One message saying what each unfinished screen needs. Past four screens the
- * reasons stop fitting a toast, so it falls back to numbers and points at the
- * filmstrip, which rings exactly the same set.
- */
-function describeIncompleteScreens(entries: IncompleteScreen[]): string {
-  const describe = (entry: IncompleteScreen) =>
-    `Screen ${entry.screenNumber}: ${SCREEN_ANNOTATION_ISSUE_ACTIONS[entry.issue]}`;
-
-  if (entries.length === 1) {
-    return `${describe(entries[0])}.`;
-  }
-  if (entries.length <= 4) {
-    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
-  }
-  return `${entries.length} screens need work: ${entries
-    .map((entry) => entry.screenNumber)
-    .join(", ")}. The filmstrip rings them in yellow.`;
-}
 
 /** Statuses where staff edit in place and the status does not change. */
 function isStaffEditStatus(status: CaptureStatus): boolean {

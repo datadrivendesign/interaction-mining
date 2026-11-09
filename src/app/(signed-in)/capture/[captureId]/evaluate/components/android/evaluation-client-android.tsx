@@ -41,6 +41,12 @@ import {
 import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
+import { useScreenFixes } from "../shared/use-screen-fixes";
+import { ScreenViewerDialog } from "../shared/screen-viewer-dialog";
+import type { FixTab } from "../shared/use-screen-fixes";
+import { useHotkeys } from "react-hotkeys-hook";
+import { InteractionSummaryEditor } from "../shared/interaction-summary-editor";
+import { FixScreenButton } from "../shared/screen-fix-controls";
 
 export function EvaluationClientAndroid({
   isAdmin,
@@ -161,6 +167,79 @@ export function EvaluationClientAndroid({
       denyBlockedReason: checklistStatus?.sendBackBlockedReason ?? null,
     });
 
+  // Staff fix screens in place; every saved fix is a new draft.
+  const canFix = verdictMode !== "none";
+  const fixes = useScreenFixes({
+    capture,
+    traceData,
+    setTraceData,
+    draftVersion,
+    setDraftVersion,
+    onScreenRemoved: (removedId) => {
+      // Move to a neighbouring screen and drop the removed one from the
+      // note composer's selection.
+      const screens = traceData?.screens ?? [];
+      const index = screens.findIndex((screen) => screen.id === removedId);
+      const neighbour = screens[index + 1] ?? screens[index - 1];
+      setActiveScreenId((prev) =>
+        prev === removedId ? (neighbour?.id ?? null) : prev,
+      );
+      setGallerySelectedScreenIds((prev) =>
+        prev.filter((id) => id !== removedId),
+      );
+    },
+  });
+  const fixScreen = fixes.fixTarget?.screen;
+  const fixScreenNumber =
+    fixScreen && traceData
+      ? traceData.screens.findIndex((screen) => screen.id === fixScreen.id) + 1
+      : 0;
+  const fixScreenCount = traceData?.screens.length ?? 0;
+
+  // Arrows in the screen viewer step through the trace's screens.
+  const fixNeighbours = (() => {
+    if (!traceData || !fixScreen || fixes.fixTarget?.isNew) {
+      return { previous: null, next: null };
+    }
+    const index = traceData.screens.findIndex(
+      (screen) => screen.id === fixScreen.id,
+    );
+    return {
+      previous: traceData.screens[index - 1]?.id ?? null,
+      next: traceData.screens[index + 1]?.id ?? null,
+    };
+  })();
+  const handleViewerNavigate = (screenId: string, mode: FixTab) => {
+    fixes.openFix(screenId, mode);
+    setActiveScreenId(screenId);
+  };
+  // F: fix the active screen (staff, once its image has loaded).
+  useHotkeys(
+    "f",
+    (event) => {
+      event.preventDefault();
+      if (activeScreenId) fixes.openFix(activeScreenId, "gesture");
+    },
+    {
+      enabled:
+        canFix &&
+        !isSubmitting &&
+        !fixes.fixTarget &&
+        !!traceData?.screens.find((screen) => screen.id === activeScreenId)
+          ?.src,
+    },
+    [activeScreenId, fixes.openFix],
+  );
+  const summaryBlock = traceData ? (
+    <InteractionSummaryEditor
+      summary={traceData.description}
+      canEdit={canFix && !isSubmitting}
+      isSaving={fixes.isSaving}
+      onSave={fixes.saveTaskDescription}
+      textClassName="text-[15px]"
+    />
+  ) : null;
+
   useEffect(() => {
     if (!captureDbId || !traceData) {
       return;
@@ -189,14 +268,28 @@ export function EvaluationClientAndroid({
           frameFiles,
           traceData,
         );
+        // Fill in images on the screens the page has now. A screen removed
+        // while frames were loading must stay removed.
+        const loadedSrc = new Map(screens.map((s) => [s.id, s.src]));
         setTraceData((prevData) => {
           if (!prevData) {
             return prevData;
           }
+          const keptIds = new Set(prevData.screens.map((s) => s.id));
           return {
             ...prevData,
-            screens: screens.sort((a, b) => a.timestamp - b.timestamp),
-            vhs: vhs,
+            screens: prevData.screens
+              .map((s) =>
+                !s.src && loadedSrc.has(s.id)
+                  ? { ...s, src: loadedSrc.get(s.id)! }
+                  : s,
+              )
+              .sort((a, b) => a.timestamp - b.timestamp),
+            vhs: Object.fromEntries(
+              Object.entries({ ...prevData.vhs, ...vhs }).filter(([id]) =>
+                keptIds.has(id),
+              ),
+            ),
           };
         });
       } catch (error) {
@@ -343,6 +436,7 @@ export function EvaluationClientAndroid({
           >
             {traceData && capture && (
               <ReviewContextPanelAndroid
+                summary={summaryBlock}
                 traceData={traceData}
                 isAdmin={isStaffView}
                 listHref={listPath}
@@ -387,6 +481,25 @@ export function EvaluationClientAndroid({
                     onSelectedScreenToggle={
                       isComposerInScreenMode ? handleGalleryToggle : undefined
                     }
+                    fixedScreenIds={fixes.fixedScreenIds}
+                    onOpenScreen={(screenId) => fixes.openFix(screenId, "view")}
+                    renderCardFooter={
+                      canFix
+                        ? (screenId, index) => (
+                            <FixScreenButton
+                              screenNumber={index + 1}
+                              disabled={
+                                isSubmitting ||
+                                fixes.isSaving ||
+                                !traceData.screens.find(
+                                  (screen) => screen.id === screenId,
+                                )?.src
+                              }
+                              onClick={() => fixes.openFix(screenId, "gesture")}
+                            />
+                          )
+                        : undefined
+                    }
                   />
                 )}
               </ResizablePanel>
@@ -430,6 +543,29 @@ export function EvaluationClientAndroid({
         </ResizablePanelGroup>
       )}
       <PublishProgressDialog progress={saveProgress} />
+      <ScreenViewerDialog
+        target={fixes.fixTarget}
+        canEdit={canFix && !isSubmitting}
+        previousScreenId={fixNeighbours.previous}
+        nextScreenId={fixNeighbours.next}
+        onNavigate={handleViewerNavigate}
+        screenNumber={fixScreenNumber}
+        screenCount={fixScreenCount}
+        isLastScreen={fixScreenNumber === fixScreenCount}
+        gesture={fixScreen ? traceData?.gestures[fixScreen.id] : undefined}
+        redactions={
+          fixScreen ? (traceData?.redactions[fixScreen.id] ?? []) : []
+        }
+        noteCount={
+          fixScreen
+            ? (feedbackState.commentsByScreen[fixScreen.id]?.length ?? 0)
+            : 0
+        }
+        isSaving={fixes.isSaving}
+        onSave={fixes.saveScreen}
+        onRemove={fixes.removeScreen}
+        onClose={fixes.closeFix}
+      />
       {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
           mode={verdictMode}
@@ -445,6 +581,7 @@ export function EvaluationClientAndroid({
           approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
           denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
           additionalShortcuts={[
+            ...(canFix ? [{ label: "Fix screen", keys: "F" }] : []),
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
             { label: "Custom issue", keys: "O" },

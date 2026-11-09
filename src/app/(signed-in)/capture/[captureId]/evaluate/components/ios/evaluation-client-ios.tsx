@@ -37,6 +37,17 @@ import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
+import { toast } from "sonner";
+import { extractVideoFrame } from "../../../edit/components/repair-screen/util/ios-video-operations";
+import { useScreenFixes } from "../shared/use-screen-fixes";
+import { ScreenViewerDialog } from "../shared/screen-viewer-dialog";
+import type { FixTab } from "../shared/use-screen-fixes";
+import { useHotkeys } from "react-hotkeys-hook";
+import { InteractionSummaryEditor } from "../shared/interaction-summary-editor";
+import { FixScreenButton } from "../shared/screen-fix-controls";
+
+/** A new screen this close (seconds) to an existing one is a duplicate. */
+const DUPLICATE_SCREEN_SECONDS = 0.05;
 
 const REVIEW_VIDEO_PANEL_DEFAULT_HORIZONTAL = 23;
 const REVIEW_VIDEO_PANEL_LANDSCAPE_HORIZONTAL = 31;
@@ -187,6 +198,121 @@ export function EvaluationClientIOS({
     isSubmitting,
   });
 
+  // Staff fix screens in place; every saved fix is a new draft.
+  const canFix = verdictMode !== "none";
+  const fixes = useScreenFixes({
+    capture,
+    traceData,
+    setTraceData,
+    draftVersion,
+    setDraftVersion,
+    onScreenRemoved: (removedId) => {
+      // Move to a neighbouring screen and drop the removed one from the
+      // note composer's selection.
+      const screens = traceData?.screens ?? [];
+      const index = screens.findIndex((screen) => screen.id === removedId);
+      const neighbour = screens[index + 1] ?? screens[index - 1];
+      setActiveScreenId((prev) =>
+        prev === removedId ? (neighbour?.id ?? null) : prev,
+      );
+      setGallerySelectedScreenIds((prev) =>
+        prev.filter((id) => id !== removedId),
+      );
+    },
+  });
+  const [isAddingScreen, setIsAddingScreen] = useState(false);
+  // Set synchronously, so a double click cannot start two frame grabs.
+  const isAddingScreenRef = useRef(false);
+  const handleAddScreen = async () => {
+    const video = videoRef.current;
+    if (!video || !traceData || isAddingScreenRef.current) return;
+    video.pause();
+    const time = video.currentTime;
+    if (
+      traceData.screens.some(
+        (screen) =>
+          Math.abs(screen.timestamp - time) < DUPLICATE_SCREEN_SECONDS,
+      )
+    ) {
+      toast.error(
+        "There is already a screen at this time. Move to the missing step first.",
+      );
+      return;
+    }
+    isAddingScreenRef.current = true;
+    setIsAddingScreen(true);
+    try {
+      const frame = await extractVideoFrame(video, time, {
+        mimeType: "image/png",
+        output: "object-url",
+        preferOffscreenCanvas: true,
+      });
+      fixes.openAddScreen(frame);
+    } catch {
+      toast.error("Could not get the frame. Pause the video and try again.");
+    } finally {
+      isAddingScreenRef.current = false;
+      setIsAddingScreen(false);
+    }
+  };
+  const fixScreen = fixes.fixTarget?.screen;
+  const fixScreensAfter =
+    traceData && fixes.fixTarget
+      ? fixes.fixTarget.isNew
+        ? [...traceData.screens, fixes.fixTarget.screen].sort(
+            (a, b) => a.timestamp - b.timestamp,
+          )
+        : traceData.screens
+      : [];
+  const fixScreenNumber = fixScreen
+    ? fixScreensAfter.findIndex((screen) => screen.id === fixScreen.id) + 1
+    : 0;
+
+  // Arrows in the screen viewer step through the trace's screens.
+  const fixNeighbours = (() => {
+    if (!traceData || !fixScreen || fixes.fixTarget?.isNew) {
+      return { previous: null, next: null };
+    }
+    const index = traceData.screens.findIndex(
+      (screen) => screen.id === fixScreen.id,
+    );
+    return {
+      previous: traceData.screens[index - 1]?.id ?? null,
+      next: traceData.screens[index + 1]?.id ?? null,
+    };
+  })();
+  const handleViewerNavigate = (screenId: string, mode: FixTab) => {
+    fixes.openFix(screenId, mode);
+    const screen = traceData?.screens.find((s) => s.id === screenId);
+    if (screen) handleScreenSelect(screen.id, screen.timestamp);
+  };
+  // F: fix the active screen (staff, once its image has loaded).
+  useHotkeys(
+    "f",
+    (event) => {
+      event.preventDefault();
+      if (activeScreenId) fixes.openFix(activeScreenId, "gesture");
+    },
+    {
+      enabled:
+        canFix &&
+        !isSubmitting &&
+        !fixes.fixTarget &&
+        !!traceData?.screens.find((screen) => screen.id === activeScreenId)
+          ?.src,
+    },
+    [activeScreenId, fixes.openFix],
+  );
+  const summaryBlock = traceData ? (
+    <InteractionSummaryEditor
+      summary={traceData.description}
+      canEdit={canFix && !isSubmitting}
+      isSaving={fixes.isSaving}
+      onSave={fixes.saveTaskDescription}
+      textClassName="text-[13px]"
+    />
+  ) : null;
+
   const { hotkeyAction: screenCommentsHotkeyAction } = useReviewCommentHotkeys({
     isSubmitting,
     sortedScreensLength: traceData?.screens.length ?? 0,
@@ -300,6 +426,7 @@ export function EvaluationClientIOS({
           >
             {traceData && capture && (
               <ReviewVideoPanelIOS
+                summary={summaryBlock}
                 traceData={traceData}
                 isAdmin={isStaffView}
                 listHref={listPath}
@@ -320,6 +447,12 @@ export function EvaluationClientIOS({
                 onVideoLayoutOrientationChange={(orientation) =>
                   setReviewVideoLandscape(orientation === "landscape")
                 }
+                onAddScreen={
+                  canFix && !isSubmitting
+                    ? () => void handleAddScreen()
+                    : undefined
+                }
+                isAddingScreen={isAddingScreen || fixes.isSaving}
               />
             )}
           </ResizablePanel>
@@ -368,6 +501,25 @@ export function EvaluationClientIOS({
                     }
                     onSelectedScreenToggle={
                       isComposerInScreenMode ? handleGalleryToggle : undefined
+                    }
+                    fixedScreenIds={fixes.fixedScreenIds}
+                    onOpenScreen={(screenId) => fixes.openFix(screenId, "view")}
+                    renderCardFooter={
+                      canFix
+                        ? (screenId, index) => (
+                            <FixScreenButton
+                              screenNumber={index + 1}
+                              disabled={
+                                isSubmitting ||
+                                fixes.isSaving ||
+                                !traceData.screens.find(
+                                  (screen) => screen.id === screenId,
+                                )?.src
+                              }
+                              onClick={() => fixes.openFix(screenId, "gesture")}
+                            />
+                          )
+                        : undefined
                     }
                   />
                 )}
@@ -422,6 +574,32 @@ export function EvaluationClientIOS({
         </ResizablePanelGroup>
       )}
       <PublishProgressDialog progress={saveProgress} />
+      <ScreenViewerDialog
+        target={fixes.fixTarget}
+        canEdit={canFix && !isSubmitting}
+        previousScreenId={fixNeighbours.previous}
+        nextScreenId={fixNeighbours.next}
+        onNavigate={handleViewerNavigate}
+        screenNumber={fixScreenNumber}
+        screenCount={fixScreensAfter.length}
+        isLastScreen={fixScreenNumber === fixScreensAfter.length}
+        timeLabel={
+          fixScreen ? `${fixScreen.timestamp.toFixed(1)} s` : undefined
+        }
+        gesture={fixScreen ? traceData?.gestures[fixScreen.id] : undefined}
+        redactions={
+          fixScreen ? (traceData?.redactions[fixScreen.id] ?? []) : []
+        }
+        noteCount={
+          fixScreen
+            ? (feedbackState.commentsByScreen[fixScreen.id]?.length ?? 0)
+            : 0
+        }
+        isSaving={fixes.isSaving}
+        onSave={fixes.saveScreen}
+        onRemove={fixes.removeScreen}
+        onClose={fixes.closeFix}
+      />
       {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
           mode={verdictMode}
@@ -437,6 +615,7 @@ export function EvaluationClientIOS({
           approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
           denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
           additionalShortcuts={[
+            ...(canFix ? [{ label: "Fix screen", keys: "F" }] : []),
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
             { label: "Replay around screen", keys: "R" },
