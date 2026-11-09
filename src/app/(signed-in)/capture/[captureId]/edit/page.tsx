@@ -45,7 +45,7 @@ import {
   revalidateCaptureCaches,
   updateCapture,
 } from "@/lib/actions";
-import { CaptureStatus } from "@prisma/client";
+import { Capture, CaptureStatus } from "@prisma/client";
 import {
   ChecklistLayoutMode,
   FeedbackChecklist,
@@ -53,6 +53,7 @@ import {
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenBlobRegistryProvider } from "./screen-blob-registry";
+import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import {
   emptySelfChecks,
   SELF_CHECK_COUNT,
@@ -155,6 +156,15 @@ export default function Page() {
     [TraceSteps.Review]: undefined,
   });
 
+  // The draft this page last loaded or saved. Staff saves are refused by the
+  // server if someone saved a newer one since (see saveCaptureDraft).
+  const draftVersionRef = useRef<string | null>(null);
+  const saveDraft = async (data: TraceFormData, target: Capture) => {
+    const res = await handleDraftSave(data, target, draftVersionRef.current);
+    if (res.ok) draftVersionRef.current = res.data.version;
+    return res;
+  };
+
   const methods = useForm<TraceFormData>({
     defaultValues: {
       screens: [],
@@ -201,6 +211,7 @@ export default function Page() {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
+      draftVersionRef.current = draftVersionFromKey(latestDraftFile.fileKey);
       const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
         captureId,
         latestDraftFile.fileKey,
@@ -320,9 +331,11 @@ export default function Page() {
       isAutosavingRef.current = true;
       try {
         const data = methods.getValues();
-        const saveRes = await handleDraftSave(data, capture);
+        const saveRes = await saveDraft(data, capture);
         if (saveRes.ok) {
           toast.success("Draft autosaved");
+        } else {
+          toast.error(saveRes.message || "Autosave failed.");
         }
       } catch (error) {
         console.error("Autosave failed:", error);
@@ -689,7 +702,7 @@ export default function Page() {
         // upload progress to storage as draft state
         const data = methods.getValues();
         // save review data to s3 and route to evaluate
-        const saveRes = await handleDraftSave(data, capture!);
+        const saveRes = await saveDraft(data, capture!);
         if (!saveRes.ok) {
           throw new Error(saveRes.message || "Failed to save draft");
         }
@@ -729,7 +742,7 @@ export default function Page() {
     e.preventDefault();
     setIsSubmitting(true);
     const data = methods.getValues();
-    const saveRes = await handleDraftSave(data, capture!);
+    const saveRes = await saveDraft(data, capture!);
     if (saveRes.ok) {
       toast.success("Draft saved");
     } else {

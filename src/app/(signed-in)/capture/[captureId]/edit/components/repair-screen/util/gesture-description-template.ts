@@ -1,6 +1,5 @@
 import { ScreenGesture } from "@prisma/client";
-import { normalizeGestureType } from "@/lib/utils/gesture-options";
-import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { GESTURE_TYPES, normalizeGestureType } from "@/lib/utils/gesture-types";
 
 export const GESTURE_DESCRIPTION_MAX_LENGTH = 125;
 export const MIN_SLOT_LENGTH = 2;

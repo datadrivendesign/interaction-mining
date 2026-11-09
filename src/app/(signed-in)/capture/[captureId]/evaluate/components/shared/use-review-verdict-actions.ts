@@ -164,7 +164,13 @@ export function useReviewVerdictActions({
 
       // direct (REVIEWING) and final (REVIEWED): the admin's browser renders
       // the screens from the loaded draft and publishes the trace.
-      const permission = await validateApprovePermissions(capture.id);
+      if (!draftVersion) {
+        throw new Error("No draft saved. Send back to worker.");
+      }
+      const permission = await validateApprovePermissions(
+        capture.id,
+        draftVersion,
+      );
       if (!permission.ok) {
         throw new Error(permission.message);
       }

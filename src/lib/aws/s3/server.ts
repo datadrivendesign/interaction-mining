@@ -11,9 +11,7 @@ import {
   uploadUrlRequestSchema,
   type UploadUrlRequest,
 } from "./upload-purpose";
-import { isAdmin, isReviewer } from "@/lib/auth/roles";
-import { OWNER_EDITABLE_STATUSES } from "@/lib/actions/capture-internal";
-import { CaptureStatus } from "@prisma/client";
+import { isAdmin } from "@/lib/auth/roles";
 import type { Session } from "next-auth";
 
 // Only `createUploadUrl` (and its private check) lives here now. The raw list/copy/delete/sign primitives moved
@@ -25,9 +23,9 @@ import type { Session } from "next-auth";
  *
  * Who may write follows who holds the pen (see `capture-internal.ts`):
  * - Video: the capture's owner, or an admin (unchanged).
- * - Draft: the owner while the capture is theirs to edit, a reviewer while it
- *   is in review, an admin always. Without the status check an owner could
- *   save a new draft after a reviewer approved, changing what is published.
+ * - Draft: never. Drafts are saved through `saveCaptureDraft`
+ *   (`@/lib/actions/draft`), which checks the same people and also refuses a
+ *   save on top of a version the saver has not seen.
  * - Trace files: admins only. `traces/` is public and a trace belongs to the
  *   worker, who must not be able to overwrite their own published screens.
  *
@@ -47,25 +45,17 @@ async function mayUpload(
     return trace !== null;
   }
 
+  // Drafts go through the checked server action only.
+  if (request.purpose === UploadPurpose.CAPTURE_DRAFT) return false;
+
   const capture = await prisma.capture.findUnique({
     where: { id: request.resourceId },
-    select: { userId: true, status: true },
+    select: { userId: true },
   });
   if (!capture) return false;
 
-  const inReview = capture.status === CaptureStatus.REVIEWING;
-
   if (isAdmin(session)) return true;
-
-  const isOwner = capture.userId === session.user.id;
-  if (request.purpose === UploadPurpose.CAPTURE_DRAFT) {
-    return (
-      (isOwner && OWNER_EDITABLE_STATUSES.includes(capture.status)) ||
-      (inReview && isReviewer(session))
-    );
-  }
-
-  return isOwner;
+  return capture.userId === session.user.id;
 }
 
 /**

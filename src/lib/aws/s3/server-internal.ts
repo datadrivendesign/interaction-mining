@@ -15,6 +15,8 @@ import {
   ListObjectsV2Command,
   DeleteObjectCommand,
   CopyObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl as getSignedCloudfrontUrl } from "@aws-sdk/cloudfront-signer";
 import { s3 } from "..";
@@ -283,4 +285,26 @@ export async function listKeys(prefix: string): Promise<string[]> {
     token = res.IsTruncated ? res.NextContinuationToken : undefined;
   } while (token);
   return keys;
+}
+
+/** Writes a JSON document to the upload bucket. Throws on S3 errors. */
+export async function putJson(key: string, body: string): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket(),
+      Key: key,
+      Body: body,
+      ContentType: "application/json",
+    }),
+  );
+}
+
+/** Reads a JSON document from the upload bucket. Throws on S3 errors. */
+export async function getJson(key: string): Promise<unknown> {
+  const res = await s3.send(
+    new GetObjectCommand({ Bucket: bucket(), Key: key }),
+  );
+  const text = await res.Body?.transformToString();
+  if (text === undefined) throw new Error("Empty S3 object.");
+  return JSON.parse(text);
 }

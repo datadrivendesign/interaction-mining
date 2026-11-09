@@ -15,14 +15,10 @@ import {
   Redaction,
   TraceFormData,
 } from "../../../edit/components/types";
-import { getDraftFiles, handleDraftSave } from "../../../edit/util";
+import { handleDraftSave } from "../../../edit/util";
 import { getScreenAnnotationIssue } from "../../../edit/components/repair-screen/util/gesture-description-template";
 import { normalizeGestureType } from "@/lib/utils/gesture-options";
 import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
-import {
-  draftVersionFromKey,
-  draftVersionTime,
-} from "@/lib/aws/s3/upload-purpose";
 
 /** The screen viewer's modes: look, fix the gesture, or fix the boxes. */
 export type FixTab = "view" | "gesture" | "redaction";
@@ -148,27 +144,13 @@ export function useScreenFixes({
       isSavingRef.current = true;
       setIsSaving(true);
       try {
-        const files = await getDraftFiles(capture.id);
-        if (!files.ok) {
-          toast.error("Could not check for newer drafts. Try again.");
-          return false;
-        }
-        const latest = files.data
-          .map((file) => draftVersionFromKey(file.fileKey))
-          .filter((version): version is string => version !== null)
-          .sort((a, b) => draftVersionTime(b) - draftVersionTime(a))[0];
-        if (
-          latest &&
-          (!draftVersion ||
-            draftVersionTime(latest) > draftVersionTime(draftVersion))
-        ) {
-          toast.error(
-            "Someone saved a newer version of this capture. Reload the page to see it, then make your fix again.",
-          );
-          return false;
-        }
-
-        const res = await handleDraftSave(applyFix(traceData), capture);
+        // The server refuses the save if someone saved a newer draft than
+        // the one this page loaded.
+        const res = await handleDraftSave(
+          applyFix(traceData),
+          capture,
+          draftVersion,
+        );
         if (!res.ok) {
           toast.error(res.message || "Could not save the fix. Try again.");
           return false;

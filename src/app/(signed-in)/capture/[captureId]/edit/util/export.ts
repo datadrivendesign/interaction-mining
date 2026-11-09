@@ -12,10 +12,10 @@ import {
   FrameData,
   TraceFormData,
   Redaction,
-  DraftFrameData,
   DraftTraceFormData,
 } from "../components/types";
 import { redactVH } from "./vh-parse";
+import { saveCaptureDraft } from "@/lib/actions/draft";
 import { ActionPayload } from "@/lib/actions/types";
 
 export enum DraftFetchResults {
@@ -30,24 +30,22 @@ export enum DraftFetchResults {
 export { getCaptureDraftFiles as getDraftFiles } from "@/lib/actions/capture";
 
 /**
- * Saves the trace as a new draft file. Returns the draft and its version
- * (`draft-<ms>`), which is what a reviewer's Approve pins.
+ * Saves the trace as a new draft through the server, which picks the version
+ * (`draft-<ms>`). `baseVersion` is the draft the page last loaded or saved;
+ * for staff the server refuses the save if someone saved a newer one since.
+ * Returns the draft and its new version, which is what a reviewer's Approve
+ * pins and what the page passes as `baseVersion` next time.
  */
 export async function handleDraftSave(
   data: TraceFormData,
   capture: Capture,
+  baseVersion: string | null,
 ): Promise<ActionPayload<{ draft: DraftTraceFormData; version: string }>> {
-  // grab screen data from trace form data to serialize
-  const draftScreenData: DraftFrameData[] = data.screens.map(
-    (screen: FrameData) => {
-      return {
-        id: screen.id,
-        timestamp: screen.timestamp,
-      };
-    },
-  );
   const draftTraceData: DraftTraceFormData = {
-    screens: draftScreenData,
+    screens: data.screens.map((screen: FrameData) => ({
+      id: screen.id,
+      timestamp: screen.timestamp,
+    })),
     gestures: data.gestures,
     redactions: data.redactions,
     description: data.description,
@@ -59,29 +57,14 @@ export async function handleDraftSave(
   if (data.iOSVersion) {
     draftTraceData.iOSVersion = data.iOSVersion;
   }
-  // upload draft trace data to s3
-  const version = `draft-${Date.now()}`;
-  const fileName = `${version}.json`;
-  const file = new File([JSON.stringify(draftTraceData)], fileName, {
-    type: "application/json",
-  });
-  const uploadRes = await uploadToS3(
-    file,
-    UploadPurpose.CAPTURE_DRAFT,
-    capture.id,
-    fileName,
-  );
-  if (!uploadRes.ok) {
-    return {
-      ok: false,
-      message: "Failed to upload draft trace data.",
-      data: null,
-    };
+  const res = await saveCaptureDraft(capture.id, draftTraceData, baseVersion);
+  if (!res.ok) {
+    return { ok: false, message: res.message, data: null };
   }
   return {
     ok: true,
-    message: "Draft trace data uploaded successfully.",
-    data: { draft: draftTraceData, version },
+    message: "Draft saved.",
+    data: { draft: draftTraceData, version: res.data.version },
   };
 }
 

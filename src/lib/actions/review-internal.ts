@@ -7,14 +7,20 @@ import "server-only";
  * out of a `"use server"` module means none of them is a public endpoint.
  */
 
-import { ReviewStage, ReviewVerdict } from "@prisma/client";
+import { Prisma, ReviewStage, ReviewVerdict } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { listKeys } from "@/lib/aws/s3/server-internal";
+import { getJson, listKeys } from "@/lib/aws/s3/server-internal";
 import {
   draftVersionFromKey,
   draftVersionTime,
+  newerDraftVersion,
 } from "@/lib/aws/s3/upload-purpose";
+import {
+  DraftTraceSchema,
+  traceFromDraft,
+} from "@/app/(signed-in)/capture/[captureId]/edit/components/types";
+import { getTraceCompletenessIssues } from "@/app/(signed-in)/capture/[captureId]/edit/util/trace-validation";
 
 // ---------------------------------------------------------------------------
 // Review log
@@ -175,4 +181,56 @@ export async function getLatestDraftVersion(
     }
   }
   return latest;
+}
+
+/** Where a draft version is stored. */
+export function draftKey(captureId: string, version: string): string {
+  return `uploads/${captureId}/drafts/${version}.json`;
+}
+
+/**
+ * The newest draft version as everyone should see it: the newer of the
+ * version claimed on the capture and the newest file in S3. The claim is
+ * newer while a save is uploading; the file is newer when a script wrote a
+ * draft directly. Throws on S3 errors.
+ */
+export async function getCurrentDraftVersion(
+  captureId: string,
+  claimed: string | null,
+): Promise<string | null> {
+  return newerDraftVersion(claimed, await getLatestDraftVersion(captureId));
+}
+
+/**
+ * Prisma condition: the capture's claimed draft version is still `claimed`
+ * (unset when null). Every draft save and reviewer approval is conditional on
+ * it, so the first of two concurrent writers wins and the other is refused.
+ */
+export function claimedDraftIs(
+  claimed: string | null,
+): Prisma.CaptureWhereInput {
+  return claimed
+    ? { draftVersion: claimed }
+    : { OR: [{ draftVersion: null }, { draftVersion: { isSet: false } }] };
+}
+
+/**
+ * What stops a saved draft from being approved, as messages for the person
+ * approving: the same checks the browser runs (`getTraceCompletenessIssues`).
+ * Throws on S3 errors; an unreadable draft is reported as an issue.
+ */
+export async function getDraftCompletenessIssues(
+  captureId: string,
+  version: string,
+): Promise<string[]> {
+  const parsed = DraftTraceSchema.safeParse(
+    await getJson(draftKey(captureId, version)),
+  );
+  if (!parsed.success) {
+    console.error("Unreadable draft", captureId, version, parsed.error.issues);
+    return [
+      "The saved draft could not be read. Reload the page and try again.",
+    ];
+  }
+  return getTraceCompletenessIssues(traceFromDraft(parsed.data));
 }

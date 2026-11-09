@@ -144,3 +144,102 @@ export const TraceFormSchema: ZodType<TraceFormData> = z
     },
     { message: "Each screen except the last one must have a gesture" },
   );
+
+const optionalNumber = z.number().nullish();
+
+/**
+ * Shape of a saved draft file, checked by the server before it writes or
+ * approves one. Loose on purpose: a draft may be unfinished, so this checks
+ * types and sizes, not completeness. Unknown keys are kept, so a resave never
+ * drops data an older tool wrote.
+ */
+export const DraftTraceSchema = z
+  .object({
+    screens: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(200),
+            timestamp: z.number(),
+          })
+          .passthrough(),
+      )
+      .max(2000),
+    gestures: z.record(
+      z
+        .object({
+          type: z.string().max(100).nullish(),
+          x: optionalNumber,
+          y: optionalNumber,
+          scrollDeltaX: optionalNumber,
+          scrollDeltaY: optionalNumber,
+          description: z.string().max(2000).nullish(),
+        })
+        .passthrough(),
+    ),
+    redactions: z.record(
+      z
+        .array(
+          z
+            .object({
+              id: z.string().max(200),
+              x: z.number(),
+              y: z.number(),
+              width: z.number(),
+              height: z.number(),
+              annotation: z.string().max(1000).nullish(),
+            })
+            .passthrough(),
+        )
+        .max(500),
+    ),
+    description: z.string().max(2000),
+    iPhoneVersion: z.string().max(100).optional(),
+    iOSVersion: z.string().max(100).optional(),
+  })
+  .passthrough();
+
+/**
+ * A draft as trace form data for the completeness checks: no images or VHs
+ * (the checks do not read them), missing gesture fields as null.
+ */
+export function traceFromDraft(
+  draft: z.infer<typeof DraftTraceSchema>,
+): TraceFormData {
+  return {
+    screens: draft.screens.map((screen) => ({
+      id: screen.id,
+      src: "",
+      timestamp: screen.timestamp,
+    })),
+    gestures: Object.fromEntries(
+      Object.entries(draft.gestures).map(([id, gesture]) => [
+        id,
+        {
+          type: gesture.type ?? null,
+          x: gesture.x ?? null,
+          y: gesture.y ?? null,
+          scrollDeltaX: gesture.scrollDeltaX ?? null,
+          scrollDeltaY: gesture.scrollDeltaY ?? null,
+          description: gesture.description ?? null,
+        },
+      ]),
+    ),
+    redactions: Object.fromEntries(
+      Object.entries(draft.redactions).map(([id, boxes]) => [
+        id,
+        boxes.map((box) => ({
+          id: box.id,
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          annotation: box.annotation ?? "",
+        })),
+      ]),
+    ),
+    description: draft.description,
+    iPhoneVersion: draft.iPhoneVersion,
+    iOSVersion: draft.iOSVersion,
+  };
+}

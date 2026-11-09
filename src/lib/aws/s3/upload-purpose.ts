@@ -121,6 +121,26 @@ export function draftVersionTime(version: string): number {
   return Number(version.slice("draft-".length));
 }
 
+/** The newer of two draft versions (either may be missing). */
+export function newerDraftVersion(
+  a: string | null,
+  b: string | null,
+): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return draftVersionTime(b) > draftVersionTime(a) ? b : a;
+}
+
+/**
+ * The version for the next save: the server's clock, but always after the
+ * current newest, so a draft saved under a fast clock is never overtaken by
+ * one saved later.
+ */
+export function nextDraftVersion(current: string | null, now: number): string {
+  const after = current ? draftVersionTime(current) + 1 : 0;
+  return `draft-${Math.max(now, after)}`;
+}
+
 export const uploadUrlRequestSchema = z
   .object({
     purpose: z.nativeEnum(UploadPurpose),
