@@ -17,6 +17,11 @@
  *   -h, --help              Show this message
  *
  * At least one of --store or --capture-ids is required.
+ *
+ * REVIEWED and APPROVED cannot be targets: the app's Approve buttons set them
+ * together with other data (the pinned reviewer draft; the Trace and review
+ * log), which a bare status change would leave missing. Moving a capture out
+ * of REVIEWED also clears its pinned draft version.
  */
 
 import { existsSync, readdirSync, statSync } from "node:fs";
@@ -59,6 +64,54 @@ if (!values["to-status"]) {
   process.exit(1);
 }
 
+// Keep in step with `enum CaptureStatus` in prisma/schema.prisma.
+const CAPTURE_STATUSES = [
+  "CREATED",
+  "PROCESSING",
+  "REVIEWING",
+  "REVIEWED",
+  "ARCHIVED",
+  "APPROVED",
+];
+// Set only by the app, alongside data this script does not write.
+const APP_ONLY_TARGETS = {
+  REVIEWED:
+    "a reviewer's Approve on the review page (it pins the draft version)",
+  APPROVED:
+    "the admin's Approve on the review page (it creates the Trace and the review log)",
+};
+
+for (const flag of ["from-status", "to-status"]) {
+  if (!CAPTURE_STATUSES.includes(values[flag])) {
+    console.error(
+      `Error: --${flag} "${values[flag]}" is not a capture status. Use one of: ${CAPTURE_STATUSES.join(", ")}.`,
+    );
+    process.exit(1);
+  }
+}
+if (APP_ONLY_TARGETS[values["to-status"]]) {
+  console.error(
+    `Error: captures move to ${values["to-status"]} only through ${APP_ONLY_TARGETS[values["to-status"]]}.`,
+  );
+  process.exit(1);
+}
+if (values["from-status"] === values["to-status"]) {
+  console.error("Error: --from-status and --to-status are the same.");
+  process.exit(1);
+}
+
+/** Cluster and database name, without credentials, to tell dev from prod. */
+function describeDatabase(url) {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const cluster = hostname.split(".")[0];
+    const database = pathname.replace(/^\//, "") || "(default)";
+    return `${cluster} / ${database}`;
+  } catch {
+    return "(DATABASE_URL not set or unreadable)";
+  }
+}
+
 function getCaptureIdsFromStore(storeDir) {
   if (!existsSync(storeDir)) return [];
   return readdirSync(storeDir).filter((name) => {
@@ -76,6 +129,7 @@ async function main() {
   const fromStatus = values["from-status"];
   const toStatus = values["to-status"];
   const dryRun = values["dry-run"];
+  console.log(`Database: ${describeDatabase(process.env.DATABASE_URL)}`);
 
   const storeIds = values.store ? getCaptureIdsFromStore(values.store) : [];
   const explicitIds = values["capture-ids"]
@@ -109,7 +163,12 @@ async function main() {
 
   const result = await prisma.capture.updateMany({
     where: { id: { in: ids }, status: fromStatus },
-    data: { status: toStatus },
+    // A capture leaving REVIEWED is no longer waiting on that reviewer's
+    // draft; the next reviewer Approve pins a new one.
+    data:
+      fromStatus === "REVIEWED"
+        ? { status: toStatus, stagedDraftVersion: null }
+        : { status: toStatus },
   });
 
   console.log(
