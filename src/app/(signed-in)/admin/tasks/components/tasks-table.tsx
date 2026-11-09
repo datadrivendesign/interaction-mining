@@ -25,7 +25,8 @@ const STAGE_LABEL: Record<ReviewStage, string> = {
  * TasksTable displays one page of a review queue.
  * @param captures - Rows to display
  * @param stage - Which queue; decides the review-log columns
- * @param showWorker - Show worker name and email (admin only)
+ * @param showWorkerEmail - Show the worker's email (admin only; the name
+ *   column shows for everyone who can open the queue)
  * @param handleTableUserClick - Callback when user is clicked
  * @param handleTableAppClick - Callback when app is clicked
  * @returns TasksTable component
@@ -33,13 +34,13 @@ const STAGE_LABEL: Record<ReviewStage, string> = {
 export function TasksTable({
   captures,
   stage,
-  showWorker,
+  showWorkerEmail,
   handleTableUserClick,
   handleTableAppClick,
 }: {
   captures: TaskRow[];
   stage: TaskStage;
-  showWorker: boolean;
+  showWorkerEmail: boolean;
   handleTableUserClick: (capture: TaskRow) => void;
   handleTableAppClick: (capture: TaskRow) => void;
 }) {
@@ -49,8 +50,8 @@ export function TasksTable({
     <Table>
       <TableHeader>
         <TableRow className="border-none">
-          {showWorker && <TableHead className={head}>Name</TableHead>}
-          {showWorker && <TableHead className={head}>Email</TableHead>}
+          <TableHead className={head}>Name</TableHead>
+          {showWorkerEmail && <TableHead className={head}>Email</TableHead>}
           <TableHead className={head}>App</TableHead>
           <TableHead className={head}>Created</TableHead>
           <TableHead className={head}>Task</TableHead>
@@ -77,16 +78,14 @@ export function TasksTable({
       <TableBody>
         {captures.map((capture) => (
           <TableRow key={capture.id} className="hover:bg-muted/10 border-0">
-            {showWorker && (
-              <TableCell>
-                <FilterLink
-                  label={capture.user?.name ?? "Unknown"}
-                  title="Filter by this worker"
-                  onClick={() => handleTableUserClick(capture)}
-                />
-              </TableCell>
-            )}
-            {showWorker && (
+            <TableCell>
+              <FilterLink
+                label={capture.user?.name ?? "Unknown"}
+                title="Filter by this worker"
+                onClick={() => handleTableUserClick(capture)}
+              />
+            </TableCell>
+            {showWorkerEmail && (
               <TableCell>
                 {capture.user?.email ? (
                   <Link

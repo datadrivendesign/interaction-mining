@@ -297,7 +297,7 @@ export function TasksPanel({
           handleAppFilterRemove={handleAppFilterRemove}
           handleUserFilterRemove={handleUserFilterRemove}
           handleClearFilters={handleClearFilters}
-          showUserFilter={isAdmin}
+          showUserFilter
         />
       </div>
       {isAdmin && (
@@ -326,7 +326,7 @@ export function TasksPanel({
           <TasksTable
             captures={captures}
             stage={stage}
-            showWorker={isAdmin}
+            showWorkerEmail={isAdmin}
             handleTableUserClick={handleTableUserClick}
             handleTableAppClick={handleTableAppClick}
           />

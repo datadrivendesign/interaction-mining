@@ -219,11 +219,12 @@ export const getReviewingCaptures = async ({
 
     const rows: TaskRow[] = captures.map((capture) => ({
       ...capture,
-      // Reviewers see the queue but not who recorded each capture.
+      // Reviewers see who recorded each capture by name; emails stay
+      // admin-only.
       user:
         admin || !capture.user
           ? capture.user
-          : { id: capture.user.id, name: null, email: null },
+          : { ...capture.user, email: null },
       review: reviews.get(capture.id)!,
       isOwn: capture.userId === session.user.id,
     }));
@@ -318,8 +319,8 @@ export const getFilterOptionsForTasks = async (
       data: null,
     };
   }
-  // The worker list (names, emails) is for admins; reviewers filter by app.
-  const includeUsers = isAdmin(session);
+  // Reviewers can filter by worker name; emails are for admins only.
+  const includeEmails = isAdmin(session);
   const queue = allowedStage(session, stage);
   if (!queue) {
     return { ok: false, message: "Invalid review stage.", data: null };
@@ -350,13 +351,11 @@ export const getFilterOptionsForTasks = async (
   }
 
   // fetch full user and app data
-  const [users, apps] = await Promise.all([
-    includeUsers
-      ? prisma.user.findMany({
-          where: { id: { in: userIds.map((u) => u.userId as string) } },
-          select: { id: true, name: true, email: true },
-        })
-      : Promise.resolve([]),
+  const [workers, apps] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: userIds.map((u) => u.userId as string) } },
+      select: { id: true, name: true, email: true },
+    }),
     prisma.app.findMany({
       where: { id: { in: appIds.map((a) => a.appId) } },
       select: {
@@ -370,6 +369,11 @@ export const getFilterOptionsForTasks = async (
   return {
     ok: true,
     message: "Filter options found.",
-    data: { users, apps },
+    data: {
+      users: workers.map((worker) =>
+        includeEmails ? worker : { ...worker, email: null },
+      ),
+      apps,
+    },
   };
 };

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import { isReviewer } from "@/lib/auth/roles";
 import { NotAuthorized } from "@/components/authorized";
 
-/** Review queue: REVIEWER and ADMIN. No worker names or emails here. */
+/** Review queue: REVIEWER and ADMIN. Worker names show here; emails are admin-only. */
 export default async function Layout({
   children,
 }: {
