@@ -54,7 +54,6 @@ export function ReviewGalleryGrid({
   screensWithIssues,
   captureTimestamp,
   gapsByScreenId = {},
-  banner,
   renderCard,
 }: {
   sortedScreens: FrameData[];
@@ -63,8 +62,6 @@ export function ReviewGalleryGrid({
   captureTimestamp?: string | null;
   /** From `findScreenGaps`; leave empty where timestamps are not video time. */
   gapsByScreenId?: Record<string, number>;
-  /** Shown above the screens (the "Fixes saved" list). */
-  banner?: ReactNode;
   renderCard: (
     screen: FrameData,
     index: number,
@@ -145,7 +142,6 @@ export function ReviewGalleryGrid({
         ref={scrollContainerRef}
         className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-6"
       >
-        {banner}
         <div className="flex flex-wrap items-start gap-x-3 gap-y-5">
           {sortedScreens.map((screen, index) => {
             const gap = gapsByScreenId[screen.id];

@@ -22,7 +22,6 @@ export function ReviewGalleryIOS({
   onSelectedScreenToggle,
   fixedScreenIds,
   renderCardFooter,
-  banner,
   onOpenScreen,
 }: {
   traceData: TraceFormData;
@@ -36,8 +35,6 @@ export function ReviewGalleryIOS({
   fixedScreenIds?: string[];
   /** Controls under a card's description (the Fix button). */
   renderCardFooter?: (screenId: string, index: number) => ReactNode;
-  /** Shown above the screens (the "Fixes saved" list). */
-  banner?: ReactNode;
   /** Opens the screen viewer (double-click or the enlarge button). */
   onOpenScreen?: (screenId: string) => void;
 }) {
@@ -63,7 +60,6 @@ export function ReviewGalleryIOS({
       activeScreenId={activeScreenId}
       screensWithIssues={screensWithIssues}
       captureTimestamp={captureTimestamp}
-      banner={banner}
       gapsByScreenId={gapsByScreenId}
       renderCard={(screen, index, cardRef, cardSize) => (
         <ReviewScreenCard

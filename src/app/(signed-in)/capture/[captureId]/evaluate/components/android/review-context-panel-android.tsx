@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { TraceFormData } from "../../../edit/components/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export function ReviewContextPanelAndroid({
-  traceData: _traceData,
   isAdmin,
   listHref,
   summary,
 }: {
-  traceData: TraceFormData;
   isAdmin: boolean;
   /** Task list for this viewer's role. */
   listHref: string;

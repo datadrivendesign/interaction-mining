@@ -18,7 +18,6 @@ export function ReviewGalleryAndroid({
   onSelectedScreenToggle,
   fixedScreenIds,
   renderCardFooter,
-  banner,
   onOpenScreen,
 }: {
   traceData: TraceFormData;
@@ -32,8 +31,6 @@ export function ReviewGalleryAndroid({
   fixedScreenIds?: string[];
   /** Controls under a card's description (the Fix button). */
   renderCardFooter?: (screenId: string, index: number) => ReactNode;
-  /** Shown above the screens (the "Fixes saved" list). */
-  banner?: ReactNode;
   /** Opens the screen viewer (double-click or the enlarge button). */
   onOpenScreen?: (screenId: string) => void;
 }) {
@@ -53,7 +50,6 @@ export function ReviewGalleryAndroid({
       activeScreenId={activeScreenId}
       screensWithIssues={screensWithIssues}
       captureTimestamp={captureTimestamp}
-      banner={banner}
       renderCard={(screen, index, cardRef, cardSize) => (
         <ReviewScreenCard
           key={screen.id}

@@ -58,6 +58,7 @@ import {
   collectUnlabelledRedactions,
   describeIncompleteScreens,
   describeUnlabelledRedactions,
+  getTraceCompletenessIssues,
 } from "./util/trace-validation";
 import {
   parseFeedbackChecklistItems,
@@ -650,42 +651,13 @@ export default function Page() {
         return;
       }
     } else if (stepIndex === TraceSteps.Review) {
-      const { screens: currentScreens, gestures: currentGestures } =
-        methods.getValues();
-      // Gestures first, with the same predicate and reporting as the capture
-      // step. TraceFormSchema's refines under-report for the reason described on
-      // collectIncompleteScreens, and this is the gate that decides whether a
-      // trace reaches a reviewer — a screen captured after passing the capture
-      // step would otherwise slip through unannotated.
-      const incompleteScreens = collectIncompleteScreens(
-        currentScreens,
-        currentGestures,
-      );
-      if (incompleteScreens.length > 0) {
-        toast.error(describeIncompleteScreens(incompleteScreens));
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Then the rest of the trace — the description above all, which is only
-      // written at this step.
-      const allButLastScreenIds = currentScreens.slice(0, -1).map((s) => s.id);
-      const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(currentGestures).filter(([id]) =>
-          allButLastScreenIds.includes(id),
-        ),
-      );
-      const validation = TraceFormSchema.safeParse({
-        ...methods.getValues(),
-        gestures: allButLastScreenGestures,
-      });
-      if (!validation.success) {
-        console.error(validation.error.issues);
-        // Deduplicated: the schema reports per field, so one cause can surface
-        // several times with the same wording.
-        new Set(validation.error.issues.map((issue) => issue.message)).forEach(
-          (message) => toast.error(message),
-        );
+      // The same check staff run before Approve, so the two cannot drift
+      // apart: unfinished screens and unlabelled boxes, then the schema (the
+      // description above all, which is only written at this step). This is
+      // the gate that decides whether a trace reaches a reviewer.
+      const issues = getTraceCompletenessIssues(methods.getValues());
+      if (issues.length > 0) {
+        issues.forEach((message) => toast.error(message));
         setIsSubmitting(false);
         return;
       }
