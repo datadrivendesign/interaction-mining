@@ -1,6 +1,5 @@
 import { ScreenGesture } from "@prisma/client";
-import { normalizeGestureType } from "@/lib/utils/gesture-options";
-import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import { GESTURE_TYPES, normalizeGestureType } from "@/lib/utils/gesture-types";
 
 export const GESTURE_DESCRIPTION_MAX_LENGTH = 125;
 export const MIN_SLOT_LENGTH = 2;
@@ -25,74 +24,106 @@ const gestureTemplates: GestureTemplate[] = [
     type: GESTURE_TYPES.TAP,
     fixedParts: ["Tap ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "button" },
-      { key: "goal", label: "goal", placeholder: "open settings" },
+      { key: "target", label: "What you touched", placeholder: "button" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "open settings",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.SWIPE_UP,
     fixedParts: ["Swipe up on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "feed" },
-      { key: "goal", label: "goal", placeholder: "see older items" },
+      { key: "target", label: "What you touched", placeholder: "feed" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "see older items",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.SWIPE_DOWN,
     fixedParts: ["Swipe down on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "slider" },
-      { key: "goal", label: "goal", placeholder: "see older items" },
+      { key: "target", label: "What you touched", placeholder: "slider" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "see older items",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.SWIPE_LEFT,
     fixedParts: ["Swipe left on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "items list" },
-      { key: "goal", label: "goal", placeholder: "view next item" },
+      { key: "target", label: "What you touched", placeholder: "items list" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "view next item",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.SWIPE_RIGHT,
     fixedParts: ["Swipe right on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "items list" },
-      { key: "goal", label: "goal", placeholder: "view previous item" },
+      { key: "target", label: "What you touched", placeholder: "items list" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "view previous item",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.TYPING,
     fixedParts: ["Type in ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "search bar" },
-      { key: "goal", label: "goal", placeholder: "search for item" },
+      { key: "target", label: "What you touched", placeholder: "search bar" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "search for item",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.TOUCH_AND_HOLD,
     fixedParts: ["Touch and hold ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "photo" },
-      { key: "goal", label: "goal", placeholder: "open context menu" },
+      { key: "target", label: "What you touched", placeholder: "photo" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "open context menu",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.DOUBLE_TAP,
     fixedParts: ["Double tap ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "image" },
-      { key: "goal", label: "goal", placeholder: "like post" },
+      { key: "target", label: "What you touched", placeholder: "image" },
+      { key: "goal", label: "Why you touched it", placeholder: "like post" },
     ],
   },
   {
     type: GESTURE_TYPES.DRAG,
     fixedParts: ["Drag ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "slider handle" },
+      {
+        key: "target",
+        label: "What you touched",
+        placeholder: "slider handle",
+      },
       {
         key: "destination",
-        label: "destination",
+        label: "Where you dragged it",
         placeholder: "increase value to 40%",
       },
     ],
@@ -101,32 +132,48 @@ const gestureTemplates: GestureTemplate[] = [
     type: GESTURE_TYPES.ZOOM_IN,
     fixedParts: ["Zoom in on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "map" },
-      { key: "goal", label: "goal", placeholder: "inspect details" },
+      { key: "target", label: "What you touched", placeholder: "map" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "inspect details",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.ZOOM_OUT,
     fixedParts: ["Zoom out on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "map" },
-      { key: "goal", label: "goal", placeholder: "see larger area" },
+      { key: "target", label: "What you touched", placeholder: "map" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "see larger area",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.ROTATE_CW,
     fixedParts: ["Rotate clockwise on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "photo" },
-      { key: "goal", label: "goal", placeholder: "adjust orientation" },
+      { key: "target", label: "What you touched", placeholder: "photo" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "adjust orientation",
+      },
     ],
   },
   {
     type: GESTURE_TYPES.ROTATE_CCW,
     fixedParts: ["Rotate counterclockwise on ", " to ", ""],
     slots: [
-      { key: "target", label: "target", placeholder: "map" },
-      { key: "goal", label: "goal", placeholder: "adjust orientation" },
+      { key: "target", label: "What you touched", placeholder: "map" },
+      {
+        key: "goal",
+        label: "Why you touched it",
+        placeholder: "adjust orientation",
+      },
     ],
   },
 ];

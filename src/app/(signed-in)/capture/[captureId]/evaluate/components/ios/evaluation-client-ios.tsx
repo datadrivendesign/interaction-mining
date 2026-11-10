@@ -28,10 +28,21 @@ import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
 import { getVerdictMode, taskListPathFor } from "../shared/verdict-mode";
+import {
+  getChecklistStatus,
+  passUnflaggedSteps,
+  ReviewChecklist,
+} from "../shared/review-checklist";
 import { PublishProgressDialog } from "../shared/publish-progress-dialog";
 import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { useIOSReviewPlayback } from "./use-ios-review-playback";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
+import { toast } from "sonner";
+import { extractVideoFrame } from "../../../edit/components/repair-screen/util/ios-video-operations";
+import { useReviewScreenFixes } from "../shared/use-review-screen-fixes";
+
+/** A new screen this close (seconds) to an existing one is a duplicate. */
+const DUPLICATE_SCREEN_SECONDS = 0.05;
 
 const REVIEW_VIDEO_PANEL_DEFAULT_HORIZONTAL = 23;
 const REVIEW_VIDEO_PANEL_LANDSCAPE_HORIZONTAL = 31;
@@ -55,6 +66,11 @@ export function EvaluationClientIOS({
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
   );
+  // The reviewer's Pass/Issue mark per step; it gates the verdict.
+  const [checklist, setChecklist] = useState<ReviewChecklist>({});
+  useEffect(() => {
+    setChecklist({});
+  }, [captureId]);
   const [gallerySelectedScreenIds, setGallerySelectedScreenIds] = useState<
     string[]
   >([]);
@@ -134,6 +150,12 @@ export function EvaluationClientIOS({
   const listPath = taskListPathFor(verdictMode, isAdmin);
   const editHref = `/capture/${captureId}/edit`;
 
+  // Only the reviewer's first pass is gated; the admin's paths are not.
+  const checklistStatus =
+    verdictMode === "review"
+      ? getChecklistStatus(checklist, feedbackState)
+      : null;
+
   const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
       capture,
@@ -143,6 +165,8 @@ export function EvaluationClientIOS({
       mode: verdictMode,
       listPath,
       editHref,
+      approveBlockedReason: checklistStatus?.approveBlockedReason ?? null,
+      denyBlockedReason: checklistStatus?.sendBackBlockedReason ?? null,
     });
 
   const {
@@ -154,7 +178,6 @@ export function EvaluationClientIOS({
     handleScreenSelect,
     handleScreenStep,
     handleMarkerStripScrub,
-    handleReplayScreen,
     togglePlayback,
     handleVideoSeeking,
     handleOnVideoLoadedMetadata,
@@ -169,6 +192,66 @@ export function EvaluationClientIOS({
     setActiveScreenId,
     isSubmitting,
   });
+
+  const {
+    fixes,
+    canFix,
+    summaryBlock,
+    galleryProps,
+    viewerDialog,
+    shortcuts: fixShortcuts,
+  } = useReviewScreenFixes({
+    capture,
+    traceData,
+    setTraceData,
+    draftVersion,
+    setDraftVersion,
+    verdictMode,
+    isSubmitting,
+    activeScreenId,
+    setActiveScreenId,
+    setGallerySelectedScreenIds,
+    noteCountByScreen: feedbackState.commentsByScreen,
+    onViewerNavigate: (screen) =>
+      handleScreenSelect(screen.id, screen.timestamp),
+    showTimeLabel: true,
+    summaryTextClassName: "text-[13px]",
+  });
+  const [isAddingScreen, setIsAddingScreen] = useState(false);
+  // Set synchronously, so a double click cannot start two frame grabs.
+  const isAddingScreenRef = useRef(false);
+  const handleAddScreen = async () => {
+    const video = videoRef.current;
+    if (!video || !traceData || isAddingScreenRef.current) return;
+    video.pause();
+    const time = video.currentTime;
+    if (
+      traceData.screens.some(
+        (screen) =>
+          Math.abs(screen.timestamp - time) < DUPLICATE_SCREEN_SECONDS,
+      )
+    ) {
+      toast.error(
+        "There is already a screen at this time. Move to the missing step first.",
+      );
+      return;
+    }
+    isAddingScreenRef.current = true;
+    setIsAddingScreen(true);
+    try {
+      const frame = await extractVideoFrame(video, time, {
+        mimeType: "image/png",
+        output: "object-url",
+        preferOffscreenCanvas: true,
+      });
+      fixes.openAddScreen(frame);
+    } catch {
+      toast.error("Could not get the frame. Pause the video and try again.");
+    } finally {
+      isAddingScreenRef.current = false;
+      setIsAddingScreen(false);
+    }
+  };
 
   const { hotkeyAction: screenCommentsHotkeyAction } = useReviewCommentHotkeys({
     isSubmitting,
@@ -283,6 +366,7 @@ export function EvaluationClientIOS({
           >
             {traceData && capture && (
               <ReviewVideoPanelIOS
+                summary={summaryBlock}
                 traceData={traceData}
                 isAdmin={isStaffView}
                 listHref={listPath}
@@ -303,6 +387,12 @@ export function EvaluationClientIOS({
                 onVideoLayoutOrientationChange={(orientation) =>
                   setReviewVideoLandscape(orientation === "landscape")
                 }
+                onAddScreen={
+                  canFix && !isSubmitting
+                    ? () => void handleAddScreen()
+                    : undefined
+                }
+                isAddingScreen={isAddingScreen || fixes.isSaving}
               />
             )}
           </ResizablePanel>
@@ -332,9 +422,9 @@ export function EvaluationClientIOS({
               <ResizablePanel
                 id="review-gallery"
                 order={1}
-                defaultSize={isStaffView ? 70 : 100}
+                defaultSize={isStaffView ? 60 : 100}
                 minSize={50}
-                maxSize={isStaffView ? 85 : 100}
+                maxSize={isStaffView ? 80 : 100}
                 className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950"
               >
                 {traceData && (
@@ -344,10 +434,6 @@ export function EvaluationClientIOS({
                     commentsByScreen={feedbackState.commentsByScreen}
                     onScreenSelect={handleScreenSelect}
                     captureTimestamp={captureTimestamp}
-                    onReplayScreen={(screenId) =>
-                      void handleReplayScreen(screenId)
-                    }
-                    canReplay={videoDuration > 0}
                     selectedScreenIds={
                       isComposerInScreenMode
                         ? gallerySelectedScreenIds
@@ -356,6 +442,7 @@ export function EvaluationClientIOS({
                     onSelectedScreenToggle={
                       isComposerInScreenMode ? handleGalleryToggle : undefined
                     }
+                    {...galleryProps}
                   />
                 )}
               </ResizablePanel>
@@ -367,9 +454,9 @@ export function EvaluationClientIOS({
                 <ResizablePanel
                   id="review-comments"
                   order={2}
-                  defaultSize={30}
+                  defaultSize={40}
                   minSize={20}
-                  maxSize={45}
+                  maxSize={50}
                   className="min-h-0 overflow-hidden"
                 >
                   {traceData && (
@@ -395,6 +482,11 @@ export function EvaluationClientIOS({
                         setGallerySelectedScreenIds
                       }
                       onComposerScreenModeChange={setIsComposerInScreenMode}
+                      checklist={checklistStatus ? checklist : undefined}
+                      onChecklistMark={(category, mark) =>
+                        setChecklist((prev) => ({ ...prev, [category]: mark }))
+                      }
+                      onPassAll={() => setChecklist(passUnflaggedSteps)}
                     />
                   )}
                 </ResizablePanel>
@@ -404,6 +496,7 @@ export function EvaluationClientIOS({
         </ResizablePanelGroup>
       )}
       <PublishProgressDialog progress={saveProgress} />
+      {viewerDialog}
       {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
           mode={verdictMode}
@@ -415,7 +508,11 @@ export function EvaluationClientIOS({
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
           editHref={editHref}
+          checklistLabel={checklistStatus?.label}
+          approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
+          denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
           additionalShortcuts={[
+            ...fixShortcuts,
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
             { label: "Replay around screen", keys: "R" },

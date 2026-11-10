@@ -35,6 +35,9 @@ export function VerdictBar({
   onSkip,
   editHref,
   additionalShortcuts = [],
+  checklistLabel,
+  approveBlockedReason = null,
+  denyBlockedReason = null,
 }: {
   mode: Exclude<VerdictMode, "none">;
   /** False when the worker never saved a draft: nothing to approve. */
@@ -48,6 +51,12 @@ export function VerdictBar({
   /** Edit page link; shown in every verdict mode, draft or not. */
   editHref?: string;
   additionalShortcuts?: { label: string; keys: string }[];
+  /** Reviewer checklist progress, e.g. "4 of 6 steps checked". */
+  checklistLabel?: string;
+  /** Checklist gate: Approve stays visible but off, with this reason. */
+  approveBlockedReason?: string | null;
+  /** Checklist gate: Send back stays visible but off, with this reason. */
+  denyBlockedReason?: string | null;
 }) {
   const canApprove = hasDraft;
   // With no draft the edit page starts from the recording, so a reviewer can
@@ -55,7 +64,14 @@ export function VerdictBar({
   const canEdit = canEditInMode(mode) && !!editHref;
   const denyLabel = DENY_LABEL[mode];
 
-  let status = issueSummary;
+  // With both verdicts off, say what unlocks one instead of the issue count.
+  let status = checklistLabel
+    ? `${checklistLabel} · ${
+        approveBlockedReason && denyBlockedReason
+          ? approveBlockedReason
+          : issueSummary
+      }`
+    : issueSummary;
   if (saveProgress) {
     status = `Saving screens ${saveProgress.done} of ${saveProgress.total}. Keep this page open.`;
   } else if (!canApprove) {
@@ -118,7 +134,8 @@ export function VerdictBar({
             size="sm"
             className="min-w-0 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700! dark:text-white! dark:hover:bg-green-800!"
             onClick={onApprove}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !!approveBlockedReason}
+            title={approveBlockedReason ?? undefined}
           >
             <span>Approve</span>
             <span className="text-[10px] font-normal text-green-100">
@@ -130,7 +147,8 @@ export function VerdictBar({
           size="sm"
           className="min-w-0 bg-red-500 text-white hover:bg-red-600 dark:bg-red-700! dark:text-white! dark:hover:bg-red-800!"
           onClick={onDeny}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !!denyBlockedReason}
+          title={denyBlockedReason ?? undefined}
         >
           <span>{denyLabel}</span>
           <span className="text-[10px] font-normal text-red-100">

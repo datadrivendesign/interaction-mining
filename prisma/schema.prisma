@@ -194,6 +194,10 @@ model Capture {
   /// REVIEWED and cleared on send-back or deny. The admin's final Approve
   /// renders the draft in the browser; this records what the reviewer saw.
   stagedDraftVersion String?         @map("staged_draft_version")
+  /// Newest saved draft version (`draft-<ms>`), claimed by the server before
+  /// each draft upload. Saves are conditional on it, so two people editing at
+  /// once cannot both win. Unset on captures not saved since it was added.
+  draftVersion       String?         @map("draft_version")
   // Back-relation only. The foreign key lives on CaptureReview, so this adds no
   // stored field to existing capture documents.
   reviews            CaptureReview[]

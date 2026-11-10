@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
+import { getTraceCompletenessIssues } from "../../../edit/util/trace-validation";
 import { revalidateCaptureCaches } from "@/lib/actions";
 import { TraceFormData } from "../../../edit/components/types";
 import { handleTraceSave } from "../../../edit/util/export";
@@ -37,6 +38,8 @@ export function useReviewVerdictActions({
   mode,
   listPath,
   editHref,
+  approveBlockedReason = null,
+  denyBlockedReason = null,
 }: {
   capture?: Capture | null;
   traceData?: TraceFormData;
@@ -48,6 +51,10 @@ export function useReviewVerdictActions({
   listPath: string;
   /** Edit page for this capture; Ctrl+Shift+E opens it in REVIEWING. */
   editHref?: string;
+  /** Checklist gate: why Approve is off now (button and hotkey), or null. */
+  approveBlockedReason?: string | null;
+  /** Checklist gate: why Send back / Deny is off now, or null. */
+  denyBlockedReason?: string | null;
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,6 +127,19 @@ export function useReviewVerdictActions({
     if (!capture || !traceData || isSubmitting || mode === "none") {
       return;
     }
+    if (approveBlockedReason) {
+      toast.error(approveBlockedReason);
+      return;
+    }
+    // Staff can fix a trace in place here, which skips the edit page's
+    // Finish checks, so every Approve runs them on what it is approving.
+    const completenessIssues = getTraceCompletenessIssues(traceData);
+    if (completenessIssues.length > 0) {
+      completenessIssues.forEach((message) =>
+        toast.error(`Can't approve yet. ${message}`),
+      );
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -144,7 +164,13 @@ export function useReviewVerdictActions({
 
       // direct (REVIEWING) and final (REVIEWED): the admin's browser renders
       // the screens from the loaded draft and publishes the trace.
-      const permission = await validateApprovePermissions(capture.id);
+      if (!draftVersion) {
+        throw new Error("No draft saved. Send back to worker.");
+      }
+      const permission = await validateApprovePermissions(
+        capture.id,
+        draftVersion,
+      );
       if (!permission.ok) {
         throw new Error(permission.message);
       }
@@ -172,6 +198,7 @@ export function useReviewVerdictActions({
     }
   }, [
     approvalSummary,
+    approveBlockedReason,
     capture,
     draftVersion,
     isSubmitting,
@@ -183,6 +210,10 @@ export function useReviewVerdictActions({
 
   const handleDeny = useCallback(async () => {
     if (!capture || isSubmitting || mode === "none") {
+      return;
+    }
+    if (denyBlockedReason) {
+      toast.error(denyBlockedReason);
       return;
     }
     const screens = traceData?.screens ?? [];
@@ -227,6 +258,7 @@ export function useReviewVerdictActions({
     }
   }, [
     capture,
+    denyBlockedReason,
     feedbackState,
     isSubmitting,
     mode,

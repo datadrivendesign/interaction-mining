@@ -17,8 +17,10 @@ import {
   objectIdSchema,
 } from "@/lib/aws/s3/upload-purpose";
 import {
+  claimedDraftIs,
   FINAL_EDIT_KIND,
-  getLatestDraftVersion,
+  getCurrentDraftVersion,
+  getDraftCompletenessIssues,
   markReviewerApprovalOverturned,
   recordCaptureReview,
   reviewMetricsSchema,
@@ -74,6 +76,23 @@ async function transition(
   return res.count === 1;
 }
 
+/**
+ * Why a draft cannot be approved, or null: the person must have seen the
+ * newest version (`version`, from their page), and it must pass the same
+ * completeness checks the browser runs. Throws on S3 errors.
+ */
+async function checkApprovableDraft(
+  captureId: string,
+  claimed: string | null,
+  version: string,
+): Promise<string | null> {
+  if ((await getCurrentDraftVersion(captureId, claimed)) !== version) {
+    return "The draft changed. Reload the page and check it again.";
+  }
+  const issues = await getDraftCompletenessIssues(captureId, version);
+  return issues.length > 0 ? `Can't approve yet. ${issues.join(" ")}` : null;
+}
+
 function errorMessage(err: unknown, fallback: string): string {
   // Prisma and S3 messages can carry internals; log them, show the fallback.
   console.error(fallback, err);
@@ -85,16 +104,19 @@ function errorMessage(err: unknown, fallback: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Pre-flight before the browser builds a trace: admin, and the capture is
- * still waiting for a verdict. Checked first so a stale page does not create
- * a trace for a capture someone else already handled.
+ * Pre-flight before the browser builds a trace: admin, the capture is still
+ * waiting for a verdict, `version` (the draft the admin's page loaded) is
+ * still the newest, and that draft passes the completeness checks. Checked
+ * first so a stale or unfinished page does not create a trace.
  */
 export async function validateApprovePermissions(
   captureId: unknown,
+  version: unknown,
 ): Promise<ActionPayload<null>> {
   const id = objectIdSchema.safeParse(captureId);
-  if (!id.success) {
-    return denied("Invalid capture ID.");
+  const v = draftVersionSchema.safeParse(version);
+  if (!id.success || !v.success) {
+    return denied("Invalid approve request.");
   }
   const session = await auth();
   if (!session?.user) {
@@ -103,14 +125,24 @@ export async function validateApprovePermissions(
   if (!isAdmin(session)) {
     return denied("Only admins can approve captures");
   }
-  const capture = await prisma.capture.findUnique({
-    where: { id: id.data },
-    select: { status: true },
-  });
-  if (!capture || !ADMIN_APPROVABLE.includes(capture.status)) {
-    return denied("Capture is no longer waiting for review.");
+  try {
+    const capture = await prisma.capture.findUnique({
+      where: { id: id.data },
+      select: { status: true, draftVersion: true },
+    });
+    if (!capture || !ADMIN_APPROVABLE.includes(capture.status)) {
+      return denied("Capture is no longer waiting for review.");
+    }
+    const draftProblem = await checkApprovableDraft(
+      id.data,
+      capture.draftVersion ?? null,
+      v.data,
+    );
+    if (draftProblem) return denied(draftProblem);
+    return { ok: true, message: "Auth check passed", data: null };
+  } catch (err) {
+    return denied(errorMessage(err, "Failed to check the capture."));
   }
-  return { ok: true, message: "Auth check passed", data: null };
 }
 
 /**
@@ -134,13 +166,19 @@ export async function approveCapture(
   try {
     const capture = await prisma.capture.findUnique({
       where: { id: id.data },
-      select: { userId: true, status: true, stagedDraftVersion: true },
+      select: {
+        userId: true,
+        status: true,
+        stagedDraftVersion: true,
+        draftVersion: true,
+      },
     });
     // At the final check, a newer draft than the reviewer approved means the
     // admin edited it before publishing. Read before the status moves.
     const editedAtFinal =
       capture?.status === CaptureStatus.REVIEWED &&
-      (await getLatestDraftVersion(id.data)) !== capture.stagedDraftVersion;
+      (await getCurrentDraftVersion(id.data, capture.draftVersion ?? null)) !==
+        capture.stagedDraftVersion;
     const moved =
       capture &&
       ADMIN_APPROVABLE.includes(capture.status) &&
@@ -196,25 +234,34 @@ export async function reviewerApprove(
   try {
     const capture = await prisma.capture.findUnique({
       where: { id: id.data },
-      select: { userId: true, status: true },
+      select: { userId: true, status: true, draftVersion: true },
     });
     if (!capture || capture.status !== CaptureStatus.REVIEWING) {
       return denied("Capture is no longer waiting for review.");
     }
 
-    // The reviewer approves the draft they looked at. If a newer draft was
-    // saved since their page loaded, they have not seen it.
-    const latest = await getLatestDraftVersion(id.data);
-    if (latest !== v.data) {
-      return denied("The draft changed. Reload the page and check it again.");
-    }
+    const claimed = capture.draftVersion ?? null;
+    const draftProblem = await checkApprovableDraft(id.data, claimed, v.data);
+    if (draftProblem) return denied(draftProblem);
 
-    const moved = await transition(id.data, CaptureStatus.REVIEWING, {
-      status: CaptureStatus.REVIEWED,
-      stagedDraftVersion: v.data,
+    // Conditional on the claimed draft version as well as the status, so a
+    // fix saved while this approval runs makes it fail instead of slipping in
+    // unseen.
+    const moved = await prisma.capture.updateMany({
+      where: {
+        id: id.data,
+        status: CaptureStatus.REVIEWING,
+        ...claimedDraftIs(claimed),
+      },
+      data: {
+        status: CaptureStatus.REVIEWED,
+        stagedDraftVersion: v.data,
+      },
     });
-    if (!moved) {
-      return denied("Capture is no longer waiting for review.");
+    if (moved.count !== 1) {
+      return denied(
+        "The capture changed while approving. Reload the page and check it again.",
+      );
     }
     await recordCaptureReview({
       captureId: id.data,

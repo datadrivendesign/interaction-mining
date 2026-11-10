@@ -8,6 +8,8 @@ import {
   draftVersionFromKey,
   draftVersionSchema,
   draftVersionTime,
+  newerDraftVersion,
+  nextDraftVersion,
   safePathSegmentSchema,
   uploadUrlRequestSchema,
 } from "./upload-purpose.ts";
@@ -206,5 +208,24 @@ describe("draft versions", () => {
     );
     assert.equal(draftVersionFromKey(`uploads/${OID}/drafts/notes.json`), null);
     assert.equal(draftVersionTime(VERSION), 1761234567890);
+  });
+});
+
+describe("draft version order", () => {
+  it("picks the newer version, either may be missing", () => {
+    assert.equal(newerDraftVersion("draft-5", "draft-9"), "draft-9");
+    assert.equal(newerDraftVersion("draft-9", "draft-5"), "draft-9");
+    assert.equal(newerDraftVersion(null, "draft-5"), "draft-5");
+    assert.equal(newerDraftVersion("draft-5", null), "draft-5");
+    assert.equal(newerDraftVersion(null, null), null);
+  });
+
+  it("uses the clock for the next version", () => {
+    assert.equal(nextDraftVersion("draft-1000", 2000), "draft-2000");
+    assert.equal(nextDraftVersion(null, 2000), "draft-2000");
+  });
+
+  it("stays after the newest even when the clock is behind", () => {
+    assert.equal(nextDraftVersion("draft-5000", 2000), "draft-5001");
   });
 });
