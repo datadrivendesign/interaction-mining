@@ -33,11 +33,18 @@ const CARD_WIDTH_CLASS: Record<
   L: { portrait: "w-72", landscape: "w-[36rem]" },
 };
 
-/** Gesture ring diameter: scales with the screenshot, never below 14 px. */
-const RING_MIN_PX = 14;
-const RING_MAX_PX = 32;
-const RING_WIDTH_RATIO = 0.13;
-/** The gesture icons render at 24 px; the ring shrinks them to fit. */
+/**
+ * Gesture icon size: a share of the screenshot's shorter side, so it grows
+ * with the S/M/L card size and a landscape screen gets the same icon as a
+ * portrait one. Only the grid cards use this; the full-size viewer draws
+ * its own marker.
+ */
+const ICON_MIN_PX = 10;
+const ICON_MAX_PX = 33;
+const ICON_SIZE_RATIO = 0.1125;
+/** The yellow ring sits just outside the icon. */
+const RING_PER_ICON = 1.05;
+/** The gesture icons render at 24 px; they are scaled to the icon size. */
 const ICON_NATIVE_PX = 24;
 
 /**
@@ -208,12 +215,17 @@ export function ScreenOverlays({
   const [containerRef, { width, height }] = useMeasure();
   const canvasWidth = width ?? 0;
   const canvasHeight = height ?? 0;
-  const ringPx = Math.round(
-    Math.min(
-      RING_MAX_PX,
-      Math.max(RING_MIN_PX, canvasWidth * RING_WIDTH_RATIO),
+  const iconPx = Math.min(
+    ICON_MAX_PX,
+    Math.max(
+      ICON_MIN_PX,
+      Math.min(canvasWidth, canvasHeight) * ICON_SIZE_RATIO,
     ),
   );
+  const ringPx = Math.round(iconPx * RING_PER_ICON);
+  // The drag arrow scales with the icon (2 px line and 5 px dot at 24 px).
+  const dragStroke = Math.max(1.5, iconPx / 12);
+  const dragDotRadius = Math.max(4, iconPx * 0.21);
 
   const isDrag =
     !!gesture &&
@@ -258,16 +270,16 @@ export function ScreenOverlays({
               x2={endX}
               y2={endY}
               stroke="rgba(23,23,23,0.72)"
-              strokeWidth="2"
+              strokeWidth={dragStroke}
               markerEnd={`url(#dragArrowHead-${screenId})`}
             />
             <circle
               cx={endX}
               cy={endY}
-              r="5"
+              r={dragDotRadius}
               fill="white"
               stroke="rgba(23,23,23,0.92)"
-              strokeWidth="1.8"
+              strokeWidth={dragStroke * 0.9}
             />
           </svg>
         )}
@@ -287,7 +299,7 @@ export function ScreenOverlays({
                 <span
                   className="flex items-center justify-center"
                   style={{
-                    transform: `scale(${(ringPx * 0.75) / ICON_NATIVE_PX})`,
+                    transform: `scale(${iconPx / ICON_NATIVE_PX})`,
                   }}
                 >
                   {findGestureOption(gesture.type)?.icon}
