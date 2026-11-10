@@ -22,7 +22,7 @@ import {
   serializeReviewFeedbackState,
 } from "../../utils/review-feedback";
 import { summarizeReviewVerdict } from "../../utils/review-verdict-summary";
-import { canEditInMode, queueStatusFor, VerdictMode } from "./verdict-mode";
+import { queueStatusFor, VerdictMode } from "./verdict-mode";
 
 /** Rendering and uploading progress while the admin's Approve publishes. */
 export type SaveProgress = { done: number; total: number };
@@ -37,7 +37,6 @@ export function useReviewVerdictActions({
   feedbackState,
   mode,
   listPath,
-  editHref,
   approveBlockedReason = null,
   denyBlockedReason = null,
 }: {
@@ -49,8 +48,6 @@ export function useReviewVerdictActions({
   mode: VerdictMode;
   /** Where to go when the queue is empty or the next capture can't load. */
   listPath: string;
-  /** Edit page for this capture; Ctrl+Shift+E opens it in REVIEWING. */
-  editHref?: string;
   /** Checklist gate: why Approve is off now (button and hotkey), or null. */
   approveBlockedReason?: string | null;
   /** Checklist gate: why Send back / Deny is off now, or null. */
@@ -314,16 +311,6 @@ export function useReviewVerdictActions({
     },
     hotkeyOptions,
     [handleDeny, enabled, isSubmitting],
-  );
-
-  useHotkeys(
-    "ctrl+shift+e",
-    (event) => {
-      event.preventDefault();
-      if (editHref && canEditInMode(mode)) router.push(editHref);
-    },
-    hotkeyOptions,
-    [editHref, mode, router, enabled, isSubmitting],
   );
 
   useHotkeys(

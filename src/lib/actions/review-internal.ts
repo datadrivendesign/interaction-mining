@@ -14,6 +14,7 @@ import { getJson, listKeys } from "@/lib/aws/s3/server-internal";
 import {
   draftVersionFromKey,
   draftVersionTime,
+  isAfterTakeOver,
   newerDraftVersion,
 } from "@/lib/aws/s3/upload-purpose";
 import {
@@ -164,10 +165,12 @@ export async function markReviewerApprovalOverturned(
 /**
  * The newest draft version of a capture (`draft-<ms>`), or null if it has
  * none. Same newest-timestamp rule the evaluate and edit pages use when they
- * load a draft. Throws on S3 errors.
+ * load a draft. On a capture taken over to be recorded again, drafts saved
+ * before `takenOverAt` are ignored. Throws on S3 errors.
  */
 export async function getLatestDraftVersion(
   captureId: string,
+  takenOverAt: Date | null = null,
 ): Promise<string | null> {
   const keys = await listKeys(`uploads/${captureId}/drafts/`);
   let latest: string | null = null;
@@ -175,6 +178,7 @@ export async function getLatestDraftVersion(
     const version = draftVersionFromKey(key);
     if (
       version &&
+      isAfterTakeOver(draftVersionTime(version), takenOverAt) &&
       (!latest || draftVersionTime(version) > draftVersionTime(latest))
     ) {
       latest = version;
@@ -197,8 +201,12 @@ export function draftKey(captureId: string, version: string): string {
 export async function getCurrentDraftVersion(
   captureId: string,
   claimed: string | null,
+  takenOverAt: Date | null = null,
 ): Promise<string | null> {
-  return newerDraftVersion(claimed, await getLatestDraftVersion(captureId));
+  return newerDraftVersion(
+    claimed,
+    await getLatestDraftVersion(captureId, takenOverAt),
+  );
 }
 
 /**

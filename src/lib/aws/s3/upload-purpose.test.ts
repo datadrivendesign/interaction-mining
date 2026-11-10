@@ -8,6 +8,8 @@ import {
   draftVersionFromKey,
   draftVersionSchema,
   draftVersionTime,
+  isAfterTakeOver,
+  listedFileWrittenAt,
   newerDraftVersion,
   nextDraftVersion,
   safePathSegmentSchema,
@@ -227,5 +229,53 @@ describe("draft version order", () => {
 
   it("stays after the newest even when the clock is behind", () => {
     assert.equal(nextDraftVersion("draft-5000", 2000), "draft-5001");
+  });
+});
+
+describe("isAfterTakeOver", () => {
+  const takenOverAt = new Date(1_800_000_000_000);
+
+  it("keeps every file on a capture that was never taken over", () => {
+    assert.equal(isAfterTakeOver(0, null), true);
+    assert.equal(isAfterTakeOver(1_700_000_000_000, undefined), true);
+  });
+
+  it("hides files written before the take-over", () => {
+    assert.equal(isAfterTakeOver(1_799_999_999_999, takenOverAt), false);
+  });
+
+  it("hides a file written at the same millisecond", () => {
+    assert.equal(isAfterTakeOver(takenOverAt.getTime(), takenOverAt), false);
+  });
+
+  it("keeps files written after the take-over", () => {
+    assert.equal(isAfterTakeOver(1_800_000_000_001, takenOverAt), true);
+  });
+
+  it("works on draft names, which carry their save time", () => {
+    const old = draftVersionTime("draft-1799000000000");
+    const fresh = draftVersionTime("draft-1800000500000");
+    assert.equal(isAfterTakeOver(old, takenOverAt), false);
+    assert.equal(isAfterTakeOver(fresh, takenOverAt), true);
+  });
+});
+
+describe("listedFileWrittenAt", () => {
+  it("uses the time in a draft's name, not S3's", () => {
+    assert.equal(
+      listedFileWrittenAt(
+        "uploads/abc/drafts/draft-1700000000000.json",
+        new Date(1_900_000_000_000),
+      ),
+      1_700_000_000_000,
+    );
+  });
+
+  it("uses LastModified for other files", () => {
+    assert.equal(
+      listedFileWrittenAt("uploads/abc/video.mp4", new Date(1_800_000_000_000)),
+      1_800_000_000_000,
+    );
+    assert.equal(listedFileWrittenAt("uploads/abc/video.mp4", undefined), 0);
   });
 });

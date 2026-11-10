@@ -198,6 +198,14 @@ model Capture {
   /// each draft upload. Saves are conditional on it, so two people editing at
   /// once cannot both win. Unset on captures not saved since it was added.
   draftVersion       String?         @map("draft_version")
+  /// The worker who first recorded the capture. Set once, when a reviewer
+  /// takes the capture over to record it again; `userId` is then the reviewer.
+  originalUserId     String?         @map("original_user") @db.ObjectId
+  /// The reviewer who took the capture over to record it again, and when.
+  /// Files in S3 written before `takenOverAt` belong to the earlier recording:
+  /// they are kept, but no page lists them.
+  takenOverById      String?         @map("taken_over_by") @db.ObjectId
+  takenOverAt        DateTime?       @map("taken_over_at")
   // Back-relation only. The foreign key lives on CaptureReview, so this adds no
   // stored field to existing capture documents.
   reviews            CaptureReview[]

@@ -132,6 +132,32 @@ export function newerDraftVersion(
 }
 
 /**
+ * Whether a file belongs to the current recording of a capture: always, unless
+ * the capture was taken over to be recorded again, in which case only files
+ * written after `takenOverAt` do. Old files stay in S3 but are not shown.
+ */
+export function isAfterTakeOver(
+  writtenAt: number,
+  takenOverAt: Date | null | undefined,
+): boolean {
+  return !takenOverAt || writtenAt > takenOverAt.getTime();
+}
+
+/**
+ * When a listed file was written, for `isAfterTakeOver`. A draft's time is the
+ * one in its name (the app server's clock, the same one `takenOverAt` and the
+ * version checks use), so a listing and the newest-draft check never disagree.
+ * Other files use S3's LastModified.
+ */
+export function listedFileWrittenAt(
+  key: string,
+  lastModified: Date | undefined,
+): number {
+  const version = draftVersionFromKey(key);
+  return version ? draftVersionTime(version) : (lastModified?.getTime() ?? 0);
+}
+
+/**
  * The version for the next save: the server's clock, but always after the
  * current newest, so a draft saved under a fast clock is never overtaken by
  * one saved later.

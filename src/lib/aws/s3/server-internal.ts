@@ -23,15 +23,19 @@ import { s3 } from "..";
 import { ActionPayload } from "@/lib/actions/types";
 import type { ListedFiles } from "@/lib/actions/capture";
 import { presignPutObject } from "./presign";
+import { isAfterTakeOver, listedFileWrittenAt } from "./upload-purpose";
 
 /*
  * Fetches a list of files from S3.
  * @param key The S3 object key to fetch.
+ * @param takenOverAt When set (a capture taken over to be recorded again),
+ *   files written before it are left out.
  * @returns
  */
 export async function listFromS3(
   key: string,
   generateSignedUrl: boolean = true, // don't generate signed if not needed
+  takenOverAt: Date | null = null,
 ): Promise<ActionPayload<ListedFiles[]>> {
   try {
     const command = new ListObjectsV2Command({
@@ -39,8 +43,14 @@ export async function listFromS3(
       Prefix: key,
     });
     const files = await s3.send(command);
+    const contents = (files.Contents ?? []).filter((file) =>
+      isAfterTakeOver(
+        listedFileWrittenAt(file.Key ?? "", file.LastModified),
+        takenOverAt,
+      ),
+    );
 
-    if (!files.Contents || files.Contents.length === 0) {
+    if (contents.length === 0) {
       return {
         ok: true,
         message: "File not found",
@@ -49,7 +59,7 @@ export async function listFromS3(
     }
 
     const filePayload = await Promise.all(
-      files.Contents.map(async (file: any) => {
+      contents.map(async (file: any) => {
         // use signed cloudfront url to grab file url
         let fileUrl = "";
         if (process.env.USE_MINIO_STORE === "true") {

@@ -14,6 +14,8 @@ import {
 import { putJson } from "@/lib/aws/s3/server-internal";
 import {
   draftVersionSchema,
+  draftVersionTime,
+  isAfterTakeOver,
   nextDraftVersion,
   objectIdSchema,
 } from "@/lib/aws/s3/upload-purpose";
@@ -74,7 +76,12 @@ export async function saveCaptureDraft(
   try {
     const capture = await prisma.capture.findUnique({
       where: { id: id.data },
-      select: { userId: true, status: true, draftVersion: true },
+      select: {
+        userId: true,
+        status: true,
+        draftVersion: true,
+        takenOverAt: true,
+      },
     });
     if (!capture) {
       return denied("Not found.");
@@ -90,8 +97,24 @@ export async function saveCaptureDraft(
       return denied("Not found.");
     }
 
+    // A page loaded before a take-over still holds the old recording's draft.
+    // The new owner skips the version check below, so refuse it here, or the
+    // hidden screens would come back as the newest draft.
+    if (
+      base.data &&
+      !isAfterTakeOver(draftVersionTime(base.data), capture.takenOverAt)
+    ) {
+      return denied(
+        "This capture is being recorded again. Reload the page to see the new recording.",
+      );
+    }
+
     const claimed = capture.draftVersion ?? null;
-    const current = await getCurrentDraftVersion(id.data, claimed);
+    const current = await getCurrentDraftVersion(
+      id.data,
+      claimed,
+      capture.takenOverAt,
+    );
     if (!isOwnerWithPen && base.data !== current) {
       return denied(NEWER_DRAFT_MESSAGE);
     }

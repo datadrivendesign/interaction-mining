@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { canEditInMode, VerdictMode } from "./verdict-mode";
 import { SaveProgress } from "./use-review-verdict-actions";
+import { TakeOverDialog } from "./take-over-dialog";
 
 const DENY_LABEL: Record<Exclude<VerdictMode, "none">, string> = {
   review: "Send back",
@@ -38,8 +39,14 @@ export function VerdictBar({
   checklistLabel,
   approveBlockedReason = null,
   denyBlockedReason = null,
+  takeOverCaptureId,
 }: {
   mode: Exclude<VerdictMode, "none">;
+  /**
+   * Shows "Record it again myself" while the capture is REVIEWING (review and
+   * direct modes). Not at the final check: the reviewer already approved it.
+   */
+  takeOverCaptureId?: string;
   /** False when the worker never saved a draft: nothing to approve. */
   hasDraft: boolean;
   issueSummary: string;
@@ -91,14 +98,12 @@ export function VerdictBar({
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
+        {/* Less common: fixing it yourself, or recording it again. */}
         {canEdit &&
           (isSubmitting ? (
             <Button size="sm" variant="outline" className="min-w-0" disabled>
               <Pencil className="size-3.5" aria-hidden />
               <span>Edit</span>
-              <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">
-                Ctrl+Shift+E
-              </span>
             </Button>
           ) : (
             <Button
@@ -111,12 +116,22 @@ export function VerdictBar({
               <Link href={editHref}>
                 <Pencil className="size-3.5" aria-hidden />
                 <span>Edit</span>
-                <span className="text-[10px] font-normal text-neutral-500 dark:text-neutral-400">
-                  Ctrl+Shift+E
-                </span>
               </Link>
             </Button>
           ))}
+        {takeOverCaptureId && mode !== "final" && (
+          <TakeOverDialog
+            captureId={takeOverCaptureId}
+            disabled={isSubmitting}
+          />
+        )}
+        {(canEdit || (takeOverCaptureId && mode !== "final")) && (
+          <div
+            className="mx-1 h-6 w-px bg-neutral-200 dark:bg-neutral-800"
+            aria-hidden
+          />
+        )}
+        {/* Common: the verdicts, each with a hotkey. */}
         <Button
           size="sm"
           variant="outline"
@@ -187,12 +202,6 @@ export function VerdictBar({
                 <span>{denyLabel} capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+D</Kbd>
               </div>
-              {canEdit && (
-                <div className="flex items-center justify-between gap-3">
-                  <span>Edit capture</span>
-                  <Kbd className="text-[10px]">Ctrl+Shift+E</Kbd>
-                </div>
-              )}
               <div className="flex items-center justify-between gap-3">
                 <span>Skip capture</span>
                 <Kbd className="text-[10px]">Ctrl+Shift+S</Kbd>
