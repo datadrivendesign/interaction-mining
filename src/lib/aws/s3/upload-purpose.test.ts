@@ -5,12 +5,18 @@ import {
   UPLOAD_PURPOSE_CONFIG,
   UploadPurpose,
   buildUploadKey,
+  draftVersionFromKey,
+  draftVersionSchema,
+  draftVersionTime,
+  newerDraftVersion,
+  nextDraftVersion,
   safePathSegmentSchema,
   uploadUrlRequestSchema,
 } from "./upload-purpose.ts";
 
 // Synthetic ObjectId — shape only, not a real record.
 const OID = "0123456789abcdef01234567";
+const VERSION = "draft-1761234567890";
 
 const video = {
   purpose: UploadPurpose.CAPTURE_VIDEO,
@@ -173,5 +179,53 @@ describe("buildUploadKey", () => {
         `${purpose} produced ${prefix}`,
       );
     }
+  });
+});
+
+describe("draft versions", () => {
+  it("accepts draft-<digits> only", () => {
+    assert.equal(draftVersionSchema.safeParse(VERSION).success, true);
+    for (const bad of [
+      "draft-",
+      "draft-12.json",
+      "../draft-1",
+      "draft-1/x",
+      "draft-abc",
+      "1761234567890",
+    ]) {
+      assert.equal(
+        draftVersionSchema.safeParse(bad).success,
+        false,
+        `bad version: ${bad}`,
+      );
+    }
+  });
+
+  it("reads the version from a draft key", () => {
+    assert.equal(
+      draftVersionFromKey(`uploads/${OID}/drafts/${VERSION}.json`),
+      VERSION,
+    );
+    assert.equal(draftVersionFromKey(`uploads/${OID}/drafts/notes.json`), null);
+    assert.equal(draftVersionTime(VERSION), 1761234567890);
+  });
+});
+
+describe("draft version order", () => {
+  it("picks the newer version, either may be missing", () => {
+    assert.equal(newerDraftVersion("draft-5", "draft-9"), "draft-9");
+    assert.equal(newerDraftVersion("draft-9", "draft-5"), "draft-9");
+    assert.equal(newerDraftVersion(null, "draft-5"), "draft-5");
+    assert.equal(newerDraftVersion("draft-5", null), "draft-5");
+    assert.equal(newerDraftVersion(null, null), null);
+  });
+
+  it("uses the clock for the next version", () => {
+    assert.equal(nextDraftVersion("draft-1000", 2000), "draft-2000");
+    assert.equal(nextDraftVersion(null, 2000), "draft-2000");
+  });
+
+  it("stays after the newest even when the clock is behind", () => {
+    assert.equal(nextDraftVersion("draft-5000", 2000), "draft-5001");
   });
 });

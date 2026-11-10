@@ -2,16 +2,19 @@
 
 import { Capture } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
+import { getTraceCompletenessIssues } from "../../../edit/util/trace-validation";
 import { revalidateCaptureCaches } from "@/lib/actions";
 import { TraceFormData } from "../../../edit/components/types";
 import { handleTraceSave } from "../../../edit/util/export";
 import {
   approveCapture,
-  denyCapture,
+  finalDeny,
   getNextReviewingCaptureId,
+  reviewerApprove,
+  sendBack,
   validateApprovePermissions,
 } from "../../utils/capture-actions";
 import {
@@ -19,20 +22,57 @@ import {
   serializeReviewFeedbackState,
 } from "../../utils/review-feedback";
 import { summarizeReviewVerdict } from "../../utils/review-verdict-summary";
+import { canEditInMode, queueStatusFor, VerdictMode } from "./verdict-mode";
+
+/** Rendering and uploading progress while the admin's Approve publishes. */
+export type SaveProgress = { done: number; total: number };
+
+/** Longest duration the server accepts; a tab left open overnight is capped. */
+const MAX_REVIEW_DURATION_MS = 24 * 60 * 60 * 1000;
 
 export function useReviewVerdictActions({
   capture,
   traceData,
+  draftVersion,
   feedbackState,
-  isAdmin,
+  mode,
+  listPath,
+  editHref,
+  approveBlockedReason = null,
+  denyBlockedReason = null,
 }: {
   capture?: Capture | null;
   traceData?: TraceFormData;
+  /** Version (`draft-<ms>`) `traceData` was loaded from; null when no draft. */
+  draftVersion: string | null;
   feedbackState: ReviewFeedbackState;
-  isAdmin: boolean;
+  mode: VerdictMode;
+  /** Where to go when the queue is empty or the next capture can't load. */
+  listPath: string;
+  /** Edit page for this capture; Ctrl+Shift+E opens it in REVIEWING. */
+  editHref?: string;
+  /** Checklist gate: why Approve is off now (button and hotkey), or null. */
+  approveBlockedReason?: string | null;
+  /** Checklist gate: why Send back / Deny is off now, or null. */
+  denyBlockedReason?: string | null;
 }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<SaveProgress | null>(null);
+  // Review duration runs from the first render of this capture's page.
+  const openedAtRef = useRef(Date.now());
+  const enabled = mode !== "none";
+  const queueStatus = queueStatusFor(mode);
+
+  const reviewMetrics = useCallback(
+    () => ({
+      reviewDurationMs: Math.min(
+        Math.max(0, Math.round(Date.now() - openedAtRef.current)),
+        MAX_REVIEW_DURATION_MS,
+      ),
+    }),
+    [],
+  );
 
   const navigateAfterVerdict = useCallback(
     async (
@@ -40,18 +80,18 @@ export function useReviewVerdictActions({
       emptyQueueMessage = "Review queue complete.",
     ) => {
       if (!capture) {
-        router.push("/admin/tasks");
+        router.push(listPath);
         return;
       }
 
-      const nextCaptureRes = await getNextReviewingCaptureId(capture.id);
+      const nextCaptureRes = await getNextReviewingCaptureId(
+        capture.id,
+        queueStatus,
+      );
       if (!nextCaptureRes.ok) {
-        console.error(
-          "Failed to fetch next reviewing capture:",
-          nextCaptureRes.message,
-        );
+        console.error("Failed to fetch next capture:", nextCaptureRes.message);
         toast.success(`${successMessage} Returning to task list.`);
-        router.push("/admin/tasks");
+        router.push(listPath);
         return;
       }
 
@@ -62,85 +102,153 @@ export function useReviewVerdictActions({
       }
 
       toast.success(`${successMessage} ${emptyQueueMessage}`);
-      router.push("/admin/tasks");
+      router.push(listPath);
     },
-    [capture, router],
+    [capture, listPath, queueStatus, router],
+  );
+
+  // Approvals carry no issues: an approval means nothing was left to send
+  // back. Summarizing the live state here would record the previous
+  // rejection's comments, which reopening a bounced capture loads back in.
+  // `screenCount` stays — it describes the trace, not the feedback.
+  const approvalSummary = useCallback(
+    () => ({
+      issueIds: [],
+      issueCategories: [],
+      destinations: [],
+      screenIssueCount: 0,
+      flowIssueCount: 0,
+      screenCount: traceData?.screens.length ?? 0,
+    }),
+    [traceData],
   );
 
   const handleApprove = useCallback(async () => {
-    if (!capture || !traceData) {
+    if (!capture || !traceData || isSubmitting || mode === "none") {
+      return;
+    }
+    if (approveBlockedReason) {
+      toast.error(approveBlockedReason);
+      return;
+    }
+    // Staff can fix a trace in place here, which skips the edit page's
+    // Finish checks, so every Approve runs them on what it is approving.
+    const completenessIssues = getTraceCompletenessIssues(traceData);
+    if (completenessIssues.length > 0) {
+      completenessIssues.forEach((message) =>
+        toast.error(`Can't approve yet. ${message}`),
+      );
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const approveRes = await validateApprovePermissions();
-      if (!approveRes.ok) {
-        throw new Error(approveRes.message);
+
+      if (mode === "review") {
+        if (!draftVersion) {
+          throw new Error("No draft saved. Send back to worker.");
+        }
+        const res = await reviewerApprove(
+          capture.id,
+          draftVersion,
+          reviewMetrics(),
+          approvalSummary(),
+        );
+        if (!res.ok) {
+          throw new Error(res.message);
+        }
+        await revalidateCaptureCaches();
+        await navigateAfterVerdict("Capture approved. Sent for final check.");
+        return;
       }
-      const saveRes = await handleTraceSave(traceData, capture);
+
+      // direct (REVIEWING) and final (REVIEWED): the admin's browser renders
+      // the screens from the loaded draft and publishes the trace.
+      if (!draftVersion) {
+        throw new Error("No draft saved. Send back to worker.");
+      }
+      const permission = await validateApprovePermissions(
+        capture.id,
+        draftVersion,
+      );
+      if (!permission.ok) {
+        throw new Error(permission.message);
+      }
+      const saveRes = await handleTraceSave(traceData, capture, (done, total) =>
+        setSaveProgress({ done, total }),
+      );
       if (!saveRes.ok) {
         throw new Error(saveRes.message);
       }
-      // Logged as well as applied, so the log carries the denominator a reject
-      // rate needs.
-      //
-      // Issue fields are empty deliberately: an approval means nothing was left
-      // to send back. Summarizing the live state here recorded the previous
-      // rejection's comments, which reopening a bounced capture loads back in, so
-      // the same issues landed on both the rejection and the approval that
-      // cleared them. `screenCount` stays — it describes the trace, not the
-      // feedback.
-      const approveCaptureRes = await approveCapture(capture, {
-        issueIds: [],
-        issueCategories: [],
-        destinations: [],
-        screenIssueCount: 0,
-        flowIssueCount: 0,
-        screenCount: traceData.screens.length,
-      });
-      if (!approveCaptureRes.ok) {
-        throw new Error(approveCaptureRes.message);
+      const approveRes = await approveCapture(capture.id, approvalSummary());
+      if (!approveRes.ok) {
+        throw new Error(approveRes.message);
       }
       await revalidateCaptureCaches();
-      await navigateAfterVerdict("Capture approved.");
+      await navigateAfterVerdict(
+        mode === "final" ? "Capture published." : "Capture approved.",
+      );
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "An unknown error occurred",
       );
     } finally {
+      setSaveProgress(null);
       setIsSubmitting(false);
     }
-  }, [capture, feedbackState, navigateAfterVerdict, traceData]);
+  }, [
+    approvalSummary,
+    approveBlockedReason,
+    capture,
+    draftVersion,
+    isSubmitting,
+    mode,
+    navigateAfterVerdict,
+    reviewMetrics,
+    traceData,
+  ]);
 
   const handleDeny = useCallback(async () => {
-    if (!capture || !traceData) {
+    if (!capture || isSubmitting || mode === "none") {
       return;
     }
+    if (denyBlockedReason) {
+      toast.error(denyBlockedReason);
+      return;
+    }
+    const screens = traceData?.screens ?? [];
 
     try {
       setIsSubmitting(true);
-      const serializedFeedback = serializeReviewFeedbackState({
+      const feedback = serializeReviewFeedbackState({ feedbackState, screens });
+      // Serializing flattens the reviewer's issue picks into prose for the
+      // worker. This preserves them as structured data for the review log.
+      const summary = summarizeReviewVerdict({
         feedbackState,
-        screens: traceData.screens,
+        screenCount: screens.length,
       });
-      const denyRes = await denyCapture(
-        capture,
-        serializedFeedback.annotateFeedback,
-        serializedFeedback.redactFeedback,
-        serializedFeedback.summarizeFeedback,
-        // Serializing flattens the reviewer's issue picks into prose for the
-        // worker. This preserves them as structured data for the review log.
-        summarizeReviewVerdict({
-          feedbackState,
-          screenCount: traceData.screens.length,
-        }),
-      );
-      if (!denyRes.ok) {
-        throw new Error(denyRes.message);
+      const feedbackFields = {
+        annotateFeedback: feedback.annotateFeedback,
+        redactFeedback: feedback.redactFeedback,
+        summarizeFeedback: feedback.summarizeFeedback,
+      };
+
+      const res =
+        mode === "final"
+          ? await finalDeny(capture.id, feedbackFields, summary)
+          : await sendBack(
+              capture.id,
+              feedbackFields,
+              summary,
+              mode === "review" ? reviewMetrics() : undefined,
+            );
+      if (!res.ok) {
+        throw new Error(res.message);
       }
       await revalidateCaptureCaches();
-      await navigateAfterVerdict("Capture denied.");
+      await navigateAfterVerdict(
+        mode === "final" ? "Capture denied." : "Capture sent back.",
+      );
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "An unknown error occurred",
@@ -148,10 +256,19 @@ export function useReviewVerdictActions({
     } finally {
       setIsSubmitting(false);
     }
-  }, [capture, feedbackState, navigateAfterVerdict, traceData]);
+  }, [
+    capture,
+    denyBlockedReason,
+    feedbackState,
+    isSubmitting,
+    mode,
+    navigateAfterVerdict,
+    reviewMetrics,
+    traceData,
+  ]);
 
   const handleSkip = useCallback(async () => {
-    if (!capture) {
+    if (!capture || isSubmitting) {
       return;
     }
 
@@ -159,7 +276,7 @@ export function useReviewVerdictActions({
       setIsSubmitting(true);
       await navigateAfterVerdict(
         "Capture skipped.",
-        "No later reviewing captures found.",
+        "No later captures found.",
       );
     } catch (err) {
       toast.error(
@@ -168,22 +285,25 @@ export function useReviewVerdictActions({
     } finally {
       setIsSubmitting(false);
     }
-  }, [capture, navigateAfterVerdict]);
+  }, [capture, isSubmitting, navigateAfterVerdict]);
+
+  const hotkeyOptions = {
+    enabled: enabled && !isSubmitting,
+    enableOnFormTags: false,
+    enableOnContentEditable: false,
+    ignoreEventWhen: (event: KeyboardEvent) => event.repeat,
+    preventDefault: true,
+  };
 
   useHotkeys(
     "ctrl+shift+a",
     (event) => {
       event.preventDefault();
-      void handleApprove();
+      // No Approve without a draft; the bar hides it too.
+      if (draftVersion) void handleApprove();
     },
-    {
-      enabled: isAdmin && !isSubmitting,
-      enableOnFormTags: false,
-      enableOnContentEditable: false,
-      ignoreEventWhen: (event) => event.repeat,
-      preventDefault: true,
-    },
-    [handleApprove, isAdmin, isSubmitting],
+    hotkeyOptions,
+    [handleApprove, draftVersion, mode, enabled, isSubmitting],
   );
 
   useHotkeys(
@@ -192,14 +312,18 @@ export function useReviewVerdictActions({
       event.preventDefault();
       void handleDeny();
     },
-    {
-      enabled: isAdmin && !isSubmitting,
-      enableOnFormTags: false,
-      enableOnContentEditable: false,
-      ignoreEventWhen: (event) => event.repeat,
-      preventDefault: true,
+    hotkeyOptions,
+    [handleDeny, enabled, isSubmitting],
+  );
+
+  useHotkeys(
+    "ctrl+shift+e",
+    (event) => {
+      event.preventDefault();
+      if (editHref && canEditInMode(mode)) router.push(editHref);
     },
-    [handleDeny, isAdmin, isSubmitting],
+    hotkeyOptions,
+    [editHref, mode, router, enabled, isSubmitting],
   );
 
   useHotkeys(
@@ -208,18 +332,13 @@ export function useReviewVerdictActions({
       event.preventDefault();
       void handleSkip();
     },
-    {
-      enabled: isAdmin && !isSubmitting,
-      enableOnFormTags: false,
-      enableOnContentEditable: false,
-      ignoreEventWhen: (event) => event.repeat,
-      preventDefault: true,
-    },
-    [handleSkip, isAdmin, isSubmitting],
+    hotkeyOptions,
+    [handleSkip, enabled, isSubmitting],
   );
 
   return {
     isSubmitting,
+    saveProgress,
     handleApprove,
     handleDeny,
     handleSkip,

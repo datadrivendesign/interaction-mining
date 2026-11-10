@@ -11,6 +11,7 @@ import {
   CaptureCardColumns,
   NoCapturesCard,
 } from "./components/capture-card-columns";
+import { COLUMN_QUERY_STATUSES } from "./components/config";
 import { ProfileCard } from "./components/profile-card";
 
 export default async function Page() {
@@ -43,7 +44,7 @@ export default async function Page() {
     }),
     getCapturesPaginated({
       userId: user.id,
-      status: CaptureStatus.REVIEWING,
+      status: COLUMN_QUERY_STATUSES[CaptureStatus.REVIEWING],
       limit: 10,
       includes: { app: true, task: true },
     }),
@@ -101,7 +102,11 @@ export default async function Page() {
   // const pendingCaptures = totalCaptures - approvedCaptures;
   const createdCaptures = capturesByStatus[CaptureStatus.CREATED] ?? 0;
   const processingCaptures = capturesByStatus[CaptureStatus.PROCESSING] ?? 0;
-  const reviewingCaptures = capturesByStatus[CaptureStatus.REVIEWING] ?? 0;
+  // In review covers both stages: waiting for a reviewer, and waiting for
+  // the final check after a reviewer approved.
+  const reviewingCaptures =
+    (capturesByStatus[CaptureStatus.REVIEWING] ?? 0) +
+    (capturesByStatus[CaptureStatus.REVIEWED] ?? 0);
 
   // Get initial captures by status
   const initialCapturesByStatus = {

@@ -175,6 +175,7 @@ export function CaptureCard({
           </div>
         );
       case CaptureStatus.REVIEWING:
+      case CaptureStatus.REVIEWED:
         return <ReviewButton captureId={capture.id} />;
       default:
         return <EditButton captureId={capture.id} />;
@@ -231,6 +232,14 @@ export function CaptureCard({
               title="Revision requested"
             >
               Needs revision
+            </Badge>
+          )}
+          {status === CaptureStatus.REVIEWED && (
+            <Badge
+              className="bg-purple-100 text-xs text-purple-700 hover:bg-purple-100 dark:bg-purple-950 dark:text-purple-300"
+              title="A reviewer approved it. Waiting for final check."
+            >
+              Waiting for final check
             </Badge>
           )}
         </div>

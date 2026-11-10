@@ -25,7 +25,14 @@ import DoubleTapIcon from "@/components/ui/gesture-icons/double-tap-01.svg";
 import TouchHoldIcon from "@/components/ui/gesture-icons/touch-and-hold.svg";
 
 import { cn } from "@/lib/utils";
-import { GESTURE_GROUP_TYPES, GESTURE_TYPES } from "@/lib/utils/gesture-types";
+import {
+  GESTURE_GROUP_TYPES,
+  GESTURE_TYPES,
+  normalizeGestureType,
+} from "@/lib/utils/gesture-types";
+
+// Lives in gesture-types (no "use client") so server code can use it too.
+export { normalizeGestureType };
 
 const ICON_BOX_SIZE = "w-6 h-6";
 const HUGE_ICON_SIZE = "w-6 h-6";
@@ -108,26 +115,6 @@ export const COMMAND_LIST_CLASS =
   "max-h-none overflow-visible hover:cursor-pointer";
 export const COMMAND_ITEM_CLASS =
   "cursor-pointer group px-2 py-1 rounded-md relative hover:cursor-pointer";
-
-const LEGACY_GESTURE_TYPE_MAP: Record<string, string> = {
-  Tap: GESTURE_TYPES.TAP,
-  "Double tap": GESTURE_TYPES.DOUBLE_TAP,
-  "Finger Swipe": GESTURE_GROUP_TYPES.SWIPE,
-  Typing: GESTURE_TYPES.TYPING,
-  "Touch and hold": GESTURE_TYPES.TOUCH_AND_HOLD,
-  Drag: GESTURE_TYPES.DRAG,
-  "Drag up": GESTURE_TYPES.DRAG,
-  "Drag down": GESTURE_TYPES.DRAG,
-  "Drag left": GESTURE_TYPES.DRAG,
-  "Drag right": GESTURE_TYPES.DRAG,
-  Zoom: GESTURE_GROUP_TYPES.ZOOM,
-  "Zoom in": GESTURE_TYPES.ZOOM_IN,
-  "Zoom out": GESTURE_TYPES.ZOOM_OUT,
-  Rotate: GESTURE_GROUP_TYPES.ROTATE,
-  "Rotate right": GESTURE_TYPES.ROTATE_CW,
-  "Rotate left": GESTURE_TYPES.ROTATE_CCW,
-  Other: GESTURE_TYPES.OTHER,
-};
 
 // ── options ────────────────────────────────────────
 export const gestureOptions: GestureOption[] = [
@@ -248,24 +235,6 @@ export function flattenGestureOptions(
   options: GestureOption[] = gestureOptions,
 ) {
   return options.flatMap((option) => [option, ...(option.subGestures ?? [])]);
-}
-
-export function normalizeGestureType(type: string | null | undefined) {
-  if (!type) return null;
-  const raw = type.trim();
-  if (!raw) return null;
-
-  const allOptions = flattenGestureOptions();
-  const exact = allOptions.find((option) => option.value === raw);
-  if (exact) return exact.value;
-
-  const lower = raw.toLowerCase();
-  const caseInsensitive = allOptions.find(
-    (option) => option.value.toLowerCase() === lower,
-  );
-  if (caseInsensitive) return caseInsensitive.value;
-
-  return LEGACY_GESTURE_TYPE_MAP[lower] ?? null;
 }
 
 export function findGestureOption(type: string | null | undefined) {

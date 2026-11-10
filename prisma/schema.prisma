@@ -33,6 +33,8 @@ type ScreenRedaction {
 
 enum Role {
   USER
+  // first-pass review of other workers' captures.
+  REVIEWER
   ADMIN
 }
 
@@ -40,6 +42,8 @@ enum CaptureStatus {
   CREATED
   PROCESSING
   REVIEWING
+  /// Passed first-pass review; waiting for the admin's final check. Nobody edits.
+  REVIEWED
   ARCHIVED
   APPROVED
 }
@@ -47,6 +51,12 @@ enum CaptureStatus {
 enum ReviewVerdict {
   APPROVED
   REJECTED
+}
+
+/// Which tier gave a verdict: a REVIEWER's first pass, or the admin's FINAL check.
+enum ReviewStage {
+  REVIEWER
+  FINAL
 }
 
 type AppMetadata {
@@ -117,6 +127,11 @@ model Screen {
   redactions ScreenRedaction[]
   src        String
   vh         String
+  /// Where the screen sits in its recording, copied from the draft: seconds
+  /// into the video for iOS, Unix epoch milliseconds for Android. Screens are
+  /// ordered by it within a trace. Null on screens published before 2026-11,
+  /// which fall back to `created` and then the ObjectId counter.
+  timestamp  Float?
   traceId    String            @map("trace") @db.ObjectId
   trace      Trace             @relation(fields: [traceId], references: [id])
 
@@ -161,23 +176,31 @@ model Task {
 }
 
 model Capture {
-  id                String        @id @default(auto()) @map("_id") @db.ObjectId
-  appId             String        @map("app") @db.ObjectId
-  app               App           @relation(fields: [appId], references: [id])
-  userId            String?       @map("user") @db.ObjectId
-  user              User?         @relation(fields: [userId], references: [id])
-  traceId           String?       @map("trace") @db.ObjectId
-  taskId            String        @map("task") @db.ObjectId
-  task              Task          @relation(fields: [taskId], references: [id])
-  annotateFeedback  String?       @map("annotate_feedback")
-  redactFeedback    String?       @map("redact_feedback")
-  summarizeFeedback String?       @map("summarize_feedback")
-  otp               String
-  src               String
-  status            CaptureStatus @default(CREATED)
+  id                 String          @id @default(auto()) @map("_id") @db.ObjectId
+  appId              String          @map("app") @db.ObjectId
+  app                App             @relation(fields: [appId], references: [id])
+  userId             String?         @map("user") @db.ObjectId
+  user               User?           @relation(fields: [userId], references: [id])
+  traceId            String?         @map("trace") @db.ObjectId
+  taskId             String          @map("task") @db.ObjectId
+  task               Task            @relation(fields: [taskId], references: [id])
+  annotateFeedback   String?         @map("annotate_feedback")
+  redactFeedback     String?         @map("redact_feedback")
+  summarizeFeedback  String?         @map("summarize_feedback")
+  otp                String
+  src                String
+  status             CaptureStatus   @default(CREATED)
+  /// Draft version (`draft-<ms>`) the reviewer approved, set on REVIEWING →
+  /// REVIEWED and cleared on send-back or deny. The admin's final Approve
+  /// renders the draft in the browser; this records what the reviewer saw.
+  stagedDraftVersion String?         @map("staged_draft_version")
+  /// Newest saved draft version (`draft-<ms>`), claimed by the server before
+  /// each draft upload. Saves are conditional on it, so two people editing at
+  /// once cannot both win. Unset on captures not saved since it was added.
+  draftVersion       String?         @map("draft_version")
   // Back-relation only. The foreign key lives on CaptureReview, so this adds no
   // stored field to existing capture documents.
-  reviews           CaptureReview[]
+  reviews            CaptureReview[]
 
   // add indexes for faster lookup for admin review search/filter
   @@index([status, userId])
@@ -196,8 +219,24 @@ model CaptureReview {
   reviewerId       String?       @map("reviewer") @db.ObjectId
   reviewer         User?         @relation(fields: [reviewerId], references: [id])
   verdict          ReviewVerdict
+  /// REVIEWER for a staff reviewer's first pass, FINAL for the admin's check.
+  /// Rows written before 2026-11 were the admin's own verdicts, so they are
+  /// FINAL (backfilled by prisma/scripts/migrations/backfill-review-stage.mjs).
+  /// Every write sets this explicitly; the default only covers old documents.
+  stage            ReviewStage   @default(FINAL)
+  /// The reviewer owns the capture they reviewed.
+  selfReview       Boolean       @default(false) @map("self_review")
+  /// A later FINAL verdict disagreed with this REVIEWER verdict.
+  overturned       Boolean       @default(false)
+  /// How many screens the reviewer fixed in place before this verdict.
+  fixedScreenCount Int?          @map("fixed_screen_count")
+  /// Which kinds of fix were made: redaction, gesture, description, screen.
+  fixedKinds       String[]      @map("fixed_kinds")
+  /// Wall-clock time from opening the capture to the verdict.
+  reviewDurationMs Int?          @map("review_duration_ms")
   /// 1 for the first review of this capture, 2 after one round of rework, and so
-  /// on. Lets "needed more than one pass" be queried without a self-join.
+  /// on. Counts prior REJECTED rows + 1, so a REVIEWER approval and the admin's
+  /// FINAL verdict on the same submission share an attempt number.
   attempt          Int
   /// Stable TRACE_ISSUES ids cited in this review, deduplicated. Empty on
   /// approval and on rejections written only as freehand comments.

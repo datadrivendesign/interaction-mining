@@ -22,12 +22,6 @@ import {
   TraceFormData,
   TraceFormSchema,
 } from "./components/types";
-import {
-  SCREEN_ANNOTATION_ISSUE_ACTIONS,
-  ScreenAnnotationIssue,
-  getScreenAnnotationIssue,
-} from "./components/repair-screen/util";
-
 import { Button } from "@/components/ui/button";
 import Sheet from "./components/sheet";
 
@@ -42,14 +36,16 @@ import RedactDoc from "./components/redact-screen/doc.mdx";
 
 import {
   DraftFetchResults,
-  countUnlabelledRedactions,
   dedupeScreensById,
   getDraftFiles,
   handleDraftSave,
 } from "./util";
-import { revalidateCaptureCaches, updateCapture } from "@/lib/actions";
-import { CaptureStatus } from "@prisma/client";
-import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
+import {
+  getSignedCaptureFileUrl,
+  revalidateCaptureCaches,
+  updateCapture,
+} from "@/lib/actions";
+import { Capture, CaptureStatus } from "@prisma/client";
 import {
   ChecklistLayoutMode,
   FeedbackChecklist,
@@ -57,6 +53,18 @@ import {
 import { fileFetcher } from "../util";
 import { ListedFiles } from "@/lib/actions";
 import { ScreenBlobRegistryProvider } from "./screen-blob-registry";
+import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
+import {
+  emptySelfChecks,
+  SELF_CHECK_COUNT,
+} from "./components/review/components/self-check";
+import {
+  collectIncompleteScreens,
+  collectUnlabelledRedactions,
+  describeIncompleteScreens,
+  describeUnlabelledRedactions,
+  getTraceCompletenessIssues,
+} from "./util/trace-validation";
 import {
   parseFeedbackChecklistItems,
   upgradeLegacyFeedbackText,
@@ -79,103 +87,11 @@ const FEEDBACK_STEP_ORDER = [
   TraceSteps.Review,
 ];
 
-type IncompleteScreen = {
-  screenNumber: number;
-  issue: ScreenAnnotationIssue;
-};
-
-/**
- * Screens whose annotation is unfinished, numbered the way the filmstrip numbers
- * them. The last screen is the goal state and needs no gesture.
- *
- * Scanned per screen rather than parsed with a zod schema. Zod skips a `.refine`
- * when the schema beneath it failed, and the ways an annotation can be
- * incomplete sit at different levels — a missing marker fails field validation,
- * unfilled template slots fail a refine, a screen with no gesture at all fails a
- * different refine — so any field-level failure hid the rest. Both gates share
- * this function so they cannot drift apart or under-report.
- */
-function collectIncompleteScreens(
-  screens: TraceFormData["screens"],
-  gestures: TraceFormData["gestures"],
-): IncompleteScreen[] {
-  return screens
-    .slice(0, -1)
-    .map((screen, index) => ({
-      screenNumber: index + 1,
-      issue: getScreenAnnotationIssue(gestures[screen.id]),
-    }))
-    .filter((entry): entry is IncompleteScreen => entry.issue !== null);
-}
-
-type UnlabelledRedactionScreen = {
-  screenNumber: number;
-  boxCount: number;
-};
-
-/**
- * Screens carrying redaction boxes with no label, numbered the way the filmstrip
- * numbers them.
- *
- * Scanned rather than parsed for the same reason as `collectIncompleteScreens`:
- * `RedactionSchema`'s refine returns on the first unlabelled box and reports one
- * record-level message, so it can say neither which screen nor how many boxes.
- *
- * Slightly stricter than the schema, which only rejects an empty string — a
- * whitespace-only label is no more useful to a reviewer than a blank one.
- */
-function collectUnlabelledRedactions(
-  screens: TraceFormData["screens"],
-  redactions: TraceFormData["redactions"],
-): UnlabelledRedactionScreen[] {
-  return screens
-    .map((screen, index) => ({
-      screenNumber: index + 1,
-      boxCount: countUnlabelledRedactions(redactions[screen.id]),
-    }))
-    .filter((entry) => entry.boxCount > 0);
-}
-
-/** One message naming the screens whose redaction boxes still need labels. */
-function describeUnlabelledRedactions(
-  entries: UnlabelledRedactionScreen[],
-): string {
-  const describe = (entry: UnlabelledRedactionScreen) =>
-    `Screen ${entry.screenNumber}: label ${
-      entry.boxCount === 1
-        ? "the redaction box"
-        : `${entry.boxCount} redaction boxes`
-    }`;
-
-  if (entries.length === 1) {
-    return `${describe(entries[0])}.`;
-  }
-  if (entries.length <= 4) {
-    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
-  }
-  return `${entries.length} screens have unlabelled redaction boxes: ${entries
-    .map((entry) => entry.screenNumber)
-    .join(", ")}.`;
-}
-
-/**
- * One message saying what each unfinished screen needs. Past four screens the
- * reasons stop fitting a toast, so it falls back to numbers and points at the
- * filmstrip, which rings exactly the same set.
- */
-function describeIncompleteScreens(entries: IncompleteScreen[]): string {
-  const describe = (entry: IncompleteScreen) =>
-    `Screen ${entry.screenNumber}: ${SCREEN_ANNOTATION_ISSUE_ACTIONS[entry.issue]}`;
-
-  if (entries.length === 1) {
-    return `${describe(entries[0])}.`;
-  }
-  if (entries.length <= 4) {
-    return `${entries.length} screens need work — ${entries.map(describe).join("; ")}.`;
-  }
-  return `${entries.length} screens need work: ${entries
-    .map((entry) => entry.screenNumber)
-    .join(", ")}. The filmstrip rings them in yellow.`;
+/** Statuses where staff edit in place and the status does not change. */
+function isStaffEditStatus(status: CaptureStatus): boolean {
+  return (
+    status === CaptureStatus.REVIEWING || status === CaptureStatus.REVIEWED
+  );
 }
 
 export default function Page() {
@@ -240,6 +156,15 @@ export default function Page() {
     [TraceSteps.Review]: undefined,
   });
 
+  // The draft this page last loaded or saved. Staff saves are refused by the
+  // server if someone saved a newer one since (see saveCaptureDraft).
+  const draftVersionRef = useRef<string | null>(null);
+  const saveDraft = async (data: TraceFormData, target: Capture) => {
+    const res = await handleDraftSave(data, target, draftVersionRef.current);
+    if (res.ok) draftVersionRef.current = res.data.version;
+    return res;
+  };
+
   const methods = useForm<TraceFormData>({
     defaultValues: {
       screens: [],
@@ -286,7 +211,9 @@ export default function Page() {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
-      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+      draftVersionRef.current = draftVersionFromKey(latestDraftFile.fileKey);
+      const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
+        captureId,
         latestDraftFile.fileKey,
       );
       if (!signedLatestDraftFileRes.ok) {
@@ -404,9 +331,11 @@ export default function Page() {
       isAutosavingRef.current = true;
       try {
         const data = methods.getValues();
-        const saveRes = await handleDraftSave(data, capture);
+        const saveRes = await saveDraft(data, capture);
         if (saveRes.ok) {
           toast.success("Draft autosaved");
+        } else {
+          toast.error(saveRes.message || "Autosave failed.");
         }
       } catch (error) {
         console.error("Autosave failed:", error);
@@ -422,6 +351,15 @@ export default function Page() {
   }, [capture]);
 
   const [stepIndex, setStepIndex] = useState(0);
+  // The worker's self-check before Finish. Page state only, never saved, so
+  // it starts empty on every visit (and after a send-back). Staff editing in
+  // review never see it.
+  const [selfChecks, setSelfChecks] = useState<boolean[]>(emptySelfChecks);
+  const needsSelfCheck = !!capture && !isStaffEditStatus(capture.status);
+  const selfCheckCount = selfChecks.filter(Boolean).length;
+  const isSelfCheckDone = selfCheckCount === SELF_CHECK_COUNT;
+  const isFinishBlockedBySelfCheck =
+    stepIndex === TraceSteps.Review && needsSelfCheck && !isSelfCheckDone;
 
   useEffect(() => {
     if (!capture || draftFetchResult !== DraftFetchResults.SUCCESS) {
@@ -477,6 +415,13 @@ export default function Page() {
       ...prev,
       ...nextOverrides,
     }));
+
+    // Only the owner may write feedback through `updateCapture`. Staff fixing
+    // a capture in review see the upgraded text locally; the stored text is
+    // upgraded the next time the owner opens it.
+    if (isStaffEditStatus(capture.status)) {
+      return;
+    }
 
     void updateCapture(captureId, nextOverrides).then(async (result) => {
       if (result.ok) {
@@ -732,42 +677,18 @@ export default function Page() {
         return;
       }
     } else if (stepIndex === TraceSteps.Review) {
-      const { screens: currentScreens, gestures: currentGestures } =
-        methods.getValues();
-      // Gestures first, with the same predicate and reporting as the capture
-      // step. TraceFormSchema's refines under-report for the reason described on
-      // collectIncompleteScreens, and this is the gate that decides whether a
-      // trace reaches a reviewer — a screen captured after passing the capture
-      // step would otherwise slip through unannotated.
-      const incompleteScreens = collectIncompleteScreens(
-        currentScreens,
-        currentGestures,
-      );
-      if (incompleteScreens.length > 0) {
-        toast.error(describeIncompleteScreens(incompleteScreens));
+      if (isFinishBlockedBySelfCheck) {
+        toast.error("Tick all six boxes under Check your work first.");
         setIsSubmitting(false);
         return;
       }
-
-      // Then the rest of the trace — the description above all, which is only
-      // written at this step.
-      const allButLastScreenIds = currentScreens.slice(0, -1).map((s) => s.id);
-      const allButLastScreenGestures = Object.fromEntries(
-        Object.entries(currentGestures).filter(([id]) =>
-          allButLastScreenIds.includes(id),
-        ),
-      );
-      const validation = TraceFormSchema.safeParse({
-        ...methods.getValues(),
-        gestures: allButLastScreenGestures,
-      });
-      if (!validation.success) {
-        console.error(validation.error.issues);
-        // Deduplicated: the schema reports per field, so one cause can surface
-        // several times with the same wording.
-        new Set(validation.error.issues.map((issue) => issue.message)).forEach(
-          (message) => toast.error(message),
-        );
+      // The same check staff run before Approve, so the two cannot drift
+      // apart: unfinished screens and unlabelled boxes, then the schema (the
+      // description above all, which is only written at this step). This is
+      // the gate that decides whether a trace reaches a reviewer.
+      const issues = getTraceCompletenessIssues(methods.getValues());
+      if (issues.length > 0) {
+        issues.forEach((message) => toast.error(message));
         setIsSubmitting(false);
         return;
       }
@@ -781,9 +702,19 @@ export default function Page() {
         // upload progress to storage as draft state
         const data = methods.getValues();
         // save review data to s3 and route to evaluate
-        const saveRes = await handleDraftSave(data, capture!);
+        const saveRes = await saveDraft(data, capture!);
         if (!saveRes.ok) {
           throw new Error(saveRes.message || "Failed to save draft");
+        }
+        // Staff fixing a capture in review (REVIEWING) or at the final check
+        // (REVIEWED): the status stays, and the fixed draft is what they
+        // approve on the review page. Only the owner submits (Finish →
+        // REVIEWING).
+        if (capture && isStaffEditStatus(capture.status)) {
+          await revalidateCaptureCaches();
+          toast.success("Fixes saved. Back to review.");
+          router.push(`/capture/${captureId}/evaluate`);
+          return;
         }
         const updateResult = await updateCapture(captureId, {
           status: CaptureStatus.REVIEWING,
@@ -811,7 +742,7 @@ export default function Page() {
     e.preventDefault();
     setIsSubmitting(true);
     const data = methods.getValues();
-    const saveRes = await handleDraftSave(data, capture!);
+    const saveRes = await saveDraft(data, capture!);
     if (saveRes.ok) {
       toast.success("Draft saved");
     } else {
@@ -867,7 +798,22 @@ export default function Page() {
           />
         );
       case 2:
-        return <Review capture={capture} />;
+        return (
+          <Review
+            capture={capture}
+            selfCheck={
+              needsSelfCheck
+                ? {
+                    checks: selfChecks,
+                    onChange: (index, checked) =>
+                      setSelfChecks((prev) =>
+                        prev.map((value, i) => (i === index ? checked : value)),
+                      ),
+                  }
+                : undefined
+            }
+          />
+        );
       default:
         return null;
     }
@@ -1043,13 +989,22 @@ export default function Page() {
                         onClick={handleNext}
                         disabled={
                           isSubmitting ||
-                          activeStepReadiness.isBlockingNavigation
+                          activeStepReadiness.isBlockingNavigation ||
+                          isFinishBlockedBySelfCheck
                         }
                       >
                         {isSubmitting && (
                           <Loader2 className="size-4 animate-spin" />
                         )}
-                        {stepIndex < TraceSteps.Review ? "Next" : "Finish"}
+                        {stepIndex < TraceSteps.Review
+                          ? "Next"
+                          : capture?.status === CaptureStatus.REVIEWING
+                            ? "Save and return to review"
+                            : capture?.status === CaptureStatus.REVIEWED
+                              ? "Save and return to final check"
+                              : isFinishBlockedBySelfCheck
+                                ? `Finish · ${selfCheckCount} of ${SELF_CHECK_COUNT} checked`
+                                : "Finish"}
                       </Button>
                       {activeStepReadiness.isBlockingNavigation &&
                       activeStepReadiness.reason ? (

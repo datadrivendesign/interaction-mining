@@ -3,8 +3,8 @@
 import { ComboboxOption } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
 import { AdminPagination } from "@/components/ui/admin-pagination";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-import { CaptureAdminView } from "@/lib/actions";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -12,15 +12,36 @@ import {
   getFilterOptionsForTasks,
   getReviewCapturesCount,
   getReviewingCaptures,
+  TaskRow,
+  TaskStage,
 } from "../../util";
 import { FilterTask } from "./filter-task";
 import { TasksTable } from "./tasks-table";
 
+const STAGE_TABS: { value: TaskStage; label: string }[] = [
+  { value: "REVIEWED", label: "Final check" },
+  { value: "REVIEWING", label: "Waiting for reviewer" },
+  { value: "SENT_BACK", label: "Sent back" },
+];
+
+function isTaskStage(value: string | null): value is TaskStage {
+  return STAGE_TABS.some((tab) => tab.value === value);
+}
+
 /**
- * TasksPanel is the main panel for the tasks page
+ * TasksPanel is the queue for /admin/tasks (admin, with stage tabs) and
+ * /review/tasks (reviewers, REVIEWING only).
+ * @param isAdmin Admins get the stage tabs; reviewers only see REVIEWING.
+ * @param basePath The page this panel is on, for filter and page links.
  * @returns TasksPanel component
  */
-export function TasksPanel() {
+export function TasksPanel({
+  isAdmin,
+  basePath,
+}: {
+  isAdmin: boolean;
+  basePath: "/admin/tasks" | "/review/tasks";
+}) {
   // constants
   const itemsPerPage = 10;
 
@@ -30,12 +51,19 @@ export function TasksPanel() {
   const page = searchParams.get("page")
     ? parseInt(searchParams.get("page") || "1")
     : 1;
+  // The admin's queue opens on the final check; reviewers have one queue.
+  const stageParam = searchParams.get("stage");
+  const stage: TaskStage = !isAdmin
+    ? "REVIEWING"
+    : isTaskStage(stageParam)
+      ? stageParam
+      : "REVIEWED";
 
   // handle loading state
   const [loading, setLoading] = useState(false);
 
   // retrieve data from server
-  const [captures, setCaptures] = useState<CaptureAdminView[]>([]);
+  const [captures, setCaptures] = useState<TaskRow[]>([]);
   const [reviewCapturesCount, setReviewCapturesCount] = useState(0);
   const [appsList, setAppsList] = useState<ComboboxOption[]>([]);
   const [usersList, setUsersList] = useState<ComboboxOption[]>([]);
@@ -46,7 +74,7 @@ export function TasksPanel() {
   // handle fetching filter options from server
   useEffect(() => {
     const fetchFilterOptions = async () => {
-      const filterOptionsRes = await getFilterOptionsForTasks();
+      const filterOptionsRes = await getFilterOptionsForTasks(stage);
       if (filterOptionsRes.ok) {
         const appsData = filterOptionsRes.data?.apps ?? [];
         const usersData = filterOptionsRes.data?.users ?? [];
@@ -68,7 +96,7 @@ export function TasksPanel() {
       }
     };
     fetchFilterOptions();
-  }, []);
+  }, [stage]);
 
   // handle updating filtered objects from url parameters
   useEffect(() => {
@@ -100,10 +128,12 @@ export function TasksPanel() {
           page: page,
           userIds,
           appIds,
+          stage,
         }),
         getReviewCapturesCount({
           userIds,
           appIds,
+          stage,
         }),
       ]);
 
@@ -126,12 +156,7 @@ export function TasksPanel() {
       setLoading(false);
     };
     fetchReviewCaptures();
-  }, [page, itemsPerPage, searchParams]);
-
-  // filter out captures with no user or email
-  const validCaptures = captures.filter(
-    (capture) => capture.user?.name !== null && capture.user?.email !== null,
-  );
+  }, [page, itemsPerPage, searchParams, stage]);
 
   // pagination inputs for pagination component
   const totalPages = Math.ceil(reviewCapturesCount / itemsPerPage);
@@ -139,9 +164,11 @@ export function TasksPanel() {
   const handlePageChange = (page: number) => {
     router.push(
       constructTaskPanelURL(
+        basePath,
         page,
         usersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -152,9 +179,11 @@ export function TasksPanel() {
     setAppsFiltered(newAppsFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         page,
         usersFiltered.map((user) => user.value),
         newAppsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -163,9 +192,11 @@ export function TasksPanel() {
     setUsersFiltered(newUsersFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         page,
         newUsersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -177,9 +208,11 @@ export function TasksPanel() {
     setAppsFiltered(newAppsFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         1,
         usersFiltered.map((user) => user.value),
         newAppsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
@@ -190,20 +223,38 @@ export function TasksPanel() {
     setUsersFiltered(newUsersFiltered);
     router.push(
       constructTaskPanelURL(
+        basePath,
         1,
         newUsersFiltered.map((user) => user.value),
         appsFiltered.map((app) => app.value),
+        stage,
       ),
     );
   };
   const handleClearFilters = () => {
     setAppsFiltered([]);
     setUsersFiltered([]);
-    router.push(constructTaskPanelURL(1, [], []));
+    router.push(constructTaskPanelURL(basePath, 1, [], [], stage));
+  };
+
+  // Switching queues keeps the filters and goes back to page 1.
+  const handleStageChange = (value: string) => {
+    if (!isTaskStage(value)) {
+      return;
+    }
+    router.push(
+      constructTaskPanelURL(
+        basePath,
+        1,
+        usersFiltered.map((user) => user.value),
+        appsFiltered.map((app) => app.value),
+        value,
+      ),
+    );
   };
 
   // handle logic for users and apps shown in table
-  const handleTableUserClick = (capture: CaptureAdminView) => {
+  const handleTableUserClick = (capture: TaskRow) => {
     if (
       capture.user?.id &&
       capture.user?.name &&
@@ -218,7 +269,7 @@ export function TasksPanel() {
     }
   };
 
-  const handleTableAppClick = (capture: CaptureAdminView) => {
+  const handleTableAppClick = (capture: TaskRow) => {
     if (
       capture.app?.id &&
       capture.app?.metadata.name &&
@@ -246,8 +297,20 @@ export function TasksPanel() {
           handleAppFilterRemove={handleAppFilterRemove}
           handleUserFilterRemove={handleUserFilterRemove}
           handleClearFilters={handleClearFilters}
+          showUserFilter
         />
       </div>
+      {isAdmin && (
+        <Tabs value={stage} onValueChange={handleStageChange}>
+          <TabsList aria-label="Review queue">
+            {STAGE_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} disabled={loading}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
       <p className="text-md mt-1 text-start font-bold tracking-tight">
         Pending Task Submissions{" "}
         <span className="text-muted-foreground">({reviewCapturesCount})</span>
@@ -261,7 +324,9 @@ export function TasksPanel() {
           </div>
         ) : (
           <TasksTable
-            captures={validCaptures}
+            captures={captures}
+            stage={stage}
+            showWorkerEmail={isAdmin}
             handleTableUserClick={handleTableUserClick}
             handleTableAppClick={handleTableAppClick}
           />

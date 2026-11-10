@@ -76,7 +76,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
   {
     id: "missing_intermediate_screen",
     label: "A screen is missing between two captured screens",
-    chipLabel: "Missing screen",
+    chipLabel: "Gap between screens",
     category: "missing_screens",
     annotation:
       "Screen #: A screen is missing here. Please add the screen where you [WHICH_ACTION], between this screen and the next one.",
@@ -219,12 +219,11 @@ export const TRACE_ISSUES: TraceIssue[] = [
   },
   {
     id: "task_description_commentary",
-    label:
-      "Wrote task description as commentary about task rather than describing.",
-    chipLabel: "Task description is commentary",
+    label: "Interaction summary does not summarize what was done.",
+    chipLabel: "Task summary written incorrectly",
     category: "description",
     annotation:
-      "Describe what you are doing on screen, not a comment about the task itself.",
+      'Interaction Summary is not written as a real summary. Example: "Add a lunch event in Calendar."',
     destination: "summarize",
     scope: "flow",
   },

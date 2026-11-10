@@ -101,6 +101,46 @@ export const safePathSegmentSchema = z
     message: "Must not start with a dot.",
   });
 
+/**
+ * A draft version: the draft file's name without `.json`, e.g.
+ * `draft-1761234567890`. Drafts are named `draft-<Date.now()>.json`, and the
+ * newest timestamp wins everywhere drafts are read.
+ */
+export const draftVersionSchema = z
+  .string()
+  .regex(/^draft-\d{1,16}$/, "Invalid draft version.");
+
+/** `uploads/<id>/drafts/draft-123.json` → `draft-123`, else null. */
+export function draftVersionFromKey(key: string): string | null {
+  const match = key.match(/(?:^|\/)(draft-\d{1,16})\.json$/);
+  return match ? match[1] : null;
+}
+
+/** Numeric timestamp of a draft version, for newest-wins comparisons. */
+export function draftVersionTime(version: string): number {
+  return Number(version.slice("draft-".length));
+}
+
+/** The newer of two draft versions (either may be missing). */
+export function newerDraftVersion(
+  a: string | null,
+  b: string | null,
+): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return draftVersionTime(b) > draftVersionTime(a) ? b : a;
+}
+
+/**
+ * The version for the next save: the server's clock, but always after the
+ * current newest, so a draft saved under a fast clock is never overtaken by
+ * one saved later.
+ */
+export function nextDraftVersion(current: string | null, now: number): string {
+  const after = current ? draftVersionTime(current) + 1 : 0;
+  return `draft-${Math.max(now, after)}`;
+}
+
 export const uploadUrlRequestSchema = z
   .object({
     purpose: z.nativeEnum(UploadPurpose),

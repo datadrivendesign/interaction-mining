@@ -21,8 +21,8 @@ import { TitleMarquee } from "@/components/marquee";
 import { Button } from "@/components/ui/button";
 import { Platform } from "@/lib/utils";
 import { isProduction } from "@/lib/utils/env";
-import { Role } from "@prisma/client";
 import { useSession } from "next-auth/react";
+import { isAdmin } from "@/lib/auth/roles";
 
 export default function DatasetGallery() {
   const [search, setSearch] = useState("");
@@ -30,8 +30,8 @@ export default function DatasetGallery() {
   // FIXME: disable UI selection of iOS in prod for now, still in dev
   const isProd = isProduction();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === Role.ADMIN;
-  const isIOSDisabled = isProd && !isAdmin;
+  const admin = isAdmin(session);
+  const isIOSDisabled = isProd && !admin;
 
   const params = useMemo(
     () => ({

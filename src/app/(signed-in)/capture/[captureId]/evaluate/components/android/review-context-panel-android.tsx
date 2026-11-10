@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { TraceFormData } from "../../../edit/components/types";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export function ReviewContextPanelAndroid({
-  traceData,
   isAdmin,
+  listHref,
+  summary,
 }: {
-  traceData: TraceFormData;
   isAdmin: boolean;
+  /** Task list for this viewer's role. */
+  listHref: string;
+  /** The Interaction Summary block (with Edit for staff). */
+  summary?: ReactNode;
 }) {
   return (
     <aside className="flex h-full min-h-0 w-full flex-col">
@@ -24,7 +28,7 @@ export function ReviewContextPanelAndroid({
           )}
         />
         <span className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase dark:text-neutral-400">
-          {isAdmin ? "Admin Review" : "Owner Review"}
+          {isAdmin ? "Review" : "Owner Review"}
         </span>
         {isAdmin && (
           <Button
@@ -32,21 +36,14 @@ export function ReviewContextPanelAndroid({
             className="ml-auto text-[10px] font-semibold tracking-widest text-neutral-300 uppercase transition-colors hover:text-neutral-100 dark:text-neutral-700 dark:hover:text-neutral-800"
           >
             <ArrowLeft className="h-2 w-2" />
-            <Link href="/admin/tasks">Back to list</Link>
+            <Link href={listHref}>Back to list</Link>
           </Button>
         )}
       </div>
 
-      {isAdmin && traceData.description && (
+      {isAdmin && (
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold tracking-widest text-neutral-400 uppercase dark:text-neutral-500">
-              Task
-            </span>
-            <p className="text-[15px] leading-6 font-medium text-neutral-800 dark:text-neutral-100">
-              {traceData.description}
-            </p>
-          </div>
+          {summary}
           <div className="mt-3 rounded-md border border-dashed border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
             <p className="text-[11px] font-medium text-neutral-700 dark:text-neutral-200">
               Feedback is authored in the right panel.

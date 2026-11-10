@@ -1,207 +1,140 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { FrameData, Redaction, TraceFormData } from "../../types";
 import type { ScreenGesture } from "@prisma/client";
-import { useMeasure } from "@uidotdev/usehooks";
+import { cn } from "@/lib/utils";
+import { Redaction, TraceFormData } from "../../types";
+import { ReviewScreenCard } from "../../../../evaluate/components/shared/review-screen-card";
 import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
-import {
-  findGestureOption,
-  normalizeGestureType,
-} from "@/lib/utils/gesture-options";
-import { GESTURE_TYPES } from "@/lib/utils/gesture-types";
+  findScreenGaps,
+  GAP_CALLOUT_SECONDS,
+  ReviewGalleryGrid,
+} from "../../../../evaluate/components/shared/review-gallery-grid";
+import { ScreenViewerDialog } from "../../../../evaluate/components/shared/screen-viewer-dialog";
 
-export function SaveTraceGallery() {
+const noChange = async () => false;
+
+/**
+ * The worker's last look before Finish: every screen in the same wrapped,
+ * numbered grid the reviewer sees. Clicking a screen opens it at full size
+ * (look only), so small private text can be checked.
+ */
+export function SaveTraceGallery({ os }: { os: string }) {
   const { watch } = useFormContext<TraceFormData>();
   const screens = watch("screens");
   const gestures = watch("gestures") as { [key: string]: ScreenGesture };
   const redactions = watch("redactions") as { [key: string]: Redaction[] };
+  const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
+  const [openScreenId, setOpenScreenId] = useState<string | null>(null);
   const [orientationByScreenId, setOrientationByScreenId] = useState<
     Record<string, "portrait" | "landscape">
   >({});
 
-  return (
-    <section className="block h-full w-full p-5">
-      <div className="flex w-full touch-pan-x overflow-x-scroll">
-        <div className="flex min-w-full gap-5">
-          {screens.map((screen: FrameData, index: number) => (
-            <SaveTraceFigure
-              key={screen.id}
-              screen={screen}
-              index={index}
-              gesture={gestures[screen.id]}
-              redactions={redactions[screen.id] || []}
-              isLandscape={orientationByScreenId[screen.id] === "landscape"}
-              onImageLoad={(img) => {
-                if (!img.naturalWidth || !img.naturalHeight) {
-                  return;
-                }
-                setOrientationByScreenId((prev) => ({
-                  ...prev,
-                  [screen.id]:
-                    img.naturalWidth > img.naturalHeight
-                      ? "landscape"
-                      : "portrait",
-                }));
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
+  const sortedScreens = useMemo(
+    () => [...screens].sort((a, b) => a.timestamp - b.timestamp),
+    [screens],
   );
-}
+  // iOS timestamps are seconds into the recording, so gaps mean something.
+  const gapsByScreenId = useMemo(
+    () =>
+      os === "ios" ? findScreenGaps(sortedScreens, GAP_CALLOUT_SECONDS) : {},
+    [os, sortedScreens],
+  );
 
-function SaveTraceFigure({
-  screen,
-  index,
-  gesture,
-  redactions,
-  isLandscape,
-  onImageLoad,
-}: {
-  screen: FrameData;
-  index: number;
-  gesture?: ScreenGesture;
-  redactions: Redaction[];
-  isLandscape: boolean;
-  onImageLoad: (img: HTMLImageElement) => void;
-}) {
-  const [containerRef, { width, height }] = useMeasure();
-  const canvasWidth = width ?? 0;
-  const canvasHeight = height ?? 0;
-
-  const isDrag =
-    gesture &&
-    normalizeGestureType(gesture.type) === GESTURE_TYPES.DRAG &&
-    gesture.x !== null &&
-    gesture.y !== null &&
-    gesture.scrollDeltaX !== null &&
-    gesture.scrollDeltaY !== null &&
-    canvasWidth > 0 &&
-    canvasHeight > 0;
-
-  const startX = isDrag ? gesture.x! * canvasWidth : 0;
-  const startY = isDrag ? gesture.y! * canvasHeight : 0;
-  const endX = isDrag ? (gesture.x! + gesture.scrollDeltaX!) * canvasWidth : 0;
-  const endY = isDrag ? (gesture.y! + gesture.scrollDeltaY!) * canvasHeight : 0;
-  const cardWidthClass = isLandscape
-    ? "w-[min(38rem,88vw)]"
-    : "w-[min(18rem,42vw)]";
+  const openIndex = sortedScreens.findIndex(
+    (screen) => screen.id === openScreenId,
+  );
+  const openScreen = openIndex >= 0 ? sortedScreens[openIndex] : null;
+  const openViewer = (screenId: string) => {
+    setActiveScreenId(screenId);
+    setOpenScreenId(screenId);
+  };
 
   return (
-    <figure
-      className={`relative flex shrink-0 flex-col bg-neutral-100 shadow-xs dark:bg-neutral-900 ${cardWidthClass}`}
-    >
-      <div className="relative w-full" ref={containerRef}>
-        <div className="absolute top-1 right-1 z-20 min-w-[1.5rem] rounded bg-black/60 px-1 py-0.5 text-center font-mono text-xs text-white">
-          {index + 1}
-        </div>
-
-        <TooltipProvider delayDuration={100}>
-          <Image
-            className="relative z-10 h-full w-full rounded-lg border-2 border-blue-500 object-cover"
-            src={screen.src}
-            alt={`Extracted frame at ${screen.timestamp}`}
-            draggable={false}
-            width={0}
-            height={0}
-            sizes="100vw"
-            onLoad={(event) => onImageLoad(event.currentTarget)}
-          />
-
-          {isDrag && (
-            <svg
-              className="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-visible"
-              width="100%"
-              height="100%"
-            >
-              <defs>
-                <marker
-                  id={`dragArrowHead-${screen.id}`}
-                  viewBox="0 0 8 8"
-                  markerWidth="5"
-                  markerHeight="5"
-                  refX="7"
-                  refY="4"
-                  orient="auto"
-                  markerUnits="strokeWidth"
-                >
-                  <path d="M0,0 L0,8 L8,4 z" fill="rgba(23,23,23,0.72)" />
-                </marker>
-              </defs>
-              <line
-                x1={startX}
-                y1={startY}
-                x2={endX}
-                y2={endY}
-                stroke="rgba(23,23,23,0.72)"
-                strokeWidth="2"
-                markerEnd={`url(#dragArrowHead-${screen.id})`}
-              />
-              <circle
-                cx={endX}
-                cy={endY}
-                r="4.75"
-                fill="white"
-                stroke="rgba(23,23,23,0.92)"
-                strokeWidth="1.8"
-              />
-            </svg>
-          )}
-
-          {gesture?.type && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className="absolute z-20 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-yellow-300 opacity-70 md:h-7 md:w-7"
-                  style={{
-                    left: `${(gesture.x ?? 0) * 100}%`,
-                    top: `${(gesture.y ?? 0) * 100}%`,
-                  }}
-                >
-                  {findGestureOption(gesture.type)?.icon}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>{gesture.type ?? "No gesture type"}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {redactions.map((redaction) => (
-            <Tooltip key={redaction.id}>
-              <TooltipTrigger asChild>
-                <div
-                  className="absolute z-15 cursor-pointer border-1 border-yellow-500 bg-black hover:shadow-lg hover:shadow-yellow-500/50"
-                  style={{
-                    left: `${redaction.x * 100}%`,
-                    top: `${redaction.y * 100}%`,
-                    width: `${redaction.width * 100}%`,
-                    height: `${redaction.height * 100}%`,
+    <>
+      <ReviewGalleryGrid
+        sortedScreens={sortedScreens}
+        activeScreenId={activeScreenId}
+        screensWithIssues={0}
+        gapsByScreenId={gapsByScreenId}
+        renderCard={(screen, index, cardRef, cardSize) => (
+          <ReviewScreenCard
+            key={screen.id}
+            cardRef={cardRef}
+            index={index}
+            screenId={screen.id}
+            gesture={gestures[screen.id]}
+            redactions={redactions[screen.id] || []}
+            isActive={screen.id === activeScreenId}
+            isLastScreen={index === sortedScreens.length - 1}
+            issueCount={0}
+            isLandscape={orientationByScreenId[screen.id] === "landscape"}
+            size={cardSize}
+            onSelect={() => openViewer(screen.id)}
+            onEnlarge={() => openViewer(screen.id)}
+            renderImage={(borderClass) =>
+              screen.src.length > 0 ? (
+                <Image
+                  src={screen.src}
+                  alt={`Screen ${index + 1}`}
+                  width={0}
+                  height={0}
+                  sizes="640px"
+                  className={cn(
+                    "relative z-0 h-auto w-full rounded-lg border-2 object-contain transition-all duration-150",
+                    borderClass,
+                  )}
+                  onLoad={(event) => {
+                    const img = event.currentTarget;
+                    if (!img.naturalWidth || !img.naturalHeight) return;
+                    const orientation =
+                      img.naturalWidth > img.naturalHeight
+                        ? "landscape"
+                        : "portrait";
+                    setOrientationByScreenId((prev) =>
+                      prev[screen.id] === orientation
+                        ? prev
+                        : { ...prev, [screen.id]: orientation },
+                    );
                   }}
                 />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {redaction.annotation}
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </TooltipProvider>
-      </div>
-
-      <div className="font-sm prose h-full w-full overflow-auto leading-snug font-semibold whitespace-pre-wrap prose-neutral dark:prose-invert dark:text-neutral-900">
-        <p className="text-center text-sm dark:text-neutral-300">
-          {gesture?.description ?? ""}
-        </p>
-      </div>
-    </figure>
+              ) : (
+                <div
+                  className={cn(
+                    "aspect-[9/19] w-full rounded-lg border-2 bg-neutral-100 dark:bg-neutral-800",
+                    borderClass,
+                  )}
+                />
+              )
+            }
+          />
+        )}
+      />
+      <ScreenViewerDialog
+        target={
+          openScreen && openScreen.src
+            ? { screen: openScreen, isNew: false, tab: "view" }
+            : null
+        }
+        canEdit={false}
+        screenNumber={openIndex + 1}
+        screenCount={sortedScreens.length}
+        isLastScreen={openIndex === sortedScreens.length - 1}
+        gesture={openScreen ? gestures[openScreen.id] : undefined}
+        redactions={openScreen ? (redactions[openScreen.id] ?? []) : []}
+        noteCount={0}
+        previousScreenId={sortedScreens[openIndex - 1]?.id ?? null}
+        nextScreenId={
+          openIndex >= 0 ? (sortedScreens[openIndex + 1]?.id ?? null) : null
+        }
+        onNavigate={(screenId) => openViewer(screenId)}
+        isSaving={false}
+        onSave={noChange}
+        onRemove={noChange}
+        onClose={() => setOpenScreenId(null)}
+      />
+    </>
   );
 }

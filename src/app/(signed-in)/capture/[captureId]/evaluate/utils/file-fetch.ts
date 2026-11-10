@@ -1,8 +1,14 @@
-import { ListedFiles } from "@/lib/actions";
-import { generateSignedCloudFrontURL, listFromS3 } from "@/lib/aws/s3/server";
+import { getCaptureFiles, ListedFiles } from "@/lib/actions";
 
-export async function fetchVideoFile(fileKey: string): Promise<ListedFiles[]> {
-  let res = await listFromS3(fileKey, false);
+/**
+ * Lists a capture's video file(s) with signed URLs. Goes through the checked
+ * `getCaptureFiles` action, which verifies the caller may see the capture and
+ * signs every object under its prefix.
+ */
+export async function fetchVideoFile(
+  captureId: string,
+): Promise<ListedFiles[]> {
+  const res = await getCaptureFiles(captureId);
   if (!res.ok) {
     console.error("Failed to fetch uploaded files", res.message);
     return [];
@@ -15,15 +21,5 @@ export async function fetchVideoFile(fileKey: string): Promise<ListedFiles[]> {
     console.error("No video file found");
     return [];
   }
-  const signedUrlRes = await Promise.all(
-    videoFiles.map(async (file) => {
-      const signedUrlRes = await generateSignedCloudFrontURL(file.fileKey);
-      if (signedUrlRes.ok) {
-        return { ...file, fileUrl: signedUrlRes.data.signedUrl };
-      } else {
-        return file;
-      }
-    }),
-  );
-  return signedUrlRes;
+  return videoFiles;
 }

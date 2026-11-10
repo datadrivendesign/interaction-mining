@@ -5,10 +5,19 @@ import { CaptureStatus, Prisma, ScreenGesture } from "@prisma/client";
 import { isValidObjectId } from "mongoose";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { listFromS3 } from "../aws";
+import {
+  deleteFromS3,
+  generateSignedCloudFrontURL,
+  listFromS3,
+} from "../aws/s3/server-internal";
 import { ActionPayload } from "./types";
 import { requireAuth } from "../auth/auth";
-import { updateUser } from "./user";
+import {
+  OWNER_EDITABLE_STATUSES,
+  getCaptureForAccess,
+  updateCaptureRecord,
+} from "./capture-internal";
+import { isAdmin } from "@/lib/auth/roles";
 
 export type ListedFiles = {
   fileKey: string;
@@ -218,7 +227,8 @@ export async function getCaptureCounts({
 
 interface GetCapturesPaginatedProps {
   userId: string;
-  status: CaptureStatus;
+  /** One status, or several shown together (In review = REVIEWING + REVIEWED). */
+  status: CaptureStatus | CaptureStatus[];
   cursor?: string;
   limit: number;
   includes: Prisma.CaptureInclude;
@@ -268,7 +278,7 @@ export async function getCapturesPaginated({
     const { task = false, app = false } = includes || {};
     const query: Prisma.CaptureWhereInput = {
       userId,
-      status,
+      status: Array.isArray(status) ? { in: status } : status,
     };
     const captures = await prisma.capture.findMany({
       where: query,
@@ -292,29 +302,80 @@ export async function getCapturesPaginated({
   }
 }
 
+const captureIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid capture id.");
+
+const feedbackText = z.string().max(20_000).nullable();
+
 /**
- * Updates a capture in the database.
+ * What the browser may write to a capture. Status is limited to the two
+ * owner-driven transitions (Start → PROCESSING, Finish → REVIEWING); the
+ * feedback fields exist because the edit page rewrites legacy feedback text
+ * into the current wording. REVIEWED / APPROVED / `traceId` are only written
+ * through `updateCaptureRecord` by role-checked code.
+ */
+const updateCaptureInputSchema = z
+  .object({
+    status: z
+      .enum([CaptureStatus.PROCESSING, CaptureStatus.REVIEWING])
+      .optional(),
+    annotateFeedback: feedbackText.optional(),
+    redactFeedback: feedbackText.optional(),
+    summarizeFeedback: feedbackText.optional(),
+  })
+  .strict();
+
+export type UpdateCaptureInput = z.infer<typeof updateCaptureInputSchema>;
+
+/**
+ * Updates a capture on behalf of its owner (or an ADMIN).
+ *
+ * Previously this accepted any `Prisma.CaptureUpdateInput` from any signed-in
+ * user, so a worker could set any capture to APPROVED from devtools. Now the id
+ * and fields are validated, the caller must own the capture, and an owner may
+ * only change status while the capture is still theirs to edit.
  * @param id Id of the capture to update.
- * @param data Data to update the capture with.
+ * @param input Fields to update.
  * @returns ActionPayload of updated capture.
  */
 export async function updateCapture(
   id: string,
-  data: Prisma.CaptureUpdateInput,
-) {
+  input: UpdateCaptureInput,
+): Promise<ActionPayload<Prisma.CaptureGetPayload<{}>>> {
   const session = await requireAuth();
 
   if (!session || !session.user || !session.user.id) {
     return { ok: false, message: "User not authenticated.", data: null };
   }
 
-  try {
-    const capture = await prisma.capture.update({
-      where: { id },
-      data,
-    });
+  const parsedId = captureIdSchema.safeParse(id);
+  const parsed = updateCaptureInputSchema.safeParse(input);
+  if (!parsedId.success || !parsed.success) {
+    return { ok: false, message: "Invalid capture update.", data: null };
+  }
 
-    return { ok: true, message: "Capture updated.", data: capture };
+  try {
+    const capture = await getCaptureForAccess(parsedId.data, session);
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+
+    const admin = isAdmin(session);
+    if (
+      parsed.data.status !== undefined &&
+      !admin &&
+      !OWNER_EDITABLE_STATUSES.includes(capture.status)
+    ) {
+      return {
+        ok: false,
+        message: "This capture is in review and cannot be changed right now.",
+        data: null,
+      };
+    }
+
+    const updated = await updateCaptureRecord(parsedId.data, parsed.data);
+    return { ok: true, message: "Capture updated.", data: updated };
   } catch (err) {
     console.error("Error updating capture:", err);
     return { ok: false, message: "Failed to update capture.", data: null };
@@ -322,15 +383,38 @@ export async function updateCapture(
 }
 
 /**
- * Fetches a list of uploaded files for a given capture ID from S3.
+ * Checks that `fileKey` names an object inside this capture's upload prefix.
+ * Browser callers pass keys they were handed by a listing; this stops a
+ * crafted key from reaching S3 under another capture's prefix.
+ */
+function isKeyInCapture(captureId: string, fileKey: string): boolean {
+  return (
+    fileKey.startsWith(`uploads/${captureId}/`) &&
+    !fileKey.includes("..") &&
+    fileKey.length <= 1024
+  );
+}
+
+/**
+ * Fetches a list of uploaded files (with signed URLs) for a capture the
+ * caller may see.
  * @param captureId The ID of the capture to fetch uploaded files for.
  * @returns ActionPayload of list of uploaded files.
  */
 export async function getCaptureFiles(
   captureId: string,
 ): Promise<ActionPayload<ListedFiles[]>> {
+  const parsedId = captureIdSchema.safeParse(captureId);
+  if (!parsedId.success) {
+    return { ok: false, message: "Invalid capture id.", data: null };
+  }
   try {
-    const files = await listFromS3(`uploads/${captureId}`);
+    const session = await requireAuth();
+    const capture = await getCaptureForAccess(parsedId.data, session);
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+    const files = await listFromS3(`uploads/${parsedId.data}`);
     if (!files.ok) {
       return {
         ok: false,
@@ -346,6 +430,103 @@ export async function getCaptureFiles(
       message: "Failed to fetch uploaded files.",
       data: null,
     };
+  }
+}
+
+/**
+ * Lists a capture's saved drafts (`uploads/<id>/drafts/`), unsigned. Use
+ * `getSignedCaptureFileUrl` to read one.
+ */
+export async function getCaptureDraftFiles(
+  captureId: string,
+): Promise<ActionPayload<ListedFiles[]>> {
+  const parsedId = captureIdSchema.safeParse(captureId);
+  if (!parsedId.success) {
+    return { ok: false, message: "Invalid capture id.", data: null };
+  }
+  try {
+    const session = await requireAuth();
+    const capture = await getCaptureForAccess(parsedId.data, session);
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+    const files = await listFromS3(`uploads/${parsedId.data}/drafts`, false);
+    if (!files.ok) {
+      return { ok: false, message: "Failed to fetch draft files.", data: null };
+    }
+    return files;
+  } catch (err) {
+    console.error("Error fetching draft files:", err);
+    return { ok: false, message: "Failed to fetch draft files.", data: null };
+  }
+}
+
+/**
+ * Signs a read URL for one object under a capture the caller may see. The key
+ * must sit inside `uploads/<captureId>/`; the capture id, not the key, is what
+ * authorizes the call.
+ */
+export async function getSignedCaptureFileUrl(
+  captureId: string,
+  fileKey: string,
+): Promise<ActionPayload<{ signedUrl: string }>> {
+  const parsedId = captureIdSchema.safeParse(captureId);
+  if (
+    !parsedId.success ||
+    typeof fileKey !== "string" ||
+    !isKeyInCapture(parsedId.data, fileKey)
+  ) {
+    return { ok: false, message: "Invalid file request.", data: null };
+  }
+  try {
+    const session = await requireAuth();
+    const capture = await getCaptureForAccess(parsedId.data, session);
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+    return await generateSignedCloudFrontURL(fileKey);
+  } catch (err) {
+    console.error("Error signing capture file URL:", err);
+    return { ok: false, message: "Failed to generate signed URL", data: null };
+  }
+}
+
+/**
+ * Deletes one uploaded object under a capture. Owners may delete only while
+ * the capture is still theirs to edit (CREATED / PROCESSING); ADMIN always.
+ */
+export async function deleteCaptureFile(
+  captureId: string,
+  fileKey: string,
+): Promise<ActionPayload<null>> {
+  const parsedId = captureIdSchema.safeParse(captureId);
+  if (
+    !parsedId.success ||
+    typeof fileKey !== "string" ||
+    !isKeyInCapture(parsedId.data, fileKey)
+  ) {
+    return { ok: false, message: "Invalid file request.", data: null };
+  }
+  try {
+    const session = await requireAuth();
+    const capture = await getCaptureForAccess(parsedId.data, session);
+    if (!capture) {
+      return { ok: false, message: "Capture not found.", data: null };
+    }
+    if (
+      !isAdmin(session) &&
+      !OWNER_EDITABLE_STATUSES.includes(capture.status)
+    ) {
+      return {
+        ok: false,
+        message: "This capture is in review and its files cannot be deleted.",
+        data: null,
+      };
+    }
+    return await deleteFromS3(fileKey);
+  } catch (err) {
+    console.error("Error deleting capture file:", err);
+    return { ok: false, message: "Failed to delete file.", data: null };
   }
 }
 
@@ -528,15 +709,11 @@ export async function createCaptureTask({
       } as Prisma.CaptureCreateInput,
     });
 
-    const user = await updateUser(session.user.id, {
-      captures: {
-        connect: { id: capture.id },
-      },
+    // Direct write rather than the `updateUser` action, which is ADMIN-only.
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { captures: { connect: { id: capture.id } } },
     });
-
-    if (!user) {
-      return { ok: false, message: "Failed to update user.", data: null };
-    }
 
     if (input.candidateOrigin && candidateTaskApp) {
       await prisma.$runCommandRaw({

@@ -160,7 +160,7 @@ export function useIOSReviewPlayback({
 
     const loadVideoAndPopulateScreens = async () => {
       try {
-        const videoFiles = await fetchVideoFile(`uploads/${captureDbId}`);
+        const videoFiles = await fetchVideoFile(captureDbId);
         if (!isCurrent() || videoFiles.length === 0 || !videoRef.current) {
           return;
         }

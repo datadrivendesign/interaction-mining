@@ -16,8 +16,12 @@ import { useCapture } from "@/lib/hooks/capture";
 import { ReviewContextPanelAndroid } from "./review-context-panel-android";
 import { ReviewGalleryAndroid } from "./review-gallery-android";
 import { getDraftFiles } from "../../../edit/util";
-import { generateSignedCloudFrontURL } from "@/lib/aws/s3/server";
-import { CaptureScreenFile, getCaptureFiles, ListedFiles } from "@/lib/actions";
+import {
+  CaptureScreenFile,
+  getCaptureFiles,
+  getSignedCaptureFileUrl,
+  ListedFiles,
+} from "@/lib/actions";
 import { ScreenCommentsPanel } from "../shared/screen-comments-panel";
 import { VerdictBar } from "../shared/verdict-bar";
 import {
@@ -28,16 +32,39 @@ import {
 import { getReviewIssueSummary } from "../shared/review-issue-summary";
 import { useReviewCommentHotkeys } from "../shared/use-review-comment-hotkeys";
 import { useReviewVerdictActions } from "../shared/use-review-verdict-actions";
+import { getVerdictMode, taskListPathFor } from "../shared/verdict-mode";
+import {
+  getChecklistStatus,
+  passUnflaggedSteps,
+  ReviewChecklist,
+} from "../shared/review-checklist";
+import { PublishProgressDialog } from "../shared/publish-progress-dialog";
+import { draftVersionFromKey } from "@/lib/aws/s3/upload-purpose";
 import { formatCaptureTimestampFromObjectId } from "@/lib/utils/capture-timestamp";
+import { useReviewScreenFixes } from "../shared/use-review-screen-fixes";
 
-export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
+export function EvaluationClientAndroid({
+  isAdmin,
+  isReviewer,
+}: {
+  isAdmin: boolean;
+  isReviewer: boolean;
+}) {
   const params = useParams();
   const captureId = params.captureId as string;
   const [traceData, setTraceData] = useState<TraceFormData>();
+  // Draft the page loaded (`draft-<ms>`); a reviewer approves exactly this one.
+  const [draftVersion, setDraftVersion] = useState<string | null>(null);
+  const [hasNoDraft, setHasNoDraft] = useState(false);
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<ReviewFeedbackState>(
     EMPTY_REVIEW_FEEDBACK_STATE,
   );
+  // The reviewer's Pass/Issue mark per step; it gates the verdict.
+  const [checklist, setChecklist] = useState<ReviewChecklist>({});
+  useEffect(() => {
+    setChecklist({});
+  }, [captureId]);
   const [gallerySelectedScreenIds, setGallerySelectedScreenIds] = useState<
     string[]
   >([]);
@@ -106,13 +133,57 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
-  const { isSubmitting, handleApprove, handleDeny, handleSkip } =
+  const verdictMode = getVerdictMode({
+    isAdmin,
+    isReviewer,
+    status: capture?.status,
+  });
+  // Staff reading a capture (reviewer or admin), as opposed to its owner.
+  const isStaffView = verdictMode !== "none" || isAdmin;
+  const listPath = taskListPathFor(verdictMode, isAdmin);
+  const editHref = `/capture/${captureId}/edit`;
+
+  // Only the reviewer's first pass is gated; the admin's paths are not.
+  const checklistStatus =
+    verdictMode === "review"
+      ? getChecklistStatus(checklist, feedbackState)
+      : null;
+
+  const { isSubmitting, saveProgress, handleApprove, handleDeny, handleSkip } =
     useReviewVerdictActions({
       capture,
       traceData,
+      draftVersion,
       feedbackState,
-      isAdmin,
+      mode: verdictMode,
+      listPath,
+      editHref,
+      approveBlockedReason: checklistStatus?.approveBlockedReason ?? null,
+      denyBlockedReason: checklistStatus?.sendBackBlockedReason ?? null,
     });
+
+  const {
+    fixes,
+    canFix,
+    summaryBlock,
+    galleryProps,
+    viewerDialog,
+    shortcuts: fixShortcuts,
+  } = useReviewScreenFixes({
+    capture,
+    traceData,
+    setTraceData,
+    draftVersion,
+    setDraftVersion,
+    verdictMode,
+    isSubmitting,
+    activeScreenId,
+    setActiveScreenId,
+    setGallerySelectedScreenIds,
+    noteCountByScreen: feedbackState.commentsByScreen,
+    onViewerNavigate: (screen) => setActiveScreenId(screen.id),
+    summaryTextClassName: "text-[15px]",
+  });
 
   useEffect(() => {
     if (!captureDbId || !traceData) {
@@ -142,14 +213,28 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
           frameFiles,
           traceData,
         );
+        // Fill in images on the screens the page has now. A screen removed
+        // while frames were loading must stay removed.
+        const loadedSrc = new Map(screens.map((s) => [s.id, s.src]));
         setTraceData((prevData) => {
           if (!prevData) {
             return prevData;
           }
+          const keptIds = new Set(prevData.screens.map((s) => s.id));
           return {
             ...prevData,
-            screens: screens.sort((a, b) => a.timestamp - b.timestamp),
-            vhs: vhs,
+            screens: prevData.screens
+              .map((s) =>
+                !s.src && loadedSrc.has(s.id)
+                  ? { ...s, src: loadedSrc.get(s.id)! }
+                  : s,
+              )
+              .sort((a, b) => a.timestamp - b.timestamp),
+            vhs: Object.fromEntries(
+              Object.entries({ ...prevData.vhs, ...vhs }).filter(([id]) =>
+                keptIds.has(id),
+              ),
+            ),
           };
         });
       } catch (error) {
@@ -170,7 +255,7 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         return;
       }
       if (files.data.length === 0) {
-        console.error("No draft files found");
+        setHasNoDraft(true);
         return;
       }
       const regexFileVersionRule = /draft-(\d+)\.json$/;
@@ -184,7 +269,9 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
         return 0;
       });
       const latestDraftFile = draftFiles[draftFiles.length - 1];
-      const signedLatestDraftFileRes = await generateSignedCloudFrontURL(
+      setDraftVersion(draftVersionFromKey(latestDraftFile.fileKey));
+      const signedLatestDraftFileRes = await getSignedCaptureFileUrl(
+        captureId,
         latestDraftFile.fileKey,
       );
       if (!signedLatestDraftFileRes.ok) {
@@ -294,8 +381,9 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
           >
             {traceData && capture && (
               <ReviewContextPanelAndroid
-                traceData={traceData}
-                isAdmin={isAdmin}
+                summary={summaryBlock}
+                isAdmin={isStaffView}
+                listHref={listPath}
               />
             )}
           </ResizablePanel>
@@ -315,9 +403,11 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
             >
               {/* Gallery — left/center */}
               <ResizablePanel
-                defaultSize={70}
+                id="review-gallery"
+                order={1}
+                defaultSize={isStaffView ? 60 : 100}
                 minSize={50}
-                maxSize={85}
+                maxSize={isStaffView ? 80 : 100}
                 className="min-h-0 overflow-y-auto bg-neutral-50 dark:bg-neutral-950"
               >
                 {traceData && (
@@ -335,47 +425,67 @@ export function EvaluationClientAndroid({ isAdmin }: { isAdmin: boolean }) {
                     onSelectedScreenToggle={
                       isComposerInScreenMode ? handleGalleryToggle : undefined
                     }
+                    {...galleryProps}
                   />
                 )}
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
-
-              {/* Screen Comments Panel — right */}
-              <ResizablePanel
-                defaultSize={30}
-                minSize={20}
-                maxSize={45}
-                className="min-h-0 overflow-hidden"
-              >
-                {traceData && (
-                  <ScreenCommentsPanel
-                    screens={traceData.screens}
-                    activeScreenId={activeScreenId}
-                    feedbackState={feedbackState}
-                    onFeedbackStateChange={setFeedbackState}
-                    hotkeyAction={screenCommentsHotkeyAction}
-                    onJumpToScreen={setActiveScreenId}
-                    externalSelectedScreenIds={gallerySelectedScreenIds}
-                    onExternalSelectedScreenIdsChange={
-                      setGallerySelectedScreenIds
-                    }
-                    onComposerScreenModeChange={setIsComposerInScreenMode}
-                  />
-                )}
-              </ResizablePanel>
+              {/* Screen Comments Panel — right. Staff only: the owner
+                  reads feedback on the edit page, not here. */}
+              {isStaffView && <ResizableHandle withHandle />}
+              {isStaffView && (
+                <ResizablePanel
+                  id="review-comments"
+                  order={2}
+                  defaultSize={40}
+                  minSize={20}
+                  maxSize={50}
+                  className="min-h-0 overflow-hidden"
+                >
+                  {traceData && (
+                    <ScreenCommentsPanel
+                      screens={traceData.screens}
+                      activeScreenId={activeScreenId}
+                      feedbackState={feedbackState}
+                      onFeedbackStateChange={setFeedbackState}
+                      hotkeyAction={screenCommentsHotkeyAction}
+                      onJumpToScreen={setActiveScreenId}
+                      externalSelectedScreenIds={gallerySelectedScreenIds}
+                      onExternalSelectedScreenIdsChange={
+                        setGallerySelectedScreenIds
+                      }
+                      onComposerScreenModeChange={setIsComposerInScreenMode}
+                      checklist={checklistStatus ? checklist : undefined}
+                      onChecklistMark={(category, mark) =>
+                        setChecklist((prev) => ({ ...prev, [category]: mark }))
+                      }
+                      onPassAll={() => setChecklist(passUnflaggedSteps)}
+                    />
+                  )}
+                </ResizablePanel>
+              )}
             </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
-      {isAdmin && capture && traceData && (
+      <PublishProgressDialog progress={saveProgress} />
+      {viewerDialog}
+      {verdictMode !== "none" && capture && (traceData || hasNoDraft) && (
         <VerdictBar
+          mode={verdictMode}
+          hasDraft={!!traceData && !!draftVersion}
           issueSummary={issueSummary}
           isSubmitting={isSubmitting}
+          saveProgress={saveProgress}
           onApprove={() => void handleApprove()}
           onDeny={() => void handleDeny()}
           onSkip={() => void handleSkip()}
+          editHref={editHref}
+          checklistLabel={checklistStatus?.label}
+          approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
+          denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
           additionalShortcuts={[
+            ...fixShortcuts,
             { label: "Previous screen", keys: "[" },
             { label: "Next screen", keys: "]" },
             { label: "Custom issue", keys: "O" },

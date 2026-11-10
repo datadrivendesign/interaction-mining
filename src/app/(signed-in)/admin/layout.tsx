@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth";
-import { Role } from "@prisma/client";
+import { isAdmin, isReviewer } from "@/lib/auth/roles";
 import { NotAuthorized } from "@/components/authorized";
 
 export default async function Layout({
@@ -13,7 +13,12 @@ export default async function Layout({
   if (!session?.user) {
     redirect(`/sign-in?callbackUrl=/`);
   }
-  if (session!.user!.role !== Role.ADMIN) {
+  // ADMIN only. Reviewers have their own queue at /review/tasks; send old
+  // bookmarks there instead of showing an error.
+  if (!isAdmin(session)) {
+    if (isReviewer(session)) {
+      redirect("/review/tasks");
+    }
     return <NotAuthorized />;
   }
 

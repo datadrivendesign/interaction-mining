@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getCapture, getTraces, updateCapture } from "@/lib/actions";
+import { getCapture, getTraces } from "@/lib/actions";
+import { updateCaptureRecord } from "@/lib/actions/capture-internal";
 import { AuthorizedRoute } from "@/components/authorized";
 
 import {
@@ -41,7 +42,7 @@ export default async function Layout({
     // If capture has no traceId and there are traces associated with the captureId, update the capture with the last traceId
     else if (traces.data && traces.data.length > 0) {
       const lastTrace = traces.data?.[traces.data.length - 1];
-      await updateCapture(captureId, {
+      await updateCaptureRecord(captureId, {
         traceId: lastTrace.id,
       });
 
@@ -55,7 +56,10 @@ export default async function Layout({
 
   return (
     <>
-      <AuthorizedRoute resourceUserId={capture?.userId ?? undefined}>
+      <AuthorizedRoute
+        resourceUserId={capture?.userId ?? undefined}
+        captureStatus={capture?.status}
+      >
         {children}
       </AuthorizedRoute>
     </>

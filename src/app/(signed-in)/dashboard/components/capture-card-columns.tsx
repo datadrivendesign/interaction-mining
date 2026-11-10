@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, AlertCircle, Upload } from "lucide-react";
@@ -17,7 +17,7 @@ import {
   getCapturesPaginated,
   revalidateCaptureCaches,
 } from "@/lib/actions";
-import { statusConfig } from "./config";
+import { COLUMN_QUERY_STATUSES, statusConfig } from "./config";
 import { CaptureCard } from "./capture-card";
 
 type DashboardCapture = Prisma.CaptureGetPayload<{
@@ -30,6 +30,61 @@ const VISIBLE_CAPTURE_STATUSES = [
 ] as const;
 type NonApprovedStatus = (typeof VISIBLE_CAPTURE_STATUSES)[number];
 
+/** Which part of the In review column the worker is looking at. */
+type ReviewFilter = "all" | "REVIEWING" | "REVIEWED";
+
+const REVIEW_FILTERS: { value: ReviewFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: CaptureStatus.REVIEWING, label: "Waiting for reviewer" },
+  { value: CaptureStatus.REVIEWED, label: "Waiting for final check" },
+];
+
+function queryStatusesFor(
+  status: NonApprovedStatus,
+  reviewFilter: ReviewFilter,
+): CaptureStatus[] {
+  if (status === CaptureStatus.REVIEWING && reviewFilter !== "all") {
+    return [reviewFilter];
+  }
+  return COLUMN_QUERY_STATUSES[status];
+}
+
+function ReviewFilterChips({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: ReviewFilter;
+  disabled: boolean;
+  onChange: (value: ReviewFilter) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Filter captures in review"
+      className="flex flex-wrap gap-1.5 pt-2"
+    >
+      {REVIEW_FILTERS.map((filter) => {
+        const selected = filter.value === value;
+        return (
+          <Button
+            key={filter.value}
+            type="button"
+            size="sm"
+            variant={selected ? "default" : "outline"}
+            className="h-7 rounded-full px-3 text-xs"
+            aria-pressed={selected}
+            disabled={disabled}
+            onClick={() => onChange(filter.value)}
+          >
+            {filter.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CaptureColumn({
   handleLoadMore,
   status,
@@ -37,6 +92,7 @@ export function CaptureColumn({
   columnData,
   onDelete,
   deletingIds,
+  filters,
 }: {
   handleLoadMore: (status: NonApprovedStatus) => void;
   status: NonApprovedStatus;
@@ -44,6 +100,8 @@ export function CaptureColumn({
   columnData: DashboardCapturesPaginatedOutput & { loading: boolean };
   onDelete: (id: string) => Promise<void>;
   deletingIds: Set<string>;
+  /** Optional filter chips, shown under the column description. */
+  filters?: React.ReactNode;
 }) {
   const Icon = config.icon;
 
@@ -60,6 +118,7 @@ export function CaptureColumn({
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{config.description}</p>
+        {filters}
       </CardHeader>
       <CardContent className="px-4 pt-0 lg:max-h-[65vh] lg:overflow-y-auto">
         {columnData.items.length > 0 ? (
@@ -69,7 +128,7 @@ export function CaptureColumn({
                 <CaptureCard
                   key={capture.id}
                   capture={capture}
-                  status={status as CaptureStatus}
+                  status={capture.status}
                   onDelete={onDelete}
                   isDeleting={deletingIds.has(capture.id)}
                 />
@@ -142,6 +201,50 @@ export function CaptureCardColumns({
     return Object.fromEntries(entries) as ColumnsState;
   });
 
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
+  // Ignores a filter response that arrives after a newer filter was chosen.
+  const reviewFilterRequestRef = useRef(0);
+
+  const handleReviewFilterChange = async (next: ReviewFilter) => {
+    if (next === reviewFilter) {
+      return;
+    }
+    const status = CaptureStatus.REVIEWING;
+    const requestId = ++reviewFilterRequestRef.current;
+    setReviewFilter(next);
+    setColumns((prev) => ({
+      ...prev,
+      [status]: { ...prev[status], loading: true },
+    }));
+    const res = await getCapturesPaginated({
+      userId,
+      status: queryStatusesFor(status, next),
+      limit: 10,
+      includes: { app: true, task: true },
+    });
+    if (requestId !== reviewFilterRequestRef.current) {
+      return;
+    }
+    if (!res.ok || !res.data) {
+      toast.error("Could not load captures. Try again.");
+      setColumns((prev) => ({
+        ...prev,
+        [status]: { ...prev[status], loading: false },
+      }));
+      return;
+    }
+    const { items, nextCursor, hasNextPage } = res.data;
+    setColumns((prev) => ({
+      ...prev,
+      [status]: {
+        items: normalizeCaptureItems(items as DashboardCapture[]),
+        nextCursor,
+        hasNextPage,
+        loading: false,
+      },
+    }));
+  };
+
   const handleLoadMore = async (status: NonApprovedStatus) => {
     const column = columns[status];
     if (!column?.hasNextPage || column.loading) {
@@ -154,7 +257,7 @@ export function CaptureCardColumns({
     }));
     const res = await getCapturesPaginated({
       userId,
-      status,
+      status: queryStatusesFor(status, reviewFilter),
       cursor: column.nextCursor,
       limit: 10,
       includes: { app: true, task: true },
@@ -238,6 +341,15 @@ export function CaptureCardColumns({
             handleLoadMore={handleLoadMore}
             onDelete={(id) => handleDelete(id)}
             deletingIds={deletingIds}
+            filters={
+              status === CaptureStatus.REVIEWING ? (
+                <ReviewFilterChips
+                  value={reviewFilter}
+                  disabled={column.loading}
+                  onChange={(next) => void handleReviewFilterChange(next)}
+                />
+              ) : undefined
+            }
           />
         );
       })}
