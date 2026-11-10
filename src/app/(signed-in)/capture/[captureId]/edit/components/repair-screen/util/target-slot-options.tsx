@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  ChevronsUpDown,
   Circle,
   Image as ImageIcon,
   Link2,
@@ -58,6 +59,12 @@ export const TARGET_SLOT_OPTION_GROUPS: TargetSlotOptionGroup[] = [
         value: "dropdown menu",
         label: "dropdown menu",
         icon: <ChevronDown className="h-3.5 w-3.5" />,
+      },
+      {
+        // The iOS wheel for dates, times and numbers: swipe it to choose.
+        value: "picker",
+        label: "picker",
+        icon: <ChevronsUpDown className="h-3.5 w-3.5" />,
       },
     ],
   },

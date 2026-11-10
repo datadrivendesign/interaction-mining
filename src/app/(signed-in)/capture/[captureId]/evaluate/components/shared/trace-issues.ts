@@ -193,7 +193,7 @@ export const TRACE_ISSUES: TraceIssue[] = [
     chipLabel: "Wrong element type",
     category: "description",
     annotation:
-      "Screen #: Fix the screen element type in the first part of the description. This element is a [CORRECT_TYPE], not a [WRONG_TYPE]. Common types: button, list item, tab, icon, text box, toggle.",
+      "Screen #: Fix the screen element type in the first part of the description. This element is a [CORRECT_TYPE], not a [WRONG_TYPE]. Common types: button, list item, tab, icon, text box, switch.",
     destination: "annotation",
     scope: "screen",
     shortcutKey: 8,
