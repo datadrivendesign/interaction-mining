@@ -414,7 +414,11 @@ export async function getCaptureFiles(
     if (!capture) {
       return { ok: false, message: "Capture not found.", data: null };
     }
-    const files = await listFromS3(`uploads/${parsedId.data}`);
+    const files = await listFromS3(
+      `uploads/${parsedId.data}`,
+      true,
+      capture.takenOverAt,
+    );
     if (!files.ok) {
       return {
         ok: false,
@@ -450,7 +454,11 @@ export async function getCaptureDraftFiles(
     if (!capture) {
       return { ok: false, message: "Capture not found.", data: null };
     }
-    const files = await listFromS3(`uploads/${parsedId.data}/drafts`, false);
+    const files = await listFromS3(
+      `uploads/${parsedId.data}/drafts`,
+      false,
+      capture.takenOverAt,
+    );
     if (!files.ok) {
       return { ok: false, message: "Failed to fetch draft files.", data: null };
     }

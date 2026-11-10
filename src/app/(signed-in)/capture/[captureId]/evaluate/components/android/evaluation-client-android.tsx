@@ -157,7 +157,6 @@ export function EvaluationClientAndroid({
       feedbackState,
       mode: verdictMode,
       listPath,
-      editHref,
       approveBlockedReason: checklistStatus?.approveBlockedReason ?? null,
       denyBlockedReason: checklistStatus?.sendBackBlockedReason ?? null,
     });
@@ -484,6 +483,7 @@ export function EvaluationClientAndroid({
           checklistLabel={checklistStatus?.label}
           approveBlockedReason={checklistStatus?.approveBlockedReason ?? null}
           denyBlockedReason={checklistStatus?.sendBackBlockedReason ?? null}
+          takeOverCaptureId={captureId}
           additionalShortcuts={[
             ...fixShortcuts,
             { label: "Previous screen", keys: "[" },
