@@ -85,8 +85,11 @@ async function checkApprovableDraft(
   captureId: string,
   claimed: string | null,
   version: string,
+  takenOverAt: Date | null,
 ): Promise<string | null> {
-  if ((await getCurrentDraftVersion(captureId, claimed)) !== version) {
+  if (
+    (await getCurrentDraftVersion(captureId, claimed, takenOverAt)) !== version
+  ) {
     return "The draft changed. Reload the page and check it again.";
   }
   const issues = await getDraftCompletenessIssues(captureId, version);
@@ -128,7 +131,7 @@ export async function validateApprovePermissions(
   try {
     const capture = await prisma.capture.findUnique({
       where: { id: id.data },
-      select: { status: true, draftVersion: true },
+      select: { status: true, draftVersion: true, takenOverAt: true },
     });
     if (!capture || !ADMIN_APPROVABLE.includes(capture.status)) {
       return denied("Capture is no longer waiting for review.");
@@ -137,6 +140,7 @@ export async function validateApprovePermissions(
       id.data,
       capture.draftVersion ?? null,
       v.data,
+      capture.takenOverAt,
     );
     if (draftProblem) return denied(draftProblem);
     return { ok: true, message: "Auth check passed", data: null };
@@ -171,14 +175,18 @@ export async function approveCapture(
         status: true,
         stagedDraftVersion: true,
         draftVersion: true,
+        takenOverAt: true,
       },
     });
     // At the final check, a newer draft than the reviewer approved means the
     // admin edited it before publishing. Read before the status moves.
     const editedAtFinal =
       capture?.status === CaptureStatus.REVIEWED &&
-      (await getCurrentDraftVersion(id.data, capture.draftVersion ?? null)) !==
-        capture.stagedDraftVersion;
+      (await getCurrentDraftVersion(
+        id.data,
+        capture.draftVersion ?? null,
+        capture.takenOverAt,
+      )) !== capture.stagedDraftVersion;
     const moved =
       capture &&
       ADMIN_APPROVABLE.includes(capture.status) &&
@@ -234,14 +242,24 @@ export async function reviewerApprove(
   try {
     const capture = await prisma.capture.findUnique({
       where: { id: id.data },
-      select: { userId: true, status: true, draftVersion: true },
+      select: {
+        userId: true,
+        status: true,
+        draftVersion: true,
+        takenOverAt: true,
+      },
     });
     if (!capture || capture.status !== CaptureStatus.REVIEWING) {
       return denied("Capture is no longer waiting for review.");
     }
 
     const claimed = capture.draftVersion ?? null;
-    const draftProblem = await checkApprovableDraft(id.data, claimed, v.data);
+    const draftProblem = await checkApprovableDraft(
+      id.data,
+      claimed,
+      v.data,
+      capture.takenOverAt,
+    );
     if (draftProblem) return denied(draftProblem);
 
     // Conditional on the claimed draft version as well as the status, so a
@@ -327,6 +345,80 @@ export async function sendBack(
     return { ok: true, message: "Capture sent back.", data: null };
   } catch (err) {
     return denied(errorMessage(err, "Failed to send capture back."));
+  }
+}
+
+/** Marks a take-over in the review log, so it can be counted apart. */
+const TAKE_OVER_ISSUE_ID = "taken_over_to_rerecord";
+
+/**
+ * A reviewer takes a REVIEWING capture over to record the task again, for a
+ * wrong or missing recording whose worker cannot redo it. The capture becomes
+ * the reviewer's (`userId`), goes back to CREATED for a new upload, and keeps
+ * who recorded it first (`originalUserId`, never overwritten).
+ *
+ * Nothing in S3 is deleted: the old video, screens and drafts stay (unless a
+ * new upload reuses a file name), and every listing hides files written before
+ * `takenOverAt`. Conditional on REVIEWING, so it cannot race another verdict.
+ * A fix claimed just before still uploads, but its draft name predates the
+ * take-over, so it stays hidden; saves from pages loaded before the take-over
+ * are refused (`saveCaptureDraft`).
+ */
+export async function takeOverCapture(
+  captureId: unknown,
+): Promise<ActionPayload<null>> {
+  const id = objectIdSchema.safeParse(captureId);
+  if (!id.success) {
+    return denied("Invalid request.");
+  }
+  const session = await auth();
+  if (!session?.user?.id || !isReviewer(session)) {
+    return denied("Only reviewers can record a capture again.");
+  }
+
+  try {
+    const capture = await prisma.capture.findUnique({
+      where: { id: id.data },
+      select: { userId: true, originalUserId: true },
+    });
+    const moved =
+      capture &&
+      (await prisma.capture.updateMany({
+        where: { id: id.data, status: CaptureStatus.REVIEWING },
+        data: {
+          status: CaptureStatus.CREATED,
+          userId: session.user.id,
+          originalUserId: capture.originalUserId ?? capture.userId,
+          takenOverById: session.user.id,
+          takenOverAt: new Date(),
+          draftVersion: null,
+          stagedDraftVersion: null,
+          annotateFeedback: "",
+          redactFeedback: "",
+          summarizeFeedback: "",
+        },
+      }));
+    if (!moved || moved.count !== 1) {
+      return denied("This capture is no longer waiting for review.");
+    }
+    await recordCaptureReview({
+      captureId: id.data,
+      reviewerId: session.user.id,
+      verdict: ReviewVerdict.REJECTED,
+      stage: isAdmin(session) ? ReviewStage.FINAL : ReviewStage.REVIEWER,
+      selfReview: capture.userId === session.user.id,
+      summary: {
+        issueIds: [TAKE_OVER_ISSUE_ID],
+        issueCategories: ["recording"],
+        destinations: [],
+        screenIssueCount: 0,
+        flowIssueCount: 1,
+        screenCount: 0,
+      },
+    });
+    return { ok: true, message: "The capture is yours now.", data: null };
+  } catch (err) {
+    return denied(errorMessage(err, "Could not take over the capture."));
   }
 }
 
