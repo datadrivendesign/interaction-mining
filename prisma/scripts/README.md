@@ -84,13 +84,13 @@ One-time scripts. Safe to re-run (idempotent where noted), but intended to be ex
 
 ## task-curation/
 
-MJS scripts that export and filter data from the database to feed into the Python task-curation pipeline (`scripts/task-curation/`). Typical workflow:
+MJS scripts that export and filter data from the database to feed into the Python task-curation pipeline (now the `odim-curation-pipeline` repository). Typical workflow:
 
 ```
 1. export-candidate-task-apps.mjs         → candidate-task-apps-export.json
 2. filter-candidate-task-apps.mjs         → candidate-task-apps-filtered.json  (remove games + isTaken)
 3. export-ios-apps-with-captures-or-traces.mjs → ios-apps-with-captures-or-traces.json  (exclusion list)
-4. (hand off to Python pipeline — see scripts/curation-pipeline/)
+4. (hand off to the Python pipeline in the odim-curation-pipeline repository)
 5. convert-ios-existing-apps-to-csv.mjs   → claimed-ios-apps.csv  (audit view)
 ```
 
@@ -127,16 +127,10 @@ Gitignored files consumed by scripts at runtime:
 
 ---
 
-## Related: scripts/curation-pipeline/ (Python pipeline)
+## Related: the Python curation pipeline (separate repository)
 
-The Python pipeline lives at `scripts/curation-pipeline/` (top-level, outside `prisma/`). It consumes the JSON exported by the MJS scripts above and produces curated task lists and worker assignment PDFs.
-
-| Script | Purpose |
-|--------|---------|
-| `curate_tasks.py` | Call Claude Haiku to generate task descriptions for each app. |
-| `curate_db_apps.py` | Same as above, but reads apps directly from MongoDB. |
-| `cleanup_tasks.py` | Audit existing curated tasks: fix placeholder emails, reword tasks >100 chars. |
-| `find_truncated.py` | Find tasks that were truncated mid-word at the old 75-char hard cutoff. |
-| `assign_tasks.py` | Score and rank curated apps, assign batches to workers, skip apps already in the DB. |
-| `export_worker_pdfs.py` | Generate per-worker PDF packets with interactive checkboxes. |
-| `run_pipeline.sh` | Local convenience wrapper (gitignored — references external paths). |
+The Python pipeline that scrapes new apps, writes and reviews their tasks, and
+imports them into `candidate_task_apps` used to live at
+`scripts/curation-pipeline/`. It moved to its own repository,
+`odim-curation-pipeline`, in November 2026. It consumes the JSON exported by
+the MJS scripts above.
