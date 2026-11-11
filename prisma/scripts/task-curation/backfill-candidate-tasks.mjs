@@ -11,16 +11,21 @@
  * was never historically copied into a Capture/Task, because legacy data did
  * not store a durable candidate-task origin link.
  *
- * Apps present in the curated import are skipped by default so
+ * Apps present in the curated import are skipped so
  * import-curated-tasks.mjs can write their true generated provenance.
  *
+ * The curated JSON is not in this repository. It is produced by the Python
+ * curation pipeline, which moved to the odim-curation-pipeline repository
+ * (there: data/legacy/candidate-task-apps-export-curated.json). Pass its path
+ * with --curated; the script refuses to run without it, so the skip list is
+ * never silently missing.
+ *
  * Usage:
- *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/backfill-candidate-tasks.mjs
- *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/backfill-candidate-tasks.mjs --apply
+ *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/backfill-candidate-tasks.mjs --curated <path>
+ *   dotenvx run --env-file=.env.local -- node prisma/scripts/task-curation/backfill-candidate-tasks.mjs --curated <path> --apply
  *
  * Options:
- *   --curated <path>  Curated JSON whose appIds should be skipped
- *                     (default: scripts/curation-pipeline/candidate-task-apps-export-curated.json)
+ *   --curated <path>  Required. Curated JSON whose appIds should be skipped.
  *   --out <path>      Report JSON path (default: <script-dir>/backfill-candidate-tasks-report.json)
  *   --apply           Write changes. Default: dry run.
  *   -h, --help        Show this message
@@ -36,7 +41,6 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "../../..");
 
 const { values } = parseArgs({
   args: process.argv.slice(2),
@@ -53,21 +57,23 @@ if (values.help) {
   console.log(`Usage: node prisma/scripts/task-curation/backfill-candidate-tasks.mjs [options]
 
 Options:
-  --curated <path>  Curated JSON whose appIds should be skipped.
+  --curated <path>  Required. Curated JSON whose appIds should be skipped
+                    (candidate-task-apps-export-curated.json, from the
+                    odim-curation-pipeline repository).
   --out <path>      Report JSON path.
   --apply           Write changes. Default: dry run.
   -h, --help        Show this message`);
   process.exit(0);
 }
 
-const curatedPath = path.resolve(
-  process.cwd(),
-  values.curated ??
-    path.join(
-      repoRoot,
-      "scripts/curation-pipeline/candidate-task-apps-export-curated.json",
-    ),
-);
+if (!values.curated) {
+  console.error(
+    "Missing --curated <path>. Pass the curated JSON from the odim-curation-pipeline repository (data/legacy/candidate-task-apps-export-curated.json). Run with --help for details.",
+  );
+  process.exit(1);
+}
+
+const curatedPath = path.resolve(process.cwd(), values.curated);
 const outputPath = path.resolve(
   process.cwd(),
   values.out ?? path.join(__dirname, "backfill-candidate-tasks-report.json"),
