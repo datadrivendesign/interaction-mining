@@ -53,14 +53,7 @@ prisma/scripts/capture-store/CAPTURE_STORE_SYNC.md
 prisma/scripts/capture-store/logs/
 prisma/scripts/admin/find-all-processing-captures.json
 
-# curation-pipeline — large data files and local-only scripts
-scripts/curation-pipeline/candidate-task-apps-export.json
-scripts/curation-pipeline/candidate-task-apps-export-curated.json
-scripts/curation-pipeline/ios-apps-with-captures-or-traces.json
-scripts/curation-pipeline/worker-assignments/
-scripts/curation-pipeline/new-apps.json
-scripts/curation-pipeline/generated-tasks.json
-scripts/curation-pipeline/curated-tasks-new.json
+# task-curation reports
 prisma/scripts/task-curation/istaken-audit-report.json
 prisma/scripts/task-curation/backfill-candidate-tasks-report.json
 prisma/scripts/task-curation/import-curated-report.json
